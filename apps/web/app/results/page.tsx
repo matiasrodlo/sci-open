@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import { SearchBar } from '@/components/SearchBar';
 import { FacetPanel } from '@/components/FacetPanel';
 import { SortBar } from '@/components/SortBar';
-import { ResultCard } from '@/components/ResultCard';
+import { InfiniteResults } from '@/components/InfiniteResults';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { searchPapers } from '@/lib/fetcher';
@@ -54,18 +54,11 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
           <FacetPanel facets={results.facets} currentFilters={currentFilters} />
           <div className="flex-1">
             <SortBar />
-            <div className="space-y-4">
-              {results.hits.map((record) => (
-                <ResultCard key={record.id} record={record} />
-              ))}
-            </div>
-            {results.total > results.hits.length && (
-              <div className="text-center mt-8">
-                <p className="text-sm text-muted-foreground">
-                  Showing {results.hits.length} of {results.total} results
-                </p>
-              </div>
-            )}
+            <InfiniteResults 
+              initialResults={results.hits}
+              initialTotal={results.total}
+              searchParams={searchParamsObj}
+            />
           </div>
         </div>
       </div>
