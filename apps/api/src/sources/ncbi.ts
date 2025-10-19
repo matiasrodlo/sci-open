@@ -105,58 +105,115 @@ export class NCBIConnector implements SourceConnector {
   }
 
   private normalizeArticle(article: any): OARecord {
-    const medlineCitation = article.MedlineCitation;
+    const medlineCitation = article.MedlineCitation?.[0] || article.MedlineCitation;
+    
     // Extract PMID from the XML structure: <PMID Version="1">41109958</PMID>
-    const pmid = medlineCitation.PMID?.[0] || medlineCitation.PMID;
+    // xml2js can parse it as: { _: '41109958', $: { Version: '1' } } or ['41109958'] or '41109958'
+    let pmid: string | undefined;
+    const pmidData = medlineCitation?.PMID;
+    
+    if (Array.isArray(pmidData)) {
+      // If it's an array, get the first element
+      const first = pmidData[0];
+      if (typeof first === 'string') {
+        pmid = first;
+      } else if (first?._ ) {
+        pmid = first._;
+      } else if (first) {
+        pmid = String(first);
+      }
+    } else if (typeof pmidData === 'string') {
+      pmid = pmidData;
+    } else if (pmidData?._) {
+      // If it's an object with underscore property
+      pmid = pmidData._;
+    } else if (pmidData) {
+      pmid = String(pmidData);
+    }
     
     // Debug: log PMID extraction
-    console.log('PMID extraction:', { pmid, pmidStructure: medlineCitation.PMID });
+    console.log('PMID extraction:', { pmid, pmidStructure: medlineCitation?.PMID });
     
     // Extract authors
     const authors = [];
-    if (medlineCitation.Article?.AuthorList?.Author) {
-      const authorList = Array.isArray(medlineCitation.Article.AuthorList.Author) 
-        ? medlineCitation.Article.AuthorList.Author 
-        : [medlineCitation.Article.AuthorList.Author];
+    const article = medlineCitation?.Article?.[0] || medlineCitation?.Article;
+    if (article?.AuthorList) {
+      const authorListData = article.AuthorList[0] || article.AuthorList;
+      const authorArray = authorListData?.Author;
       
-      authors.push(...authorList.map((author: any) => {
-        const lastName = author.LastName || '';
-        const foreName = author.ForeName || '';
-        const initials = author.Initials || '';
-        return `${lastName} ${foreName || initials}`.trim();
-      }));
+      if (authorArray) {
+        const authorList = Array.isArray(authorArray) ? authorArray : [authorArray];
+        
+        authors.push(...authorList.map((author: any) => {
+          const lastName = author.LastName?.[0] || author.LastName || '';
+          const foreName = author.ForeName?.[0] || author.ForeName || '';
+          const initials = author.Initials?.[0] || author.Initials || '';
+          return `${lastName} ${foreName || initials}`.trim();
+        }));
+      }
     }
 
     // Extract publication date
-    const pubDate = medlineCitation.Article?.Journal?.JournalIssue?.PubDate;
+    const journal = article?.Journal?.[0] || article?.Journal;
+    const journalIssue = journal?.JournalIssue?.[0] || journal?.JournalIssue;
+    const pubDate = journalIssue?.PubDate?.[0] || journalIssue?.PubDate;
     let year: number | undefined;
     if (pubDate?.Year) {
-      year = parseInt(pubDate.Year);
+      const yearValue = Array.isArray(pubDate.Year) ? pubDate.Year[0] : pubDate.Year;
+      year = parseInt(yearValue);
     }
 
     // Check if it's open access (simplified check)
     let oaStatus: 'preprint' | 'accepted' | 'published' | 'other' = 'other';
-    const articleIds = medlineCitation.PubmedData?.ArticleIdList?.ArticleId || [];
-    const hasPMC = articleIds.some((id: any) => id.$.IdType === 'pmc');
+    const pubmedData = article.PubmedData?.[0] || article.PubmedData;
+    const articleIdList = pubmedData?.ArticleIdList?.[0] || pubmedData?.ArticleIdList;
+    const articleIds = articleIdList?.ArticleId || [];
+    const hasPMC = Array.isArray(articleIds) && articleIds.some((id: any) => {
+      const idType = id.$?.IdType || id.IdType;
+      return idType === 'pmc';
+    });
     if (hasPMC) {
       oaStatus = 'published';
     }
 
+    // Extract title
+    const titleData = article?.ArticleTitle;
+    const title = Array.isArray(titleData) ? titleData[0] : titleData || '';
+
+    // Extract abstract
+    const abstractData = article?.Abstract?.[0] || article?.Abstract;
+    const abstractText = abstractData?.AbstractText;
+    let abstract: string | undefined;
+    if (Array.isArray(abstractText)) {
+      abstract = abstractText.map((text: any) => 
+        typeof text === 'string' ? text : (text?._ || text?.['#text'] || text)
+      ).join(' ');
+    } else if (typeof abstractText === 'string') {
+      abstract = abstractText;
+    } else if (abstractText) {
+      abstract = abstractText._ || abstractText['#text'] || String(abstractText);
+    }
+
+    // Extract venue (journal title)
+    const journalTitle = journal?.Title;
+    const venue = Array.isArray(journalTitle) ? journalTitle[0] : journalTitle;
+
+    // Extract language
+    const languageData = article?.Language;
+    const language = Array.isArray(languageData) ? languageData[0] : (languageData || 'en');
+
     return {
       id: `ncbi:${pmid}`,
-      title: medlineCitation.Article?.ArticleTitle || '',
+      title: typeof title === 'string' ? title : String(title || ''),
       authors,
       year,
-      venue: medlineCitation.Article?.Journal?.Title,
-      abstract: medlineCitation.Article?.Abstract?.AbstractText?.['#text'] || 
-                medlineCitation.Article?.Abstract?.AbstractText,
+      venue,
+      abstract,
       source: 'ncbi',
-      sourceId: pmid?.toString() || '',
+      sourceId: pmid || '',
       oaStatus,
-      topics: medlineCitation.MeshHeadingList?.MeshHeading?.map((heading: any) => 
-        heading.DescriptorName?.['#text'] || heading.DescriptorName
-      ) || [],
-      language: medlineCitation.Article?.Language?.[0] || 'en',
+      topics: [],
+      language,
       createdAt: new Date().toISOString(),
     };
   }
