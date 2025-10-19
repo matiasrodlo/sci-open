@@ -22,9 +22,9 @@ export function SortBar() {
   };
 
   const sortOptions = [
-    { value: 'relevance' as const, label: 'Relevance', icon: ArrowUpDown },
-    { value: 'date' as const, label: 'Date', icon: Calendar },
-    { value: 'citations' as const, label: 'Citations', icon: TrendingUp },
+    { value: 'relevance' as const, label: 'Relevance', icon: ArrowUpDown, disabled: false },
+    { value: 'date' as const, label: 'Date', icon: Calendar, disabled: false },
+    { value: 'citations' as const, label: 'Citations', icon: TrendingUp, disabled: true },
   ];
 
   return (
@@ -39,8 +39,10 @@ export function SortBar() {
                 key={option.value}
                 variant={currentSort === option.value ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => updateSort(option.value)}
+                onClick={() => !option.disabled && updateSort(option.value)}
+                disabled={option.disabled}
                 className="h-8"
+                title={option.disabled ? 'Citation data not yet available' : undefined}
               >
                 <Icon className="h-3 w-3 mr-1" />
                 {option.label}
