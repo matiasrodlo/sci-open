@@ -104,8 +104,8 @@ export class NCBIConnector implements SourceConnector {
     }
   }
 
-  private normalizeArticle(article: any): OARecord {
-    const medlineCitation = article.MedlineCitation?.[0] || article.MedlineCitation;
+  private normalizeArticle(pubmedArticle: any): OARecord {
+    const medlineCitation = pubmedArticle.MedlineCitation?.[0] || pubmedArticle.MedlineCitation;
     
     // Extract PMID from the XML structure: <PMID Version="1">41109958</PMID>
     // xml2js can parse it as: { _: '41109958', $: { Version: '1' } } or ['41109958'] or '41109958'
