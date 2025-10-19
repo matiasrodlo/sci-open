@@ -81,7 +81,7 @@ export function FacetPanel({ facets, currentFilters }: FacetPanelProps) {
                 />
                 <label
                   htmlFor={`source-${source}`}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer"
                 >
                   {getSourceLabel(source)}
                 </label>
@@ -116,7 +116,7 @@ export function FacetPanel({ facets, currentFilters }: FacetPanelProps) {
                 />
                 <label
                   htmlFor={`oa-${status}`}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer"
                 >
                   {getOAStatusLabel(status)}
                 </label>
@@ -154,7 +154,7 @@ export function FacetPanel({ facets, currentFilters }: FacetPanelProps) {
                   />
                   <label
                     htmlFor={`year-${year}`}
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer"
                   >
                     {year}
                   </label>
@@ -192,7 +192,7 @@ export function FacetPanel({ facets, currentFilters }: FacetPanelProps) {
                   />
                   <label
                     htmlFor={`venue-${venue}`}
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 truncate"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 truncate cursor-pointer"
                     title={venue}
                   >
                     {venue}
