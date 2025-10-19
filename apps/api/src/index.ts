@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
-import { SearchParams, SearchResponse, PaperResponse } from '@open-access-explorer/shared';
+import { SearchParams, SearchResponse, PaperResponse, OARecord } from '@open-access-explorer/shared';
 import { TypesenseAdapter, MeilisearchAdapter, AlgoliaAdapter } from '@open-access-explorer/search';
 import { ArxivConnector } from './sources/arxiv';
 import { CoreConnector } from './sources/core';
