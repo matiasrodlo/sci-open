@@ -1,0 +1,22 @@
+{
+  "name": "@open-access-explorer/search",
+  "version": "1.0.0",
+  "description": "Search backend adapters",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@open-access-explorer/shared": "workspace:*",
+    "typesense": "^1.6.0",
+    "meilisearch": "^0.35.0",
+    "algoliasearch": "^4.20.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "@types/node": "^20.8.0"
+  }
+}

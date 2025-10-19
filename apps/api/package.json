@@ -1,0 +1,30 @@
+{
+  "name": "@open-access-explorer/api",
+  "version": "1.0.0",
+  "description": "Fastify API server for Open Access Explorer",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "seed": "tsx src/seed.ts",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@open-access-explorer/shared": "workspace:*",
+    "@open-access-explorer/search": "workspace:*",
+    "fastify": "^4.24.3",
+    "@fastify/cors": "^8.4.0",
+    "@fastify/helmet": "^11.1.1",
+    "node-cache": "^5.1.2",
+    "axios": "^1.5.0",
+    "xml2js": "^0.6.2",
+    "crypto": "^1.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "@types/node": "^20.8.0",
+    "@types/xml2js": "^0.4.14",
+    "tsx": "^4.1.4"
+  }
+}
