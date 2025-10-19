@@ -8,6 +8,10 @@ import { EmptyState } from '@/components/EmptyState';
 import { searchPapers } from '@/lib/fetcher';
 import { SearchParams } from '@open-access-explorer/shared';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 interface ResultsPageProps {
   searchParams: { [key: string]: string | string[] | undefined };
 }
@@ -77,10 +81,13 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
 }
 
 export default function ResultsPage({ searchParams }: ResultsPageProps) {
+  // Create a unique key from search params to force re-render
+  const searchKey = JSON.stringify(searchParams);
+  
   return (
     <div className="space-y-6">
       <SearchBar />
-      <Suspense fallback={<LoadingSkeleton />}>
+      <Suspense key={searchKey} fallback={<LoadingSkeleton />}>
         <ResultsContent searchParams={searchParams} />
       </Suspense>
     </div>
