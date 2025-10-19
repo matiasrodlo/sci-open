@@ -62,6 +62,40 @@ const ncbiConnector = new NCBIConnector(process.env.NCBI_EUTILS_BASE, process.en
 // Ensure search index exists
 searchAdapter.ensureIndex().catch(console.error);
 
+// Helper function to distribute results across sources
+function distributeResultsAcrossSources(results: any[], pageSize: number): any[] {
+  // Group results by source
+  const bySource = results.reduce((acc, result) => {
+    if (!acc[result.source]) acc[result.source] = [];
+    acc[result.source].push(result);
+    return acc;
+  }, {} as Record<string, any[]>);
+
+  const sources = Object.keys(bySource);
+  const distributed: any[] = [];
+  
+  // Round-robin distribution across sources
+  let sourceIndex = 0;
+  while (distributed.length < pageSize && sources.length > 0) {
+    const currentSource = sources[sourceIndex % sources.length];
+    const sourceResults = bySource[currentSource];
+    
+    if (sourceResults.length > 0) {
+      distributed.push(sourceResults.shift()!);
+    } else {
+      // Remove empty sources
+      sources.splice(sourceIndex % sources.length, 1);
+      if (sources.length === 0) break;
+      sourceIndex = sourceIndex % sources.length;
+      continue;
+    }
+    
+    sourceIndex++;
+  }
+  
+  return distributed;
+}
+
 // Search endpoint
 fastify.post<{ Body: SearchParams }>('/api/search', async (request, reply) => {
   try {
@@ -72,49 +106,122 @@ fastify.post<{ Body: SearchParams }>('/api/search', async (request, reply) => {
     // Check cache first
     const cached = searchCache.get<SearchResponse>(cacheKey);
     if (cached) {
+      fastify.log.info({ cacheKey, query: params.q }, 'Returning cached search results');
       reply.header('Cache-Control', 'public, max-age=300');
       return cached;
     }
+    
+    fastify.log.info({ cacheKey, query: params.q }, 'No cache hit, performing fresh search');
 
-    // Perform search
-    const searchResult = await searchAdapter.search({
-      q: params.q,
-      filters: params.filters,
-      page: params.page || 1,
-      pageSize: params.pageSize || 20,
-      sort: params.sort || 'relevance'
-    });
+    let searchResult: { hits: any[]; facets: Record<string, any>; total: number } = { hits: [], facets: {}, total: 0 };
 
-    // If low recall and we have a query, try remote sources
-    if (searchResult.hits.length < 10 && (params.q || params.doi)) {
+    // Try search backend first, but gracefully handle failures
+    try {
+      searchResult = await searchAdapter.search({
+        q: params.q,
+        filters: params.filters,
+        page: params.page || 1,
+        pageSize: params.pageSize || 20,
+        sort: params.sort || 'relevance'
+      });
+    } catch (searchError) {
+      fastify.log.warn({ error: searchError }, 'Search backend unavailable, falling back to direct source queries');
+      // Continue with empty search result - we'll query sources directly
+    }
+
+    // Always try remote sources when we have a query (since search backend is not available)
+    if (params.q || params.doi) {
+      fastify.log.info({ query: params.q || params.doi }, 'Querying remote sources');
+      
+      const searchParams = {
+        titleOrKeywords: params.q,
+        doi: params.doi,
+        yearFrom: params.filters?.yearFrom,
+        yearTo: params.filters?.yearTo
+      };
+
       const remoteResults = await Promise.allSettled([
-        arxivConnector.search(params),
-        coreConnector.search(params),
-        europepmcConnector.search(params),
-        ncbiConnector.search(params)
+        arxivConnector.search(searchParams),
+        coreConnector.search(searchParams),
+        europepmcConnector.search(searchParams),
+        ncbiConnector.search(searchParams)
       ]);
+
+      // Debug: log the results from each source
+      const sourceNames = ['arxiv', 'core', 'europepmc', 'ncbi'];
+      remoteResults.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          fastify.log.info({ source: sourceNames[index], count: result.value.length }, 'Source results');
+        } else {
+          fastify.log.warn({ source: sourceNames[index], error: result.reason }, 'Source failed');
+        }
+      });
 
       const allRemoteResults = remoteResults
         .filter(result => result.status === 'fulfilled')
         .flatMap(result => (result as PromiseFulfilledResult<any>).value);
 
-      // Deduplicate by DOI and title
+      // Deduplicate by DOI first, then by title+source combination
       const seen = new Set<string>();
       const uniqueResults = allRemoteResults.filter(record => {
-        const key = record.doi || record.title.toLowerCase();
+        let key: string;
+        if (record.doi) {
+          // Use DOI as primary key for deduplication
+          key = `doi:${record.doi}`;
+        } else {
+          // Use title+source combination for records without DOI
+          key = `title:${record.title.toLowerCase()}:${record.source}`;
+        }
+        
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
       });
 
-      // Add to search index asynchronously
+      // Add to search index asynchronously (if backend is available)
       if (uniqueResults.length > 0) {
-        searchAdapter.upsertMany(uniqueResults).catch(console.error);
+        searchAdapter.upsertMany(uniqueResults).catch((error: any) => {
+          fastify.log.warn({ error }, 'Failed to index results');
+        });
       }
 
-      // Merge results
-      searchResult.hits = [...searchResult.hits, ...uniqueResults].slice(0, params.pageSize || 20);
-      searchResult.total = Math.max(searchResult.total, searchResult.hits.length);
+      // Distribute results across sources for better diversity
+      const pageSize = params.pageSize || 20;
+      const distributedResults = distributeResultsAcrossSources(uniqueResults, pageSize);
+      
+      searchResult.hits = distributedResults;
+      searchResult.total = uniqueResults.length;
+      
+      // Generate basic facets from ALL unique results (not just the paginated ones)
+      searchResult.facets = {
+        source: uniqueResults.reduce((acc, record) => {
+          acc[record.source] = (acc[record.source] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>),
+        year: uniqueResults.reduce((acc, record) => {
+          if (record.year) {
+            acc[record.year] = (acc[record.year] || 0) + 1;
+          }
+          return acc;
+        }, {} as Record<string, number>),
+        oaStatus: uniqueResults.reduce((acc, record) => {
+          if (record.oaStatus) {
+            acc[record.oaStatus] = (acc[record.oaStatus] || 0) + 1;
+          }
+          return acc;
+        }, {} as Record<string, number>),
+        venue: uniqueResults.reduce((acc, record) => {
+          if (record.venue) {
+            acc[record.venue] = (acc[record.venue] || 0) + 1;
+          }
+          return acc;
+        }, {} as Record<string, number>)
+      };
+      
+      fastify.log.info({ 
+        totalResults: uniqueResults.length,
+        facets: searchResult.facets 
+      }, 'Generated facets from search results');
     }
 
     const response: SearchResponse = {
@@ -160,10 +267,10 @@ fastify.get<{ Params: { id: string } }>('/api/paper/:id', async (request, reply)
       });
       record = searchResult.hits[0];
     } catch (error) {
-      // If not found in index, try to reconstruct from source
+      // If not found in index, create a record from the ID
       const [source, sourceId] = id.split(':');
       if (source && sourceId) {
-        // This is a simplified approach - in production you might want to store more metadata
+        // Create a basic record with known PDF URL for arXiv
         record = {
           id,
           source,
@@ -172,6 +279,13 @@ fastify.get<{ Params: { id: string } }>('/api/paper/:id', async (request, reply)
           authors: [],
           createdAt: new Date().toISOString()
         };
+        
+        // For arXiv, we can construct the PDF URL directly
+        if (source === 'arxiv') {
+          // arXiv PDF URLs use the full ID including version (e.g., 2409.12922v1)
+          record.bestPdfUrl = `https://arxiv.org/pdf/${sourceId}`;
+          record.landingPage = `https://arxiv.org/abs/${sourceId}`;
+        }
       }
     }
 
@@ -181,13 +295,22 @@ fastify.get<{ Params: { id: string } }>('/api/paper/:id', async (request, reply)
     }
 
     // Resolve PDF URL
-    const pdfUrl = await resolveBestPdf(record);
+    let pdfUrl = await resolveBestPdf(record);
+    let pdfStatus: "ok" | "not_found" | "error" = "not_found";
+    
+    // If we have a bestPdfUrl but resolveBestPdf failed, use it anyway
+    if (!pdfUrl && record.bestPdfUrl) {
+      pdfUrl = record.bestPdfUrl;
+      pdfStatus = 'ok'; // Assume it's valid since it came from the source
+    } else if (pdfUrl) {
+      pdfStatus = 'ok';
+    }
     
     const response: PaperResponse = {
       record,
       pdf: {
         url: pdfUrl || undefined,
-        status: pdfUrl ? 'ok' : 'not_found'
+        status: pdfStatus
       }
     };
 
@@ -206,6 +329,30 @@ fastify.get<{ Params: { id: string } }>('/api/paper/:id', async (request, reply)
 // Health check
 fastify.get('/health', async (request, reply) => {
   return { status: 'ok', timestamp: new Date().toISOString() };
+});
+
+// Debug endpoint to test source connectors
+fastify.get('/debug/sources', async (request, reply) => {
+  try {
+    const testParams = { titleOrKeywords: 'ai' };
+    
+    const results = await Promise.allSettled([
+      arxivConnector.search(testParams),
+      europepmcConnector.search(testParams),
+      coreConnector.search(testParams),
+      ncbiConnector.search(testParams)
+    ]);
+
+    return {
+      arxiv: results[0].status === 'fulfilled' ? results[0].value.length : results[0].reason?.message,
+      europepmc: results[1].status === 'fulfilled' ? results[1].value.length : results[1].reason?.message,
+      core: results[2].status === 'fulfilled' ? results[2].value.length : results[2].reason?.message,
+      ncbi: results[3].status === 'fulfilled' ? results[3].value.length : results[3].reason?.message,
+    };
+  } catch (error) {
+    reply.code(500);
+    return { error: error.message };
+  }
 });
 
 // Start server

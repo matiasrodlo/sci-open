@@ -78,7 +78,7 @@ export class ArxivConnector implements SourceConnector {
 
   private normalizeEntry(entry: any): OARecord {
     const id = entry.id[0];
-    const arxivId = id.split('/').pop()?.replace('v', '');
+    const arxivId = id.split('/').pop();
     
     // Extract authors
     const authors = entry.author?.map((author: any) => author.name[0]) || [];
@@ -86,7 +86,12 @@ export class ArxivConnector implements SourceConnector {
     // Extract PDF URL
     const links = entry.link || [];
     const pdfLink = links.find((link: any) => link.$.type === 'application/pdf');
-    const pdfUrl = pdfLink?.$.href;
+    let pdfUrl = pdfLink?.$.href;
+    
+    // Ensure arXiv PDF URLs use HTTPS
+    if (pdfUrl && pdfUrl.includes('arxiv.org')) {
+      pdfUrl = pdfUrl.replace('http://', 'https://');
+    }
 
     // Extract published date
     const published = entry.published?.[0];

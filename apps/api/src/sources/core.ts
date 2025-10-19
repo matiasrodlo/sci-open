@@ -18,6 +18,12 @@ export class CoreConnector implements SourceConnector {
   }): Promise<OARecord[]> {
     const { doi, titleOrKeywords, yearFrom, yearTo } = params;
 
+    // Skip CORE if no API key is provided
+    if (!this.apiKey) {
+      console.log('CORE API key not provided, skipping CORE search');
+      return [];
+    }
+
     try {
       let query = '';
       
