@@ -1,0 +1,25 @@
+{
+  "name": "open-access-explorer",
+  "version": "1.0.0",
+  "description": "WoS-style UI for open-access papers with multi-source search",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:web": "turbo run dev --filter=web",
+    "dev:api": "turbo run dev --filter=api",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "seed": "turbo run seed --filter=api",
+    "clean": "turbo run clean"
+  },
+  "devDependencies": {
+    "turbo": "^1.10.12",
+    "@types/node": "^20.8.0",
+    "typescript": "^5.2.2"
+  },
+  "packageManager": "pnpm@8.10.0"
+}

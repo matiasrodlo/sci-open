@@ -1,0 +1,31 @@
+
+> @open-access-explorer/web@1.0.0 build /Users/matiasrodlo/Documents/github/sci-open/apps/web
+> next build
+
+  ▲ Next.js 14.2.33
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/5) ...
+   Generating static pages (1/5) 
+   Generating static pages (2/5) 
+   Generating static pages (3/5) 
+ ✓ Generating static pages (5/5)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+┌ ○ /                                    2.61 kB         143 kB
+├ ○ /_not-found                          871 B          88.2 kB
+└ ƒ /results                             5.13 kB         145 kB
++ First Load JS shared by all            87.3 kB
+  ├ chunks/1489ca71-bce3a105bedc5875.js  53.6 kB
+  ├ chunks/899-bbd0d503da599eac.js       31.7 kB
+  └ other shared chunks (total)          1.96 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

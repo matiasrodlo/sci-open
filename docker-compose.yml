@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  typesense:
+    image: typesense/typesense:0.25.1
+    ports:
+      - "8108:8108"
+    environment:
+      - TYPESENSE_DATA_DIR=/data
+      - TYPESENSE_API_KEY=xyz
+      - TYPESENSE_ENABLE_CORS=true
+    volumes:
+      - typesense_data:/data
+    command: '--data-dir /data --api-key=xyz --listen-port 8108 --enable-cors'
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.5
+    ports:
+      - "7700:7700"
+    environment:
+      - MEILI_MASTER_KEY=xyz
+      - MEILI_ENV=development
+    volumes:
+      - meilisearch_data:/meili_data
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - SEARCH_BACKEND=typesense
+      - TYPESENSE_HOST=typesense
+      - TYPESENSE_PORT=8108
+      - TYPESENSE_PROTOCOL=http
+      - TYPESENSE_API_KEY=xyz
+    depends_on:
+      - typesense
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+volumes:
+  typesense_data:
+  meilisearch_data:
