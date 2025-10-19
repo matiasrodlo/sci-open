@@ -36,7 +36,7 @@ async function looksLikePdf(url: string): Promise<boolean> {
 
 function candidateFromArxiv(record: OARecord): string | null {
   if (record.source === 'arxiv' && record.sourceId) {
-    return `https://arxiv.org/pdf/${record.sourceId}.pdf`;
+    return `https://arxiv.org/pdf/${record.sourceId}`;
   }
   return null;
 }

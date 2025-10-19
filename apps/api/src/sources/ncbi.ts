@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { parseString } from 'xml2js';
 import { OARecord, SourceConnector } from '@open-access-explorer/shared';
 
 export class NCBIConnector implements SourceConnector {
@@ -68,7 +69,7 @@ export class NCBIConnector implements SourceConnector {
       const fetchParams: any = {
         db: 'pubmed',
         id: pmids.join(','),
-        retmode: 'json',
+        retmode: 'xml',
         rettype: 'abstract',
       };
 
@@ -81,10 +82,22 @@ export class NCBIConnector implements SourceConnector {
         timeout: 5000
       });
 
-      const fetchData = fetchResponse.data;
-      const articles = fetchData.PubmedArticleSet?.PubmedArticle || [];
+      return new Promise((resolve, reject) => {
+        parseString(fetchResponse.data, (err, result) => {
+          if (err) {
+            reject(err);
+            return;
+          }
 
-      return articles.map((article: any) => this.normalizeArticle(article));
+          try {
+            const articles = result?.PubmedArticleSet?.PubmedArticle || [];
+            const records = articles.map((article: any) => this.normalizeArticle(article));
+            resolve(records);
+          } catch (error) {
+            reject(error);
+          }
+        });
+      });
     } catch (error) {
       console.error('NCBI search error:', error);
       return [];
@@ -93,7 +106,11 @@ export class NCBIConnector implements SourceConnector {
 
   private normalizeArticle(article: any): OARecord {
     const medlineCitation = article.MedlineCitation;
-    const pmid = medlineCitation.PMID?.Version || medlineCitation.PMID?.['#text'];
+    // Extract PMID from the XML structure: <PMID Version="1">41109958</PMID>
+    const pmid = medlineCitation.PMID?.[0] || medlineCitation.PMID;
+    
+    // Debug: log PMID extraction
+    console.log('PMID extraction:', { pmid, pmidStructure: medlineCitation.PMID });
     
     // Extract authors
     const authors = [];
