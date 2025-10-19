@@ -70,16 +70,24 @@ fastify.post('/api/search', async (request, reply) => {
             reply.header('Cache-Control', 'public, max-age=300');
             return cached;
         }
-        // Perform search
-        const searchResult = await searchAdapter.search({
-            q: params.q,
-            filters: params.filters,
-            page: params.page || 1,
-            pageSize: params.pageSize || 20,
-            sort: params.sort || 'relevance'
-        });
-        // If low recall and we have a query, try remote sources
+        let searchResult = { hits: [], facets: {}, total: 0 };
+        // Try search backend first, but gracefully handle failures
+        try {
+            searchResult = await searchAdapter.search({
+                q: params.q,
+                filters: params.filters,
+                page: params.page || 1,
+                pageSize: params.pageSize || 20,
+                sort: params.sort || 'relevance'
+            });
+        }
+        catch (searchError) {
+            fastify.log.warn({ error: searchError }, 'Search backend unavailable, falling back to direct source queries');
+            // Continue with empty search result - we'll query sources directly
+        }
+        // If no results from search backend or low recall, try remote sources
         if (searchResult.hits.length < 10 && (params.q || params.doi)) {
+            fastify.log.info({ query: params.q || params.doi }, 'Querying remote sources');
             const remoteResults = await Promise.allSettled([
                 arxivConnector.search(params),
                 coreConnector.search(params),
@@ -98,13 +106,28 @@ fastify.post('/api/search', async (request, reply) => {
                 seen.add(key);
                 return true;
             });
-            // Add to search index asynchronously
+            // Add to search index asynchronously (if backend is available)
             if (uniqueResults.length > 0) {
-                searchAdapter.upsertMany(uniqueResults).catch(console.error);
+                searchAdapter.upsertMany(uniqueResults).catch((error) => {
+                    fastify.log.warn({ error }, 'Failed to index results');
+                });
             }
-            // Merge results
-            searchResult.hits = [...searchResult.hits, ...uniqueResults].slice(0, params.pageSize || 20);
-            searchResult.total = Math.max(searchResult.total, searchResult.hits.length);
+            // Use remote results as primary results
+            searchResult.hits = uniqueResults.slice(0, params.pageSize || 20);
+            searchResult.total = uniqueResults.length;
+            // Generate basic facets from remote results
+            searchResult.facets = {
+                source: uniqueResults.reduce((acc, record) => {
+                    acc[record.source] = (acc[record.source] || 0) + 1;
+                    return acc;
+                }, {}),
+                year: uniqueResults.reduce((acc, record) => {
+                    if (record.year) {
+                        acc[record.year] = (acc[record.year] || 0) + 1;
+                    }
+                    return acc;
+                }, {})
+            };
         }
         const response = {
             hits: searchResult.hits,

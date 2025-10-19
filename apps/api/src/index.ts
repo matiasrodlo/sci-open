@@ -178,8 +178,53 @@ fastify.post<{ Body: SearchParams }>('/api/search', async (request, reply) => {
         return true;
       });
 
+      // Apply client-side filters
+      let filteredResults = uniqueResults;
+      
+      if (params.filters) {
+        // Filter by source
+        if (params.filters.source && params.filters.source.length > 0) {
+          filteredResults = filteredResults.filter(record => 
+            params.filters!.source!.includes(record.source)
+          );
+        }
+        
+        // Filter by specific years (if provided as array)
+        // @ts-ignore - year can be passed as string[] for exact matches
+        if (params.filters.year && Array.isArray(params.filters.year) && params.filters.year.length > 0) {
+          // @ts-ignore
+          const yearNumbers = params.filters.year.map((y: string) => parseInt(y));
+          filteredResults = filteredResults.filter(record => 
+            record.year && yearNumbers.includes(record.year)
+          );
+        }
+        // Otherwise filter by year range
+        else if (params.filters.yearFrom || params.filters.yearTo) {
+          filteredResults = filteredResults.filter(record => {
+            if (!record.year) return false;
+            if (params.filters!.yearFrom && record.year < params.filters!.yearFrom) return false;
+            if (params.filters!.yearTo && record.year > params.filters!.yearTo) return false;
+            return true;
+          });
+        }
+        
+        // Filter by oaStatus
+        if (params.filters.oaStatus && params.filters.oaStatus.length > 0) {
+          filteredResults = filteredResults.filter(record => 
+            record.oaStatus && params.filters!.oaStatus!.includes(record.oaStatus)
+          );
+        }
+        
+        // Filter by venue
+        if (params.filters.venue && params.filters.venue.length > 0) {
+          filteredResults = filteredResults.filter(record => 
+            record.venue && params.filters!.venue!.includes(record.venue)
+          );
+        }
+      }
+
       // Sort results based on sort parameter
-      const sortedResults = [...uniqueResults];
+      const sortedResults = [...filteredResults];
       if (params.sort === 'date') {
         sortedResults.sort((a, b) => {
           const dateA = new Date(a.createdAt || a.updatedAt || 0).getTime();
@@ -190,8 +235,8 @@ fastify.post<{ Body: SearchParams }>('/api/search', async (request, reply) => {
       // For 'relevance' or default, keep original order from sources
 
       // Add to search index asynchronously (if backend is available)
-      if (sortedResults.length > 0) {
-        searchAdapter.upsertMany(sortedResults).catch((error: any) => {
+      if (uniqueResults.length > 0) {
+        searchAdapter.upsertMany(uniqueResults).catch((error: any) => {
           fastify.log.warn({ error }, 'Failed to index results');
         });
       }
