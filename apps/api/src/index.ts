@@ -147,6 +147,10 @@ fastify.post<{ Body: SearchParams }>('/api/search', async (request, reply) => {
         ncbiConnector.search(searchParams)
       ]);
 
+      const allRemoteResults = remoteResults
+        .filter(result => result.status === 'fulfilled')
+        .flatMap(result => (result as PromiseFulfilledResult<any>).value);
+
       // Debug: log the results from each source
       const sourceNames = ['arxiv', 'core', 'europepmc', 'ncbi'];
       remoteResults.forEach((result, index) => {
@@ -156,27 +160,66 @@ fastify.post<{ Body: SearchParams }>('/api/search', async (request, reply) => {
           fastify.log.warn({ source: sourceNames[index], error: result.reason }, 'Source failed');
         }
       });
+      
+      fastify.log.info({ 
+        totalBefore: allRemoteResults.length,
+        bySources: {
+          arxiv: allRemoteResults.filter(r => r.source === 'arxiv').length,
+          core: allRemoteResults.filter(r => r.source === 'core').length,
+          europepmc: allRemoteResults.filter(r => r.source === 'europepmc').length,
+          ncbi: allRemoteResults.filter(r => r.source === 'ncbi').length,
+        }
+      }, 'Results before deduplication');
 
-      const allRemoteResults = remoteResults
-        .filter(result => result.status === 'fulfilled')
-        .flatMap(result => (result as PromiseFulfilledResult<any>).value);
-
-      // Deduplicate by DOI first, then by title+source combination
-      const seen = new Set<string>();
-      const uniqueResults = allRemoteResults.filter(record => {
+      // Deduplicate by DOI, but try to keep source diversity
+      // Group by DOI/title, then pick one representative from each group
+      const paperGroups = new Map<string, OARecord[]>();
+      
+      for (const record of allRemoteResults) {
         let key: string;
         if (record.doi) {
-          // Use DOI as primary key for deduplication
           key = `doi:${record.doi}`;
         } else {
-          // Use title+source combination for records without DOI
-          key = `title:${record.title.toLowerCase()}:${record.source}`;
+          key = `title:${record.title.toLowerCase()}`;
         }
         
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
+        if (!paperGroups.has(key)) {
+          paperGroups.set(key, []);
+        }
+        paperGroups.get(key)!.push(record);
+      }
+      
+      // For each group, prefer the first occurrence BUT ensure we have
+      // at least some representation from each source
+      const uniqueResults: OARecord[] = [];
+      const sourcePreference = ['arxiv', 'ncbi', 'europepmc', 'core'];
+      
+      for (const [key, group] of paperGroups.entries()) {
+        if (group.length === 1) {
+          uniqueResults.push(group[0]);
+        } else {
+          // Multiple sources have this paper - prefer in source order
+          // but keep the first one found
+          const sorted = group.sort((a, b) => {
+            const aIndex = sourcePreference.indexOf(a.source);
+            const bIndex = sourcePreference.indexOf(b.source);
+            return aIndex - bIndex;
+          });
+          uniqueResults.push(sorted[0]);
+        }
+      }
+      
+      fastify.log.info({ 
+        totalAfter: uniqueResults.length,
+        bySources: {
+          arxiv: uniqueResults.filter(r => r.source === 'arxiv').length,
+          core: uniqueResults.filter(r => r.source === 'core').length,
+          europepmc: uniqueResults.filter(r => r.source === 'europepmc').length,
+          ncbi: uniqueResults.filter(r => r.source === 'ncbi').length,
+        },
+        duplicateGroups: paperGroups.size,
+        totalRecords: allRemoteResults.length
+      }, 'Results after deduplication');
 
       // Apply client-side filters
       let filteredResults = uniqueResults;
