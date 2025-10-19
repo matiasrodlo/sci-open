@@ -315,7 +315,7 @@ fastify.get<{ Params: { id: string } }>('/api/paper/:id', async (request, reply)
     }
 
     // Try to find the record in search index first
-    let record;
+    let record: OARecord | undefined;
     try {
       const searchResult = await searchAdapter.search({
         q: `id:${id}`,
@@ -326,21 +326,29 @@ fastify.get<{ Params: { id: string } }>('/api/paper/:id', async (request, reply)
       // If not found in index, create a record from the ID
       const [source, sourceId] = id.split(':');
       if (source && sourceId) {
-        // Create a basic record with known PDF URL for arXiv
+        // Create a basic record with known PDF URL
         record = {
           id,
-          source,
+          source: source as OARecord['source'],
           sourceId,
           title: 'Unknown',
           authors: [],
           createdAt: new Date().toISOString()
         };
         
-        // For arXiv, we can construct the PDF URL directly
+        // Construct PDF URLs based on source
         if (source === 'arxiv') {
           // arXiv PDF URLs use the full ID including version (e.g., 2409.12922v1)
           record.bestPdfUrl = `https://arxiv.org/pdf/${sourceId}`;
           record.landingPage = `https://arxiv.org/abs/${sourceId}`;
+        } else if (source === 'europepmc') {
+          // Europe PMC PDF URLs
+          if (sourceId.startsWith('PMC')) {
+            record.bestPdfUrl = `https://europepmc.org/articles/${sourceId}?pdf=render`;
+          } else {
+            record.bestPdfUrl = `https://europepmc.org/article/MED/${sourceId}?pdf=render`;
+          }
+          record.landingPage = `https://europepmc.org/article/${sourceId}`;
         }
       }
     }
@@ -351,15 +359,26 @@ fastify.get<{ Params: { id: string } }>('/api/paper/:id', async (request, reply)
     }
 
     // Resolve PDF URL
-    let pdfUrl = await resolveBestPdf(record);
+    let pdfUrl: string | null = null;
     let pdfStatus: "ok" | "not_found" | "error" = "not_found";
     
-    // If we have a bestPdfUrl but resolveBestPdf failed, use it anyway
-    if (!pdfUrl && record.bestPdfUrl) {
+    // For Europe PMC, always prefer the bestPdfUrl from the source
+    // These URLs with ?pdf=render work but don't validate as direct PDFs
+    if (record.source === 'europepmc' && record.bestPdfUrl) {
       pdfUrl = record.bestPdfUrl;
-      pdfStatus = 'ok'; // Assume it's valid since it came from the source
-    } else if (pdfUrl) {
       pdfStatus = 'ok';
+    } 
+    // For other sources, try to validate the PDF
+    else {
+      pdfUrl = await resolveBestPdf(record);
+      
+      // If validation failed but we have a bestPdfUrl, use it anyway
+      if (!pdfUrl && record.bestPdfUrl) {
+        pdfUrl = record.bestPdfUrl;
+        pdfStatus = 'ok'; // Assume it's valid since it came from the source
+      } else if (pdfUrl) {
+        pdfStatus = 'ok';
+      }
     }
     
     const response: PaperResponse = {
