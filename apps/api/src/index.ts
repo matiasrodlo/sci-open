@@ -178,39 +178,50 @@ fastify.post<{ Body: SearchParams }>('/api/search', async (request, reply) => {
         return true;
       });
 
+      // Sort results based on sort parameter
+      const sortedResults = [...uniqueResults];
+      if (params.sort === 'date') {
+        sortedResults.sort((a, b) => {
+          const dateA = new Date(a.createdAt || a.updatedAt || 0).getTime();
+          const dateB = new Date(b.createdAt || b.updatedAt || 0).getTime();
+          return dateB - dateA; // Newest first
+        });
+      }
+      // For 'relevance' or default, keep original order from sources
+
       // Add to search index asynchronously (if backend is available)
-      if (uniqueResults.length > 0) {
-        searchAdapter.upsertMany(uniqueResults).catch((error: any) => {
+      if (sortedResults.length > 0) {
+        searchAdapter.upsertMany(sortedResults).catch((error: any) => {
           fastify.log.warn({ error }, 'Failed to index results');
         });
       }
 
       // Distribute results across sources for better diversity
       const pageSize = params.pageSize || 20;
-      const distributedResults = distributeResultsAcrossSources(uniqueResults, pageSize);
+      const distributedResults = distributeResultsAcrossSources(sortedResults, pageSize);
       
       searchResult.hits = distributedResults;
-      searchResult.total = uniqueResults.length;
+      searchResult.total = sortedResults.length;
       
-      // Generate basic facets from ALL unique results (not just the paginated ones)
+      // Generate basic facets from ALL sorted results (not just the paginated ones)
       searchResult.facets = {
-        source: uniqueResults.reduce((acc, record) => {
+        source: sortedResults.reduce((acc, record) => {
           acc[record.source] = (acc[record.source] || 0) + 1;
           return acc;
         }, {} as Record<string, number>),
-        year: uniqueResults.reduce((acc, record) => {
+        year: sortedResults.reduce((acc, record) => {
           if (record.year) {
             acc[record.year] = (acc[record.year] || 0) + 1;
           }
           return acc;
         }, {} as Record<string, number>),
-        oaStatus: uniqueResults.reduce((acc, record) => {
+        oaStatus: sortedResults.reduce((acc, record) => {
           if (record.oaStatus) {
             acc[record.oaStatus] = (acc[record.oaStatus] || 0) + 1;
           }
           return acc;
         }, {} as Record<string, number>),
-        venue: uniqueResults.reduce((acc, record) => {
+        venue: sortedResults.reduce((acc, record) => {
           if (record.venue) {
             acc[record.venue] = (acc[record.venue] || 0) + 1;
           }
