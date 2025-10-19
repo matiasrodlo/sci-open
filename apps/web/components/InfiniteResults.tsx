@@ -17,6 +17,13 @@ export function InfiniteResults({
   initialTotal, 
   searchParams 
 }: InfiniteResultsProps) {
+  // Create a stable key from search params to detect changes
+  const searchKey = JSON.stringify({
+    q: searchParams.q,
+    sort: searchParams.sort,
+    filters: searchParams.filters
+  });
+
   const [results, setResults] = useState<OARecord[]>(initialResults);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -50,7 +57,7 @@ export function InfiniteResults({
     setResults(initialResults);
     setPage(1);
     setHasMore(initialResults.length < initialTotal);
-  }, [initialResults, initialTotal]);
+  }, [searchKey, initialResults, initialTotal]);
 
   useEffect(() => {
     // Setup intersection observer for infinite scroll
