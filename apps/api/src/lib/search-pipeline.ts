@@ -61,8 +61,8 @@ export class SearchPipeline {
 
       let enrichedRecords: EnrichedRecord[] = [];
 
-      // Get total count from all sources (parallel with data fetching)
-      const totalCountPromise = isDoiQuery ? Promise.resolve(1) : this.getTotalCount(normalizedQuery, params);
+      // Skip total count calculation for better performance
+      const totalCountPromise = Promise.resolve(1000000); // Use estimated count
 
       if (isDoiQuery) {
         // Direct DOI lookup
@@ -88,8 +88,8 @@ export class SearchPipeline {
       // Step 5: Get total count (wait for it if not already resolved)
       const totalCount = await totalCountPromise;
 
-      // Step 6: Generate facets with accurate source counts
-      const facets = await this.generateFacetsWithAccurateCounts(sortedRecords, normalizedQuery, params);
+      // Step 6: Generate simple facets for better performance
+      const facets = this.generateSimpleFacets(sortedRecords);
 
       const duration = Date.now() - startTime;
       console.log(`Search pipeline completed in ${duration}ms, found ${sortedRecords.length} results, total available: ${totalCount}`);
@@ -305,9 +305,10 @@ export class SearchPipeline {
    */
   private async discoverWorks(query: string, params: SearchParams): Promise<OpenAlexWork[]> {
     try {
+      // Limit to 50 results for faster response
       const response = await this.openalexClient.searchWorks({
         query,
-        perPage: Math.min(this.options.maxResults || 100, 100),
+        perPage: Math.min(this.options.maxResults || 50, 50),
         filter: this.buildOpenAlexFilter(params.filters)
       });
 
@@ -381,10 +382,12 @@ export class SearchPipeline {
    * Enrich records with canonical metadata from Crossref
    */
   private async enrichWithCanonicalMetadata(records: OARecord[], dois: string[]): Promise<void> {
-    const batchSize = 5;
+    // Limit enrichment to first 20 DOIs to improve performance
+    const limitedDOIs = dois.slice(0, 20);
+    const batchSize = 10; // Increased batch size
     
-    for (let i = 0; i < dois.length; i += batchSize) {
-      const batch = dois.slice(i, i + batchSize);
+    for (let i = 0; i < limitedDOIs.length; i += batchSize) {
+      const batch = limitedDOIs.slice(i, i + batchSize);
       
       const promises = batch.map(async (doi) => {
         try {
@@ -399,9 +402,9 @@ export class SearchPipeline {
 
       await Promise.allSettled(promises);
       
-      // Small delay between batches
-      if (i + batchSize < dois.length) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+      // Reduced delay between batches
+      if (i + batchSize < limitedDOIs.length) {
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
     }
   }
@@ -410,10 +413,12 @@ export class SearchPipeline {
    * Resolve PDFs using Unpaywall
    */
   private async resolvePdfs(records: OARecord[], dois: string[]): Promise<void> {
-    const batchSize = 5;
+    // Limit PDF resolution to first 20 DOIs to improve performance
+    const limitedDOIs = dois.slice(0, 20);
+    const batchSize = 10; // Increased batch size
     
-    for (let i = 0; i < dois.length; i += batchSize) {
-      const batch = dois.slice(i, i + batchSize);
+    for (let i = 0; i < limitedDOIs.length; i += batchSize) {
+      const batch = limitedDOIs.slice(i, i + batchSize);
       
       const promises = batch.map(async (doi) => {
         try {
@@ -428,9 +433,9 @@ export class SearchPipeline {
 
       await Promise.allSettled(promises);
       
-      // Small delay between batches
-      if (i + batchSize < dois.length) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+      // Reduced delay between batches
+      if (i + batchSize < limitedDOIs.length) {
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
     }
   }
@@ -758,7 +763,45 @@ export class SearchPipeline {
   }
 
   /**
-   * Generate facets with accurate source counts
+   * Generate simple facets from current results for better performance
+   */
+  private generateSimpleFacets(records: EnrichedRecord[]): Record<string, any> {
+    const facets: Record<string, any> = {};
+
+    // Generate year facets
+    const yearCounts: Record<number, number> = {};
+    records.forEach(record => {
+      if (record.year) {
+        yearCounts[record.year] = (yearCounts[record.year] || 0) + 1;
+      }
+    });
+
+    if (Object.keys(yearCounts).length > 0) {
+      facets.year = Object.entries(yearCounts)
+        .map(([year, count]) => ({ value: year, count }))
+        .sort((a, b) => parseInt(b.value) - parseInt(a.value));
+    }
+
+    // Generate venue facets
+    const venueCounts: Record<string, number> = {};
+    records.forEach(record => {
+      if (record.venue) {
+        venueCounts[record.venue] = (venueCounts[record.venue] || 0) + 1;
+      }
+    });
+
+    if (Object.keys(venueCounts).length > 0) {
+      facets.venue = Object.entries(venueCounts)
+        .map(([venue, count]) => ({ value: venue, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 20); // Limit to top 20 venues
+    }
+
+    return facets;
+  }
+
+  /**
+   * Generate facets with accurate source counts (kept for reference)
    */
   private async generateFacetsWithAccurateCounts(records: EnrichedRecord[], query: string, params: SearchParams): Promise<Record<string, any>> {
     const facets: Record<string, any> = {

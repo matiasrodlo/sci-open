@@ -62,13 +62,11 @@ export class AggregatorManager {
       yearTo: params.filters?.yearTo
     };
 
+    // Limit to fastest/most relevant aggregators for better performance
     const aggregators = [
-      { name: 'core', connector: this.coreConnector },
-      { name: 'openaire', connector: this.openaireConnector },
       { name: 'europepmc', connector: this.europepmcConnector },
       { name: 'ncbi', connector: this.ncbiConnector },
-      { name: 'opencitations', connector: this.opencitationsConnector },
-      { name: 'datacite', connector: this.dataciteConnector }
+      { name: 'core', connector: this.coreConnector }
     ];
 
     const results = await Promise.allSettled(
@@ -77,7 +75,7 @@ export class AggregatorManager {
         try {
           const records = await this.withTimeout(
             connector.search(searchParams),
-            10000 // 10 second timeout per aggregator
+            5000 // 5 second timeout per aggregator for faster response
           );
           const latency = Date.now() - startTime;
           
