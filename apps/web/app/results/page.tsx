@@ -42,6 +42,7 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
       yearTo: yearTo ? parseInt(yearTo) : undefined,
       oaStatus: oaStatus ? oaStatus.split(',') : undefined,
       venue: venue ? venue.split(',') : undefined,
+      openAccessOnly: true, // Always active
       // @ts-ignore - pass year as array for exact matching
       year: year ? year.split(',') : undefined,
     },

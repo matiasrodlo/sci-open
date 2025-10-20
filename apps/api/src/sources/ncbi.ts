@@ -18,6 +18,8 @@ export class NCBIConnector implements SourceConnector {
     yearTo?: number;
   }): Promise<OARecord[]> {
     const { doi, titleOrKeywords, yearFrom, yearTo } = params;
+    
+    console.log('NCBI search called with params:', { doi, titleOrKeywords, yearFrom, yearTo });
 
     try {
       let query = '';
@@ -27,6 +29,7 @@ export class NCBIConnector implements SourceConnector {
       } else if (titleOrKeywords) {
         query = titleOrKeywords;
       } else {
+        console.log('NCBI: No query provided');
         return [];
       }
 
@@ -49,7 +52,8 @@ export class NCBIConnector implements SourceConnector {
         usehistory: 'y',
       };
 
-      if (this.apiKey) {
+      // Only add API key if it's valid (not empty and not a placeholder)
+      if (this.apiKey && this.apiKey !== 'your_ncbi_api_key_here' && this.apiKey.trim() !== '') {
         searchParams.api_key = this.apiKey;
       }
 
@@ -60,8 +64,11 @@ export class NCBIConnector implements SourceConnector {
 
       const searchData = searchResponse.data;
       const pmids = searchData.esearchresult?.idlist || [];
+      
+      console.log('NCBI search response:', { query, pmids: pmids.length, firstFew: pmids.slice(0, 3) });
 
       if (pmids.length === 0) {
+        console.log('NCBI: No PMIDs found for query:', query);
         return [];
       }
 
@@ -73,7 +80,8 @@ export class NCBIConnector implements SourceConnector {
         rettype: 'abstract',
       };
 
-      if (this.apiKey) {
+      // Only add API key if it's valid (not empty and not a placeholder)
+      if (this.apiKey && this.apiKey !== 'your_ncbi_api_key_here' && this.apiKey.trim() !== '') {
         fetchParams.api_key = this.apiKey;
       }
 
@@ -85,17 +93,23 @@ export class NCBIConnector implements SourceConnector {
       return new Promise((resolve, reject) => {
         parseString(fetchResponse.data, (err, result) => {
           if (err) {
+            console.error('NCBI XML parsing error:', err);
             reject(err);
             return;
           }
 
           try {
             const articles = result?.PubmedArticleSet?.PubmedArticle || [];
+            console.log('NCBI fetch response:', { articlesCount: articles.length });
+            
             const records = articles
               .map((article: any) => this.normalizeArticle(article))
               .filter((record: OARecord | null): record is OARecord => record !== null);
+            
+            console.log('NCBI normalized records:', { total: records.length, sample: records[0]?.title });
             resolve(records);
           } catch (error) {
+            console.error('NCBI normalization error:', error);
             reject(error);
           }
         });
@@ -258,10 +272,11 @@ export class NCBIConnector implements SourceConnector {
 
     // Skip papers with empty or invalid titles
     if (!title || title.trim() === '') {
+      console.log('NCBI: Skipping paper with empty title, PMID:', pmid);
       return null;
     }
 
-    return {
+    const record = {
       id: `ncbi:${pmid}`,
       title: title.trim(),
       authors,
@@ -277,5 +292,9 @@ export class NCBIConnector implements SourceConnector {
       language,
       createdAt: new Date().toISOString(),
     };
+    
+    console.log('NCBI: Normalized record:', { pmid, title: title.substring(0, 50), hasAbstract: !!abstract, venue });
+    
+    return record;
   }
 }
