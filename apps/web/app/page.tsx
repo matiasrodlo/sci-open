@@ -12,7 +12,7 @@ export default function HomePage() {
             Open Access Research Explorer
           </h1>
               <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                Advanced search across millions of open-access papers from arXiv, CORE, Europe PMC, NCBI, and more
+                Advanced search across millions of open-access papers
               </p>
         </div>
         
