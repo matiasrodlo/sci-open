@@ -65,8 +65,7 @@ export class AggregatorManager {
     // Limit to fastest/most relevant aggregators for better performance
     const aggregators = [
       { name: 'europepmc', connector: this.europepmcConnector },
-      { name: 'ncbi', connector: this.ncbiConnector },
-      { name: 'core', connector: this.coreConnector }
+      { name: 'ncbi', connector: this.ncbiConnector }
     ];
 
     const results = await Promise.allSettled(
