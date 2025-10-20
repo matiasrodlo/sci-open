@@ -328,6 +328,13 @@ export class RecordMerger {
   /**
    * Deduplicate records by DOI
    */
+  deduplicate(records: OARecord[]): EnrichedRecord[] {
+    return this.deduplicateByDOI(records);
+  }
+
+  /**
+   * Deduplicate records by DOI
+   */
   deduplicateByDOI(records: OARecord[]): EnrichedRecord[] {
     const doiGroups = new Map<string, OARecord[]>();
     const nonDoiRecords: OARecord[] = [];

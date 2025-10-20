@@ -6,7 +6,7 @@ export type OARecord = {
     year?: number;
     venue?: string;
     abstract?: string;
-    source: "arxiv" | "core" | "europepmc" | "ncbi";
+    source: "arxiv" | "core" | "europepmc" | "ncbi" | "openaire";
     sourceId: string;
     oaStatus?: "preprint" | "accepted" | "published" | "other";
     bestPdfUrl?: string;
