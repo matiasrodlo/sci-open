@@ -16,9 +16,8 @@ dotenv.config({ path: path.resolve(__dirname_esm, '../../../.env') });
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
-import { SearchParams, SearchResponse, PaperResponse, OARecord } from '@open-access-explorer/shared';
+import { SearchParams, SearchResponse, OARecord } from '@open-access-explorer/shared';
 import { SearchPipeline } from './lib/search-pipeline';
-import { resolveBestPdf } from './lib/pdf';
 import { getSearchCache, getPaperCache, generateCacheKey } from './lib/cache';
 
 const fastify = Fastify({
@@ -90,39 +89,82 @@ fastify.get<{ Params: { id: string } }>('/api/paper/:id', async (request, reply)
     const paperCache = getPaperCache();
     
     // Check cache first
-    const cached = paperCache.get<PaperResponse>(cacheKey);
+    const cached = paperCache.get<OARecord>(cacheKey);
     if (cached) {
       fastify.log.info({ cacheKey, id }, 'Returning cached paper details');
       reply.header('Cache-Control', 'public, max-age=600');
       return cached;
     }
     
-    fastify.log.info({ cacheKey, id }, 'No cache hit, resolving paper details');
+    fastify.log.info({ cacheKey, id }, 'No cache hit, fetching paper details');
 
-    // Resolve PDF URL
-    const pdfResult = await resolveBestPdf(id);
+    // Parse the ID to extract source and sourceId
+    // ID format: source:sourceId or just sourceId
+    let source: string | undefined;
+    let sourceId: string = id;
     
-    const response: PaperResponse = {
-      record: {
-        id,
-        title: 'Paper Details',
-        authors: [],
-        source: 'unknown',
-        sourceId: id,
-        createdAt: new Date().toISOString()
-      },
-      pdf: pdfResult
-    };
+    if (id.includes(':')) {
+      const parts = id.split(':');
+      source = parts[0];
+      sourceId = parts.slice(1).join(':');
+    }
+
+    // Try to fetch from the appropriate source
+    let paper: OARecord | null = null;
+
+    if (source === 'arxiv' || (!source && sourceId.match(/^\d{4}\.\d{4,5}(v\d+)?$/))) {
+      const { ArxivConnector } = await import('./sources/arxiv');
+      const arxivConnector = new ArxivConnector();
+      const results = await arxivConnector.search({ q: sourceId, page: 1, pageSize: 1 });
+      paper = results[0] || null;
+    } else if (source === 'core') {
+      const { COREConnector } = await import('./sources/core');
+      const coreConnector = new COREConnector();
+      const results = await coreConnector.search({ q: `id:${sourceId}`, page: 1, pageSize: 1 });
+      paper = results[0] || null;
+    } else if (source === 'europepmc') {
+      const { EuropePMCConnector } = await import('./sources/europepmc');
+      const pmcConnector = new EuropePMCConnector();
+      const results = await pmcConnector.search({ q: sourceId, page: 1, pageSize: 1 });
+      paper = results[0] || null;
+    } else if (source === 'ncbi') {
+      const { NCBIConnector } = await import('./sources/ncbi');
+      const ncbiConnector = new NCBIConnector();
+      const results = await ncbiConnector.search({ q: sourceId, page: 1, pageSize: 1 });
+      paper = results[0] || null;
+    } else if (source === 'openaire') {
+      const { OpenAIREConnector } = await import('./sources/openaire');
+      const openaireConnector = new OpenAIREConnector();
+      const results = await openaireConnector.search({ q: sourceId, page: 1, pageSize: 1 });
+      paper = results[0] || null;
+    } else if (source === 'biorxiv' || source === 'medrxiv') {
+      const { BiorxivConnector } = await import('./sources/biorxiv');
+      const biorxivConnector = new BiorxivConnector();
+      const results = await biorxivConnector.search({ q: sourceId, page: 1, pageSize: 1 });
+      paper = results[0] || null;
+    } else if (source === 'doaj') {
+      const { DOAJConnector } = await import('./sources/doaj');
+      const doajConnector = new DOAJConnector();
+      const results = await doajConnector.search({ q: sourceId, page: 1, pageSize: 1 });
+      paper = results[0] || null;
+    }
+
+    // If no paper found, return 404
+    if (!paper) {
+      reply.code(404);
+      return { error: 'Paper not found' };
+    }
 
     // Cache the result
-    paperCache.set(cacheKey, response, 600000); // 10 minutes
+    paperCache.set(cacheKey, paper, 600000); // 10 minutes
     reply.header('Cache-Control', 'public, max-age=600');
     
-    fastify.log.info({ id, pdfStatus: pdfResult.status }, 'Paper details resolved');
+    fastify.log.info({ id, title: paper.title }, 'Paper details fetched');
     
-    return response;
+    return paper;
 
   } catch (error: any) {
+    fastify.log.error({ error: error.message }, 'Error fetching paper details');
     reply.code(500);
     return { error: error.message };
   }
