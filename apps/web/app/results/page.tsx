@@ -5,7 +5,7 @@ import { SortBar } from '@/components/SortBar';
 import { InfiniteResults } from '@/components/InfiniteResults';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { EmptyState } from '@/components/EmptyState';
-import { SearchHelp } from '@/components/SearchHelp';
+import { ExportButton } from '@/components/ExportButton';
 import { searchPapers } from '@/lib/fetcher';
 import { SearchParams } from '@open-access-explorer/shared';
 
@@ -61,25 +61,28 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
     };
 
             return (
-              <div className="space-y-6">
+              <div className="space-y-8">
                 {/* Results Header */}
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h1 className="text-2xl font-bold">"{query}"</h1>
-                    <p className="text-muted-foreground">
-                      Found {results.total} papers
-                    </p>
+                <div className="border-b pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-baseline gap-3">
+                      <h1 className="text-xl font-semibold">{query}</h1>
+                      <span className="text-sm text-muted-foreground">
+                        {results.total.toLocaleString()} results
+                      </span>
+                    </div>
+                    <ExportButton results={results.hits} query={query} />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                   {/* Facets */}
                   <div className="lg:col-span-1">
                     <FacetPanel facets={results.facets} currentFilters={currentFilters} />
                   </div>
 
                   {/* Results */}
-                  <div className="lg:col-span-2 space-y-4">
+                  <div className="lg:col-span-3 space-y-6">
                     <SortBar />
                     <InfiniteResults 
                       initialResults={results.hits}
@@ -109,21 +112,14 @@ export default function ResultsPage({ searchParams }: ResultsPageProps) {
   const query = (searchParams.q as string) || '';
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Suspense fallback={<div className="h-14 bg-muted/20 rounded-lg animate-pulse" />}>
         <AdvancedSearchBar initialQuery={query} />
       </Suspense>
       
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-1 space-y-4">
-          <SearchHelp />
-        </div>
-        <div className="lg:col-span-3">
-          <Suspense key={searchKey} fallback={<LoadingSkeleton />}>
-            <ResultsContent searchParams={searchParams} />
-          </Suspense>
-        </div>
-      </div>
+      <Suspense key={searchKey} fallback={<LoadingSkeleton />}>
+        <ResultsContent searchParams={searchParams} />
+      </Suspense>
     </div>
   );
 }
