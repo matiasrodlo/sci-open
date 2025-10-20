@@ -169,6 +169,19 @@ export class OpenAIREConnector implements SourceConnector {
     } else if (descriptionData && typeof descriptionData === 'object' && '$' in descriptionData) {
       abstract = (descriptionData as any).$ || '';
     }
+    
+    // Clean up HTML/XML tags from abstract
+    if (abstract) {
+      abstract = abstract
+        .replace(/<[^>]*>/g, '') // Remove HTML/XML tags
+        .replace(/&lt;/g, '<')   // Decode HTML entities
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\s+/g, ' ')    // Normalize whitespace
+        .trim();
+    }
 
     // Extract year
     let year: number | undefined;
