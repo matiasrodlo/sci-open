@@ -121,116 +121,39 @@ export function SearchExamples({ onSearchExample }: SearchExamplesProps) {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-8">
-      <div className="text-center space-y-4">
-        <h2 className="text-3xl font-bold tracking-tight">Search Examples</h2>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Learn how to use advanced search features with these examples. Click any example to try it out.
+    <div className="w-full max-w-5xl mx-auto space-y-8">
+      <div className="text-center space-y-2">
+        <h2 className="text-2xl font-semibold tracking-tight">Example Searches</h2>
+        <p className="text-sm text-muted-foreground">
+          Click any example to try it out
         </p>
       </div>
 
-      <div className="grid gap-8">
-        {(['basic', 'advanced', 'expert'] as const).map(category => (
-          <div key={category} className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Badge className={CATEGORY_COLORS[category]}>
-                {CATEGORY_LABELS[category]}
-              </Badge>
-              <h3 className="text-xl font-semibold capitalize">{category} Search</h3>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {SEARCH_EXAMPLES.map((example, index) => (
+          <button
+            key={index}
+            onClick={() => onSearchExample(example.query, example.filters)}
+            className="group text-left p-4 border rounded-lg hover:border-foreground/20 transition-colors"
+          >
+            <div className="space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="text-sm font-medium group-hover:text-primary transition-colors">
+                  {example.title}
+                </h3>
+                <Badge variant="outline" className="text-xs shrink-0">
+                  {example.category}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                {example.description}
+              </p>
+              <code className="block text-xs bg-muted px-2 py-1 rounded break-all">
+                {example.query}
+              </code>
             </div>
-            
-            <div className="grid gap-4 md:grid-cols-2">
-              {getCategoryExamples(category).map((example, index) => (
-                <Card key={index} className="hover:shadow-md transition-shadow cursor-pointer group">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <CardTitle className="text-base font-medium group-hover:text-primary transition-colors">
-                          {example.title}
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                          {example.description}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          copyToClipboard(example.query, index);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        {copiedIndex === index ? (
-                          <Check className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent 
-                    className="pt-0 cursor-pointer"
-                    onClick={() => onSearchExample(example.query, example.filters)}
-                  >
-                    <div className="space-y-3">
-                      <div className="p-3 bg-muted rounded-lg">
-                        <code className="text-sm break-all">
-                          {example.query}
-                        </code>
-                      </div>
-                      
-                      {example.filters && (
-                        <div className="flex flex-wrap gap-1">
-                          {Object.entries(example.filters).map(([key, value]) => (
-                            <Badge key={key} variant="outline" className="text-xs">
-                              {key}: {Array.isArray(value) ? value.join(', ') : value.toString()}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                      
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Search className="h-3 w-3" />
-                        <span>Click to search</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
+          </button>
         ))}
-      </div>
-
-      <div className="text-center space-y-4">
-        <h3 className="text-xl font-semibold">Search Tips</h3>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 text-sm text-muted-foreground">
-          <div className="space-y-2">
-            <h4 className="font-medium text-foreground">Boolean Operators</h4>
-            <ul className="space-y-1">
-              <li>• <code>AND</code> - Both terms must be present</li>
-              <li>• <code>OR</code> - Either term can be present</li>
-              <li>• <code>NOT</code> - Exclude terms</li>
-            </ul>
-          </div>
-          <div className="space-y-2">
-            <h4 className="font-medium text-foreground">Field Search</h4>
-            <ul className="space-y-1">
-              <li>• <code>title:"phrase"</code> - Search in title</li>
-              <li>• <code>authors:"name"</code> - Search by author</li>
-              <li>• <code>venue:"journal"</code> - Search by journal</li>
-            </ul>
-          </div>
-          <div className="space-y-2">
-            <h4 className="font-medium text-foreground">Advanced Features</h4>
-            <ul className="space-y-1">
-              <li>• Use quotes for exact phrases</li>
-              <li>• Combine field searches with operators</li>
-              <li>• Use filters for precise results</li>
-            </ul>
-          </div>
-        </div>
       </div>
     </div>
   );

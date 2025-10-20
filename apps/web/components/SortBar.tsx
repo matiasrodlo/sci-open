@@ -28,28 +28,24 @@ export function SortBar() {
   ];
 
   return (
-    <div className="flex items-center justify-between mb-6">
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-muted-foreground">Sort by:</span>
-        <div className="flex gap-1">
-          {sortOptions.map((option) => {
-            const Icon = option.icon;
-            return (
-              <Button
-                key={option.value}
-                variant={currentSort === option.value ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => !option.disabled && updateSort(option.value)}
-                disabled={option.disabled}
-                className="h-8"
-                title={option.disabled ? 'Citation data not yet available' : undefined}
-              >
-                <Icon className="h-3 w-3 mr-1" />
-                {option.label}
-              </Button>
-            );
-          })}
-        </div>
+    <div className="flex items-center gap-3 pb-4 border-b">
+      <span className="text-xs text-muted-foreground uppercase tracking-wide">Sort:</span>
+      <div className="flex gap-2">
+        {sortOptions.map((option) => (
+          <button
+            key={option.value}
+            onClick={() => !option.disabled && updateSort(option.value)}
+            disabled={option.disabled}
+            className={`text-sm px-3 py-1 rounded transition-colors ${
+              currentSort === option.value
+                ? 'bg-foreground text-background'
+                : 'text-muted-foreground hover:text-foreground'
+            } ${option.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            title={option.disabled ? 'Citation data not yet available' : undefined}
+          >
+            {option.label}
+          </button>
+        ))}
       </div>
     </div>
   );

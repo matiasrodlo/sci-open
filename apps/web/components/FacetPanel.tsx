@@ -2,7 +2,6 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface FacetPanelProps {
   facets: Record<string, any>;
@@ -64,14 +63,14 @@ export function FacetPanel({ facets, currentFilters }: FacetPanelProps) {
   };
 
   return (
-    <div className="w-64 space-y-4">
+    <div className="space-y-6">
       {/* Sources */}
       {facets.source && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Sources</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <div>
+          <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
+            Sources
+          </h3>
+          <div className="space-y-2">
             {Object.entries(facets.source).map(([source, count]) => (
               <div key={source} className="flex items-center space-x-2">
                 <Checkbox
@@ -81,7 +80,7 @@ export function FacetPanel({ facets, currentFilters }: FacetPanelProps) {
                 />
                 <label
                   htmlFor={`source-${source}`}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer"
+                  className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer"
                 >
                   {getSourceLabel(source)}
                 </label>
@@ -90,17 +89,17 @@ export function FacetPanel({ facets, currentFilters }: FacetPanelProps) {
                 </span>
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Open Access Status */}
       {facets.oaStatus && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Open Access Status</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <div>
+          <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
+            Access Type
+          </h3>
+          <div className="space-y-2">
             {Object.entries(facets.oaStatus).map(([status, count]) => (
               <div key={status} className="flex items-center space-x-2">
                 <Checkbox
@@ -116,7 +115,7 @@ export function FacetPanel({ facets, currentFilters }: FacetPanelProps) {
                 />
                 <label
                   htmlFor={`oa-${status}`}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer"
+                  className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer"
                 >
                   {getOAStatusLabel(status)}
                 </label>
@@ -125,17 +124,17 @@ export function FacetPanel({ facets, currentFilters }: FacetPanelProps) {
                 </span>
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Years */}
       {facets.year && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Publication Year</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <div>
+          <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
+            Year
+          </h3>
+          <div className="space-y-2">
             {Object.entries(facets.year)
               .sort(([a], [b]) => parseInt(b) - parseInt(a))
               .slice(0, 10)
@@ -154,7 +153,7 @@ export function FacetPanel({ facets, currentFilters }: FacetPanelProps) {
                   />
                   <label
                     htmlFor={`year-${year}`}
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer"
+                    className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer"
                   >
                     {year}
                   </label>
@@ -163,17 +162,17 @@ export function FacetPanel({ facets, currentFilters }: FacetPanelProps) {
                   </span>
                 </div>
               ))}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Venues */}
       {facets.venue && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Venues</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <div>
+          <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
+            Venue
+          </h3>
+          <div className="space-y-2">
             {Object.entries(facets.venue)
               .sort(([, a], [, b]) => (b as number) - (a as number))
               .slice(0, 10)
@@ -192,7 +191,7 @@ export function FacetPanel({ facets, currentFilters }: FacetPanelProps) {
                   />
                   <label
                     htmlFor={`venue-${venue}`}
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 truncate cursor-pointer"
+                    className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 truncate cursor-pointer"
                     title={venue}
                   >
                     {venue}
@@ -202,8 +201,8 @@ export function FacetPanel({ facets, currentFilters }: FacetPanelProps) {
                   </span>
                 </div>
               ))}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
     </div>
   );
