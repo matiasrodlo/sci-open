@@ -187,7 +187,10 @@ export class SearchPipeline {
     
     // Step 6: Combine and deduplicate all results
     const allRecords = [...enrichedRecords, ...aggregatorRecords];
+    console.log(`Combined ${enrichedRecords.length} enriched + ${aggregatorRecords.length} aggregator records = ${allRecords.length} total`);
+    
     const deduplicatedRecords = this.recordMerger.deduplicate(allRecords);
+    console.log(`After deduplication: ${deduplicatedRecords.length} records`);
 
     return deduplicatedRecords;
   }
@@ -547,13 +550,48 @@ export class SearchPipeline {
         return records.sort((a, b) => (b.citationCount || 0) - (a.citationCount || 0));
       case 'relevance':
       default:
-        // Sort by score (completeness and quality)
-        return records.sort((a, b) => {
-          const scoreA = this.calculateRelevanceScore(a);
-          const scoreB = this.calculateRelevanceScore(b);
-          return scoreB - scoreA;
-        });
+        // Use round-robin mixing for diversity across sources
+        return this.mixResultsBySource(records);
     }
+  }
+
+  /**
+   * Mix results from different sources in round-robin fashion
+   * This ensures diversity rather than all results from one high-scoring source
+   */
+  private mixResultsBySource(records: EnrichedRecord[]): EnrichedRecord[] {
+    // Group records by source
+    const bySource = new Map<string, EnrichedRecord[]>();
+    for (const record of records) {
+      if (!bySource.has(record.source)) {
+        bySource.set(record.source, []);
+      }
+      bySource.get(record.source)!.push(record);
+    }
+
+    // Sort each source's records by relevance score
+    for (const [source, sourceRecords] of bySource) {
+      sourceRecords.sort((a, b) => {
+        const scoreA = this.calculateRelevanceScore(a);
+        const scoreB = this.calculateRelevanceScore(b);
+        return scoreB - scoreA;
+      });
+    }
+
+    // Round-robin merge
+    const mixed: EnrichedRecord[] = [];
+    const sources = Array.from(bySource.values());
+    let maxLength = Math.max(...sources.map(s => s.length));
+
+    for (let i = 0; i < maxLength; i++) {
+      for (const sourceRecords of sources) {
+        if (i < sourceRecords.length) {
+          mixed.push(sourceRecords[i]);
+        }
+      }
+    }
+
+    return mixed;
   }
 
   /**
@@ -653,7 +691,7 @@ export class SearchPipeline {
         const enrichedRecord: EnrichedRecord = {
           ...record,
           // Add aggregator-specific metadata
-          metadata: {
+          sourceMetadata: {
             source: result.source,
             latency: result.latency,
             enriched: false // Aggregator records are not enriched by default
@@ -661,9 +699,11 @@ export class SearchPipeline {
         };
 
         enrichedRecords.push(enrichedRecord);
+        console.log(`Added aggregator record: ${record.title} (DOI: ${record.doi || 'none'})`);
       }
     }
 
+    console.log(`Total aggregator records to merge: ${enrichedRecords.length}`);
     return enrichedRecords;
   }
 }
