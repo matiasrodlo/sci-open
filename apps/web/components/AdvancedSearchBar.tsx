@@ -265,7 +265,7 @@ export function AdvancedSearchBar({ initialQuery = '', onSearch }: AdvancedSearc
 
                 {/* Value */}
                 <Input
-                  placeholder={`Enter ${SEARCH_FIELDS.find(f => f.field === row.field)?.label.toLowerCase() || 'search term'}...`}
+                  placeholder={`Enter ${SEARCH_FIELDS.find(f => f.value === row.field)?.label.toLowerCase() || 'search term'}...`}
                   value={row.value}
                   onChange={(e) => updateRow(row.id, { value: e.target.value })}
                   onKeyDown={handleKeyDown}
