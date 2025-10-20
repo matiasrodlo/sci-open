@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { AdvancedSearchBar } from '@/components/AdvancedSearchBar';
 
 export default function HomePage() {
@@ -17,7 +18,9 @@ export default function HomePage() {
         </div>
         
         <div className="w-full max-w-3xl">
-          <AdvancedSearchBar />
+          <Suspense fallback={<div className="h-14 bg-muted/20 rounded-lg animate-pulse" />}>
+            <AdvancedSearchBar />
+          </Suspense>
         </div>
       </div>
 
