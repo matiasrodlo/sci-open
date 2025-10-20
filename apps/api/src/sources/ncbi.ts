@@ -91,7 +91,9 @@ export class NCBIConnector implements SourceConnector {
 
           try {
             const articles = result?.PubmedArticleSet?.PubmedArticle || [];
-            const records = articles.map((article: any) => this.normalizeArticle(article));
+            const records = articles
+              .map((article: any) => this.normalizeArticle(article))
+              .filter((record: OARecord | null): record is OARecord => record !== null);
             resolve(records);
           } catch (error) {
             reject(error);
@@ -131,8 +133,7 @@ export class NCBIConnector implements SourceConnector {
       pmid = String(pmidData);
     }
     
-    // Debug: log PMID extraction
-    console.log('PMID extraction:', { pmid, pmidStructure: medlineCitation?.PMID });
+    // PMID extraction completed
     
     // Extract authors
     const authors = [];
@@ -198,10 +199,40 @@ export class NCBIConnector implements SourceConnector {
         }
       }
     }
+    
+    // If no PMC ID found, this is likely a paywalled paper
+    if (!pmcId) {
+      oaStatus = 'other'; // Indicates not open access
+    }
 
     // Extract title
     const titleData = article?.ArticleTitle;
-    const title = Array.isArray(titleData) ? titleData[0] : titleData || '';
+    let title: string;
+    if (Array.isArray(titleData)) {
+      const firstTitle = titleData[0];
+      if (typeof firstTitle === 'string') {
+        title = firstTitle;
+      } else if (firstTitle?._) {
+        title = firstTitle._;
+      } else if (firstTitle) {
+        title = String(firstTitle);
+      } else {
+        title = '';
+      }
+    } else if (typeof titleData === 'string') {
+      title = titleData;
+    } else if (titleData?._) {
+      title = titleData._;
+    } else if (titleData) {
+      title = String(titleData);
+    } else {
+      title = '';
+    }
+    
+    // Ensure title is a clean string
+    if (title === '[object Object]' || title === 'undefined' || title === 'null') {
+      title = '';
+    }
 
     // Extract abstract
     const abstractData = article?.Abstract?.[0] || article?.Abstract;
@@ -225,9 +256,14 @@ export class NCBIConnector implements SourceConnector {
     const languageData = article?.Language;
     const language = Array.isArray(languageData) ? languageData[0] : (languageData || 'en');
 
+    // Skip papers with empty or invalid titles
+    if (!title || title.trim() === '') {
+      return null;
+    }
+
     return {
       id: `ncbi:${pmid}`,
-      title: typeof title === 'string' ? title : String(title || ''),
+      title: title.trim(),
       authors,
       year,
       venue,
