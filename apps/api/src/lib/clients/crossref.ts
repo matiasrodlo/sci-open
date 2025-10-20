@@ -176,4 +176,9 @@ export class CrossrefClient {
     
     return 'Custom License';
   }
+
+  // Helper method to extract citation count
+  static extractCitationCount(work: CrossrefWork): number | undefined {
+    return work['is-referenced-by-count'];
+  }
 }

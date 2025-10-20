@@ -13,6 +13,7 @@ export type OARecord = {
   landingPage?: string;       // canonical page
   topics?: string[];
   language?: string;
+  citationCount?: number;     // number of citations
   createdAt: string;          // iso
   updatedAt?: string;         // iso
 };

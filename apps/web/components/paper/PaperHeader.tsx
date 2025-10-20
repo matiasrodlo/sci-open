@@ -1,5 +1,5 @@
 import { OARecord } from '@open-access-explorer/shared';
-import { ExternalLink, Calendar, Users, BookOpen, Tag } from 'lucide-react';
+import { ExternalLink, Calendar, Users, BookOpen, Tag, Quote } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 
@@ -64,13 +64,22 @@ export function PaperHeader({ paper }: PaperHeaderProps) {
         </div>
       )}
 
-      {/* Venue and Year */}
+      {/* Venue, Year, and Citations */}
       <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
         {paper.venue && (
           <span className="italic">{paper.venue}</span>
         )}
         {paper.year && (
           <span className="font-medium">({paper.year})</span>
+        )}
+        {paper.citationCount !== undefined && paper.citationCount > 0 && (
+          <div className="flex items-center gap-1.5">
+            <Quote className="h-4 w-4" />
+            <span className="font-medium">{paper.citationCount.toLocaleString()}</span>
+            <span className="text-xs">
+              {paper.citationCount === 1 ? 'citation' : 'citations'}
+            </span>
+          </div>
         )}
         {paper.language && paper.language !== 'en' && (
           <Badge variant="outline" className="text-xs border-muted-foreground/20">
