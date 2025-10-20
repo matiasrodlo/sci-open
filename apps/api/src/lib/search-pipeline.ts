@@ -768,7 +768,7 @@ export class SearchPipeline {
   private generateSimpleFacets(records: EnrichedRecord[]): Record<string, any> {
     const facets: Record<string, any> = {};
 
-    // Generate year facets
+    // Generate year facets (format: {year: count})
     const yearCounts: Record<number, number> = {};
     records.forEach(record => {
       if (record.year) {
@@ -777,12 +777,10 @@ export class SearchPipeline {
     });
 
     if (Object.keys(yearCounts).length > 0) {
-      facets.year = Object.entries(yearCounts)
-        .map(([year, count]) => ({ value: year, count }))
-        .sort((a, b) => parseInt(b.value) - parseInt(a.value));
+      facets.year = yearCounts;
     }
 
-    // Generate venue facets
+    // Generate venue facets (format: {venue: count})
     const venueCounts: Record<string, number> = {};
     records.forEach(record => {
       if (record.venue) {
@@ -791,10 +789,7 @@ export class SearchPipeline {
     });
 
     if (Object.keys(venueCounts).length > 0) {
-      facets.venue = Object.entries(venueCounts)
-        .map(([venue, count]) => ({ value: venue, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 20); // Limit to top 20 venues
+      facets.venue = venueCounts;
     }
 
     return facets;
