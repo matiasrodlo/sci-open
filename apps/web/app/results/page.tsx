@@ -1,10 +1,11 @@
 import { Suspense } from 'react';
-import { SearchBar } from '@/components/SearchBar';
+import { AdvancedSearchBar } from '@/components/AdvancedSearchBar';
 import { FacetPanel } from '@/components/FacetPanel';
 import { SortBar } from '@/components/SortBar';
 import { InfiniteResults } from '@/components/InfiniteResults';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { EmptyState } from '@/components/EmptyState';
+import { SearchHelp } from '@/components/SearchHelp';
 import { searchPapers } from '@/lib/fetcher';
 import { SearchParams } from '@open-access-explorer/shared';
 
@@ -54,26 +55,41 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
     }
 
     const currentFilters = {
-      sources: sources ? sources.split(',') : ['arxiv', 'core', 'europepmc', 'ncbi'],
+      sources: sources ? sources.split(',') : ['arxiv', 'core', 'europepmc', 'ncbi', 'doaj'],
       yearFrom: yearFrom ? parseInt(yearFrom) : undefined,
       yearTo: yearTo ? parseInt(yearTo) : undefined,
     };
 
-    return (
-      <div className="space-y-6">
-        <div className="flex gap-6">
-          <FacetPanel facets={results.facets} currentFilters={currentFilters} />
-          <div className="flex-1">
-            <SortBar />
-            <InfiniteResults 
-              initialResults={results.hits}
-              initialTotal={results.total}
-              searchParams={searchParamsObj}
-            />
-          </div>
-        </div>
-      </div>
-    );
+            return (
+              <div className="space-y-6">
+                {/* Results Header */}
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h1 className="text-2xl font-bold">"{query}"</h1>
+                    <p className="text-muted-foreground">
+                      Found {results.total} papers
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Facets */}
+                  <div className="lg:col-span-1">
+                    <FacetPanel facets={results.facets} currentFilters={currentFilters} />
+                  </div>
+
+                  {/* Results */}
+                  <div className="lg:col-span-2 space-y-4">
+                    <SortBar />
+                    <InfiniteResults 
+                      initialResults={results.hits}
+                      initialTotal={results.total}
+                      searchParams={searchParamsObj}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
   } catch (error) {
     console.error('Search error:', error);
     return (
@@ -90,13 +106,24 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
 export default function ResultsPage({ searchParams }: ResultsPageProps) {
   // Create a unique key from search params to force re-render
   const searchKey = JSON.stringify(searchParams);
+  const query = (searchParams.q as string) || '';
   
   return (
     <div className="space-y-6">
-      <SearchBar />
-      <Suspense key={searchKey} fallback={<LoadingSkeleton />}>
-        <ResultsContent searchParams={searchParams} />
+      <Suspense fallback={<div className="h-14 bg-muted/20 rounded-lg animate-pulse" />}>
+        <AdvancedSearchBar initialQuery={query} />
       </Suspense>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-1 space-y-4">
+          <SearchHelp />
+        </div>
+        <div className="lg:col-span-3">
+          <Suspense key={searchKey} fallback={<LoadingSkeleton />}>
+            <ResultsContent searchParams={searchParams} />
+          </Suspense>
+        </div>
+      </div>
     </div>
   );
 }

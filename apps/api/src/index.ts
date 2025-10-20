@@ -1,12 +1,23 @@
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Load .env from workspace root
+// Handle both ESM (dev with tsx) and CommonJS (production build)
+let __dirname_esm: string;
+if (typeof __dirname === 'undefined') {
+  const __filename_esm = fileURLToPath(import.meta.url);
+  __dirname_esm = path.dirname(__filename_esm);
+} else {
+  __dirname_esm = __dirname;
+}
+dotenv.config({ path: path.resolve(__dirname_esm, '../../../.env') });
+
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { SearchParams, SearchResponse, PaperResponse, OARecord } from '@open-access-explorer/shared';
-import { TypesenseAdapter, MeilisearchAdapter, AlgoliaAdapter } from '@open-access-explorer/search';
-import { ArxivConnector } from './sources/arxiv';
-import { CoreConnector } from './sources/core';
-import { EuropePMCConnector } from './sources/europepmc';
-import { NCBIConnector } from './sources/ncbi';
+import { SearchPipeline } from './lib/search-pipeline';
 import { resolveBestPdf } from './lib/pdf';
 import { getSearchCache, getPaperCache, generateCacheKey } from './lib/cache';
 
@@ -24,77 +35,15 @@ fastify.register(cors, {
 
 fastify.register(helmet);
 
-// Initialize search adapter
-let searchAdapter: any;
-const searchBackend = process.env.SEARCH_BACKEND || 'typesense';
-
-switch (searchBackend) {
-  case 'typesense':
-    searchAdapter = new TypesenseAdapter({
-      host: process.env.TYPESENSE_HOST || 'localhost',
-      port: parseInt(process.env.TYPESENSE_PORT || '8108'),
-      protocol: process.env.TYPESENSE_PROTOCOL || 'http',
-      apiKey: process.env.TYPESENSE_API_KEY || 'xyz'
-    });
-    break;
-  case 'meili':
-    searchAdapter = new MeilisearchAdapter({
-      host: process.env.MEILI_HOST || 'http://localhost:7700',
-      apiKey: process.env.MEILI_MASTER_KEY || 'xyz'
-    });
-    break;
-  case 'algolia':
-    searchAdapter = new AlgoliaAdapter({
-      appId: process.env.ALGOLIA_APP_ID || '',
-      apiKey: process.env.ALGOLIA_API_KEY || ''
-    });
-    break;
-  default:
-    throw new Error(`Unsupported search backend: ${searchBackend}`);
-}
-
-// Initialize source connectors
-const arxivConnector = new ArxivConnector(process.env.ARXIV_BASE);
-const coreConnector = new CoreConnector(process.env.CORE_BASE, process.env.CORE_API_KEY || '');
-const europepmcConnector = new EuropePMCConnector(process.env.EUROPE_PMC_BASE);
-const ncbiConnector = new NCBIConnector(process.env.NCBI_EUTILS_BASE, process.env.NCBI_API_KEY);
-
-// Ensure search index exists
-searchAdapter.ensureIndex().catch(console.error);
-
-// Helper function to distribute results across sources
-function distributeResultsAcrossSources(results: any[], pageSize: number): any[] {
-  // Group results by source
-  const bySource = results.reduce((acc, result) => {
-    if (!acc[result.source]) acc[result.source] = [];
-    acc[result.source].push(result);
-    return acc;
-  }, {} as Record<string, any[]>);
-
-  const sources = Object.keys(bySource);
-  const distributed: any[] = [];
-  
-  // Round-robin distribution across sources
-  let sourceIndex = 0;
-  while (distributed.length < pageSize && sources.length > 0) {
-    const currentSource = sources[sourceIndex % sources.length];
-    const sourceResults = bySource[currentSource];
-    
-    if (sourceResults.length > 0) {
-      distributed.push(sourceResults.shift()!);
-    } else {
-      // Remove empty sources
-      sources.splice(sourceIndex % sources.length, 1);
-      if (sources.length === 0) break;
-      sourceIndex = sourceIndex % sources.length;
-      continue;
-    }
-    
-    sourceIndex++;
-  }
-  
-  return distributed;
-}
+// Initialize search pipeline
+const userAgent = `OpenAccessExplorer/1.0 (mailto:${process.env.UNPAYWALL_EMAIL || 'your-email@example.com'})`;
+const searchPipeline = new SearchPipeline({
+  userAgent,
+  maxResults: 100,
+  enableEnrichment: true,
+  enablePdfResolution: true,
+  enableCitations: false
+});
 
 // Search endpoint
 fastify.post<{ Body: SearchParams }>('/api/search', async (request, reply) => {
@@ -113,237 +62,27 @@ fastify.post<{ Body: SearchParams }>('/api/search', async (request, reply) => {
     
     fastify.log.info({ cacheKey, query: params.q }, 'No cache hit, performing fresh search');
 
-    let searchResult: { hits: any[]; facets: Record<string, any>; total: number } = { hits: [], facets: {}, total: 0 };
-
-    // Try search backend first, but gracefully handle failures
-    try {
-      searchResult = await searchAdapter.search({
-        q: params.q,
-        filters: params.filters,
-        page: params.page || 1,
-        pageSize: params.pageSize || 20,
-        sort: params.sort || 'relevance'
-      });
-    } catch (searchError) {
-      fastify.log.warn({ error: searchError }, 'Search backend unavailable, falling back to direct source queries');
-      // Continue with empty search result - we'll query sources directly
-    }
-
-    // Always try remote sources when we have a query (since search backend is not available)
-    if (params.q || params.doi) {
-      fastify.log.info({ query: params.q || params.doi }, 'Querying remote sources');
-      
-      const searchParams = {
-        titleOrKeywords: params.q,
-        doi: params.doi,
-        yearFrom: params.filters?.yearFrom,
-        yearTo: params.filters?.yearTo
-      };
-
-      const remoteResults = await Promise.allSettled([
-        arxivConnector.search(searchParams),
-        coreConnector.search(searchParams),
-        europepmcConnector.search(searchParams),
-        ncbiConnector.search(searchParams)
-      ]);
-
-      const allRemoteResults = remoteResults
-        .filter(result => result.status === 'fulfilled')
-        .flatMap(result => (result as PromiseFulfilledResult<any>).value);
-
-      // Debug: log the results from each source
-      const sourceNames = ['arxiv', 'core', 'europepmc', 'ncbi'];
-      remoteResults.forEach((result, index) => {
-        if (result.status === 'fulfilled') {
-          fastify.log.info({ source: sourceNames[index], count: result.value.length }, 'Source results');
-        } else {
-          fastify.log.warn({ source: sourceNames[index], error: result.reason }, 'Source failed');
-        }
-      });
-      
-      fastify.log.info({ 
-        totalBefore: allRemoteResults.length,
-        bySources: {
-          arxiv: allRemoteResults.filter(r => r.source === 'arxiv').length,
-          core: allRemoteResults.filter(r => r.source === 'core').length,
-          europepmc: allRemoteResults.filter(r => r.source === 'europepmc').length,
-          ncbi: allRemoteResults.filter(r => r.source === 'ncbi').length,
-        }
-      }, 'Results before deduplication');
-
-      // Deduplicate by DOI, but try to keep source diversity
-      // Group by DOI/title, then pick one representative from each group
-      const paperGroups = new Map<string, OARecord[]>();
-      
-      for (const record of allRemoteResults) {
-        let key: string;
-        if (record.doi) {
-          key = `doi:${record.doi}`;
-        } else {
-          key = `title:${record.title.toLowerCase()}`;
-        }
-        
-        if (!paperGroups.has(key)) {
-          paperGroups.set(key, []);
-        }
-        paperGroups.get(key)!.push(record);
-      }
-      
-      // For each group, prefer the first occurrence BUT ensure we have
-      // at least some representation from each source
-      const uniqueResults: OARecord[] = [];
-      const sourcePreference = ['arxiv', 'ncbi', 'europepmc', 'core'];
-      
-      for (const [key, group] of paperGroups.entries()) {
-        if (group.length === 1) {
-          uniqueResults.push(group[0]);
-        } else {
-          // Multiple sources have this paper - prefer in source order
-          // but keep the first one found
-          const sorted = group.sort((a, b) => {
-            const aIndex = sourcePreference.indexOf(a.source);
-            const bIndex = sourcePreference.indexOf(b.source);
-            return aIndex - bIndex;
-          });
-          uniqueResults.push(sorted[0]);
-        }
-      }
-      
-      fastify.log.info({ 
-        totalAfter: uniqueResults.length,
-        bySources: {
-          arxiv: uniqueResults.filter(r => r.source === 'arxiv').length,
-          core: uniqueResults.filter(r => r.source === 'core').length,
-          europepmc: uniqueResults.filter(r => r.source === 'europepmc').length,
-          ncbi: uniqueResults.filter(r => r.source === 'ncbi').length,
-        },
-        duplicateGroups: paperGroups.size,
-        totalRecords: allRemoteResults.length
-      }, 'Results after deduplication');
-
-      // Apply client-side filters
-      let filteredResults = uniqueResults;
-      
-      if (params.filters) {
-        // Filter by source
-        if (params.filters.source && params.filters.source.length > 0) {
-          filteredResults = filteredResults.filter(record => 
-            params.filters!.source!.includes(record.source)
-          );
-        }
-        
-        // Filter by specific years (if provided as array)
-        // @ts-ignore - year can be passed as string[] for exact matches
-        if (params.filters.year && Array.isArray(params.filters.year) && params.filters.year.length > 0) {
-          // @ts-ignore
-          const yearNumbers = params.filters.year.map((y: string) => parseInt(y));
-          filteredResults = filteredResults.filter(record => 
-            record.year && yearNumbers.includes(record.year)
-          );
-        }
-        // Otherwise filter by year range
-        else if (params.filters.yearFrom || params.filters.yearTo) {
-          filteredResults = filteredResults.filter(record => {
-            if (!record.year) return false;
-            if (params.filters!.yearFrom && record.year < params.filters!.yearFrom) return false;
-            if (params.filters!.yearTo && record.year > params.filters!.yearTo) return false;
-            return true;
-          });
-        }
-        
-        // Filter by oaStatus
-        if (params.filters.oaStatus && params.filters.oaStatus.length > 0) {
-          filteredResults = filteredResults.filter(record => 
-            record.oaStatus && params.filters!.oaStatus!.includes(record.oaStatus)
-          );
-        }
-        
-        // Filter by venue
-        if (params.filters.venue && params.filters.venue.length > 0) {
-          filteredResults = filteredResults.filter(record => 
-            record.venue && params.filters!.venue!.includes(record.venue)
-          );
-        }
-      }
-
-      // Sort results based on sort parameter
-      const sortedResults = [...filteredResults];
-      if (params.sort === 'date') {
-        sortedResults.sort((a, b) => {
-          const dateA = new Date(a.createdAt || a.updatedAt || 0).getTime();
-          const dateB = new Date(b.createdAt || b.updatedAt || 0).getTime();
-          return dateB - dateA; // Newest first
-        });
-      }
-      // For 'relevance' or default, keep original order from sources
-
-      // Add to search index asynchronously (if backend is available)
-      if (uniqueResults.length > 0) {
-        searchAdapter.upsertMany(uniqueResults).catch((error: any) => {
-          fastify.log.warn({ error }, 'Failed to index results');
-        });
-      }
-
-      // Distribute results across sources for better diversity
-      const pageSize = params.pageSize || 20;
-      const distributedResults = distributeResultsAcrossSources(sortedResults, pageSize);
-      
-      searchResult.hits = distributedResults;
-      searchResult.total = sortedResults.length;
-      
-      // Generate basic facets from ALL sorted results (not just the paginated ones)
-      searchResult.facets = {
-        source: sortedResults.reduce((acc, record) => {
-          acc[record.source] = (acc[record.source] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>),
-        year: sortedResults.reduce((acc, record) => {
-          if (record.year) {
-            acc[record.year] = (acc[record.year] || 0) + 1;
-          }
-          return acc;
-        }, {} as Record<string, number>),
-        oaStatus: sortedResults.reduce((acc, record) => {
-          if (record.oaStatus) {
-            acc[record.oaStatus] = (acc[record.oaStatus] || 0) + 1;
-          }
-          return acc;
-        }, {} as Record<string, number>),
-        venue: sortedResults.reduce((acc, record) => {
-          if (record.venue) {
-            acc[record.venue] = (acc[record.venue] || 0) + 1;
-          }
-          return acc;
-        }, {} as Record<string, number>)
-      };
-      
-      fastify.log.info({ 
-        totalResults: uniqueResults.length,
-        facets: searchResult.facets 
-      }, 'Generated facets from search results');
-    }
-
-    const response: SearchResponse = {
-      hits: searchResult.hits,
-      facets: searchResult.facets,
-      page: params.page || 1,
-      total: searchResult.total,
-      pageSize: params.pageSize || 20
-    };
+    // Use the new search pipeline
+    const searchResult = await searchPipeline.search(params);
 
     // Cache the result
-    searchCache.set(cacheKey, response);
-
+    searchCache.set(cacheKey, searchResult, 300000); // 5 minutes
     reply.header('Cache-Control', 'public, max-age=300');
-    return response;
-  } catch (error) {
-    fastify.log.error(error);
+    
+    fastify.log.info({ 
+      totalResults: searchResult.total,
+      query: params.q 
+    }, 'Search pipeline completed');
+    
+    return searchResult;
+
+  } catch (error: any) {
     reply.code(500);
-    return { error: 'Internal server error' };
+    return { error: error.message };
   }
 });
 
-// Paper endpoint
+// Paper details endpoint
 fastify.get<{ Params: { id: string } }>('/api/paper/:id', async (request, reply) => {
   try {
     const { id } = request.params;
@@ -353,121 +92,108 @@ fastify.get<{ Params: { id: string } }>('/api/paper/:id', async (request, reply)
     // Check cache first
     const cached = paperCache.get<PaperResponse>(cacheKey);
     if (cached) {
+      fastify.log.info({ cacheKey, id }, 'Returning cached paper details');
       reply.header('Cache-Control', 'public, max-age=600');
       return cached;
     }
-
-    // Try to find the record in search index first
-    let record: OARecord | undefined;
-    try {
-      const searchResult = await searchAdapter.search({
-        q: `id:${id}`,
-        pageSize: 1
-      });
-      record = searchResult.hits[0];
-    } catch (error) {
-      // If not found in index, create a record from the ID
-      const [source, sourceId] = id.split(':');
-      if (source && sourceId) {
-        // Create a basic record with known PDF URL
-        record = {
-          id,
-          source: source as OARecord['source'],
-          sourceId,
-          title: 'Unknown',
-          authors: [],
-          createdAt: new Date().toISOString()
-        };
-        
-        // Construct PDF URLs based on source
-        if (source === 'arxiv') {
-          // arXiv PDF URLs use the full ID including version (e.g., 2409.12922v1)
-          record.bestPdfUrl = `https://arxiv.org/pdf/${sourceId}`;
-          record.landingPage = `https://arxiv.org/abs/${sourceId}`;
-        } else if (source === 'europepmc') {
-          // Europe PMC PDF URLs
-          if (sourceId.startsWith('PMC')) {
-            record.bestPdfUrl = `https://europepmc.org/articles/${sourceId}?pdf=render`;
-          } else {
-            record.bestPdfUrl = `https://europepmc.org/article/MED/${sourceId}?pdf=render`;
-          }
-          record.landingPage = `https://europepmc.org/article/${sourceId}`;
-        }
-      }
-    }
-
-    if (!record) {
-      reply.code(404);
-      return { error: 'Paper not found' };
-    }
+    
+    fastify.log.info({ cacheKey, id }, 'No cache hit, resolving paper details');
 
     // Resolve PDF URL
-    let pdfUrl: string | null = null;
-    let pdfStatus: "ok" | "not_found" | "error" = "not_found";
-    
-    // For Europe PMC, always prefer the bestPdfUrl from the source
-    // These URLs with ?pdf=render work but don't validate as direct PDFs
-    if (record.source === 'europepmc' && record.bestPdfUrl) {
-      pdfUrl = record.bestPdfUrl;
-      pdfStatus = 'ok';
-    } 
-    // For other sources, try to validate the PDF
-    else {
-      pdfUrl = await resolveBestPdf(record);
-      
-      // If validation failed but we have a bestPdfUrl, use it anyway
-      if (!pdfUrl && record.bestPdfUrl) {
-        pdfUrl = record.bestPdfUrl;
-        pdfStatus = 'ok'; // Assume it's valid since it came from the source
-      } else if (pdfUrl) {
-        pdfStatus = 'ok';
-      }
-    }
+    const pdfResult = await resolveBestPdf(id);
     
     const response: PaperResponse = {
-      record,
-      pdf: {
-        url: pdfUrl || undefined,
-        status: pdfStatus
-      }
+      record: {
+        id,
+        title: 'Paper Details',
+        authors: [],
+        source: 'unknown',
+        sourceId: id,
+        createdAt: new Date().toISOString()
+      },
+      pdf: pdfResult
     };
 
     // Cache the result
-    paperCache.set(cacheKey, response);
-
+    paperCache.set(cacheKey, response, 600000); // 10 minutes
     reply.header('Cache-Control', 'public, max-age=600');
+    
+    fastify.log.info({ id, pdfStatus: pdfResult.status }, 'Paper details resolved');
+    
     return response;
-  } catch (error) {
-    fastify.log.error(error);
+
+  } catch (error: any) {
     reply.code(500);
-    return { error: 'Internal server error' };
+    return { error: error.message };
   }
 });
 
-// Health check
+// Health check endpoint
 fastify.get('/health', async (request, reply) => {
   return { status: 'ok', timestamp: new Date().toISOString() };
 });
 
-// Debug endpoint to test source connectors
+// Debug endpoint for testing sources
 fastify.get('/debug/sources', async (request, reply) => {
   try {
     const testParams = { titleOrKeywords: 'ai' };
     
-    const results = await Promise.allSettled([
-      arxivConnector.search(testParams),
-      europepmcConnector.search(testParams),
-      coreConnector.search(testParams),
-      ncbiConnector.search(testParams)
-    ]);
-
+    // Test the search pipeline
+    const result = await searchPipeline.search({
+      q: 'ai',
+      page: 1,
+      pageSize: 5
+    });
+    
     return {
-      arxiv: results[0].status === 'fulfilled' ? results[0].value.length : results[0].reason?.message,
-      europepmc: results[1].status === 'fulfilled' ? results[1].value.length : results[1].reason?.message,
-      core: results[2].status === 'fulfilled' ? results[2].value.length : results[2].reason?.message,
-      ncbi: results[3].status === 'fulfilled' ? results[3].value.length : results[3].reason?.message,
+      status: 'ok',
+      sources: Object.keys(result.facets.source || {}),
+      totalResults: result.total,
+      sampleResults: result.hits.slice(0, 3).map(hit => ({
+        id: hit.id,
+        title: hit.title,
+        source: hit.source,
+        doi: hit.doi
+      }))
     };
-  } catch (error) {
+  } catch (error: any) {
+    reply.code(500);
+    return { error: error.message };
+  }
+});
+
+// Debug endpoint for testing aggregators
+fastify.get('/debug/aggregators', async (request, reply) => {
+  try {
+    const { AggregatorManager } = await import('./lib/aggregators');
+    const aggregatorManager = new AggregatorManager();
+    
+    // Test aggregator search
+    const aggregatorResults = await aggregatorManager.searchAggregators({
+      q: 'machine learning',
+      page: 1,
+      pageSize: 3
+    });
+    
+    // Get aggregator stats
+    const stats = aggregatorManager.getAggregatorStats();
+    
+    return {
+      status: 'ok',
+      aggregators: stats,
+      results: aggregatorResults.map(result => ({
+        source: result.source,
+        recordCount: result.records.length,
+        latency: result.latency,
+        error: result.error,
+        sampleRecord: result.records[0] ? {
+          id: result.records[0].id,
+          title: result.records[0].title,
+          doi: result.records[0].doi
+        } : null
+      }))
+    };
+  } catch (error: any) {
     reply.code(500);
     return { error: error.message };
   }
