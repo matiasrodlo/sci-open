@@ -336,6 +336,7 @@ export class RecordMerger {
    * Deduplicate records by DOI
    */
   deduplicateByDOI(records: OARecord[]): EnrichedRecord[] {
+    console.log(`[Dedup] Starting with ${records.length} records`);
     const doiGroups = new Map<string, OARecord[]>();
     const nonDoiRecords: OARecord[] = [];
 
@@ -352,6 +353,8 @@ export class RecordMerger {
       }
     }
 
+    console.log(`[Dedup] ${doiGroups.size} DOI groups, ${nonDoiRecords.length} non-DOI records`);
+
     const mergedRecords: EnrichedRecord[] = [];
 
     // Merge DOI groups
@@ -364,6 +367,7 @@ export class RecordMerger {
       mergedRecords.push(this.enrichRecord(record));
     }
 
+    console.log(`[Dedup] Returning ${mergedRecords.length} merged records`);
     return mergedRecords;
   }
 }
