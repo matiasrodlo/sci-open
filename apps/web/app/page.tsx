@@ -19,15 +19,6 @@ export default function HomePage() {
         <div className="w-full max-w-3xl">
           <AdvancedSearchBar />
         </div>
-        
-        {/* Subtle Stats */}
-        <div className="flex items-center gap-8 text-sm text-muted-foreground">
-          <span>7+ sources</span>
-          <span>·</span>
-          <span>Millions of papers</span>
-          <span>·</span>
-          <span>100% free access</span>
-        </div>
       </div>
 
     </div>
