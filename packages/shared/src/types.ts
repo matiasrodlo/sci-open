@@ -24,6 +24,7 @@ export type SearchFilters = {
   yearTo?: number;
   oaStatus?: string[];
   venue?: string[];
+  openAccessOnly?: boolean;
 };
 
 export type SearchParams = {

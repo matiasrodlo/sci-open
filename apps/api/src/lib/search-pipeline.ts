@@ -615,36 +615,43 @@ export class SearchPipeline {
    * Apply search filters
    */
   private applyFilters(records: EnrichedRecord[], filters?: any): EnrichedRecord[] {
-    if (!filters) return records;
-
     return records.filter(record => {
       // Source filter
-      if (filters.source && filters.source.length > 0) {
+      if (filters?.source && filters.source.length > 0) {
         if (!filters.source.includes(record.source)) {
           return false;
         }
       }
 
       // Year filter
-      if (filters.yearFrom && record.year && record.year < filters.yearFrom) {
+      if (filters?.yearFrom && record.year && record.year < filters.yearFrom) {
         return false;
       }
-      if (filters.yearTo && record.year && record.year > filters.yearTo) {
+      if (filters?.yearTo && record.year && record.year > filters.yearTo) {
         return false;
       }
 
       // OA Status filter
-      if (filters.oaStatus && filters.oaStatus.length > 0) {
+      if (filters?.oaStatus && filters.oaStatus.length > 0) {
         if (!filters.oaStatus.includes(record.oaStatus)) {
           return false;
         }
       }
 
       // Venue filter
-      if (filters.venue && filters.venue.length > 0) {
+      if (filters?.venue && filters.venue.length > 0) {
         if (!record.venue || !filters.venue.includes(record.venue)) {
           return false;
         }
+      }
+
+      // Open Access + Downloadable filter (always active by default)
+      // Only show papers that are open access AND have a downloadable PDF
+      if (record.oaStatus !== 'published' && record.oaStatus !== 'preprint') {
+        return false;
+      }
+      if (!record.bestPdfUrl) {
+        return false;
       }
 
       return true;
