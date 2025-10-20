@@ -1,12 +1,8 @@
 'use client';
 
 import { AdvancedSearchBar } from '@/components/AdvancedSearchBar';
-import { SearchExamples } from '@/components/SearchExamples';
-import { Search, FileText, Zap, Globe, Database, Shield } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
-  const router = useRouter();
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -34,49 +30,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Features Section */}
-      <div className="border-t py-16 px-6">
-        <div className="max-w-5xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            <div className="space-y-3">
-              <h3 className="text-base font-semibold">Multi-Source Search</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Search across arXiv, CORE, Europe PMC, NCBI, bioRxiv, medRxiv, OpenAIRE, and PLOS simultaneously
-              </p>
-            </div>
-            <div className="space-y-3">
-              <h3 className="text-base font-semibold">Smart PDF Access</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Automatic PDF resolution with intelligent fallback chains for the best available version
-              </p>
-            </div>
-            <div className="space-y-3">
-              <h3 className="text-base font-semibold">Advanced Search</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Boolean operators, field-specific queries, and comprehensive filtering options
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Search Examples Section */}
-      <div className="border-t py-16 px-6">
-        <SearchExamples onSearchExample={(query, filters) => {
-          const params = new URLSearchParams();
-          params.set('q', query);
-          if (filters) {
-            Object.entries(filters).forEach(([key, value]) => {
-              if (Array.isArray(value)) {
-                params.set(key, value.join(','));
-              } else if (value !== undefined && value !== '') {
-                params.set(key, value.toString());
-              }
-            });
-          }
-          router.push(`/results?${params.toString()}`);
-        }} />
-      </div>
     </div>
   );
 }
