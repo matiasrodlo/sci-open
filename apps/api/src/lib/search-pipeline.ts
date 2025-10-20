@@ -85,11 +85,11 @@ export class SearchPipeline {
       const endIndex = startIndex + pageSize;
       const paginatedRecords = sortedRecords.slice(startIndex, endIndex);
 
-      // Step 5: Generate facets
-      const facets = this.generateFacets(sortedRecords);
-
-      // Step 6: Get total count (wait for it if not already resolved)
+      // Step 5: Get total count (wait for it if not already resolved)
       const totalCount = await totalCountPromise;
+
+      // Step 6: Generate facets with accurate source counts
+      const facets = await this.generateFacetsWithAccurateCounts(sortedRecords, normalizedQuery, params);
 
       const duration = Date.now() - startTime;
       console.log(`Search pipeline completed in ${duration}ms, found ${sortedRecords.length} results, total available: ${totalCount}`);
@@ -742,6 +742,94 @@ export class SearchPipeline {
     if (record.citationCount) score += Math.min(record.citationCount / 10, 10);
 
     return score;
+  }
+
+  /**
+   * Generate facets with accurate source counts
+   */
+  private async generateFacetsWithAccurateCounts(records: EnrichedRecord[], query: string, params: SearchParams): Promise<Record<string, any>> {
+    const facets: Record<string, any> = {
+      source: {},
+      year: {},
+      oaStatus: {},
+      venue: {}
+    };
+
+    // Get accurate source counts
+    const sourceCounts = await this.getSourceCounts(query, params);
+
+    // Use accurate source counts instead of fetched record counts
+    for (const [source, count] of Object.entries(sourceCounts)) {
+      if (count > 0) {
+        facets.source[source] = count;
+      }
+    }
+
+    // For other facets, use the fetched records but scale them proportionally
+    const totalFetched = records.length;
+    const totalAvailable = Object.values(sourceCounts).reduce((sum, count) => sum + count, 0);
+    // Use a more conservative scaling factor to avoid inflated numbers
+    const scaleFactor = totalAvailable > 0 ? Math.min(totalAvailable / totalFetched, 100) : 1;
+
+    for (const record of records) {
+      // Year facet (scaled)
+      if (record.year) {
+        const yearKey = record.year.toString();
+        const currentCount = facets.year[yearKey] || 0;
+        facets.year[yearKey] = Math.round(currentCount + scaleFactor);
+      }
+
+      // OA Status facet (scaled)
+      if (record.oaStatus) {
+        const currentCount = facets.oaStatus[record.oaStatus] || 0;
+        facets.oaStatus[record.oaStatus] = Math.round(currentCount + scaleFactor);
+      }
+
+      // Venue facet (scaled)
+      if (record.venue) {
+        const currentCount = facets.venue[record.venue] || 0;
+        facets.venue[record.venue] = Math.round(currentCount + scaleFactor);
+      }
+    }
+
+    return facets;
+  }
+
+  /**
+   * Get accurate source counts
+   */
+  private async getSourceCounts(query: string, params: SearchParams): Promise<Record<string, number>> {
+    const sourceCounts: Record<string, number> = {};
+
+    try {
+      // Get OpenAlex count
+      const openAlexCount = await this.getOpenAlexCount(query, params);
+      if (openAlexCount > 0) {
+        sourceCounts['openalex'] = openAlexCount;
+      }
+
+      // Get Crossref count
+      const crossrefCount = await this.getCrossrefCount(query, params);
+      if (crossrefCount > 0) {
+        sourceCounts['crossref'] = crossrefCount;
+      }
+
+      // Get aggregator counts
+      const aggregatorCounts = await this.getAggregatorCounts(query, params);
+      const aggregatorSources = ['core', 'europepmc', 'ncbi', 'openaire', 'datacite'];
+      
+      aggregatorCounts.forEach((count, index) => {
+        if (count > 0 && aggregatorSources[index]) {
+          sourceCounts[aggregatorSources[index]] = count;
+        }
+      });
+
+      console.log('Source counts:', sourceCounts);
+      return sourceCounts;
+    } catch (error) {
+      console.error('Error getting source counts:', error);
+      return {};
+    }
   }
 
   /**
