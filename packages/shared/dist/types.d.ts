@@ -6,13 +6,14 @@ export type OARecord = {
     year?: number;
     venue?: string;
     abstract?: string;
-    source: "arxiv" | "core" | "europepmc" | "ncbi" | "openaire";
+    source: "arxiv" | "core" | "europepmc" | "ncbi" | "openaire" | "biorxiv" | "medrxiv" | "doaj" | "opencitations" | "datacite";
     sourceId: string;
     oaStatus?: "preprint" | "accepted" | "published" | "other";
     bestPdfUrl?: string;
     landingPage?: string;
     topics?: string[];
     language?: string;
+    citationCount?: number;
     createdAt: string;
     updatedAt?: string;
 };
