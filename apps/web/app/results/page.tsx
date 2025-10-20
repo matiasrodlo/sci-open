@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import { AdvancedSearchBar } from '@/components/AdvancedSearchBar';
 import { FacetPanel } from '@/components/FacetPanel';
 import { SortBar } from '@/components/SortBar';
-import { InfiniteResults } from '@/components/InfiniteResults';
+import { PaginatedResults } from '@/components/PaginatedResults';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { ExportButton } from '@/components/ExportButton';
@@ -26,15 +26,19 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
   const oaStatus = searchParams.oaStatus as string;
   const year = searchParams.year as string;
   const venue = searchParams.venue as string;
+  const page = searchParams.page as string;
 
   if (!query) {
     return <EmptyState type="no-query" />;
   }
 
+  const currentPage = parseInt(page as string) || 1;
+  const pageSize = 20; // Fixed page size like Web of Science
+
   const searchParamsObj: SearchParams = {
     q: query,
-    page: 1,
-    pageSize: 20,
+    page: currentPage,
+    pageSize: pageSize,
     sort: (sort as any) || 'relevance',
     filters: {
       source: sources ? sources.split(',') : undefined,
@@ -85,9 +89,11 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
                   {/* Results */}
                   <div className="lg:col-span-3 space-y-6">
                     <SortBar />
-                    <InfiniteResults 
+                    <PaginatedResults 
                       initialResults={results.hits}
                       initialTotal={results.total}
+                      initialPage={currentPage}
+                      initialPageSize={pageSize}
                       searchParams={searchParamsObj}
                     />
                   </div>
