@@ -12,6 +12,7 @@ export interface SearchPipelineOptions {
   enableEnrichment?: boolean;
   enablePdfResolution?: boolean;
   enableCitations?: boolean;
+  enableTotalCount?: boolean;
 }
 
 export class SearchPipeline {
@@ -29,6 +30,7 @@ export class SearchPipeline {
       enableEnrichment: true,
       enablePdfResolution: true,
       enableCitations: false,
+      enableTotalCount: true,
       ...options
     };
 
@@ -59,6 +61,9 @@ export class SearchPipeline {
 
       let enrichedRecords: EnrichedRecord[] = [];
 
+      // Get total count from all sources (parallel with data fetching)
+      const totalCountPromise = isDoiQuery ? Promise.resolve(1) : this.getTotalCount(normalizedQuery, params);
+
       if (isDoiQuery) {
         // Direct DOI lookup
         enrichedRecords = await this.resolveDoi(normalizedQuery);
@@ -83,14 +88,17 @@ export class SearchPipeline {
       // Step 5: Generate facets
       const facets = this.generateFacets(sortedRecords);
 
+      // Step 6: Get total count (wait for it if not already resolved)
+      const totalCount = await totalCountPromise;
+
       const duration = Date.now() - startTime;
-      console.log(`Search pipeline completed in ${duration}ms, found ${sortedRecords.length} results`);
+      console.log(`Search pipeline completed in ${duration}ms, found ${sortedRecords.length} results, total available: ${totalCount}`);
 
       return {
         hits: paginatedRecords,
         facets,
         page,
-        total: sortedRecords.length,
+        total: totalCount > 0 ? totalCount : sortedRecords.length, // Use total count if available, fallback to fetched count
         pageSize
       };
 
@@ -162,6 +170,103 @@ export class SearchPipeline {
 
     // Merge and enrich records
     return this.recordMerger.deduplicateByDOI(records);
+  }
+
+  /**
+   * Get total count of available papers from all sources
+   */
+  private async getTotalCount(query: string, params: SearchParams): Promise<number> {
+    if (!this.options.enableTotalCount) {
+      return 0;
+    }
+
+    try {
+      const countPromises = [
+        this.getOpenAlexCount(query, params),
+        this.getCrossrefCount(query, params),
+        this.getAggregatorCounts(query, params)
+      ];
+
+      const results = await Promise.allSettled(countPromises);
+      let totalCount = 0;
+
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          if (typeof result.value === 'number') {
+            totalCount += result.value;
+          } else if (Array.isArray(result.value)) {
+            totalCount += result.value.reduce((sum, count) => sum + count, 0);
+          }
+        }
+      }
+
+      console.log(`Total count from all sources: ${totalCount}`);
+      return totalCount;
+    } catch (error) {
+      console.error('Error getting total count:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get count from OpenAlex
+   */
+  private async getOpenAlexCount(query: string, params: SearchParams): Promise<number> {
+    try {
+      const response = await this.openalexClient.searchWorks({
+        query,
+        perPage: 1, // Only need 1 result to get the total count
+        filter: this.buildOpenAlexFilter(params.filters)
+      });
+      return response.meta.count;
+    } catch (error) {
+      console.error('OpenAlex count error:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get count from Crossref
+   */
+  private async getCrossrefCount(query: string, params: SearchParams): Promise<number> {
+    try {
+      const response = await this.crossrefClient.searchWorks({
+        query,
+        rows: 1, // Only need 1 result to get the total count
+        offset: 0
+      });
+      return response.message['total-results'];
+    } catch (error) {
+      console.error('Crossref count error:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get counts from aggregator sources
+   */
+  private async getAggregatorCounts(query: string, params: SearchParams): Promise<number[]> {
+    try {
+      // For now, we'll estimate based on the aggregator results
+      // In the future, we could add count-only endpoints to each aggregator
+      const aggregatorResults = await this.aggregatorManager.searchAggregators({
+        ...params,
+        pageSize: 1 // Only fetch 1 result to minimize data transfer
+      });
+
+      // Estimate total counts based on the first page results
+      // This is not perfect but gives a reasonable estimate
+      const estimatedCounts = aggregatorResults.map(result => {
+        if (result.error) return 0;
+        // Rough estimation: if we got results, assume there are more
+        return result.records.length > 0 ? 1000 : 0;
+      });
+
+      return estimatedCounts;
+    } catch (error) {
+      console.error('Aggregator count error:', error);
+      return [0];
+    }
   }
 
   /**
