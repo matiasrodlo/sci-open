@@ -15,6 +15,7 @@ export class ArxivConnector implements SourceConnector {
     yearFrom?: number;
     yearTo?: number;
   }): Promise<OARecord[]> {
+    console.log('🔍 arXiv search called with params:', params);
     const { doi, titleOrKeywords, yearFrom, yearTo } = params;
 
     try {
@@ -43,6 +44,9 @@ export class ArxivConnector implements SourceConnector {
         return [];
       }
 
+      console.log(`arXiv searching for: ${query}`);
+      const url = `${this.baseUrl}?search_query=${encodeURIComponent(query)}&start=0&max_results=50&sortBy=relevance&sortOrder=descending`;
+      console.log(`arXiv full URL: ${url}`);
       const response = await axios.get(this.baseUrl, {
         params: {
           search_query: query,
@@ -51,27 +55,39 @@ export class ArxivConnector implements SourceConnector {
           sortBy: 'relevance',
           sortOrder: 'descending'
         },
-        timeout: 5000
+        headers: {
+          'User-Agent': 'OpenAccessExplorer/1.0 (https://github.com/your-repo/open-access-explorer)'
+        },
+        timeout: 30000
       });
+      console.log(`arXiv response status: ${response.status}, data length: ${response.data.length}`);
+      console.log(`arXiv response preview: ${response.data.substring(0, 200)}...`);
 
       return new Promise((resolve, reject) => {
         parseString(response.data, (err, result) => {
           if (err) {
+            console.error('arXiv XML parsing error:', err);
             reject(err);
             return;
           }
+          console.log('arXiv XML parsed successfully, entries:', result?.feed?.entry?.length || 0);
+          console.log('arXiv XML structure:', JSON.stringify(result?.feed, null, 2).substring(0, 500));
 
           try {
             const entries = result?.feed?.entry || [];
+            console.log(`arXiv processing ${entries.length} entries`);
             const records: OARecord[] = entries.map((entry: any) => this.normalizeEntry(entry));
+            console.log(`arXiv normalized ${records.length} records`);
             resolve(records);
           } catch (error) {
+            console.error('arXiv normalization error:', error);
             reject(error);
           }
         });
       });
     } catch (error) {
       console.error('arXiv search error:', error);
+      console.error('arXiv error stack:', (error as Error).stack);
       return [];
     }
   }

@@ -37,7 +37,7 @@ export class CoreConnector implements SourceConnector {
 
       const searchParams: any = {
         q: query,
-        limit: 50,
+        limit: 100,
         offset: 0,
       };
 
@@ -55,14 +55,21 @@ export class CoreConnector implements SourceConnector {
         params: searchParams,
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
         },
-        timeout: 5000
+        timeout: 10000,
+        maxRedirects: 5,
       });
 
       const results = response.data?.results || [];
+      console.log(`CORE returned ${results.length} results for query: ${query}`);
       return results.map((result: any) => this.normalizeResult(result));
-    } catch (error) {
-      console.error('CORE search error:', error);
+    } catch (error: any) {
+      console.error('CORE search error:', error.message);
+      if (error.response) {
+        console.error('CORE error status:', error.response.status);
+        console.error('CORE error data:', JSON.stringify(error.response.data).substring(0, 200));
+      }
       return [];
     }
   }
@@ -80,11 +87,27 @@ export class CoreConnector implements SourceConnector {
     }
 
     // Find best PDF URL
+    // CORE's fileserver.core.ac.uk is unreliable, use reader URL instead
     let bestPdfUrl: string | undefined;
-    if (result.downloadUrl) {
-      bestPdfUrl = result.downloadUrl;
-    } else if (result.fullTextIdentifier) {
+    
+    // Priority 1: Use CORE reader (most reliable - shows paper with embedded PDF)
+    if (result.id) {
+      bestPdfUrl = `https://core.ac.uk/reader/${result.id}`;
+    }
+    
+    // Priority 2: Check for direct PDF from repository (if available)
+    if (!bestPdfUrl && result.fullTextIdentifier && !result.fullTextIdentifier.includes('fileserver.core.ac.uk')) {
       bestPdfUrl = result.fullTextIdentifier;
+    }
+    
+    // Priority 3: Check links array for non-CORE download links
+    const downloadLink = result.links?.find((link: any) => 
+      link.type === 'download' && 
+      !link.url.includes('core.ac.uk') && 
+      !link.url.includes('fileserver.core.ac.uk')
+    );
+    if (!bestPdfUrl && downloadLink?.url) {
+      bestPdfUrl = downloadLink.url;
     }
 
     return {

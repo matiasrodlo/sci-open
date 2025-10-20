@@ -30,6 +30,10 @@ export function InfiniteResults({
   const [hasMore, setHasMore] = useState(initialResults.length < initialTotal);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  
+  // Backend now filters to only include papers with PDFs
+  // No need for additional filtering here
+  const filteredResults = results;
 
   const loadMore = useCallback(async () => {
     if (loading || !hasMore) return;
@@ -42,15 +46,36 @@ export function InfiniteResults({
         page: nextPage,
       });
 
-      setResults(prev => [...prev, ...nextResults.hits]);
+      // Check if we got new results
+      if (nextResults.hits.length === 0) {
+        setHasMore(false);
+        setLoading(false);
+        return;
+      }
+
+      setResults(prev => {
+        // Deduplicate by ID to prevent showing same paper twice
+        const existingIds = new Set(prev.map(r => r.id));
+        const uniqueNewResults = nextResults.hits.filter(r => !existingIds.has(r.id));
+        
+        if (uniqueNewResults.length === 0) {
+          setHasMore(false);
+          return prev;
+        }
+        
+        const newResults = [...prev, ...uniqueNewResults];
+        // Update hasMore based on new total
+        setHasMore(newResults.length < initialTotal);
+        return newResults;
+      });
       setPage(nextPage);
-      setHasMore(results.length + nextResults.hits.length < initialTotal);
     } catch (error) {
       console.error('Error loading more results:', error);
+      setHasMore(false);
     } finally {
       setLoading(false);
     }
-  }, [loading, hasMore, page, searchParams, results.length, initialTotal]);
+  }, [loading, hasMore, page, searchParams, initialTotal]);
 
   useEffect(() => {
     // Reset state when search parameters change
@@ -91,9 +116,20 @@ export function InfiniteResults({
   return (
     <>
       <div className="space-y-4">
-        {results.map((record) => (
-          <ResultCard key={record.id} record={record} />
-        ))}
+        {filteredResults.length > 0 ? (
+          filteredResults.map((record) => (
+            <ResultCard key={record.id} record={record} />
+          ))
+        ) : (
+          <div className="text-center py-12 bg-muted/50 rounded-lg">
+            <p className="text-muted-foreground">
+              No free full-text PDFs available in these results.
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Try adjusting your search or filters.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Loading indicator */}
@@ -110,13 +146,13 @@ export function InfiniteResults({
       <div ref={loadMoreRef} className="h-4" />
 
       {/* Results counter */}
-      {!loading && (
+      {!loading && filteredResults.length > 0 && (
         <div className="text-center mt-8 pb-4">
           <p className="text-sm text-muted-foreground">
             {hasMore ? (
-              <>Showing {results.length} of {initialTotal} results</>
+              <>Showing {filteredResults.length} papers with free PDFs ({results.length} total results fetched)</>
             ) : (
-              <>All {results.length} results loaded</>
+              <>All {filteredResults.length} papers with free PDFs loaded</>
             )}
           </p>
         </div>

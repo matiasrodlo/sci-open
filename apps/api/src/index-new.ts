@@ -162,43 +162,6 @@ fastify.get('/debug/sources', async (request, reply) => {
   }
 });
 
-// Debug endpoint for testing aggregators
-fastify.get('/debug/aggregators', async (request, reply) => {
-  try {
-    const { AggregatorManager } = await import('./lib/aggregators');
-    const aggregatorManager = new AggregatorManager();
-    
-    // Test aggregator search
-    const aggregatorResults = await aggregatorManager.searchAggregators({
-      q: 'machine learning',
-      page: 1,
-      pageSize: 3
-    });
-    
-    // Get aggregator stats
-    const stats = aggregatorManager.getAggregatorStats();
-    
-    return {
-      status: 'ok',
-      aggregators: stats,
-      results: aggregatorResults.map(result => ({
-        source: result.source,
-        recordCount: result.records.length,
-        latency: result.latency,
-        error: result.error,
-        sampleRecord: result.records[0] ? {
-          id: result.records[0].id,
-          title: result.records[0].title,
-          doi: result.records[0].doi
-        } : null
-      }))
-    };
-  } catch (error: any) {
-    reply.code(500);
-    return { error: error.message };
-  }
-});
-
 // Start server
 const start = async () => {
   try {

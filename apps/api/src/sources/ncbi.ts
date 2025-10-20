@@ -163,17 +163,40 @@ export class NCBIConnector implements SourceConnector {
       year = parseInt(yearValue);
     }
 
-    // Check if it's open access (simplified check)
+    // Check if it's open access and extract PMC ID
     let oaStatus: 'preprint' | 'accepted' | 'published' | 'other' = 'other';
-    const pubmedData = article.PubmedData?.[0] || article.PubmedData;
+    let pmcId: string | undefined;
+    let bestPdfUrl: string | undefined;
+    
+    const pubmedData = pubmedArticle.PubmedData?.[0] || pubmedArticle.PubmedData;
     const articleIdList = pubmedData?.ArticleIdList?.[0] || pubmedData?.ArticleIdList;
     const articleIds = articleIdList?.ArticleId || [];
-    const hasPMC = Array.isArray(articleIds) && articleIds.some((id: any) => {
-      const idType = id.$?.IdType || id.IdType;
-      return idType === 'pmc';
-    });
-    if (hasPMC) {
-      oaStatus = 'published';
+    
+    // Extract PMC ID if available
+    if (Array.isArray(articleIds)) {
+      for (const id of articleIds) {
+        const idType = id.$?.IdType || id.IdType;
+        if (idType === 'pmc') {
+          // Extract the PMC ID value
+          let pmcValue: string | undefined;
+          if (typeof id === 'string') {
+            pmcValue = id;
+          } else if (id._) {
+            pmcValue = id._;
+          } else if (Array.isArray(id) && id.length > 0) {
+            pmcValue = id[0]._ || id[0];
+          }
+          
+          if (pmcValue) {
+            // PMC IDs can be like "PMC1234567" or just "1234567"
+            pmcId = pmcValue.startsWith('PMC') ? pmcValue : `PMC${pmcValue}`;
+            oaStatus = 'published';
+            // Construct the PDF URL for PMC papers
+            bestPdfUrl = `https://www.ncbi.nlm.nih.gov/pmc/articles/${pmcId}/pdf/`;
+            break;
+          }
+        }
+      }
     }
 
     // Extract title
@@ -212,6 +235,8 @@ export class NCBIConnector implements SourceConnector {
       source: 'ncbi',
       sourceId: pmid || '',
       oaStatus,
+      bestPdfUrl, // Only set if PMC ID was found
+      landingPage: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,
       topics: [],
       language,
       createdAt: new Date().toISOString(),
