@@ -669,14 +669,14 @@ export class SearchPipeline {
         return records.sort((a, b) => (b.citationCount || 0) - (a.citationCount || 0));
       case 'relevance':
       default:
-        // Use round-robin mixing for diversity across sources
+        // Group results by provider: OpenAlex first, then all other providers
         return this.mixResultsBySource(records);
     }
   }
 
   /**
-   * Mix results from different sources in round-robin fashion
-   * This ensures diversity rather than all results from one high-scoring source
+   * Group results by provider: OpenAlex first, then all other providers
+   * This shows all OpenAlex results first, followed by all other provider results
    */
   private mixResultsBySource(records: EnrichedRecord[]): EnrichedRecord[] {
     // Group records by source
@@ -697,20 +697,26 @@ export class SearchPipeline {
       });
     }
 
-    // Round-robin merge
-    const mixed: EnrichedRecord[] = [];
-    const sources = Array.from(bySource.values());
-    let maxLength = Math.max(...sources.map(s => s.length));
-
-    for (let i = 0; i < maxLength; i++) {
-      for (const sourceRecords of sources) {
-        if (i < sourceRecords.length) {
-          mixed.push(sourceRecords[i]);
-        }
+    // Group by provider priority: OpenAlex first, then all others
+    const openalexRecords = bySource.get('openalex') || [];
+    const otherRecords: EnrichedRecord[] = [];
+    
+    // Collect all non-OpenAlex records
+    for (const [source, sourceRecords] of bySource) {
+      if (source !== 'openalex') {
+        otherRecords.push(...sourceRecords);
       }
     }
 
-    return mixed;
+    // Sort other records by relevance score
+    otherRecords.sort((a, b) => {
+      const scoreA = this.calculateRelevanceScore(a);
+      const scoreB = this.calculateRelevanceScore(b);
+      return scoreB - scoreA;
+    });
+
+    // Return OpenAlex results first, then all other provider results
+    return [...openalexRecords, ...otherRecords];
   }
 
   /**
