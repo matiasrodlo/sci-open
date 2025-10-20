@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, ExternalLink, Eye } from 'lucide-react';
+import { Download, ExternalLink, Eye, Quote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { OARecord } from '@open-access-explorer/shared';
@@ -78,13 +78,19 @@ export function ResultCard({ record }: ResultCardProps) {
           </div>
         )}
         
-        {/* Venue and Year */}
+        {/* Venue, Year, and Citations */}
         <div className="flex items-center gap-3 text-sm text-muted-foreground">
           {record.venue && (
             <span className="italic">{record.venue}</span>
           )}
           {record.year && (
             <span>({record.year})</span>
+          )}
+          {record.citationCount !== undefined && record.citationCount > 0 && (
+            <div className="flex items-center gap-1">
+              <Quote className="h-3 w-3" />
+              <span>{record.citationCount.toLocaleString()}</span>
+            </div>
           )}
           {record.doi && (
             <span className="font-mono text-xs">DOI</span>

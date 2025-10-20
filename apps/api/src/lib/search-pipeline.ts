@@ -358,6 +358,7 @@ export class SearchPipeline {
       landingPage: work.doi ? `https://doi.org/${work.doi}` : undefined,
       topics,
       language: work.language || 'en',
+      citationCount: work.cited_by_count,
       createdAt: new Date().toISOString(),
     };
   }
@@ -474,6 +475,12 @@ export class SearchPipeline {
     
     if (!record.bestPdfUrl) {
       record.bestPdfUrl = CrossrefClient.extractPdfLink(crossrefWork);
+    }
+    
+    // Add citation count from Crossref
+    const citationCount = CrossrefClient.extractCitationCount(crossrefWork);
+    if (citationCount !== undefined) {
+      record.citationCount = citationCount;
     }
   }
 
