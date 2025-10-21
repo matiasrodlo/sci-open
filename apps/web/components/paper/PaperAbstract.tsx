@@ -14,7 +14,7 @@ export function PaperAbstract({ abstract }: PaperAbstractProps) {
   
   if (!abstract) {
     return (
-      <div className="pt-2 mt-2">
+      <div className="border-t pt-6 mt-6">
         <h2 className="text-lg font-semibold mb-4">Abstract</h2>
         <p className="text-sm text-muted-foreground italic">
           No abstract available for this paper.
@@ -29,7 +29,7 @@ export function PaperAbstract({ abstract }: PaperAbstractProps) {
     : abstract.slice(0, 500) + '...';
 
   return (
-    <div className="pt-2 mt-2">
+    <div className="border-t pt-6 mt-6">
       <h2 className="text-lg font-semibold mb-4">Abstract</h2>
       <div className="space-y-4">
         <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-line">

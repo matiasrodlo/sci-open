@@ -23,36 +23,27 @@ export function RelatedPapers({ topics, currentPaperId }: RelatedPapersProps) {
       }
 
       try {
-        // Create a more comprehensive search query using multiple topics
-        const searchQuery = topics.length > 1 
-          ? topics.slice(0, 3).join(' OR ') 
-          : topics[0];
-        
-        const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000';
-        const response = await fetch(`${apiBase}/api/search`, {
+        // Use the first topic to find related papers
+        const query = topics[0];
+        const response = await fetch('http://localhost:4000/api/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            q: searchQuery,
+            q: query,
             page: 1,
-            pageSize: 8, // Get more results to have better filtering
+            pageSize: 5,
             sort: 'relevance'
           }),
         });
 
         if (response.ok) {
           const data = await response.json();
-          // Filter out the current paper and ensure we have valid results
-          const filtered = data.hits
-            .filter((p: OARecord) => p.id !== currentPaperId && p.title && p.title.trim() !== '')
-            .slice(0, 4);
-          setRelatedPapers(filtered);
-        } else {
-          console.warn('Failed to fetch related papers:', response.status, response.statusText);
+          // Filter out the current paper
+          const filtered = data.hits.filter((p: OARecord) => p.id !== currentPaperId);
+          setRelatedPapers(filtered.slice(0, 4));
         }
       } catch (error) {
         console.error('Error fetching related papers:', error);
-        // Don't show error to user, just silently fail
       } finally {
         setLoading(false);
       }
@@ -78,14 +69,7 @@ export function RelatedPapers({ topics, currentPaperId }: RelatedPapersProps) {
   }
 
   if (relatedPapers.length === 0) {
-    return (
-      <div className="border-t pt-6 mt-6">
-        <h2 className="text-lg font-semibold mb-4">Related Papers</h2>
-        <p className="text-sm text-muted-foreground">
-          No related papers found for this topic.
-        </p>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -104,14 +88,8 @@ export function RelatedPapers({ topics, currentPaperId }: RelatedPapersProps) {
               </h4>
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>
-                  {paper.authors && paper.authors.length > 0 ? (
-                    <>
-                      {paper.authors.slice(0, 2).join('; ')}
-                      {paper.authors.length > 2 && ' et al.'}
-                    </>
-                  ) : (
-                    'Unknown authors'
-                  )}
+                  {paper.authors.slice(0, 2).join('; ')}
+                  {paper.authors.length > 2 && ' et al.'}
                 </span>
                 {paper.year && <span className="font-medium">({paper.year})</span>}
               </div>
