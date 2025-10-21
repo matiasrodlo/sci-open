@@ -34,8 +34,7 @@ function PaperContent() {
     // If not in cache, try to fetch from API
     async function fetchPaper() {
       try {
-        const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000';
-        const response = await fetch(`${apiBase}/api/paper/${encodeURIComponent(id)}`, {
+        const response = await fetch(`http://localhost:4000/api/paper/${encodeURIComponent(id)}`, {
           cache: 'no-store',
         });
         
