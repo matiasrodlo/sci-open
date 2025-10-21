@@ -51,127 +51,135 @@ export function ResultCard({ record }: ResultCardProps) {
 
   return (
     <article className="group py-6 border-b last:border-b-0">
-      <div className="space-y-3">
-        {/* Title */}
-        <div className="flex items-start justify-between gap-4">
-          <Link 
-            href={`/paper/${encodeURIComponent(record.id)}`} 
-            onClick={handlePaperClick} 
-            className="flex-1"
-          >
-            <h3 className="text-base font-semibold leading-tight group-hover:text-primary transition-colors cursor-pointer">
-              {record.title}
-            </h3>
-          </Link>
-        </div>
-        
-        {/* Authors */}
-        {record.authors && record.authors.length > 0 && (
-          <div className="text-sm text-foreground">
-            {record.authors.slice(0, 3).join('; ')}
-            {record.authors.length > 3 && (
-              <span className="text-muted-foreground"> et al.</span>
-            )}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Main Content Column */}
+        <div className="lg:col-span-2 space-y-3">
+          {/* Title */}
+          <div>
+            <Link 
+              href={`/paper/${encodeURIComponent(record.id)}`} 
+              onClick={handlePaperClick} 
+              className="block"
+            >
+              <h3 className="text-base font-semibold leading-tight group-hover:text-primary transition-colors cursor-pointer">
+                {record.title}
+              </h3>
+            </Link>
           </div>
-        )}
-        
-        {/* Venue, Year, and Citations */}
-        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          {record.venue && (
-            <span className="italic">{record.venue}</span>
-          )}
-          {record.year && (
-            <span>({record.year})</span>
-          )}
-          {record.citationCount !== undefined && record.citationCount > 0 && (
-            <div className="flex items-center gap-1">
-              <Quote className="h-3 w-3" />
-              <span>{record.citationCount.toLocaleString()}</span>
+          
+          {/* Authors */}
+          {record.authors && record.authors.length > 0 && (
+            <div className="text-sm text-foreground">
+              {record.authors.slice(0, 3).join('; ')}
+              {record.authors.length > 3 && (
+                <span className="text-muted-foreground"> et al.</span>
+              )}
             </div>
           )}
-          {record.doi && (
-            <span className="font-mono text-xs">DOI</span>
+          
+          {/* Venue, Year, and Citations */}
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            {record.venue && (
+              <span className="italic">{record.venue}</span>
+            )}
+            {record.year && (
+              <span>({record.year})</span>
+            )}
+            {record.citationCount !== undefined && record.citationCount > 0 && (
+              <div className="flex items-center gap-1">
+                <Quote className="h-3 w-3" />
+                <span>{record.citationCount.toLocaleString()}</span>
+              </div>
+            )}
+            {record.doi && (
+              <span className="font-mono text-xs">DOI</span>
+            )}
+          </div>
+          
+          {/* Topics */}
+          {record.topics && record.topics.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {record.topics.slice(0, 4).map((topic, index) => (
+                <span
+                  key={index}
+                  className="text-xs px-2 py-1 bg-muted/50 text-muted-foreground rounded"
+                >
+                  {topic}
+                </span>
+              ))}
+              {record.topics.length > 4 && (
+                <span className="text-xs px-2 py-1 text-muted-foreground">
+                  +{record.topics.length - 4}
+                </span>
+              )}
+            </div>
           )}
         </div>
         
-        {/* Abstract */}
-        {record.abstract && (
-          <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-            {record.abstract}
-          </p>
-        )}
-        
-        {/* Topics */}
-        {record.topics && record.topics.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {record.topics.slice(0, 4).map((topic, index) => (
-              <span
-                key={index}
-                className="text-xs px-2 py-1 bg-muted/50 text-muted-foreground rounded"
+        {/* Actions Column */}
+        <div className="lg:col-span-1 flex flex-col justify-start">
+          <div className="flex flex-col gap-2">
+            <Link href={`/paper/${encodeURIComponent(record.id)}`} onClick={handlePaperClick}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full h-8 text-xs hover:bg-muted justify-start"
               >
-                {topic}
-              </span>
-            ))}
-            {record.topics.length > 4 && (
-              <span className="text-xs px-2 py-1 text-muted-foreground">
-                +{record.topics.length - 4}
-              </span>
+                <Eye className="h-3 w-3 mr-1.5" />
+                View Details
+              </Button>
+            </Link>
+            
+            {record.bestPdfUrl && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDownload}
+                disabled={isDownloading}
+                className="w-full h-8 text-xs hover:bg-muted justify-start"
+              >
+                <Download className="h-3 w-3 mr-1.5" />
+                {isDownloading ? 'Downloading...' : 'Download PDF'}
+              </Button>
+            )}
+            
+            {record.landingPage && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.open(record.landingPage, '_blank')}
+                className="w-full h-8 text-xs hover:bg-muted justify-start"
+              >
+                <ExternalLink className="h-3 w-3 mr-1.5" />
+                View Source
+              </Button>
+            )}
+            
+            {record.doi && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.open(`https://doi.org/${record.doi}`, '_blank')}
+                className="w-full h-8 text-xs hover:bg-muted font-mono justify-start"
+              >
+                DOI
+              </Button>
             )}
           </div>
-        )}
-        
-        {/* Error Message */}
-        {downloadError && (
-          <p className="text-xs text-destructive">{downloadError}</p>
-        )}
-        
-        {/* Actions */}
-        <div className="flex items-center gap-3 pt-2">
-          <Link href={`/paper/${encodeURIComponent(record.id)}`} onClick={handlePaperClick}>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 text-xs hover:bg-muted"
-            >
-              <Eye className="h-3 w-3 mr-1.5" />
-              Details
-            </Button>
-          </Link>
           
-          {record.bestPdfUrl && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleDownload}
-              disabled={isDownloading}
-              className="h-8 text-xs hover:bg-muted"
-            >
-              <Download className="h-3 w-3 mr-1.5" />
-              {isDownloading ? 'Downloading...' : 'PDF'}
-            </Button>
+          {/* Abstract */}
+          {record.abstract && (
+            <div className="mt-4">
+              <h4 className="text-sm font-medium text-foreground mb-2">Abstract</h4>
+              <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
+                {record.abstract}
+              </p>
+            </div>
           )}
           
-          {record.landingPage && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => window.open(record.landingPage, '_blank')}
-              className="h-8 text-xs hover:bg-muted"
-            >
-              <ExternalLink className="h-3 w-3 mr-1.5" />
-              Source
-            </Button>
-          )}
-          
-          {record.doi && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => window.open(`https://doi.org/${record.doi}`, '_blank')}
-              className="h-8 text-xs hover:bg-muted font-mono"
-            >
-              DOI
-            </Button>
+          {/* Error Message */}
+          {downloadError && (
+            <p className="text-xs text-destructive mt-2">{downloadError}</p>
           )}
         </div>
       </div>
