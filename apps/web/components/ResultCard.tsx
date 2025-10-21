@@ -52,7 +52,7 @@ export function ResultCard({ record }: ResultCardProps) {
   return (
     <article className="group py-6 border-b last:border-b-0">
       <div className="space-y-3">
-        {/* Title and Source Badge */}
+        {/* Title */}
         <div className="flex items-start justify-between gap-4">
           <Link 
             href={`/paper/${encodeURIComponent(record.id)}`} 
@@ -63,9 +63,6 @@ export function ResultCard({ record }: ResultCardProps) {
               {record.title}
             </h3>
           </Link>
-          <Badge variant="outline" className="text-xs shrink-0 capitalize">
-            {record.source}
-          </Badge>
         </div>
         
         {/* Authors */}
