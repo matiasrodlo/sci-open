@@ -34,11 +34,8 @@ const getOAStatusColor = (status?: string) => {
 export function PaperHeader({ paper }: PaperHeaderProps) {
   return (
     <div className="bg-card border-b pb-8 space-y-5">
-      {/* Source and OA Status Badges */}
+      {/* OA Status and DOI Badges */}
       <div className="flex items-center gap-2 flex-wrap">
-        <Badge variant="outline" className="text-xs font-medium border-muted-foreground/20">
-          {paper.source.toUpperCase()}
-        </Badge>
         {paper.oaStatus && (
           <Badge variant="outline" className="text-xs font-medium border-green-500/20 text-green-700 dark:text-green-400">
             Open Access

@@ -26,11 +26,6 @@ export function PaperMetadata({ paper }: PaperMetadataProps) {
         Publication Details
       </h3>
       <div className="space-y-4 text-sm">
-        {/* Source */}
-        <div>
-          <div className="text-xs text-muted-foreground mb-1">Source</div>
-          <div className="text-sm text-foreground capitalize">{paper.source}</div>
-        </div>
 
         {/* DOI */}
         {paper.doi && (
