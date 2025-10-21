@@ -147,6 +147,38 @@ fastify.get<{ Params: { id: string } }>('/api/paper/:id', async (request, reply)
       const doajConnector = new DOAJConnector();
       const results = await doajConnector.search({ q: sourceId, page: 1, pageSize: 1 });
       paper = results[0] || null;
+    } else if (source === 'openalex') {
+      // Handle OpenAlex works directly via API
+      try {
+        const { OpenAlexClient } = await import('./lib/clients/openalex');
+        const openalexClient = new OpenAlexClient(userAgent);
+        const work = await openalexClient.getWork(sourceId);
+        
+        // Convert OpenAlex work to OARecord format
+        paper = {
+          id: work.id,
+          title: work.title,
+          authors: work.authorships?.map(a => a.author.display_name) || [],
+          abstract: work.abstract_inverted_index ? 
+            Object.entries(work.abstract_inverted_index)
+              .sort(([,a], [,b]) => a[0] - b[0])
+              .map(([word]) => word)
+              .join(' ') : undefined,
+          doi: work.doi,
+          year: work.publication_year,
+          venue: work.primary_location?.source?.display_name,
+          topics: work.concepts?.map(c => c.display_name) || [],
+          citationCount: work.cited_by_count,
+          oaStatus: work.open_access?.is_oa ? 'published' : undefined,
+          bestPdfUrl: work.open_access?.oa_url,
+          landingPage: work.id,
+          source: 'openalex',
+          language: work.language || 'en'
+        };
+      } catch (error) {
+        console.error('OpenAlex fetch error:', error);
+        paper = null;
+      }
     }
 
     // If no paper found, return 404
