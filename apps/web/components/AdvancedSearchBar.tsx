@@ -100,6 +100,7 @@ export function AdvancedSearchBar({ initialQuery = '', onSearch }: AdvancedSearc
       .join('');
   };
 
+
   const handleSearch = () => {
     const query = buildQuery();
     if (!query.trim()) return;
@@ -139,39 +140,35 @@ export function AdvancedSearchBar({ initialQuery = '', onSearch }: AdvancedSearc
                 Search Help
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-96" align="end">
-              <div className="space-y-3">
-                <h4 className="font-semibold text-sm">Search Syntax</h4>
-                <div className="space-y-2 text-xs">
+            <PopoverContent className="w-80" align="end">
+              <div className="space-y-4">
+                <h4 className="font-medium text-sm">Search Help</h4>
+                <div className="space-y-3 text-xs">
                   <div>
-                    <strong>Boolean Operators:</strong>
-                    <ul className="ml-4 mt-1 space-y-1 text-muted-foreground">
-                      <li>• AND: Both terms must appear</li>
-                      <li>• OR: Either term can appear</li>
-                      <li>• NOT: Exclude term</li>
-                    </ul>
+                    <div className="font-medium mb-2">Boolean Operators</div>
+                    <div className="space-y-1 text-muted-foreground">
+                      <div>AND • OR • NOT</div>
+                    </div>
                   </div>
                   <div>
-                    <strong>Phrase Search:</strong>
-                    <ul className="ml-4 mt-1 space-y-1 text-muted-foreground">
-                      <li>• Use quotes: "machine learning"</li>
-                    </ul>
+                    <div className="font-medium mb-2">Phrase Search</div>
+                    <div className="text-muted-foreground font-mono">"machine learning"</div>
                   </div>
                   <div>
-                    <strong>Field Search:</strong>
-                    <ul className="ml-4 mt-1 space-y-1 text-muted-foreground">
-                      <li>• title:quantum</li>
-                      <li>• author:"Einstein"</li>
-                      <li>• year:2024</li>
-                    </ul>
+                    <div className="font-medium mb-2">Field Search</div>
+                    <div className="space-y-1 text-muted-foreground font-mono">
+                      <div>title:quantum</div>
+                      <div>author:"Einstein"</div>
+                      <div>year:2024</div>
+                    </div>
                   </div>
                   <div>
-                    <strong>Examples:</strong>
-                    <ul className="ml-4 mt-1 space-y-1 text-muted-foreground">
-                      <li>• quantum AND computing</li>
-                      <li>• "deep learning" OR "neural networks"</li>
-                      <li>• title:CRISPR AND year:2024</li>
-                    </ul>
+                    <div className="font-medium mb-2">Examples</div>
+                    <div className="space-y-1 text-muted-foreground font-mono">
+                      <div>quantum AND computing</div>
+                      <div>"deep learning" OR "neural networks"</div>
+                      <div>title:CRISPR AND year:2024</div>
+                    </div>
                   </div>
                 </div>
               </div>

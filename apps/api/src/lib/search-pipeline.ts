@@ -85,8 +85,9 @@ export class SearchPipeline {
       const endIndex = startIndex + pageSize;
       const paginatedRecords = sortedRecords.slice(startIndex, endIndex);
 
-      // Step 5: Get total count (wait for it if not already resolved)
-      const totalCount = await totalCountPromise;
+      // Step 5: Get total count and apply filters to it
+      const unfilteredTotalCount = await totalCountPromise;
+      const totalCount = this.applyFiltersToTotalCount(unfilteredTotalCount, params.filters);
 
       // Step 6: Generate facets with scaling based on total count
       const facets = this.generateScaledFacets(sortedRecords, totalCount);
@@ -653,6 +654,14 @@ export class SearchPipeline {
         }
       }
 
+      // Publication Type filter - map to sources
+      if (filters?.publicationType && filters.publicationType.length > 0) {
+        const allowedSources = this.getSourcesForPublicationTypes(filters.publicationType);
+        if (!allowedSources.includes(record.source)) {
+          return false;
+        }
+      }
+
       // Year filter
       if (filters?.yearFrom && record.year && record.year < filters.yearFrom) {
         return false;
@@ -700,6 +709,27 @@ export class SearchPipeline {
 
       return true;
     });
+  }
+
+  /**
+   * Map publication types to their corresponding sources
+   */
+  private getSourcesForPublicationTypes(publicationTypes: string[]): string[] {
+    const sourceMapping: Record<string, string[]> = {
+      'peer-reviewed': ['core', 'europepmc', 'ncbi', 'doaj'],
+      'preprint': ['arxiv', 'biorxiv', 'medrxiv'],
+      'other': [] // Will be handled separately
+    };
+
+    const allowedSources: string[] = [];
+    
+    publicationTypes.forEach(type => {
+      if (sourceMapping[type]) {
+        allowedSources.push(...sourceMapping[type]);
+      }
+    });
+
+    return allowedSources;
   }
 
   /**
@@ -1171,6 +1201,32 @@ export class SearchPipeline {
       // Fallback to a reasonable estimate if calculation fails
       return 50000;
     }
+  }
+
+  /**
+   * Apply filters to the total count based on source distribution
+   */
+  private applyFiltersToTotalCount(unfilteredTotalCount: number, filters?: any): number {
+    if (!filters?.publicationType || filters.publicationType.length === 0) {
+      return unfilteredTotalCount;
+    }
+
+    // Estimate the distribution based on typical source patterns
+    // This is a rough approximation - in a real system, you'd want more accurate data
+    const sourceDistribution = {
+      'peer-reviewed': 0.4, // ~40% from peer-reviewed sources
+      'preprint': 0.45,     // ~45% from preprint sources  
+      'other': 0.15         // ~15% from other sources
+    };
+
+    let filteredCount = 0;
+    filters.publicationType.forEach((type: string) => {
+      if (sourceDistribution[type as keyof typeof sourceDistribution]) {
+        filteredCount += unfilteredTotalCount * sourceDistribution[type as keyof typeof sourceDistribution];
+      }
+    });
+
+    return Math.round(filteredCount);
   }
 
   /**

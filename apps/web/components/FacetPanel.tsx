@@ -10,9 +10,10 @@ interface FacetPanelProps {
     yearFrom?: number;
     yearTo?: number;
   };
+  totalResults?: number;
 }
 
-export function FacetPanel({ facets, currentFilters }: FacetPanelProps) {
+export function FacetPanel({ facets, currentFilters, totalResults = 0 }: FacetPanelProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -81,8 +82,119 @@ export function FacetPanel({ facets, currentFilters }: FacetPanelProps) {
     return labels[publisher] || publisher;
   };
 
+  // Calculate publication type counts based on source
+  const getPublicationTypeCounts = () => {
+    const sourceCounts = facets.source || {};
+    let peerReviewedCount = 0;
+    let preprintCount = 0;
+    let otherCount = 0;
+
+    // More accurate classification based on source characteristics
+    // Peer-reviewed sources: Academic databases and journals
+    const peerReviewedSources = ['core', 'europepmc', 'ncbi', 'doaj'];
+    
+    // Preprint sources: Pre-publication repositories
+    const preprintSources = ['arxiv', 'biorxiv', 'medrxiv'];
+
+    Object.entries(sourceCounts).forEach(([source, count]) => {
+      const countNum = typeof count === 'number' ? count : 0;
+      if (peerReviewedSources.includes(source)) {
+        peerReviewedCount += countNum;
+      } else if (preprintSources.includes(source)) {
+        preprintCount += countNum;
+      } else {
+        otherCount += countNum;
+      }
+    });
+
+    return {
+      'peer-reviewed': peerReviewedCount,
+      'preprint': preprintCount,
+      'other': otherCount
+    };
+  };
+
+  const publicationTypeCounts = getPublicationTypeCounts();
+
   return (
     <div className="space-y-6">
+      {/* Publication Type */}
+      <div>
+        <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
+          Publication Type
+        </h3>
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="peer-reviewed"
+              checked={searchParams.get('publicationType')?.split(',').includes('peer-reviewed') || false}
+              onCheckedChange={(checked: boolean) => {
+                const current = searchParams.get('publicationType')?.split(',') || [];
+                const newTypes = checked
+                  ? [...current, 'peer-reviewed']
+                  : current.filter(t => t !== 'peer-reviewed');
+                updateFilters({ publicationType: newTypes });
+              }}
+            />
+            <label
+              htmlFor="peer-reviewed"
+              className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer"
+            >
+              Peer Reviewed
+            </label>
+            <span className="text-xs text-muted-foreground">
+              {publicationTypeCounts['peer-reviewed']}
+            </span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="preprint"
+              checked={searchParams.get('publicationType')?.split(',').includes('preprint') || false}
+              onCheckedChange={(checked: boolean) => {
+                const current = searchParams.get('publicationType')?.split(',') || [];
+                const newTypes = checked
+                  ? [...current, 'preprint']
+                  : current.filter(t => t !== 'preprint');
+                updateFilters({ publicationType: newTypes });
+              }}
+            />
+            <label
+              htmlFor="preprint"
+              className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer"
+            >
+              Pre-print
+            </label>
+            <span className="text-xs text-muted-foreground">
+              {publicationTypeCounts['preprint']}
+            </span>
+          </div>
+          {publicationTypeCounts['other'] > 0 && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="other"
+                checked={searchParams.get('publicationType')?.split(',').includes('other') || false}
+                onCheckedChange={(checked: boolean) => {
+                  const current = searchParams.get('publicationType')?.split(',') || [];
+                  const newTypes = checked
+                    ? [...current, 'other']
+                    : current.filter(t => t !== 'other');
+                  updateFilters({ publicationType: newTypes });
+                }}
+              />
+              <label
+                htmlFor="other"
+                className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer"
+              >
+                Other
+              </label>
+              <span className="text-xs text-muted-foreground">
+                {publicationTypeCounts['other']}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Years */}
       {facets.year && (
         <div>
@@ -98,7 +210,7 @@ export function FacetPanel({ facets, currentFilters }: FacetPanelProps) {
                   <Checkbox
                     id={`year-${year}`}
                     checked={searchParams.get('year')?.split(',').includes(year) || false}
-                    onCheckedChange={(checked) => {
+                    onCheckedChange={(checked: boolean) => {
                       const current = searchParams.get('year')?.split(',') || [];
                       const newYears = checked
                         ? [...current, year]
@@ -136,7 +248,7 @@ export function FacetPanel({ facets, currentFilters }: FacetPanelProps) {
                   <Checkbox
                     id={`venue-${venue}`}
                     checked={searchParams.get('venue')?.split(',').includes(venue) || false}
-                    onCheckedChange={(checked) => {
+                    onCheckedChange={(checked: boolean) => {
                       const current = searchParams.get('venue')?.split(',') || [];
                       const newVenues = checked
                         ? [...current, venue]
@@ -175,7 +287,7 @@ export function FacetPanel({ facets, currentFilters }: FacetPanelProps) {
                   <Checkbox
                     id={`publisher-${publisher}`}
                     checked={searchParams.get('publisher')?.split(',').includes(publisher) || false}
-                    onCheckedChange={(checked) => {
+                    onCheckedChange={(checked: boolean) => {
                       const current = searchParams.get('publisher')?.split(',') || [];
                       const newPublishers = checked
                         ? [...current, publisher]
@@ -214,7 +326,7 @@ export function FacetPanel({ facets, currentFilters }: FacetPanelProps) {
                   <Checkbox
                     id={`topic-${topic}`}
                     checked={searchParams.get('topics')?.split(',').includes(topic) || false}
-                    onCheckedChange={(checked) => {
+                    onCheckedChange={(checked: boolean) => {
                       const current = searchParams.get('topics')?.split(',') || [];
                       const newTopics = checked
                         ? [...current, topic]
