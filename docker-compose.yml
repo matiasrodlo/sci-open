@@ -23,6 +23,20 @@ services:
     volumes:
       - meilisearch_data:/meili_data
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   api:
     build:
       context: .
@@ -37,8 +51,10 @@ services:
       - TYPESENSE_PORT=8108
       - TYPESENSE_PROTOCOL=http
       - TYPESENSE_API_KEY=xyz
+      - REDIS_URL=redis://redis:6379
     depends_on:
       - typesense
+      - redis
     volumes:
       - .:/app
       - /app/node_modules
@@ -46,3 +62,4 @@ services:
 volumes:
   typesense_data:
   meilisearch_data:
+  redis_data:
