@@ -18,7 +18,15 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { SearchParams, SearchResponse, OARecord } from '@open-access-explorer/shared';
 import { SearchPipeline } from './lib/search-pipeline';
-import { getSearchCache, getPaperCache, generateCacheKey } from './lib/cache';
+import { 
+  getSearchCache, 
+  getPaperCache, 
+  generateCacheKey,
+  searchCacheManager,
+  paperCacheManager,
+  cacheWarmer,
+  cacheManager
+} from './lib/cache';
 
 const fastify = Fastify({
   logger: {
@@ -44,59 +52,129 @@ const searchPipeline = new SearchPipeline({
   enableCitations: false
 });
 
-// Search endpoint
+// Search endpoint with advanced caching
 fastify.post<{ Body: SearchParams }>('/api/search', async (request, reply) => {
+  const startTime = Date.now();
+  
   try {
     const params = request.body;
-    const cacheKey = generateCacheKey('search', params);
-    const searchCache = getSearchCache();
     
-    // Check cache first
-    const cached = searchCache.get<SearchResponse>(cacheKey);
+    // Record query usage for cache warming
+    if (params.q) {
+      await cacheWarmer.recordQueryUsage(params.q);
+    }
+    
+    // Check advanced cache first
+    const cached = await searchCacheManager.getCachedSearchResults(params.q || '', params);
     if (cached) {
-      fastify.log.info({ cacheKey, query: params.q }, 'Returning cached search results');
+      const responseTime = Date.now() - startTime;
+      fastify.log.info({ 
+        query: params.q, 
+        responseTime,
+        totalResults: cached.total 
+      }, 'Returning cached search results');
       reply.header('Cache-Control', 'public, max-age=300');
+      reply.header('X-Cache-Hit', 'true');
+      reply.header('X-Response-Time', responseTime.toString());
       return cached;
     }
     
-    fastify.log.info({ cacheKey, query: params.q }, 'No cache hit, performing fresh search');
+    // Check for similar cached results
+    const similarCached = await searchCacheManager.getSimilarResults(params.q || '', params);
+    if (similarCached) {
+      const responseTime = Date.now() - startTime;
+      fastify.log.info({ 
+        query: params.q, 
+        responseTime,
+        totalResults: similarCached.total 
+      }, 'Returning similar cached search results');
+      reply.header('Cache-Control', 'public, max-age=300');
+      reply.header('X-Cache-Hit', 'similar');
+      reply.header('X-Response-Time', responseTime.toString());
+      return similarCached;
+    }
+    
+    fastify.log.info({ query: params.q }, 'No cache hit, performing fresh search');
 
-    // Use the new search pipeline
+    // Use the search pipeline
     const searchResult = await searchPipeline.search(params);
 
-    // Cache the result
-    searchCache.set(cacheKey, searchResult, 300000); // 5 minutes
+    // Cache the result using advanced cache manager
+    await searchCacheManager.cacheSearchResults(params.q || '', params, searchResult);
+    
+    // Cache facets separately for better performance
+    if (searchResult.facets) {
+      await searchCacheManager.cacheFacets(params.q || '', params, searchResult.facets);
+    }
+    
+    const responseTime = Date.now() - startTime;
     reply.header('Cache-Control', 'public, max-age=300');
+    reply.header('X-Cache-Hit', 'false');
+    reply.header('X-Response-Time', responseTime.toString());
     
     fastify.log.info({ 
       totalResults: searchResult.total,
-      query: params.q 
+      query: params.q,
+      responseTime
     }, 'Search pipeline completed');
     
     return searchResult;
 
   } catch (error: any) {
+    const responseTime = Date.now() - startTime;
+    fastify.log.error({ 
+      error: error.message, 
+      query: params.q,
+      responseTime 
+    }, 'Search error');
     reply.code(500);
     return { error: error.message };
   }
 });
 
-// Paper details endpoint
+// Paper details endpoint with advanced caching
 fastify.get<{ Params: { id: string } }>('/api/paper/:id', async (request, reply) => {
+  const startTime = Date.now();
+  
   try {
     const { id } = request.params;
-    const cacheKey = generateCacheKey('paper', { id });
-    const paperCache = getPaperCache();
     
-    // Check cache first
-    const cached = paperCache.get<OARecord>(cacheKey);
+    // Record paper access for cache warming
+    await cacheWarmer.recordPaperAccess(id, 'Unknown Title');
+    
+    // Check advanced cache first
+    const cached = await paperCacheManager.getCachedPaper(id);
     if (cached) {
-      fastify.log.info({ cacheKey, id }, 'Returning cached paper details');
+      const responseTime = Date.now() - startTime;
+      fastify.log.info({ 
+        id, 
+        responseTime,
+        title: cached.title 
+      }, 'Returning cached paper details');
       reply.header('Cache-Control', 'public, max-age=600');
+      reply.header('X-Cache-Hit', 'true');
+      reply.header('X-Response-Time', responseTime.toString());
       return cached;
     }
     
-    fastify.log.info({ cacheKey, id }, 'No cache hit, fetching paper details');
+    // Try to get by DOI if ID looks like a DOI
+    if (id.includes('10.')) {
+      const cachedByDoi = await paperCacheManager.getCachedPaperByDoi(id);
+      if (cachedByDoi) {
+        const responseTime = Date.now() - startTime;
+        fastify.log.info({ 
+          id, 
+          responseTime,
+          title: cachedByDoi.title 
+        }, 'Returning cached paper details by DOI');
+        reply.header('Cache-Control', 'public, max-age=600');
+        reply.header('X-Cache-Hit', 'doi');
+        reply.header('X-Response-Time', responseTime.toString());
+        return cachedByDoi;
+      }
+    }
+    
+    fastify.log.info({ id }, 'No cache hit, fetching paper details');
 
     // Parse the ID to extract source and sourceId
     // ID format: source:sourceId or just sourceId
@@ -187,11 +265,19 @@ fastify.get<{ Params: { id: string } }>('/api/paper/:id', async (request, reply)
       return { error: 'Paper not found' };
     }
 
-    // Cache the result
-    paperCache.set(cacheKey, paper, 600000); // 10 minutes
-    reply.header('Cache-Control', 'public, max-age=600');
+    // Cache the result using advanced cache manager
+    await paperCacheManager.cachePaperDetails(paper);
     
-    fastify.log.info({ id, title: paper.title }, 'Paper details fetched');
+    const responseTime = Date.now() - startTime;
+    reply.header('Cache-Control', 'public, max-age=600');
+    reply.header('X-Cache-Hit', 'false');
+    reply.header('X-Response-Time', responseTime.toString());
+    
+    fastify.log.info({ 
+      id, 
+      title: paper.title,
+      responseTime 
+    }, 'Paper details fetched and cached');
     
     return paper;
 
@@ -205,6 +291,51 @@ fastify.get<{ Params: { id: string } }>('/api/paper/:id', async (request, reply)
 // Health check endpoint
 fastify.get('/health', async (request, reply) => {
   return { status: 'ok', timestamp: new Date().toISOString() };
+});
+
+// Cache metrics endpoint
+fastify.get('/api/cache/metrics', async (request, reply) => {
+  try {
+    const metrics = cacheManager.getMetrics();
+    const warmingStats = cacheWarmer.getWarmingStats();
+    
+    return {
+      cache: metrics,
+      warming: warmingStats,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error: any) {
+    reply.code(500);
+    return { error: error.message };
+  }
+});
+
+// Cache warming endpoint
+fastify.post('/api/cache/warm', async (request, reply) => {
+  try {
+    await cacheWarmer.startWarming();
+    return { 
+      message: 'Cache warming started',
+      timestamp: new Date().toISOString()
+    };
+  } catch (error: any) {
+    reply.code(500);
+    return { error: error.message };
+  }
+});
+
+// Cache clear endpoint
+fastify.post('/api/cache/clear', async (request, reply) => {
+  try {
+    await cacheManager.clear();
+    return { 
+      message: 'Cache cleared',
+      timestamp: new Date().toISOString()
+    };
+  } catch (error: any) {
+    reply.code(500);
+    return { error: error.message };
+  }
 });
 
 // Debug endpoint for testing sources
@@ -273,12 +404,34 @@ fastify.get('/debug/aggregators', async (request, reply) => {
   }
 });
 
-// Start server
+// Start server with cache warming
 const start = async () => {
   try {
     const port = parseInt(process.env.PORT || '4000');
     await fastify.listen({ port, host: '0.0.0.0' });
     console.log(`Server listening on port ${port}`);
+    
+    // Start cache warming in background
+    console.log('Starting cache warming...');
+    cacheWarmer.startWarming().catch(err => {
+      console.error('Cache warming failed:', err);
+    });
+    
+    // Graceful shutdown
+    process.on('SIGINT', async () => {
+      console.log('Shutting down gracefully...');
+      await cacheManager.close();
+      await fastify.close();
+      process.exit(0);
+    });
+    
+    process.on('SIGTERM', async () => {
+      console.log('Shutting down gracefully...');
+      await cacheManager.close();
+      await fastify.close();
+      process.exit(0);
+    });
+    
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
