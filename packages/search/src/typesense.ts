@@ -83,7 +83,7 @@ export class TypesenseAdapter implements SearchAdapter {
       query_by: 'title,authors,abstract',
       per_page: pageSize,
       page,
-      facet_by: 'source,oaStatus,year,venue,topics',
+      facet_by: 'source,oaStatus,year,venue,topics,publisher',
       max_facet_values: 100,
     };
 

@@ -24,6 +24,8 @@ export type SearchFilters = {
   yearTo?: number;
   oaStatus?: string[];
   venue?: string[];
+  publisher?: string[];
+  topics?: string[];
   openAccessOnly?: boolean;
 };
 

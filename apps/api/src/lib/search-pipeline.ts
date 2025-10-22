@@ -61,8 +61,8 @@ export class SearchPipeline {
 
       let enrichedRecords: EnrichedRecord[] = [];
 
-      // Skip total count calculation for better performance
-      const totalCountPromise = Promise.resolve(1000000); // Use estimated count
+      // Calculate actual total count from all sources
+      const totalCountPromise = this.calculateTotalCount(normalizedQuery, params);
 
       if (isDoiQuery) {
         // Direct DOI lookup
@@ -88,8 +88,8 @@ export class SearchPipeline {
       // Step 5: Get total count (wait for it if not already resolved)
       const totalCount = await totalCountPromise;
 
-      // Step 6: Generate simple facets for better performance
-      const facets = this.generateSimpleFacets(sortedRecords);
+      // Step 6: Generate facets with scaling based on total count
+      const facets = this.generateScaledFacets(sortedRecords, totalCount);
 
       const duration = Date.now() - startTime;
       console.log(`Search pipeline completed in ${duration}ms, found ${sortedRecords.length} results, total available: ${totalCount}`);
@@ -366,7 +366,11 @@ export class SearchPipeline {
 
     // Enrich with Crossref and Unpaywall data
     if (this.options.enableEnrichment && dois.length > 0) {
+      console.log(`Starting Crossref enrichment for ${dois.length} DOIs:`, dois.slice(0, 5));
       await this.enrichWithCanonicalMetadata(records, dois);
+      console.log(`Crossref enrichment completed`);
+    } else {
+      console.log(`Crossref enrichment skipped - enableEnrichment: ${this.options.enableEnrichment}, dois.length: ${dois.length}`);
     }
 
     // Resolve PDFs
@@ -391,9 +395,13 @@ export class SearchPipeline {
       
       const promises = batch.map(async (doi) => {
         try {
+          console.log(`Attempting Crossref enrichment for DOI: ${doi}`);
           const crossrefWork = await this.crossrefClient.getWork(doi);
           if (crossrefWork) {
+            console.log(`Crossref enrichment successful for ${doi}, publisher: ${crossrefWork.publisher}`);
             this.mergeCrossrefData(records, crossrefWork);
+          } else {
+            console.log(`No Crossref data found for DOI: ${doi}`);
           }
         } catch (error) {
           console.error(`Crossref enrichment error for ${doi}:`, error);
@@ -449,11 +457,12 @@ export class SearchPipeline {
     const authors = work.authorships?.map(authorship => authorship.author.display_name) || [];
     const year = work.publication_year;
     const venue = work.primary_location?.source?.display_name;
+    const publisher = work.primary_location?.source?.host_organization_name;
     const abstract = work.abstract_inverted_index ? 
       OpenAlexClient.reconstructAbstract(work.abstract_inverted_index) : undefined;
     const topics = work.concepts?.map(c => c.display_name) || [];
 
-    return {
+    const record: OARecord = {
       id: `openalex:${work.id}`,
       doi: work.doi,
       title: work.title,
@@ -471,6 +480,13 @@ export class SearchPipeline {
       citationCount: work.cited_by_count,
       createdAt: new Date().toISOString(),
     };
+
+    // Add publisher if available
+    if (publisher) {
+      (record as any).publisher = publisher;
+    }
+
+    return record;
   }
 
   /**
@@ -559,7 +575,11 @@ export class SearchPipeline {
    */
   private mergeCrossrefData(records: OARecord[], crossrefWork: CrossrefWork): void {
     const record = records.find(r => r.doi === crossrefWork.DOI);
-    if (!record) return;
+    if (!record) {
+      console.log(`No matching record found for DOI: ${crossrefWork.DOI}`);
+      return;
+    }
+    console.log(`Merging Crossref data for DOI: ${crossrefWork.DOI}, publisher: ${crossrefWork.publisher}`);
 
     // Update record with Crossref data (prefer Crossref for canonical metadata)
     if (!record.title || record.title === 'Untitled') {
@@ -591,6 +611,11 @@ export class SearchPipeline {
     const citationCount = CrossrefClient.extractCitationCount(crossrefWork);
     if (citationCount !== undefined) {
       record.citationCount = citationCount;
+    }
+    
+    // Add publisher from Crossref
+    if (crossrefWork.publisher) {
+      (record as any).publisher = crossrefWork.publisher;
     }
   }
 
@@ -646,6 +671,20 @@ export class SearchPipeline {
       // Venue filter
       if (filters?.venue && filters.venue.length > 0) {
         if (!record.venue || !filters.venue.includes(record.venue)) {
+          return false;
+        }
+      }
+
+      // Publisher filter
+      if (filters?.publisher && filters.publisher.length > 0) {
+        if (!(record as any).publisher || !filters.publisher.includes((record as any).publisher)) {
+          return false;
+        }
+      }
+
+      // Topics filter
+      if (filters?.topics && filters.topics.length > 0) {
+        if (!record.topics || !record.topics.some(topic => filters.topics!.includes(topic))) {
           return false;
         }
       }
@@ -790,6 +829,39 @@ export class SearchPipeline {
 
     if (Object.keys(venueCounts).length > 0) {
       facets.venue = venueCounts;
+    }
+
+    // Generate publisher facets (format: {publisher: count})
+    const publisherCounts: Record<string, number> = {};
+    let publisherRecords = 0;
+    records.forEach(record => {
+      if ((record as any).publisher) {
+        publisherCounts[(record as any).publisher] = (publisherCounts[(record as any).publisher] || 0) + 1;
+        publisherRecords++;
+      }
+    });
+
+    console.log(`Publisher facet generation: ${publisherRecords} records with publisher data out of ${records.length} total records`);
+    console.log(`Publisher facets:`, Object.keys(publisherCounts));
+
+    if (Object.keys(publisherCounts).length > 0) {
+      facets.publisher = publisherCounts;
+    }
+
+    // Generate topics facets (format: {topic: count}) - flatten topics array
+    const topicCounts: Record<string, number> = {};
+    records.forEach(record => {
+      if (record.topics && record.topics.length > 0) {
+        record.topics.forEach(topic => {
+          if (topic && topic.trim()) {
+            topicCounts[topic] = (topicCounts[topic] || 0) + 1;
+          }
+        });
+      }
+    });
+
+    if (Object.keys(topicCounts).length > 0) {
+      facets.topics = topicCounts;
     }
 
     return facets;
@@ -956,5 +1028,124 @@ export class SearchPipeline {
 
     console.log(`Total aggregator records to merge: ${enrichedRecords.length}`);
     return enrichedRecords;
+  }
+
+  /**
+   * Generate facets with scaling based on total count
+   */
+  private generateScaledFacets(records: EnrichedRecord[], totalCount: number): Record<string, any> {
+    const facets: Record<string, any> = {
+      source: {},
+      year: {},
+      oaStatus: {},
+      venue: {},
+      publisher: {},
+      topics: {}
+    };
+
+    // Calculate scale factor based on total count vs fetched records
+    const fetchedCount = records.length;
+    const scaleFactor = totalCount > 0 && fetchedCount > 0 ? totalCount / fetchedCount : 1;
+
+    let publisherRecords = 0;
+    for (const record of records) {
+      // Source facet (scaled)
+      const sourceCount = Math.round((facets.source[record.source] || 0) + scaleFactor);
+      facets.source[record.source] = sourceCount;
+
+      // Year facet (scaled)
+      if (record.year) {
+        const yearKey = record.year.toString();
+        const yearCount = Math.round((facets.year[yearKey] || 0) + scaleFactor);
+        facets.year[yearKey] = yearCount;
+      }
+
+      // OA Status facet (scaled)
+      if (record.oaStatus) {
+        const oaCount = Math.round((facets.oaStatus[record.oaStatus] || 0) + scaleFactor);
+        facets.oaStatus[record.oaStatus] = oaCount;
+      }
+
+      // Venue facet (scaled)
+      if (record.venue) {
+        const venueCount = Math.round((facets.venue[record.venue] || 0) + scaleFactor);
+        facets.venue[record.venue] = venueCount;
+      }
+
+      // Publisher facet (scaled)
+      if ((record as any).publisher) {
+        const publisherCount = Math.round((facets.publisher[(record as any).publisher] || 0) + scaleFactor);
+        facets.publisher[(record as any).publisher] = publisherCount;
+        publisherRecords++;
+      }
+
+      // Topics facet (scaled) - flatten topics array
+      if (record.topics && record.topics.length > 0) {
+        record.topics.forEach(topic => {
+          if (topic && topic.trim()) {
+            const topicCount = Math.round((facets.topics[topic] || 0) + scaleFactor);
+            facets.topics[topic] = topicCount;
+          }
+        });
+      }
+    }
+
+    console.log(`Scaled publisher facets: ${publisherRecords} records with publisher data out of ${records.length} total records`);
+    console.log(`Scaled publisher facets:`, Object.keys(facets.publisher));
+
+    return facets;
+  }
+
+  /**
+   * Calculate total count from all sources
+   */
+  private async calculateTotalCount(query: string, params: SearchParams): Promise<number> {
+    try {
+      let totalCount = 0;
+
+      // Get OpenAlex count
+      const openAlexCount = await this.getOpenAlexCount(query, params);
+      if (openAlexCount > 0) {
+        totalCount += openAlexCount;
+      }
+
+      // Get Crossref count
+      const crossrefCount = await this.getCrossrefCount(query, params);
+      if (crossrefCount > 0) {
+        totalCount += crossrefCount;
+      }
+
+      // Get aggregator counts
+      const aggregatorCounts = await this.getAggregatorCounts(query, params);
+      for (const count of Object.values(aggregatorCounts)) {
+        if (count > 0) {
+          totalCount += count;
+        }
+      }
+
+      console.log(`Total count calculated: ${totalCount} (OpenAlex: ${openAlexCount}, Crossref: ${crossrefCount}, Aggregators: ${Object.values(aggregatorCounts).reduce((sum, count) => sum + count, 0)})`);
+      
+      return totalCount;
+    } catch (error) {
+      console.error('Error calculating total count:', error);
+      // Fallback to a reasonable estimate if calculation fails
+      return 50000;
+    }
+  }
+
+  /**
+   * Merge aggregator results into a single array of records
+   */
+  private mergeAggregatorResults(aggregatorResults: AggregatorResult[]): OARecord[] {
+    const allRecords: OARecord[] = [];
+    
+    for (const result of aggregatorResults) {
+      if (result.records && result.records.length > 0) {
+        allRecords.push(...result.records);
+        console.log(`Added ${result.records.length} records from ${result.source} aggregator`);
+      }
+    }
+    
+    return allRecords;
   }
 }

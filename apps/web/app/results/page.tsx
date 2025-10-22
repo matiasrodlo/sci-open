@@ -26,6 +26,8 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
   const oaStatus = searchParams.oaStatus as string;
   const year = searchParams.year as string;
   const venue = searchParams.venue as string;
+  const publisher = searchParams.publisher as string;
+  const topics = searchParams.topics as string;
   const page = searchParams.page as string;
 
   if (!query) {
@@ -46,6 +48,8 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
       yearTo: yearTo ? parseInt(yearTo) : undefined,
       oaStatus: oaStatus ? oaStatus.split(',') : undefined,
       venue: venue ? venue.split(',') : undefined,
+      publisher: publisher ? publisher.split(',') : undefined,
+      topics: topics ? topics.split(',') : undefined,
       openAccessOnly: true, // Always active
       // @ts-ignore - pass year as array for exact matching
       year: year ? year.split(',') : undefined,

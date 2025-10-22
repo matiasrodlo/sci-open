@@ -98,7 +98,7 @@ export class AlgoliaAdapter implements SearchAdapter {
       query: q,
       hitsPerPage: pageSize,
       page: page - 1, // Algolia uses 0-based pagination
-      facets: ['source', 'oaStatus', 'venue', 'topics', 'year'],
+      facets: ['source', 'oaStatus', 'venue', 'topics', 'year', 'publisher'],
       maxValuesPerFacet: 100,
     };
 
