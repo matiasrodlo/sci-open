@@ -48,6 +48,9 @@ export class NCBIConnector implements SourceConnector {
         }
       }
 
+      // Add open access filter - only return open access articles
+      query = `${query} AND "open access"[Filter]`;
+
       // First, search for PMIDs
       const searchParams: any = {
         db: 'pubmed',

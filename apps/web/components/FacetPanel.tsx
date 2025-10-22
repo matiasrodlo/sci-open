@@ -258,6 +258,7 @@ export function FacetPanel({ facets, currentFilters, totalResults = 0 }: FacetPa
   const topicsFacets = convertFacetArray(facets.topics);
   const sourceFacets = convertFacetArray(facets.source);
 
+
   // Apply scaling fixes to all facet categories
   const fixedYearFacets = detectAndFixScalingIssues(yearFacets, 'year');
   const fixedVenueFacets = detectAndFixScalingIssues(venueFacets, 'venue');

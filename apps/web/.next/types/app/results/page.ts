@@ -1,4 +1,4 @@
-// File: /Users/matiasrodlo/Documents/github/sci-open/apps/web/app/results/page.tsx
+// File: /Users/matiasrodlo/Documents/github/sciopen/apps/web/app/results/page.tsx
 import * as entry from '../../../../app/results/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
