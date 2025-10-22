@@ -709,8 +709,48 @@ export class SearchPipeline {
     switch (sort) {
       case 'date':
         return records.sort((a, b) => (b.year || 0) - (a.year || 0));
+      case 'date_asc':
+        return records.sort((a, b) => (a.year || 0) - (b.year || 0));
       case 'citations':
         return records.sort((a, b) => (b.citationCount || 0) - (a.citationCount || 0));
+      case 'citations_asc':
+        return records.sort((a, b) => (a.citationCount || 0) - (b.citationCount || 0));
+      case 'author':
+        return records.sort((a, b) => {
+          const authorA = a.authors?.[0]?.name || '';
+          const authorB = b.authors?.[0]?.name || '';
+          return authorA.localeCompare(authorB);
+        });
+      case 'author_desc':
+        return records.sort((a, b) => {
+          const authorA = a.authors?.[0]?.name || '';
+          const authorB = b.authors?.[0]?.name || '';
+          return authorB.localeCompare(authorA);
+        });
+      case 'venue':
+        return records.sort((a, b) => {
+          const venueA = a.venue || '';
+          const venueB = b.venue || '';
+          return venueA.localeCompare(venueB);
+        });
+      case 'venue_desc':
+        return records.sort((a, b) => {
+          const venueA = a.venue || '';
+          const venueB = b.venue || '';
+          return venueB.localeCompare(venueA);
+        });
+      case 'title':
+        return records.sort((a, b) => {
+          const titleA = a.title || '';
+          const titleB = b.title || '';
+          return titleA.localeCompare(titleB);
+        });
+      case 'title_desc':
+        return records.sort((a, b) => {
+          const titleA = a.title || '';
+          const titleB = b.title || '';
+          return titleB.localeCompare(titleA);
+        });
       case 'relevance':
       default:
         // Group results by provider: OpenAlex first, then all other providers

@@ -15,7 +15,7 @@ export declare class TypesenseAdapter implements SearchAdapter {
         filters?: Record<string, string[] | number[]>;
         page?: number;
         pageSize?: number;
-        sort?: "relevance" | "date" | "citations";
+        sort?: "relevance" | "date" | "date_asc" | "citations" | "citations_asc" | "author" | "author_desc" | "venue" | "venue_desc" | "title" | "title_desc";
     }): Promise<{
         hits: OARecord[];
         total: number;

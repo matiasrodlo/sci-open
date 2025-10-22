@@ -68,7 +68,7 @@ export class TypesenseAdapter implements SearchAdapter {
     filters?: Record<string, string[] | number[]>;
     page?: number;
     pageSize?: number;
-    sort?: "relevance" | "date" | "citations";
+    sort?: "relevance" | "date" | "date_asc" | "citations" | "citations_asc" | "author" | "author_desc" | "venue" | "venue_desc" | "title" | "title_desc";
   }): Promise<{ hits: OARecord[]; total: number; facets: Record<string, any> }> {
     const {
       q = '*',
@@ -115,9 +115,34 @@ export class TypesenseAdapter implements SearchAdapter {
       case 'date':
         searchParams.sort_by = 'year:desc,createdAt:desc';
         break;
+      case 'date_asc':
+        searchParams.sort_by = 'year:asc,createdAt:desc';
+        break;
       case 'citations':
         // Note: citations not available in our current schema
         searchParams.sort_by = 'createdAt:desc';
+        break;
+      case 'citations_asc':
+        // Note: citations not available in our current schema
+        searchParams.sort_by = 'createdAt:desc';
+        break;
+      case 'author':
+        searchParams.sort_by = 'authors:asc,createdAt:desc';
+        break;
+      case 'author_desc':
+        searchParams.sort_by = 'authors:desc,createdAt:desc';
+        break;
+      case 'venue':
+        searchParams.sort_by = 'venue:asc,createdAt:desc';
+        break;
+      case 'venue_desc':
+        searchParams.sort_by = 'venue:desc,createdAt:desc';
+        break;
+      case 'title':
+        searchParams.sort_by = 'title:asc,createdAt:desc';
+        break;
+      case 'title_desc':
+        searchParams.sort_by = 'title:desc,createdAt:desc';
         break;
       default:
         // relevance is default

@@ -82,7 +82,7 @@ class AlgoliaAdapter {
             query: q,
             hitsPerPage: pageSize,
             page: page - 1, // Algolia uses 0-based pagination
-            facets: ['source', 'oaStatus', 'venue', 'topics', 'year'],
+            facets: ['source', 'oaStatus', 'venue', 'topics', 'year', 'publisher'],
             maxValuesPerFacet: 100,
         };
         // Add filters
@@ -115,9 +115,34 @@ class AlgoliaAdapter {
             case 'date':
                 searchParams.customRanking = ['desc(year)', 'desc(createdAt)'];
                 break;
+            case 'date_asc':
+                searchParams.customRanking = ['asc(year)', 'desc(createdAt)'];
+                break;
             case 'citations':
                 // Note: citations not available in our current schema
                 searchParams.customRanking = ['desc(createdAt)'];
+                break;
+            case 'citations_asc':
+                // Note: citations not available in our current schema
+                searchParams.customRanking = ['desc(createdAt)'];
+                break;
+            case 'author':
+                searchParams.customRanking = ['asc(authors)', 'desc(createdAt)'];
+                break;
+            case 'author_desc':
+                searchParams.customRanking = ['desc(authors)', 'desc(createdAt)'];
+                break;
+            case 'venue':
+                searchParams.customRanking = ['asc(venue)', 'desc(createdAt)'];
+                break;
+            case 'venue_desc':
+                searchParams.customRanking = ['desc(venue)', 'desc(createdAt)'];
+                break;
+            case 'title':
+                searchParams.customRanking = ['asc(title)', 'desc(createdAt)'];
+                break;
+            case 'title_desc':
+                searchParams.customRanking = ['desc(title)', 'desc(createdAt)'];
                 break;
             default:
                 // relevance is default

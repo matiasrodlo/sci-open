@@ -23,6 +23,8 @@ export type SearchFilters = {
     yearTo?: number;
     oaStatus?: string[];
     venue?: string[];
+    publisher?: string[];
+    topics?: string[];
     openAccessOnly?: boolean;
 };
 export type SearchParams = {
@@ -31,7 +33,7 @@ export type SearchParams = {
     filters?: SearchFilters;
     page?: number;
     pageSize?: number;
-    sort?: "relevance" | "date" | "citations";
+    sort?: "relevance" | "date" | "date_asc" | "citations" | "citations_asc" | "author" | "author_desc" | "venue" | "venue_desc" | "title" | "title_desc";
 };
 export type SearchResponse = {
     hits: OARecord[];
@@ -55,7 +57,7 @@ export interface SearchAdapter {
         filters?: Record<string, string[] | number[]>;
         page?: number;
         pageSize?: number;
-        sort?: "relevance" | "date" | "citations";
+        sort?: "relevance" | "date" | "date_asc" | "citations" | "citations_asc" | "author" | "author_desc" | "venue" | "venue_desc" | "title" | "title_desc";
     }): Promise<{
         hits: OARecord[];
         total: number;
