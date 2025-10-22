@@ -28,6 +28,7 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
   const venue = searchParams.venue as string;
   const publisher = searchParams.publisher as string;
   const topics = searchParams.topics as string;
+  const publicationType = searchParams.publicationType as string;
   const page = searchParams.page as string;
 
   if (!query) {
@@ -50,6 +51,7 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
       venue: venue ? venue.split(',') : undefined,
       publisher: publisher ? publisher.split(',') : undefined,
       topics: topics ? topics.split(',') : undefined,
+      publicationType: publicationType ? publicationType.split(',') : undefined,
       openAccessOnly: true, // Always active
       // @ts-ignore - pass year as array for exact matching
       year: year ? year.split(',') : undefined,
@@ -93,7 +95,7 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                   {/* Facets */}
                   <div className="lg:col-span-1">
-                    <FacetPanel facets={results.facets} currentFilters={currentFilters} />
+                    <FacetPanel facets={results.facets} currentFilters={currentFilters} totalResults={results.total} />
                   </div>
 
                   {/* Results */}

@@ -25,6 +25,7 @@ export type SearchFilters = {
     venue?: string[];
     publisher?: string[];
     topics?: string[];
+    publicationType?: string[];
     openAccessOnly?: boolean;
 };
 export type SearchParams = {

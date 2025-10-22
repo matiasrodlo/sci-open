@@ -3,6 +3,7 @@ import { CoreConnector } from '../sources/core';
 import { OpenAIREConnector } from '../sources/openaire';
 import { EuropePMCConnector } from '../sources/europepmc';
 import { NCBIConnector } from '../sources/ncbi';
+import { ArxivConnector } from '../sources/arxiv';
 import { OpenCitationsConnector } from '../sources/opencitations';
 import { DataCiteConnector } from '../sources/datacite';
 
@@ -18,6 +19,7 @@ export class AggregatorManager {
   private openaireConnector: OpenAIREConnector;
   private europepmcConnector: EuropePMCConnector;
   private ncbiConnector: NCBIConnector;
+  private arxivConnector: ArxivConnector;
   private opencitationsConnector: OpenCitationsConnector;
   private dataciteConnector: DataCiteConnector;
 
@@ -38,6 +40,10 @@ export class AggregatorManager {
     this.ncbiConnector = new NCBIConnector(
       process.env.NCBI_EUTILS_BASE || 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils',
       process.env.NCBI_API_KEY
+    );
+    
+    this.arxivConnector = new ArxivConnector(
+      process.env.ARXIV_BASE || 'https://export.arxiv.org/api/query'
     );
     
     this.opencitationsConnector = new OpenCitationsConnector(
@@ -65,7 +71,8 @@ export class AggregatorManager {
     // Limit to fastest/most relevant aggregators for better performance
     const aggregators = [
       { name: 'europepmc', connector: this.europepmcConnector },
-      { name: 'ncbi', connector: this.ncbiConnector }
+      { name: 'ncbi', connector: this.ncbiConnector },
+      { name: 'arxiv', connector: this.arxivConnector }
     ];
 
     const results = await Promise.allSettled(
