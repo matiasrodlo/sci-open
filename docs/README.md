@@ -10,6 +10,7 @@ A comprehensive research discovery platform for open-access academic papers with
 - [**Deployment**](./deployment.md) - Production deployment guide
 - [**Development**](./development.md) - Development setup and guidelines
 - [**Configuration**](./configuration.md) - Environment and service configuration
+- [**HTTP Connection Pooling**](./http-connection-pooling.md) - Performance optimization with connection pooling
 
 ## 🚀 Quick Start
 

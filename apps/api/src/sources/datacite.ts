@@ -1,5 +1,7 @@
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import { OARecord, SourceConnector } from '@open-access-explorer/shared';
+import { getPooledClient } from '../lib/http-client-factory';
+import { getServiceConfig } from '../lib/http-pool-config';
 
 /**
  * DataCite API Integration
@@ -62,10 +64,13 @@ interface DataCiteResponse {
 export class DataCiteConnector implements SourceConnector {
   private baseUrl: string;
   private apiKey?: string;
+  private httpClient: AxiosInstance;
 
   constructor(baseUrl: string = 'https://api.datacite.org/dois', apiKey?: string) {
     this.baseUrl = baseUrl;
     this.apiKey = apiKey;
+    // Initialize pooled HTTP client with DataCite-specific configuration
+    this.httpClient = getPooledClient(baseUrl, getServiceConfig('datacite'));
   }
 
   async search(params: {
@@ -108,10 +113,9 @@ export class DataCiteConnector implements SourceConnector {
         headers['Authorization'] = `Bearer ${this.apiKey}`;
       }
 
-      const response = await axios.get<DataCiteResponse>(this.baseUrl, {
+      const response = await this.httpClient.get<DataCiteResponse>('', {
         params: searchParams,
-        headers,
-        timeout: 15000
+        headers
       });
       
       console.log(`DataCite response status: ${response.status}, total: ${response.data.meta.total}, results count: ${response.data.data.length}`);

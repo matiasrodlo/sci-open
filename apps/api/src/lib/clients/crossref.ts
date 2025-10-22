@@ -1,4 +1,6 @@
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
+import { getPooledClient } from '../http-client-factory';
+import { getServiceConfig } from '../http-pool-config';
 
 export interface CrossrefWork {
   DOI: string;
@@ -62,9 +64,12 @@ export interface CrossrefResponse {
 export class CrossrefClient {
   private baseUrl = 'https://api.crossref.org';
   private userAgent: string;
+  private httpClient: AxiosInstance;
 
   constructor(userAgent: string) {
     this.userAgent = userAgent;
+    // Initialize pooled HTTP client with Crossref-specific configuration
+    this.httpClient = getPooledClient(this.baseUrl, getServiceConfig('crossref'));
   }
 
   async searchWorks(params: {
@@ -99,13 +104,12 @@ export class CrossrefClient {
       searchParams.filter = filter;
     }
 
-    const response = await axios.get(`${this.baseUrl}/works`, {
+    const response = await this.httpClient.get('/works', {
       params: searchParams,
       headers: {
         'User-Agent': this.userAgent,
         'Accept': 'application/json'
-      },
-      timeout: 10000
+      }
     });
 
     return response.data;
@@ -113,12 +117,11 @@ export class CrossrefClient {
 
   async getWork(doi: string): Promise<CrossrefWork | null> {
     try {
-      const response = await axios.get(`${this.baseUrl}/works/${encodeURIComponent(doi)}`, {
+      const response = await this.httpClient.get(`/works/${encodeURIComponent(doi)}`, {
         headers: {
           'User-Agent': this.userAgent,
           'Accept': 'application/json'
-        },
-        timeout: 10000
+        }
       });
 
       return response.data.message;

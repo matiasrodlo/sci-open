@@ -27,6 +27,8 @@ import {
   cacheWarmer,
   cacheManager
 } from './lib/cache';
+import { httpPerformanceMonitor } from './lib/http-performance-monitor';
+import { httpPerformanceTester } from './lib/http-performance-test';
 
 const fastify = Fastify({
   logger: {
@@ -404,6 +406,136 @@ fastify.get('/debug/aggregators', async (request, reply) => {
   }
 });
 
+// HTTP Performance Monitoring Endpoints
+fastify.get('/api/performance/metrics', async (request, reply) => {
+  try {
+    const overall = httpPerformanceMonitor.getOverallPerformance();
+    return {
+      success: true,
+      data: overall,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error: any) {
+    reply.code(500);
+    return { error: error.message };
+  }
+});
+
+fastify.get('/api/performance/metrics/:service', async (request, reply) => {
+  try {
+    const { service } = request.params as { service: string };
+    const metrics = httpPerformanceMonitor.getCurrentMetrics(service);
+    
+    if (!metrics) {
+      reply.code(404);
+      return { error: `No metrics found for service: ${service}` };
+    }
+    
+    return {
+      success: true,
+      data: metrics,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error: any) {
+    reply.code(500);
+    return { error: error.message };
+  }
+});
+
+fastify.get('/api/performance/comparison/:service', async (request, reply) => {
+  try {
+    const { service } = request.params as { service: string };
+    const comparison = httpPerformanceMonitor.getPerformanceComparison(service);
+    
+    if (!comparison) {
+      reply.code(404);
+      return { error: `No comparison data found for service: ${service}` };
+    }
+    
+    return {
+      success: true,
+      data: comparison,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error: any) {
+    reply.code(500);
+    return { error: error.message };
+  }
+});
+
+fastify.get('/api/performance/report', async (request, reply) => {
+  try {
+    const report = httpPerformanceMonitor.generateReport();
+    return {
+      success: true,
+      data: { report },
+      timestamp: new Date().toISOString()
+    };
+  } catch (error: any) {
+    reply.code(500);
+    return { error: error.message };
+  }
+});
+
+fastify.post('/api/performance/test', async (request, reply) => {
+  try {
+    const { service, baseUrl, endpoint, requests = 50, concurrency = 10 } = request.body as any;
+    
+    if (!service || !baseUrl || !endpoint) {
+      reply.code(400);
+      return { error: 'Missing required parameters: service, baseUrl, endpoint' };
+    }
+    
+    const result = await httpPerformanceTester.runTest({
+      service,
+      baseUrl,
+      endpoint,
+      requests,
+      concurrency,
+      warmupRequests: 5
+    });
+    
+    return {
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error: any) {
+    reply.code(500);
+    return { error: error.message };
+  }
+});
+
+fastify.post('/api/performance/test/comprehensive', async (request, reply) => {
+  try {
+    const results = await httpPerformanceTester.runComprehensiveTests();
+    
+    return {
+      success: true,
+      data: results,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error: any) {
+    reply.code(500);
+    return { error: error.message };
+  }
+});
+
+fastify.post('/api/performance/test/compare', async (request, reply) => {
+  try {
+    const comparison = await httpPerformanceTester.comparePerformance();
+    
+    return {
+      success: true,
+      data: comparison,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error: any) {
+    reply.code(500);
+    return { error: error.message };
+  }
+});
+
 // Start server with cache warming
 const start = async () => {
   try {
@@ -417,9 +549,14 @@ const start = async () => {
       console.error('Cache warming failed:', err);
     });
     
+    // Start HTTP performance monitoring
+    console.log('Starting HTTP performance monitoring...');
+    httpPerformanceMonitor.startMonitoring(30000); // 30 second intervals
+    
     // Graceful shutdown
     process.on('SIGINT', async () => {
       console.log('Shutting down gracefully...');
+      httpPerformanceMonitor.stopMonitoring();
       await cacheManager.close();
       await fastify.close();
       process.exit(0);
@@ -427,6 +564,7 @@ const start = async () => {
     
     process.on('SIGTERM', async () => {
       console.log('Shutting down gracefully...');
+      httpPerformanceMonitor.stopMonitoring();
       await cacheManager.close();
       await fastify.close();
       process.exit(0);

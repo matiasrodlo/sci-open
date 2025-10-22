@@ -1,13 +1,18 @@
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import { OARecord, SourceConnector } from '@open-access-explorer/shared';
+import { getPooledClient } from '../lib/http-client-factory';
+import { getServiceConfig } from '../lib/http-pool-config';
 
 export class CoreConnector implements SourceConnector {
   private baseUrl: string;
   private apiKey: string;
+  private httpClient: AxiosInstance;
 
   constructor(baseUrl: string = 'https://api.core.ac.uk/v3', apiKey: string) {
     this.baseUrl = baseUrl;
     this.apiKey = apiKey;
+    // Initialize pooled HTTP client with CORE-specific configuration
+    this.httpClient = getPooledClient(baseUrl, getServiceConfig('core'));
   }
 
   async search(params: {
@@ -51,14 +56,12 @@ export class CoreConnector implements SourceConnector {
         }
       }
 
-      const response = await axios.get(`${this.baseUrl}/search/works`, {
+      const response = await this.httpClient.get('/search/works', {
         params: searchParams,
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
-        },
-        timeout: 10000,
-        maxRedirects: 5,
+        }
       });
 
       const results = response.data?.results || [];
