@@ -33,6 +33,8 @@ export class EuropePMCConnector implements SourceConnector {
         pageSize: 50,
         resultType: 'core',
         sortBy: 'RELEVANCE',
+        // Only return open access results
+        openAccessOnly: true,
       };
 
       // Add year filter if provided

@@ -415,6 +415,7 @@ export class EnhancedSearchPipeline {
     const publisherFacets = this.generatePublisherFacets(allRecords);
     const topicsFacets = this.generateTopicsFacets(allRecords);
 
+
     return {
       source: sourceFacets,
       year: yearFacets,
@@ -515,21 +516,19 @@ export class EnhancedSearchPipeline {
   }
 
   private buildOpenAlexFilter(filters: any): any {
-    if (!filters) return {};
-    
     const filterParts: string[] = [];
     
-    if (filters.yearFrom) {
+    // Always filter for open access works
+    filterParts.push('is_oa:true');
+    
+    if (filters?.yearFrom) {
       filterParts.push(`publication_year:>=${filters.yearFrom}`);
     }
-    if (filters.yearTo) {
+    if (filters?.yearTo) {
       filterParts.push(`publication_year:<=${filters.yearTo}`);
     }
-    if (filters.oaStatus && filters.oaStatus.includes('published')) {
-      filterParts.push('is_oa:true');
-    }
     
-    return filterParts.length > 0 ? filterParts.join(',') : undefined;
+    return filterParts.join(',');
   }
 
   private async enrichWorks(works: OpenAlexWork[], dois: string[]): Promise<EnrichedRecord[]> {
@@ -537,6 +536,16 @@ export class EnhancedSearchPipeline {
     
     for (const work of works) {
       try {
+        // Skip non-open access works
+        if (!work.open_access?.is_oa) {
+          continue;
+        }
+
+        // Skip works without PDF URLs
+        if (!work.open_access?.oa_url) {
+          continue;
+        }
+
         // Basic enrichment - in a real implementation, you'd add more enrichment logic
         const enrichedRecord: EnrichedRecord = {
           id: `openalex:${work.id}`,
@@ -548,7 +557,7 @@ export class EnhancedSearchPipeline {
           abstract: work.abstract_inverted_index ? this.reconstructAbstract(work.abstract_inverted_index) : undefined,
           source: 'openalex',
           sourceId: work.id,
-          oaStatus: work.open_access?.is_oa ? 'published' : 'other',
+          oaStatus: 'published', // Only open access works reach here
           bestPdfUrl: work.open_access?.oa_url,
           landingPage: work.id,
           topics: work.concepts?.map(c => c.display_name) || [],
@@ -563,7 +572,7 @@ export class EnhancedSearchPipeline {
           canonicalAbstract: work.abstract_inverted_index ? this.reconstructAbstract(work.abstract_inverted_index) : undefined,
           pdfUrl: work.open_access?.oa_url,
           pdfSource: 'openalex',
-          isRedistributable: work.open_access?.is_oa || false
+          isRedistributable: true // Only open access works reach here
         };
         
         enrichedRecords.push(enrichedRecord);
@@ -713,9 +722,11 @@ export class EnhancedSearchPipeline {
   private generateVenueFacets(records: EnrichedRecord[]): any[] {
     const venueCounts = new Map<string, number>();
     records.forEach(record => {
-      if (record.venue) {
-        const count = venueCounts.get(record.venue) || 0;
-        venueCounts.set(record.venue, count + 1);
+      // Check both venue and canonicalVenue fields
+      const venue = record.venue || record.canonicalVenue;
+      if (venue && venue.trim()) {
+        const count = venueCounts.get(venue) || 0;
+        venueCounts.set(venue, count + 1);
       }
     });
 
@@ -741,10 +752,12 @@ export class EnhancedSearchPipeline {
   private generateTopicsFacets(records: EnrichedRecord[]): any[] {
     const topicCounts = new Map<string, number>();
     records.forEach(record => {
-      if ((record as any).topics && Array.isArray((record as any).topics)) {
-        (record as any).topics.forEach((topic: string) => {
-          const count = topicCounts.get(topic) || 0;
-          topicCounts.set(topic, count + 1);
+      if (record.topics && Array.isArray(record.topics)) {
+        record.topics.forEach((topic: string) => {
+          if (topic && topic.trim()) {
+            const count = topicCounts.get(topic) || 0;
+            topicCounts.set(topic, count + 1);
+          }
         });
       }
     });
@@ -752,5 +765,81 @@ export class EnhancedSearchPipeline {
     return Array.from(topicCounts.entries())
       .map(([value, count]) => ({ value, count }))
       .sort((a, b) => b.count - a.count);
+  }
+
+  /**
+   * Apply search filters including open access filtering
+   */
+  private applyFilters(records: EnrichedRecord[], filters?: any): EnrichedRecord[] {
+    return records.filter(record => {
+      // Source filter
+      if (filters?.source && filters.source.length > 0) {
+        if (!filters.source.includes(record.source)) {
+          return false;
+        }
+      }
+
+      // Year range filter
+      if (filters?.yearFrom && record.year && record.year < filters.yearFrom) {
+        return false;
+      }
+      if (filters?.yearTo && record.year && record.year > filters.yearTo) {
+        return false;
+      }
+
+      // Year exact match filter
+      if (filters?.year && filters.year.length > 0) {
+        if (!filters.year.includes(record.year?.toString())) {
+          return false;
+        }
+      }
+
+      // Open Access filter - CRITICAL: Only show open access papers
+      if (record.oaStatus !== 'published' && record.oaStatus !== 'preprint') {
+        return false;
+      }
+
+      // PDF availability filter - Only show papers with downloadable PDFs
+      if (!record.bestPdfUrl && !record.pdfUrl) {
+        return false;
+      }
+
+      // Venue filter
+      if (filters?.venue && filters.venue.length > 0) {
+        if (!record.venue || !filters.venue.includes(record.venue)) {
+          return false;
+        }
+      }
+
+      // Publisher filter
+      if (filters?.publisher && filters.publisher.length > 0) {
+        const publisher = (record as any).publisher;
+        if (!publisher || !filters.publisher.includes(publisher)) {
+          return false;
+        }
+      }
+
+      // Topics filter
+      if (filters?.topics && filters.topics.length > 0) {
+        if (!record.topics || !record.topics.some(topic => filters.topics.includes(topic))) {
+          return false;
+        }
+      }
+
+      // Publication type filter
+      if (filters?.publicationType && filters.publicationType.length > 0) {
+        const isPeerReviewed = ['europepmc', 'ncbi'].includes(record.source);
+        const isPreprint = ['arxiv'].includes(record.source);
+        
+        if (filters.publicationType.includes('peer-reviewed') && !isPeerReviewed) {
+          return false;
+        }
+        if (filters.publicationType.includes('preprint') && !isPreprint) {
+          return false;
+        }
+      }
+
+      return true;
+    });
   }
 }
