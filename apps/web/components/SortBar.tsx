@@ -43,13 +43,13 @@ export function SortBar() {
   const primarySortOptions = [
     { value: 'relevance' as const, label: 'Relevance', icon: ArrowUpDown, disabled: false },
     { value: 'date' as const, label: 'Date (Newest)', icon: Calendar, disabled: false },
-    { value: 'citations' as const, label: 'Citations', icon: TrendingUp, disabled: true },
+    { value: 'citations' as const, label: 'Citations', icon: TrendingUp, disabled: false },
   ];
 
   // Additional sort options (in dropdown)
   const additionalSortOptions = [
     { value: 'date_asc' as const, label: 'Date (Oldest)', icon: Calendar, disabled: false },
-    { value: 'citations_asc' as const, label: 'Citations (Lowest)', icon: TrendingUp, disabled: true },
+    { value: 'citations_asc' as const, label: 'Citations (Lowest)', icon: TrendingUp, disabled: false },
     { value: 'author' as const, label: 'Author (A-Z)', icon: User, disabled: false },
     { value: 'author_desc' as const, label: 'Author (Z-A)', icon: User, disabled: false },
     { value: 'venue' as const, label: 'Venue (A-Z)', icon: BookOpen, disabled: false },
