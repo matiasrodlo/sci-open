@@ -145,6 +145,9 @@ export class DOAJConnector implements SourceConnector {
     // Extract journal/venue
     const venue = bibjson.journal?.title || 'DOAJ Journal';
     
+    // Extract publisher
+    const publisher = bibjson.journal?.publisher;
+    
     // Extract abstract
     const abstract = bibjson.abstract;
     
@@ -167,7 +170,7 @@ export class DOAJConnector implements SourceConnector {
     // Determine OA status (DOAJ articles are all published open access)
     const oaStatus: "preprint" | "accepted" | "published" | "other" = "published";
 
-    return {
+    const record: OARecord = {
       id: `doaj:${article.id}`,
       doi,
       title,
@@ -185,5 +188,12 @@ export class DOAJConnector implements SourceConnector {
       createdAt: article.created_date || new Date().toISOString(),
       updatedAt: article.last_updated || undefined,
     };
+
+    // Add publisher if available
+    if (publisher) {
+      (record as any).publisher = publisher;
+    }
+
+    return record;
   }
 }

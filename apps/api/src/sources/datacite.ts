@@ -181,7 +181,7 @@ export class DataCiteConnector implements SourceConnector {
       bestPdfUrl = attrs.url;
     }
 
-    return {
+    const record: OARecord = {
       id: `datacite:${result.id}`,
       doi,
       title,
@@ -199,5 +199,12 @@ export class DataCiteConnector implements SourceConnector {
       createdAt: attrs.dates?.find(date => date.dateType === 'Created')?.date || new Date().toISOString(),
       updatedAt: attrs.dates?.find(date => date.dateType === 'Updated')?.date || undefined,
     };
+
+    // Add publisher if available
+    if (attrs.publisher) {
+      (record as any).publisher = attrs.publisher;
+    }
+
+    return record;
   }
 }

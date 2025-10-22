@@ -89,7 +89,7 @@ export class MeilisearchAdapter implements SearchAdapter {
       q,
       limit: pageSize,
       offset: (page - 1) * pageSize,
-      facets: ['source', 'oaStatus', 'year', 'venue', 'topics'],
+      facets: ['source', 'oaStatus', 'year', 'venue', 'topics', 'publisher'],
     };
 
     // Add filters

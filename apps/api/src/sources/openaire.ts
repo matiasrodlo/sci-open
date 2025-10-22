@@ -209,6 +209,7 @@ export class OpenAIREConnector implements SourceConnector {
     // Extract publisher/venue
     const publisherData = metadata.publisher;
     const venue = typeof publisherData === 'string' ? publisherData : (publisherData?.$ || undefined);
+    const publisher = venue; // Use the same value for publisher
 
     // Extract language
     const languageData = metadata.language;
@@ -267,7 +268,7 @@ export class OpenAIREConnector implements SourceConnector {
       openAireId = doi || title.substring(0, 50).replace(/\s+/g, '-');
     }
 
-    return {
+    const record: OARecord = {
       id: `openaire:${openAireId}`,
       doi,
       title,
@@ -284,6 +285,13 @@ export class OpenAIREConnector implements SourceConnector {
       language,
       createdAt: dateString || new Date().toISOString(),
     };
+
+    // Add publisher if available
+    if (publisher) {
+      (record as any).publisher = publisher;
+    }
+
+    return record;
   }
 }
 
