@@ -73,7 +73,7 @@ export class MeilisearchAdapter implements SearchAdapter {
     filters?: Record<string, string[] | number[]>;
     page?: number;
     pageSize?: number;
-    sort?: "relevance" | "date" | "citations";
+    sort?: "relevance" | "date" | "date_asc" | "citations" | "citations_asc" | "author" | "author_desc" | "venue" | "venue_desc" | "title" | "title_desc";
   }): Promise<{ hits: OARecord[]; total: number; facets: Record<string, any> }> {
     const {
       q = '',
@@ -120,9 +120,34 @@ export class MeilisearchAdapter implements SearchAdapter {
       case 'date':
         searchParams.sort = ['year:desc', 'createdAt:desc'];
         break;
+      case 'date_asc':
+        searchParams.sort = ['year:asc', 'createdAt:desc'];
+        break;
       case 'citations':
         // Note: citations not available in our current schema
         searchParams.sort = ['createdAt:desc'];
+        break;
+      case 'citations_asc':
+        // Note: citations not available in our current schema
+        searchParams.sort = ['createdAt:desc'];
+        break;
+      case 'author':
+        searchParams.sort = ['authors:asc', 'createdAt:desc'];
+        break;
+      case 'author_desc':
+        searchParams.sort = ['authors:desc', 'createdAt:desc'];
+        break;
+      case 'venue':
+        searchParams.sort = ['venue:asc', 'createdAt:desc'];
+        break;
+      case 'venue_desc':
+        searchParams.sort = ['venue:desc', 'createdAt:desc'];
+        break;
+      case 'title':
+        searchParams.sort = ['title:asc', 'createdAt:desc'];
+        break;
+      case 'title_desc':
+        searchParams.sort = ['title:desc', 'createdAt:desc'];
         break;
       default:
         // relevance is default

@@ -84,7 +84,7 @@ export class AlgoliaAdapter implements SearchAdapter {
     filters?: Record<string, string[] | number[]>;
     page?: number;
     pageSize?: number;
-    sort?: "relevance" | "date" | "citations";
+    sort?: "relevance" | "date" | "date_asc" | "citations" | "citations_asc" | "author" | "author_desc" | "venue" | "venue_desc" | "title" | "title_desc";
   }): Promise<{ hits: OARecord[]; total: number; facets: Record<string, any> }> {
     const {
       q = '',
@@ -132,9 +132,34 @@ export class AlgoliaAdapter implements SearchAdapter {
       case 'date':
         searchParams.customRanking = ['desc(year)', 'desc(createdAt)'];
         break;
+      case 'date_asc':
+        searchParams.customRanking = ['asc(year)', 'desc(createdAt)'];
+        break;
       case 'citations':
         // Note: citations not available in our current schema
         searchParams.customRanking = ['desc(createdAt)'];
+        break;
+      case 'citations_asc':
+        // Note: citations not available in our current schema
+        searchParams.customRanking = ['desc(createdAt)'];
+        break;
+      case 'author':
+        searchParams.customRanking = ['asc(authors)', 'desc(createdAt)'];
+        break;
+      case 'author_desc':
+        searchParams.customRanking = ['desc(authors)', 'desc(createdAt)'];
+        break;
+      case 'venue':
+        searchParams.customRanking = ['asc(venue)', 'desc(createdAt)'];
+        break;
+      case 'venue_desc':
+        searchParams.customRanking = ['desc(venue)', 'desc(createdAt)'];
+        break;
+      case 'title':
+        searchParams.customRanking = ['asc(title)', 'desc(createdAt)'];
+        break;
+      case 'title_desc':
+        searchParams.customRanking = ['desc(title)', 'desc(createdAt)'];
         break;
       default:
         // relevance is default
