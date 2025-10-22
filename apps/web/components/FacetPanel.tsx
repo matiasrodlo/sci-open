@@ -89,17 +89,29 @@ export function FacetPanel({ facets, currentFilters, totalResults = 0 }: FacetPa
   const detectAndFixScalingIssues = (facetData: Record<string, number>, categoryName: string) => {
     try {
       const counts = Object.values(facetData).filter(count => typeof count === 'number' && count > 0);
+      const totalSum = counts.reduce((sum, count) => sum + count, 0);
+      const validTotalResults = typeof totalResults === 'number' && totalResults > 0 ? totalResults : 0;
       
-      // Check if all counts are identical (indicating backend scaling issue)
+      // Check for various scaling issues
       const allSameCount = counts.length > 1 && counts.every(count => count === counts[0]);
+      const sumTooHigh = totalSum > validTotalResults * 1.5; // More than 150% of total
+      const sumTooLow = totalSum < validTotalResults * 0.5; // Less than 50% of total
       
-      if (allSameCount) {
-        console.log(`Detected backend scaling issue in ${categoryName} - all counts are identical`);
+      console.log(`${categoryName} analysis:`, {
+        totalSum,
+        validTotalResults,
+        ratio: totalSum / validTotalResults,
+        allSameCount,
+        sumTooHigh,
+        sumTooLow
+      });
+      
+      if (allSameCount || sumTooHigh || sumTooLow) {
+        console.log(`Detected backend scaling issue in ${categoryName}`);
         console.log(`${categoryName} counts:`, counts);
         
         // For source facets, use realistic distribution
         if (categoryName === 'source') {
-          const validTotalResults = typeof totalResults === 'number' && totalResults > 0 ? totalResults : 0;
           const estimatedPeerReviewedRatio = 0.75;
           
           return {
@@ -110,8 +122,17 @@ export function FacetPanel({ facets, currentFilters, totalResults = 0 }: FacetPa
           };
         }
         
-        // For other categories, scale down proportionally
-        const scaleFactor = 0.5; // Reduce by half as a conservative estimate
+        // For other categories, scale to match total results
+        let scaleFactor = 1;
+        if (sumTooHigh) {
+          scaleFactor = validTotalResults / totalSum;
+        } else if (sumTooLow) {
+          scaleFactor = validTotalResults / totalSum;
+        } else if (allSameCount) {
+          scaleFactor = 0.5; // Conservative scaling for identical counts
+        }
+        
+        console.log(`Applying scale factor ${scaleFactor} to ${categoryName}`);
         const scaledFacets: Record<string, number> = {};
         
         Object.entries(facetData).forEach(([key, value]) => {
