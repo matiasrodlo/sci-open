@@ -63,8 +63,22 @@ class EuropePMCConnector {
         // Find best PDF URL from full text URLs
         let bestPdfUrl;
         if (result.fullTextUrlList?.fullTextUrl) {
-            const pdfUrl = result.fullTextUrlList.fullTextUrl.find((url) => url.documentStyle === 'pdf' || url.url?.includes('.pdf'));
-            bestPdfUrl = pdfUrl?.url;
+            const urls = Array.isArray(result.fullTextUrlList.fullTextUrl)
+                ? result.fullTextUrlList.fullTextUrl
+                : [result.fullTextUrlList.fullTextUrl];
+            // Try to find PDF URL
+            const pdfUrl = urls.find((url) => url.documentStyle === 'pdf' || url.url?.toLowerCase().includes('.pdf'));
+            if (pdfUrl) {
+                bestPdfUrl = pdfUrl.url;
+            }
+            else if (result.pmcid) {
+                // If no direct PDF URL but we have a PMC ID, construct one
+                bestPdfUrl = `https://europepmc.org/articles/${result.pmcid}?pdf=render`;
+            }
+        }
+        else if (result.pmcid) {
+            // Fallback: construct URL from PMC ID
+            bestPdfUrl = `https://europepmc.org/articles/${result.pmcid}?pdf=render`;
         }
         // Extract topics from keywords
         const topics = [];

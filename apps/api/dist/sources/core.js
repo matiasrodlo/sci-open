@@ -12,6 +12,11 @@ class CoreConnector {
     }
     async search(params) {
         const { doi, titleOrKeywords, yearFrom, yearTo } = params;
+        // Skip CORE if no API key is provided or if it's a placeholder
+        if (!this.apiKey || this.apiKey === '' || this.apiKey.includes('your_') || this.apiKey.includes('placeholder')) {
+            console.log('CORE API key not provided or invalid, skipping CORE search');
+            return [];
+        }
         try {
             let query = '';
             if (doi) {
@@ -25,7 +30,7 @@ class CoreConnector {
             }
             const searchParams = {
                 q: query,
-                limit: 50,
+                limit: 100,
                 offset: 0,
             };
             // Add year filter if provided
@@ -43,14 +48,21 @@ class CoreConnector {
                 params: searchParams,
                 headers: {
                     'Authorization': `Bearer ${this.apiKey}`,
+                    'Content-Type': 'application/json',
                 },
-                timeout: 5000
+                timeout: 10000,
+                maxRedirects: 5,
             });
             const results = response.data?.results || [];
+            console.log(`CORE returned ${results.length} results for query: ${query}`);
             return results.map((result) => this.normalizeResult(result));
         }
         catch (error) {
-            console.error('CORE search error:', error);
+            console.error('CORE search error:', error.message);
+            if (error.response) {
+                console.error('CORE error status:', error.response.status);
+                console.error('CORE error data:', JSON.stringify(error.response.data).substring(0, 200));
+            }
             return [];
         }
     }
@@ -63,12 +75,22 @@ class CoreConnector {
             oaStatus = 'published';
         }
         // Find best PDF URL
+        // CORE's fileserver.core.ac.uk is unreliable, use reader URL instead
         let bestPdfUrl;
-        if (result.downloadUrl) {
-            bestPdfUrl = result.downloadUrl;
+        // Priority 1: Use CORE reader (most reliable - shows paper with embedded PDF)
+        if (result.id) {
+            bestPdfUrl = `https://core.ac.uk/reader/${result.id}`;
         }
-        else if (result.fullTextIdentifier) {
+        // Priority 2: Check for direct PDF from repository (if available)
+        if (!bestPdfUrl && result.fullTextIdentifier && !result.fullTextIdentifier.includes('fileserver.core.ac.uk')) {
             bestPdfUrl = result.fullTextIdentifier;
+        }
+        // Priority 3: Check links array for non-CORE download links
+        const downloadLink = result.links?.find((link) => link.type === 'download' &&
+            !link.url.includes('core.ac.uk') &&
+            !link.url.includes('fileserver.core.ac.uk'));
+        if (!bestPdfUrl && downloadLink?.url) {
+            bestPdfUrl = downloadLink.url;
         }
         return {
             id: `core:${result.id}`,

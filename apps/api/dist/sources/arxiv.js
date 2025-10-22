@@ -11,6 +11,7 @@ class ArxivConnector {
         this.baseUrl = baseUrl;
     }
     async search(params) {
+        console.log('🔍 arXiv search called with params:', params);
         const { doi, titleOrKeywords, yearFrom, yearTo } = params;
         try {
             let query = '';
@@ -35,6 +36,9 @@ class ArxivConnector {
             if (!query) {
                 return [];
             }
+            console.log(`arXiv searching for: ${query}`);
+            const url = `${this.baseUrl}?search_query=${encodeURIComponent(query)}&start=0&max_results=50&sortBy=relevance&sortOrder=descending`;
+            console.log(`arXiv full URL: ${url}`);
             const response = await axios_1.default.get(this.baseUrl, {
                 params: {
                     search_query: query,
@@ -43,20 +47,31 @@ class ArxivConnector {
                     sortBy: 'relevance',
                     sortOrder: 'descending'
                 },
-                timeout: 5000
+                headers: {
+                    'User-Agent': 'OpenAccessExplorer/1.0 (https://github.com/your-repo/open-access-explorer)'
+                },
+                timeout: 30000
             });
+            console.log(`arXiv response status: ${response.status}, data length: ${response.data.length}`);
+            console.log(`arXiv response preview: ${response.data.substring(0, 200)}...`);
             return new Promise((resolve, reject) => {
                 (0, xml2js_1.parseString)(response.data, (err, result) => {
                     if (err) {
+                        console.error('arXiv XML parsing error:', err);
                         reject(err);
                         return;
                     }
+                    console.log('arXiv XML parsed successfully, entries:', result?.feed?.entry?.length || 0);
+                    console.log('arXiv XML structure:', JSON.stringify(result?.feed, null, 2).substring(0, 500));
                     try {
                         const entries = result?.feed?.entry || [];
+                        console.log(`arXiv processing ${entries.length} entries`);
                         const records = entries.map((entry) => this.normalizeEntry(entry));
+                        console.log(`arXiv normalized ${records.length} records`);
                         resolve(records);
                     }
                     catch (error) {
+                        console.error('arXiv normalization error:', error);
                         reject(error);
                     }
                 });
@@ -64,18 +79,23 @@ class ArxivConnector {
         }
         catch (error) {
             console.error('arXiv search error:', error);
+            console.error('arXiv error stack:', error.stack);
             return [];
         }
     }
     normalizeEntry(entry) {
         const id = entry.id[0];
-        const arxivId = id.split('/').pop()?.replace('v', '');
+        const arxivId = id.split('/').pop();
         // Extract authors
         const authors = entry.author?.map((author) => author.name[0]) || [];
         // Extract PDF URL
         const links = entry.link || [];
         const pdfLink = links.find((link) => link.$.type === 'application/pdf');
-        const pdfUrl = pdfLink?.$.href;
+        let pdfUrl = pdfLink?.$.href;
+        // Ensure arXiv PDF URLs use HTTPS
+        if (pdfUrl && pdfUrl.includes('arxiv.org')) {
+            pdfUrl = pdfUrl.replace('http://', 'https://');
+        }
         // Extract published date
         const published = entry.published?.[0];
         const year = published ? new Date(published).getFullYear() : undefined;

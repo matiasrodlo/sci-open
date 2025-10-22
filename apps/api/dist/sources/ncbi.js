@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NCBIConnector = void 0;
 const axios_1 = __importDefault(require("axios"));
+const xml2js_1 = require("xml2js");
 class NCBIConnector {
     constructor(baseUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils', apiKey) {
         this.baseUrl = baseUrl;
@@ -12,6 +13,7 @@ class NCBIConnector {
     }
     async search(params) {
         const { doi, titleOrKeywords, yearFrom, yearTo } = params;
+        console.log('NCBI search called with params:', { doi, titleOrKeywords, yearFrom, yearTo });
         try {
             let query = '';
             if (doi) {
@@ -21,6 +23,7 @@ class NCBIConnector {
                 query = titleOrKeywords;
             }
             else {
+                console.log('NCBI: No query provided');
                 return [];
             }
             // Add year filter if provided
@@ -42,7 +45,8 @@ class NCBIConnector {
                 retmode: 'json',
                 usehistory: 'y',
             };
-            if (this.apiKey) {
+            // Only add API key if it's valid (not empty and not a placeholder)
+            if (this.apiKey && this.apiKey !== 'your_ncbi_api_key_here' && this.apiKey.trim() !== '') {
                 searchParams.api_key = this.apiKey;
             }
             const searchResponse = await axios_1.default.get(`${this.baseUrl}/esearch.fcgi`, {
@@ -51,76 +55,223 @@ class NCBIConnector {
             });
             const searchData = searchResponse.data;
             const pmids = searchData.esearchresult?.idlist || [];
+            console.log('NCBI search response:', { query, pmids: pmids.length, firstFew: pmids.slice(0, 3) });
             if (pmids.length === 0) {
+                console.log('NCBI: No PMIDs found for query:', query);
                 return [];
             }
             // Then fetch detailed records
             const fetchParams = {
                 db: 'pubmed',
                 id: pmids.join(','),
-                retmode: 'json',
+                retmode: 'xml',
                 rettype: 'abstract',
             };
-            if (this.apiKey) {
+            // Only add API key if it's valid (not empty and not a placeholder)
+            if (this.apiKey && this.apiKey !== 'your_ncbi_api_key_here' && this.apiKey.trim() !== '') {
                 fetchParams.api_key = this.apiKey;
             }
             const fetchResponse = await axios_1.default.get(`${this.baseUrl}/efetch.fcgi`, {
                 params: fetchParams,
                 timeout: 5000
             });
-            const fetchData = fetchResponse.data;
-            const articles = fetchData.PubmedArticleSet?.PubmedArticle || [];
-            return articles.map((article) => this.normalizeArticle(article));
+            return new Promise((resolve, reject) => {
+                (0, xml2js_1.parseString)(fetchResponse.data, (err, result) => {
+                    if (err) {
+                        console.error('NCBI XML parsing error:', err);
+                        reject(err);
+                        return;
+                    }
+                    try {
+                        const articles = result?.PubmedArticleSet?.PubmedArticle || [];
+                        console.log('NCBI fetch response:', { articlesCount: articles.length });
+                        const records = articles
+                            .map((article) => this.normalizeArticle(article))
+                            .filter((record) => record !== null);
+                        console.log('NCBI normalized records:', { total: records.length, sample: records[0]?.title });
+                        resolve(records);
+                    }
+                    catch (error) {
+                        console.error('NCBI normalization error:', error);
+                        reject(error);
+                    }
+                });
+            });
         }
         catch (error) {
             console.error('NCBI search error:', error);
             return [];
         }
     }
-    normalizeArticle(article) {
-        const medlineCitation = article.MedlineCitation;
-        const pmid = medlineCitation.PMID?.Version || medlineCitation.PMID?.['#text'];
+    normalizeArticle(pubmedArticle) {
+        const medlineCitation = pubmedArticle.MedlineCitation?.[0] || pubmedArticle.MedlineCitation;
+        // Extract PMID from the XML structure: <PMID Version="1">41109958</PMID>
+        // xml2js can parse it as: { _: '41109958', $: { Version: '1' } } or ['41109958'] or '41109958'
+        let pmid;
+        const pmidData = medlineCitation?.PMID;
+        if (Array.isArray(pmidData)) {
+            // If it's an array, get the first element
+            const first = pmidData[0];
+            if (typeof first === 'string') {
+                pmid = first;
+            }
+            else if (first?._) {
+                pmid = first._;
+            }
+            else if (first) {
+                pmid = String(first);
+            }
+        }
+        else if (typeof pmidData === 'string') {
+            pmid = pmidData;
+        }
+        else if (pmidData?._) {
+            // If it's an object with underscore property
+            pmid = pmidData._;
+        }
+        else if (pmidData) {
+            pmid = String(pmidData);
+        }
+        // PMID extraction completed
         // Extract authors
         const authors = [];
-        if (medlineCitation.Article?.AuthorList?.Author) {
-            const authorList = Array.isArray(medlineCitation.Article.AuthorList.Author)
-                ? medlineCitation.Article.AuthorList.Author
-                : [medlineCitation.Article.AuthorList.Author];
-            authors.push(...authorList.map((author) => {
-                const lastName = author.LastName || '';
-                const foreName = author.ForeName || '';
-                const initials = author.Initials || '';
-                return `${lastName} ${foreName || initials}`.trim();
-            }));
+        const article = medlineCitation?.Article?.[0] || medlineCitation?.Article;
+        if (article?.AuthorList) {
+            const authorListData = article.AuthorList[0] || article.AuthorList;
+            const authorArray = authorListData?.Author;
+            if (authorArray) {
+                const authorList = Array.isArray(authorArray) ? authorArray : [authorArray];
+                authors.push(...authorList.map((author) => {
+                    const lastName = author.LastName?.[0] || author.LastName || '';
+                    const foreName = author.ForeName?.[0] || author.ForeName || '';
+                    const initials = author.Initials?.[0] || author.Initials || '';
+                    return `${lastName} ${foreName || initials}`.trim();
+                }));
+            }
         }
         // Extract publication date
-        const pubDate = medlineCitation.Article?.Journal?.JournalIssue?.PubDate;
+        const journal = article?.Journal?.[0] || article?.Journal;
+        const journalIssue = journal?.JournalIssue?.[0] || journal?.JournalIssue;
+        const pubDate = journalIssue?.PubDate?.[0] || journalIssue?.PubDate;
         let year;
         if (pubDate?.Year) {
-            year = parseInt(pubDate.Year);
+            const yearValue = Array.isArray(pubDate.Year) ? pubDate.Year[0] : pubDate.Year;
+            year = parseInt(yearValue);
         }
-        // Check if it's open access (simplified check)
+        // Check if it's open access and extract PMC ID
         let oaStatus = 'other';
-        const articleIds = medlineCitation.PubmedData?.ArticleIdList?.ArticleId || [];
-        const hasPMC = articleIds.some((id) => id.$.IdType === 'pmc');
-        if (hasPMC) {
-            oaStatus = 'published';
+        let pmcId;
+        let bestPdfUrl;
+        const pubmedData = pubmedArticle.PubmedData?.[0] || pubmedArticle.PubmedData;
+        const articleIdList = pubmedData?.ArticleIdList?.[0] || pubmedData?.ArticleIdList;
+        const articleIds = articleIdList?.ArticleId || [];
+        // Extract PMC ID if available
+        if (Array.isArray(articleIds)) {
+            for (const id of articleIds) {
+                const idType = id.$?.IdType || id.IdType;
+                if (idType === 'pmc') {
+                    // Extract the PMC ID value
+                    let pmcValue;
+                    if (typeof id === 'string') {
+                        pmcValue = id;
+                    }
+                    else if (id._) {
+                        pmcValue = id._;
+                    }
+                    else if (Array.isArray(id) && id.length > 0) {
+                        pmcValue = id[0]._ || id[0];
+                    }
+                    if (pmcValue) {
+                        // PMC IDs can be like "PMC1234567" or just "1234567"
+                        pmcId = pmcValue.startsWith('PMC') ? pmcValue : `PMC${pmcValue}`;
+                        oaStatus = 'published';
+                        // Construct the PDF URL for PMC papers
+                        bestPdfUrl = `https://www.ncbi.nlm.nih.gov/pmc/articles/${pmcId}/pdf/`;
+                        break;
+                    }
+                }
+            }
         }
-        return {
+        // If no PMC ID found, this is likely a paywalled paper
+        if (!pmcId) {
+            oaStatus = 'other'; // Indicates not open access
+        }
+        // Extract title
+        const titleData = article?.ArticleTitle;
+        let title;
+        if (Array.isArray(titleData)) {
+            const firstTitle = titleData[0];
+            if (typeof firstTitle === 'string') {
+                title = firstTitle;
+            }
+            else if (firstTitle?._) {
+                title = firstTitle._;
+            }
+            else if (firstTitle) {
+                title = String(firstTitle);
+            }
+            else {
+                title = '';
+            }
+        }
+        else if (typeof titleData === 'string') {
+            title = titleData;
+        }
+        else if (titleData?._) {
+            title = titleData._;
+        }
+        else if (titleData) {
+            title = String(titleData);
+        }
+        else {
+            title = '';
+        }
+        // Ensure title is a clean string
+        if (title === '[object Object]' || title === 'undefined' || title === 'null') {
+            title = '';
+        }
+        // Extract abstract
+        const abstractData = article?.Abstract?.[0] || article?.Abstract;
+        const abstractText = abstractData?.AbstractText;
+        let abstract;
+        if (Array.isArray(abstractText)) {
+            abstract = abstractText.map((text) => typeof text === 'string' ? text : (text?._ || text?.['#text'] || text)).join(' ');
+        }
+        else if (typeof abstractText === 'string') {
+            abstract = abstractText;
+        }
+        else if (abstractText) {
+            abstract = abstractText._ || abstractText['#text'] || String(abstractText);
+        }
+        // Extract venue (journal title)
+        const journalTitle = journal?.Title;
+        const venue = Array.isArray(journalTitle) ? journalTitle[0] : journalTitle;
+        // Extract language
+        const languageData = article?.Language;
+        const language = Array.isArray(languageData) ? languageData[0] : (languageData || 'en');
+        // Skip papers with empty or invalid titles
+        if (!title || title.trim() === '') {
+            console.log('NCBI: Skipping paper with empty title, PMID:', pmid);
+            return null;
+        }
+        const record = {
             id: `ncbi:${pmid}`,
-            title: medlineCitation.Article?.ArticleTitle || '',
+            title: title.trim(),
             authors,
             year,
-            venue: medlineCitation.Article?.Journal?.Title,
-            abstract: medlineCitation.Article?.Abstract?.AbstractText?.['#text'] ||
-                medlineCitation.Article?.Abstract?.AbstractText,
+            venue,
+            abstract,
             source: 'ncbi',
-            sourceId: pmid?.toString() || '',
+            sourceId: pmid || '',
             oaStatus,
-            topics: medlineCitation.MeshHeadingList?.MeshHeading?.map((heading) => heading.DescriptorName?.['#text'] || heading.DescriptorName) || [],
-            language: medlineCitation.Article?.Language?.[0] || 'en',
+            bestPdfUrl, // Only set if PMC ID was found
+            landingPage: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,
+            topics: [],
+            language,
             createdAt: new Date().toISOString(),
         };
+        console.log('NCBI: Normalized record:', { pmid, title: title.substring(0, 50), hasAbstract: !!abstract, venue });
+        return record;
     }
 }
 exports.NCBIConnector = NCBIConnector;
