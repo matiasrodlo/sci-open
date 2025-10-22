@@ -90,7 +90,8 @@ export class SearchPipeline {
       const totalCount = this.applyFiltersToTotalCount(unfilteredTotalCount, params.filters);
 
       // Step 6: Generate facets with scaling based on total count
-      const facets = this.generateScaledFacets(sortedRecords, totalCount);
+      // Use original unfiltered records for source facets to show total available counts
+      const facets = this.generateScaledFacets(sortedRecords, totalCount, enrichedRecords);
 
       const duration = Date.now() - startTime;
       console.log(`Search pipeline completed in ${duration}ms, found ${sortedRecords.length} results, total available: ${totalCount}`);
@@ -670,6 +671,13 @@ export class SearchPipeline {
         return false;
       }
 
+      // Year array filter (exact year matching)
+      if (filters?.year && filters.year.length > 0) {
+        if (!record.year || !filters.year.includes(record.year.toString())) {
+          return false;
+        }
+      }
+
       // OA Status filter
       if (filters?.oaStatus && filters.oaStatus.length > 0) {
         if (!filters.oaStatus.includes(record.oaStatus)) {
@@ -716,9 +724,8 @@ export class SearchPipeline {
    */
   private getSourcesForPublicationTypes(publicationTypes: string[]): string[] {
     const sourceMapping: Record<string, string[]> = {
-      'peer-reviewed': ['core', 'europepmc', 'ncbi', 'doaj'],
-      'preprint': ['arxiv', 'biorxiv', 'medrxiv'],
-      'other': [] // Will be handled separately
+      'peer-reviewed': ['europepmc', 'ncbi'], // Academic databases
+      'preprint': ['arxiv'] // Preprint repository
     };
 
     const allowedSources: string[] = [];
@@ -1103,7 +1110,7 @@ export class SearchPipeline {
   /**
    * Generate facets with scaling based on total count
    */
-  private generateScaledFacets(records: EnrichedRecord[], totalCount: number): Record<string, any> {
+  private generateScaledFacets(records: EnrichedRecord[], totalCount: number, originalRecords?: EnrichedRecord[]): Record<string, any> {
     const facets: Record<string, any> = {
       source: {},
       year: {},
@@ -1118,10 +1125,17 @@ export class SearchPipeline {
     const scaleFactor = totalCount > 0 && fetchedCount > 0 ? totalCount / fetchedCount : 1;
 
     let publisherRecords = 0;
-    for (const record of records) {
+    
+    // Use original unfiltered records for source facets to show total available counts
+    const sourceRecords = originalRecords || records;
+    for (const record of sourceRecords) {
       // Source facet (scaled)
       const sourceCount = Math.round((facets.source[record.source] || 0) + scaleFactor);
       facets.source[record.source] = sourceCount;
+    }
+    
+    // Use filtered records for other facets
+    for (const record of records) {
 
       // Year facet (scaled)
       if (record.year) {
@@ -1207,24 +1221,71 @@ export class SearchPipeline {
    * Apply filters to the total count based on source distribution
    */
   private applyFiltersToTotalCount(unfilteredTotalCount: number, filters?: any): number {
-    if (!filters?.publicationType || filters.publicationType.length === 0) {
-      return unfilteredTotalCount;
+    let filteredCount = unfilteredTotalCount;
+
+    // Apply publication type filters
+    if (filters?.publicationType && filters.publicationType.length > 0) {
+      // Estimate the distribution based on typical source patterns
+      const sourceDistribution = {
+        'peer-reviewed': 0.4, // ~40% from peer-reviewed sources
+        'preprint': 0.45,     // ~45% from preprint sources  
+        'other': 0.15         // ~15% from other sources
+      };
+
+      let typeFilteredCount = 0;
+      filters.publicationType.forEach((type: string) => {
+        if (sourceDistribution[type as keyof typeof sourceDistribution]) {
+          typeFilteredCount += filteredCount * sourceDistribution[type as keyof typeof sourceDistribution];
+        }
+      });
+      filteredCount = typeFilteredCount;
     }
 
-    // Estimate the distribution based on typical source patterns
-    // This is a rough approximation - in a real system, you'd want more accurate data
-    const sourceDistribution = {
-      'peer-reviewed': 0.4, // ~40% from peer-reviewed sources
-      'preprint': 0.45,     // ~45% from preprint sources  
-      'other': 0.15         // ~15% from other sources
-    };
+    // Apply year filters
+    if (filters?.year && filters.year.length > 0) {
+      // Estimate year distribution (rough approximation)
+      // Recent years typically have more papers
+      const yearDistribution: Record<string, number> = {
+        '2025': 0.15,
+        '2024': 0.25,
+        '2023': 0.20,
+        '2022': 0.15,
+        '2021': 0.10,
+        '2020': 0.08,
+        '2019': 0.04,
+        '2018': 0.02,
+        '2017': 0.01
+      };
 
-    let filteredCount = 0;
-    filters.publicationType.forEach((type: string) => {
-      if (sourceDistribution[type as keyof typeof sourceDistribution]) {
-        filteredCount += unfilteredTotalCount * sourceDistribution[type as keyof typeof sourceDistribution];
-      }
-    });
+      let yearFilteredCount = 0;
+      filters.year.forEach((year: string) => {
+        if (yearDistribution[year]) {
+          yearFilteredCount += filteredCount * yearDistribution[year];
+        }
+      });
+      filteredCount = yearFilteredCount;
+    }
+
+    // Apply venue filters (rough estimate - venues are highly variable)
+    if (filters?.venue && filters.venue.length > 0) {
+      // Estimate that each venue represents a small percentage of total papers
+      const venueFilterRatio = Math.min(0.1 * filters.venue.length, 0.5); // Max 50% reduction
+      filteredCount = filteredCount * venueFilterRatio;
+    }
+
+    // Apply publisher filters (rough estimate - publishers are highly variable)
+    if (filters?.publisher && filters.publisher.length > 0) {
+      // Estimate that each publisher represents a small percentage of total papers
+      const publisherFilterRatio = Math.min(0.1 * filters.publisher.length, 0.5); // Max 50% reduction
+      filteredCount = filteredCount * publisherFilterRatio;
+    }
+
+    // Apply topics filters (rough estimate - topics are highly variable)
+    if (filters?.topics && filters.topics.length > 0) {
+      // Estimate that each topic represents a small percentage of total papers
+      const topicFilterRatio = Math.min(0.1 * filters.topics.length, 0.5); // Max 50% reduction
+      filteredCount = filteredCount * topicFilterRatio;
+    }
 
     return Math.round(filteredCount);
   }

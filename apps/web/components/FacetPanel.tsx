@@ -84,33 +84,30 @@ export function FacetPanel({ facets, currentFilters, totalResults = 0 }: FacetPa
 
   // Calculate publication type counts based on source
   const getPublicationTypeCounts = () => {
-    const sourceCounts = facets.source || {};
+    // Always use the original unfiltered facets to show total available counts
+    const originalFacets = facets.source || {};
     let peerReviewedCount = 0;
     let preprintCount = 0;
-    let otherCount = 0;
 
     // More accurate classification based on source characteristics
     // Peer-reviewed sources: Academic databases and journals
-    const peerReviewedSources = ['core', 'europepmc', 'ncbi', 'doaj'];
+    const peerReviewedSources = ['europepmc', 'ncbi'];
     
     // Preprint sources: Pre-publication repositories
-    const preprintSources = ['arxiv', 'biorxiv', 'medrxiv'];
+    const preprintSources = ['arxiv'];
 
-    Object.entries(sourceCounts).forEach(([source, count]) => {
+    Object.entries(originalFacets).forEach(([source, count]) => {
       const countNum = typeof count === 'number' ? count : 0;
       if (peerReviewedSources.includes(source)) {
         peerReviewedCount += countNum;
       } else if (preprintSources.includes(source)) {
         preprintCount += countNum;
-      } else {
-        otherCount += countNum;
       }
     });
 
     return {
       'peer-reviewed': peerReviewedCount,
-      'preprint': preprintCount,
-      'other': otherCount
+      'preprint': preprintCount
     };
   };
 
@@ -168,30 +165,6 @@ export function FacetPanel({ facets, currentFilters, totalResults = 0 }: FacetPa
               {publicationTypeCounts['preprint']}
             </span>
           </div>
-          {publicationTypeCounts['other'] > 0 && (
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="other"
-                checked={searchParams.get('publicationType')?.split(',').includes('other') || false}
-                onCheckedChange={(checked: boolean) => {
-                  const current = searchParams.get('publicationType')?.split(',') || [];
-                  const newTypes = checked
-                    ? [...current, 'other']
-                    : current.filter(t => t !== 'other');
-                  updateFilters({ publicationType: newTypes });
-                }}
-              />
-              <label
-                htmlFor="other"
-                className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer"
-              >
-                Other
-              </label>
-              <span className="text-xs text-muted-foreground">
-                {publicationTypeCounts['other']}
-              </span>
-            </div>
-          )}
         </div>
       </div>
 
@@ -234,7 +207,7 @@ export function FacetPanel({ facets, currentFilters, totalResults = 0 }: FacetPa
       )}
 
       {/* Venues */}
-      {facets.venue && (
+      {facets.venue && Object.entries(facets.venue).length > 0 && (
         <div>
           <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
             Venue
@@ -273,7 +246,7 @@ export function FacetPanel({ facets, currentFilters, totalResults = 0 }: FacetPa
       )}
 
       {/* Publishers */}
-      {facets.publisher && (
+      {facets.publisher && Object.entries(facets.publisher).length > 0 && (
         <div>
           <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
             Publisher
