@@ -15,11 +15,33 @@ interface ResultCardProps {
 
 export function ResultCard({ record }: ResultCardProps) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [doiCopied, setDoiCopied] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
   // Cache paper data for detail page
   const handlePaperClick = () => {
     cachePaper(record);
+  };
+
+  const handleCopyDOI = async () => {
+    if (record.doi) {
+      try {
+        await navigator.clipboard.writeText(record.doi);
+        setDoiCopied(true);
+        setTimeout(() => setDoiCopied(false), 2000);
+      } catch (error) {
+        console.error('Failed to copy DOI:', error);
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = record.doi;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        setDoiCopied(true);
+        setTimeout(() => setDoiCopied(false), 2000);
+      }
+    }
   };
 
   const handleDownload = async () => {
@@ -167,10 +189,11 @@ export function ResultCard({ record }: ResultCardProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => window.open(`https://doi.org/${record.doi}`, '_blank')}
+              onClick={handleCopyDOI}
               className="h-8 text-xs hover:bg-muted font-mono"
+              title={doiCopied ? 'DOI copied to clipboard!' : 'Click to copy DOI'}
             >
-              DOI
+              {doiCopied ? 'Copied!' : 'DOI'}
             </Button>
           )}
         </div>
