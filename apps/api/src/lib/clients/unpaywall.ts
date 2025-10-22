@@ -1,4 +1,6 @@
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
+import { getPooledClient } from '../http-client-factory';
+import { getServiceConfig } from '../http-pool-config';
 
 export interface UnpaywallResponse {
   doi: string;
@@ -45,9 +47,12 @@ export interface UnpaywallResponse {
 export class UnpaywallClient {
   private baseUrl = 'https://api.unpaywall.org/v2';
   private userAgent: string;
+  private httpClient: AxiosInstance;
 
   constructor(userAgent: string) {
     this.userAgent = userAgent;
+    // Initialize pooled HTTP client with Unpaywall-specific configuration
+    this.httpClient = getPooledClient(this.baseUrl, getServiceConfig('unpaywall'));
   }
 
   async resolveDOI(doi: string): Promise<UnpaywallResponse | null> {
@@ -55,7 +60,7 @@ export class UnpaywallClient {
       // Normalize DOI
       const normalizedDOI = this.normalizeDOI(doi);
       
-      const response = await axios.get(`${this.baseUrl}/${normalizedDOI}`, {
+      const response = await this.httpClient.get(`/${normalizedDOI}`, {
         params: {
           email: this.userAgent.includes('mailto:') ? 
             this.userAgent.split('mailto:')[1].split(' ')[0] : 
@@ -64,8 +69,7 @@ export class UnpaywallClient {
         headers: {
           'User-Agent': this.userAgent,
           'Accept': 'application/json'
-        },
-        timeout: 8000
+        }
       });
 
       return response.data;

@@ -1,14 +1,19 @@
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import { parseString } from 'xml2js';
 import { OARecord, SourceConnector } from '@open-access-explorer/shared';
+import { getPooledClient } from '../lib/http-client-factory';
+import { getServiceConfig } from '../lib/http-pool-config';
 
 export class NCBIConnector implements SourceConnector {
   private baseUrl: string;
   private apiKey?: string;
+  private httpClient: AxiosInstance;
 
   constructor(baseUrl: string = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils', apiKey?: string) {
     this.baseUrl = baseUrl;
     this.apiKey = apiKey;
+    // Initialize pooled HTTP client with NCBI-specific configuration
+    this.httpClient = getPooledClient(baseUrl, getServiceConfig('ncbi'));
   }
 
   async search(params: {
@@ -57,7 +62,7 @@ export class NCBIConnector implements SourceConnector {
         searchParams.api_key = this.apiKey;
       }
 
-      const searchResponse = await axios.get(`${this.baseUrl}/esearch.fcgi`, {
+      const searchResponse = await this.httpClient.get('/esearch.fcgi', {
         params: searchParams,
         timeout: 5000
       });
@@ -85,7 +90,7 @@ export class NCBIConnector implements SourceConnector {
         fetchParams.api_key = this.apiKey;
       }
 
-      const fetchResponse = await axios.get(`${this.baseUrl}/efetch.fcgi`, {
+      const fetchResponse = await this.httpClient.get('/efetch.fcgi', {
         params: fetchParams,
         timeout: 5000
       });

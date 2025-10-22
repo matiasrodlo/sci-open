@@ -1,4 +1,6 @@
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
+import { getPooledClient, getServiceConfig } from '../http-client-factory';
+import { getServiceConfig as getHttpServiceConfig } from '../http-pool-config';
 
 export interface OpenAlexWork {
   id: string;
@@ -48,9 +50,12 @@ export interface OpenAlexResponse {
 export class OpenAlexClient {
   private baseUrl = 'https://api.openalex.org';
   private userAgent: string;
+  private httpClient: AxiosInstance;
 
   constructor(userAgent: string) {
     this.userAgent = userAgent;
+    // Initialize pooled HTTP client with OpenAlex-specific configuration
+    this.httpClient = getPooledClient(this.baseUrl, getHttpServiceConfig('openalex'));
   }
 
   async searchWorks(params: {
@@ -83,25 +88,23 @@ export class OpenAlexClient {
       searchParams.filter = filter;
     }
 
-    const response = await axios.get(`${this.baseUrl}/works`, {
+    const response = await this.httpClient.get('/works', {
       params: searchParams,
       headers: {
         'User-Agent': this.userAgent,
         'Accept': 'application/json'
-      },
-      timeout: 10000
+      }
     });
 
     return response.data;
   }
 
   async getWork(workId: string): Promise<OpenAlexWork> {
-    const response = await axios.get(`${this.baseUrl}/works/${workId}`, {
+    const response = await this.httpClient.get(`/works/${workId}`, {
       headers: {
         'User-Agent': this.userAgent,
         'Accept': 'application/json'
-      },
-      timeout: 10000
+      }
     });
 
     return response.data;
