@@ -80,7 +80,13 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
                         {results.total.toLocaleString()} results
                       </span>
                     </div>
-                    <ExportButton results={results.hits} query={query} />
+                    <ExportButton 
+                      results={results.hits} 
+                      query={query} 
+                      totalResults={results.total}
+                      currentPage={currentPage}
+                      pageSize={pageSize}
+                    />
                   </div>
                 </div>
 
