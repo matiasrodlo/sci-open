@@ -1126,12 +1126,25 @@ export class SearchPipeline {
 
     let publisherRecords = 0;
     
-    // Use original unfiltered records for source facets to show total available counts
+    // Use original unfiltered records for source, venue, and publisher facets to show total available counts
     const sourceRecords = originalRecords || records;
     for (const record of sourceRecords) {
       // Source facet (scaled)
       const sourceCount = Math.round((facets.source[record.source] || 0) + scaleFactor);
       facets.source[record.source] = sourceCount;
+      
+      // Venue facet (scaled) - use original records
+      if (record.venue) {
+        const venueCount = Math.round((facets.venue[record.venue] || 0) + scaleFactor);
+        facets.venue[record.venue] = venueCount;
+      }
+
+      // Publisher facet (scaled) - use original records
+      if ((record as any).publisher) {
+        const publisherCount = Math.round((facets.publisher[(record as any).publisher] || 0) + scaleFactor);
+        facets.publisher[(record as any).publisher] = publisherCount;
+        publisherRecords++;
+      }
     }
     
     // Use filtered records for other facets
@@ -1148,19 +1161,6 @@ export class SearchPipeline {
       if (record.oaStatus) {
         const oaCount = Math.round((facets.oaStatus[record.oaStatus] || 0) + scaleFactor);
         facets.oaStatus[record.oaStatus] = oaCount;
-      }
-
-      // Venue facet (scaled)
-      if (record.venue) {
-        const venueCount = Math.round((facets.venue[record.venue] || 0) + scaleFactor);
-        facets.venue[record.venue] = venueCount;
-      }
-
-      // Publisher facet (scaled)
-      if ((record as any).publisher) {
-        const publisherCount = Math.round((facets.publisher[(record as any).publisher] || 0) + scaleFactor);
-        facets.publisher[(record as any).publisher] = publisherCount;
-        publisherRecords++;
       }
 
       // Topics facet (scaled) - flatten topics array
