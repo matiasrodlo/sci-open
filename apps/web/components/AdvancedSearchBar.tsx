@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, Plus, X, HelpCircle, Calendar, Filter } from 'lucide-react';
+import { Search, Plus, X, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -38,16 +38,6 @@ const OPERATORS = [
   { value: 'NOT', label: 'NOT' },
 ];
 
-const SOURCES = [
-  { value: 'arxiv', label: 'arXiv' },
-  { value: 'core', label: 'CORE' },
-  { value: 'europepmc', label: 'Europe PMC' },
-  { value: 'ncbi', label: 'NCBI/PMC' },
-  { value: 'openaire', label: 'OpenAIRE' },
-  { value: 'biorxiv', label: 'bioRxiv' },
-  { value: 'medrxiv', label: 'medRxiv' },
-  { value: 'doaj', label: 'DOAJ' },
-];
 
 export function AdvancedSearchBar({ initialQuery = '', onSearch }: AdvancedSearchProps) {
   const router = useRouter();
@@ -57,11 +47,6 @@ export function AdvancedSearchBar({ initialQuery = '', onSearch }: AdvancedSearc
   const [searchRows, setSearchRows] = useState<SearchRow[]>([
     { id: '1', field: 'all', operator: 'AND', value: initialQuery }
   ]);
-  const [yearFrom, setYearFrom] = useState('');
-  const [yearTo, setYearTo] = useState('');
-  const [selectedSources, setSelectedSources] = useState<string[]>(
-    SOURCES.map(s => s.value)
-  );
 
   useEffect(() => {
     setBasicQuery(initialQuery);
@@ -121,16 +106,9 @@ export function AdvancedSearchBar({ initialQuery = '', onSearch }: AdvancedSearc
 
     const params = new URLSearchParams();
     params.set('q', query);
-    
-    if (selectedSources.length > 0 && selectedSources.length < SOURCES.length) {
-      params.set('sources', selectedSources.join(','));
-    }
-    
-    if (yearFrom) params.set('yearFrom', yearFrom);
-    if (yearTo) params.set('yearTo', yearTo);
 
     if (onSearch) {
-      onSearch(query, { sources: selectedSources, yearFrom, yearTo });
+      onSearch(query, {});
     } else {
       router.push(`/results?${params.toString()}`);
     }
@@ -143,13 +121,6 @@ export function AdvancedSearchBar({ initialQuery = '', onSearch }: AdvancedSearc
     }
   };
 
-  const toggleSource = (source: string) => {
-    setSelectedSources(prev => 
-      prev.includes(source)
-        ? prev.filter(s => s !== source)
-        : [...prev, source]
-    );
-  };
 
   return (
     <div className="w-full space-y-4">
@@ -301,75 +272,6 @@ export function AdvancedSearchBar({ initialQuery = '', onSearch }: AdvancedSearc
         </TabsContent>
       </Tabs>
 
-      {/* Filters Section - Only show in Advanced mode */}
-      {mode === 'advanced' && (
-        <div className="border-t pt-4 space-y-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-            <Filter className="h-4 w-4" />
-            REFINE RESULTS
-          </div>
-
-          {/* Year Range */}
-          <div className="flex items-center gap-3">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium min-w-24">Year:</span>
-            <Input
-              type="number"
-              placeholder="From"
-              value={yearFrom}
-              onChange={(e) => setYearFrom(e.target.value)}
-              className="w-28 h-9"
-              min="1900"
-              max={new Date().getFullYear()}
-            />
-            <span className="text-muted-foreground">to</span>
-            <Input
-              type="number"
-              placeholder="To"
-              value={yearTo}
-              onChange={(e) => setYearTo(e.target.value)}
-              className="w-28 h-9"
-              min="1900"
-              max={new Date().getFullYear()}
-            />
-          </div>
-
-          {/* Sources */}
-          <div className="flex items-start gap-3">
-            <div className="flex items-center gap-2 min-w-24">
-              <span className="text-sm font-medium">Sources:</span>
-            </div>
-            <div className="flex-1 flex flex-wrap gap-2">
-              {SOURCES.map(source => (
-                <button
-                  key={source.value}
-                  onClick={() => toggleSource(source.value)}
-                  className={`text-xs px-3 py-1.5 rounded border transition-colors ${
-                    selectedSources.includes(source.value)
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-background border-border hover:border-foreground/50'
-                  }`}
-                >
-                  {source.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Selected Filters Summary */}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{selectedSources.length} of {SOURCES.length} sources selected</span>
-            {(yearFrom || yearTo) && (
-              <>
-                <span>•</span>
-                <span>
-                  {yearFrom && yearTo ? `${yearFrom}-${yearTo}` : yearFrom ? `From ${yearFrom}` : `To ${yearTo}`}
-                </span>
-              </>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Search Button */}
       <Button
