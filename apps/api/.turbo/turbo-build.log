@@ -2,3 +2,54 @@
 > @open-access-explorer/api@1.0.0 build /Users/matiasrodlo/Documents/github/sci-open/apps/api
 > tsc
 
+src/index-new.ts(9,40): error TS1343: The 'import.meta' meta-property is only allowed when the '--module' option is 'es2020', 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', or 'nodenext'.
+src/index-new.ts(103,44): error TS2345: Argument of type 'string' is not assignable to parameter of type 'OARecord'.
+src/index-new.ts(110,9): error TS2322: Type '"unknown"' is not assignable to type '"europepmc" | "core" | "openaire" | "arxiv" | "biorxiv" | "medrxiv" | "doaj" | "ncbi" | "opencitations" | "datacite"'.
+src/index-new.ts(114,7): error TS2322: Type 'string | null' is not assignable to type '{ url?: string | undefined; status: "error" | "ok" | "not_found"; }'.
+  Type 'null' is not assignable to type '{ url?: string | undefined; status: "error" | "ok" | "not_found"; }'.
+src/index-new.ts(121,39): error TS18047: 'pdfResult' is possibly 'null'.
+src/index-new.ts(121,49): error TS2339: Property 'status' does not exist on type 'string'.
+src/index.ts(9,40): error TS1343: The 'import.meta' meta-property is only allowed when the '--module' option is 'es2020', 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', or 'nodenext'.
+src/index.ts(127,14): error TS2304: Cannot find name 'params'.
+src/index.ts(196,53): error TS2353: Object literal may only specify known properties, and 'q' does not exist in type '{ doi?: string | undefined; titleOrKeywords?: string | undefined; yearFrom?: number | undefined; yearTo?: number | undefined; }'.
+src/index.ts(199,15): error TS2339: Property 'COREConnector' does not exist on type 'typeof import("/Users/matiasrodlo/Documents/github/sci-open/apps/api/src/sources/core")'.
+src/index.ts(206,51): error TS2353: Object literal may only specify known properties, and 'q' does not exist in type '{ doi?: string | undefined; titleOrKeywords?: string | undefined; yearFrom?: number | undefined; yearTo?: number | undefined; }'.
+src/index.ts(211,52): error TS2353: Object literal may only specify known properties, and 'q' does not exist in type '{ doi?: string | undefined; titleOrKeywords?: string | undefined; yearFrom?: number | undefined; yearTo?: number | undefined; }'.
+src/index.ts(216,56): error TS2353: Object literal may only specify known properties, and 'q' does not exist in type '{ doi?: string | undefined; titleOrKeywords?: string | undefined; yearFrom?: number | undefined; yearTo?: number | undefined; }'.
+src/index.ts(221,55): error TS2353: Object literal may only specify known properties, and 'q' does not exist in type '{ doi?: string | undefined; titleOrKeywords?: string | undefined; yearFrom?: number | undefined; yearTo?: number | undefined; }'.
+src/index.ts(226,52): error TS2353: Object literal may only specify known properties, and 'q' does not exist in type '{ doi?: string | undefined; titleOrKeywords?: string | undefined; yearFrom?: number | undefined; yearTo?: number | undefined; }'.
+src/index.ts(253,11): error TS2322: Type '"openalex"' is not assignable to type '"europepmc" | "core" | "openaire" | "arxiv" | "biorxiv" | "medrxiv" | "doaj" | "ncbi" | "opencitations" | "datacite"'.
+src/lib/cache-manager.ts(46,24): error TS2769: No overload matches this call.
+  Overload 1 of 8, '(path: string, options: RedisOptions): Redis', gave the following error.
+    Object literal may only specify known properties, and 'retryDelayOnFailover' does not exist in type 'RedisOptions'.
+  Overload 2 of 8, '(port: number, options: RedisOptions): Redis', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'number'.
+  Overload 3 of 8, '(port: number, host: string): Redis', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'number'.
+src/lib/merge.ts(331,3): error TS2393: Duplicate function implementation.
+src/lib/merge.ts(377,3): error TS2393: Duplicate function implementation.
+src/lib/search-cache-manager.ts(230,29): error TS2339: Property 'sourceMetadata' does not exist on type 'OARecord'.
+src/lib/search-cache-manager.ts(231,23): error TS2339: Property 'sourceMetadata' does not exist on type 'OARecord'.
+src/lib/search-cache-manager.ts(232,24): error TS2339: Property 'sourceMetadata' does not exist on type 'OARecord'.
+src/lib/search-cache-manager.ts(233,17): error TS2339: Property 'sourceMetadata' does not exist on type 'OARecord'.
+src/lib/search-pipeline.ts(145,21): error TS2322: Type 'Promise<UnpaywallResponse | null>' is not assignable to type 'Promise<CrossrefWork | null>'.
+  Type 'UnpaywallResponse | null' is not assignable to type 'CrossrefWork | null'.
+    Type 'UnpaywallResponse' is missing the following properties from type 'CrossrefWork': DOI, author, 'container-title'
+src/lib/search-pipeline.ts(152,21): error TS2322: Type 'Promise<OpenAlexWork | null>' is not assignable to type 'Promise<CrossrefWork | null>'.
+  Type 'OpenAlexWork | null' is not assignable to type 'CrossrefWork | null'.
+    Type 'OpenAlexWork' is missing the following properties from type 'CrossrefWork': DOI, author, 'container-title'
+src/lib/search-pipeline.ts(462,54): error TS2339: Property 'host_organization_name' does not exist on type '{ display_name: string; issn?: string[] | undefined; publisher?: string | undefined; }'.
+src/lib/search-pipeline.ts(475,7): error TS2322: Type '"openalex"' is not assignable to type '"europepmc" | "core" | "openaire" | "arxiv" | "biorxiv" | "medrxiv" | "doaj" | "ncbi" | "opencitations" | "datacite"'.
+src/lib/search-pipeline.ts(531,7): error TS2322: Type '"crossref"' is not assignable to type '"europepmc" | "core" | "openaire" | "arxiv" | "biorxiv" | "medrxiv" | "doaj" | "ncbi" | "opencitations" | "datacite"'.
+src/lib/search-pipeline.ts(564,7): error TS2322: Type '"unpaywall"' is not assignable to type '"europepmc" | "core" | "openaire" | "arxiv" | "biorxiv" | "medrxiv" | "doaj" | "ncbi" | "opencitations" | "datacite"'.
+src/lib/search-pipeline.ts(757,43): error TS2339: Property 'name' does not exist on type 'string'.
+src/lib/search-pipeline.ts(758,43): error TS2339: Property 'name' does not exist on type 'string'.
+src/lib/search-pipeline.ts(763,43): error TS2339: Property 'name' does not exist on type 'string'.
+src/lib/search-pipeline.ts(764,43): error TS2339: Property 'name' does not exist on type 'string'.
+src/lib/search-pipeline.ts(1079,11): error TS2393: Duplicate function implementation.
+src/lib/search-pipeline.ts(1341,11): error TS2393: Duplicate function implementation.
+src/sources/ncbi.ts(276,7): error TS2322: Type 'null' is not assignable to type 'OARecord'.
+src/sources/ncbi.ts(298,5): error TS2322: Type '{ id: string; title: string; authors: string[]; year: number | undefined; venue: any; abstract: string | undefined; source: string; sourceId: string; oaStatus: "published" | "other"; bestPdfUrl: string | undefined; landingPage: string; topics: never[]; language: any; createdAt: string; }' is not assignable to type 'OARecord'.
+  Types of property 'source' are incompatible.
+    Type 'string' is not assignable to type '"europepmc" | "core" | "openaire" | "arxiv" | "biorxiv" | "medrxiv" | "doaj" | "ncbi" | "opencitations" | "datacite"'.
+ ELIFECYCLE  Command failed with exit code 2.
