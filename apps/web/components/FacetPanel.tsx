@@ -85,6 +85,15 @@ export function FacetPanel({ facets, currentFilters, totalResults = 0 }: FacetPa
     return labels[publisher] || publisher;
   };
 
+  // Convert facet arrays to key-value objects for processing
+  const convertFacetArray = (facetArray: Array<{value: string | number, count: number}> | undefined) => {
+    if (!facetArray || !Array.isArray(facetArray)) return {};
+    return facetArray.reduce((acc, item) => {
+      acc[item.value.toString()] = item.count;
+      return acc;
+    }, {} as Record<string, number>);
+  };
+
   // Utility function to detect and fix scaling issues in any facet category
   const detectAndFixScalingIssues = (facetData: Record<string, number>, categoryName: string) => {
     try {
@@ -152,11 +161,12 @@ export function FacetPanel({ facets, currentFilters, totalResults = 0 }: FacetPa
   // Calculate publication type counts with proper scaling
   const getPublicationTypeCounts = () => {
     try {
-      const sourceFacets = facets.source || {};
+      // Convert source facets from array format to object format
+      const sourceFacetsObj = convertFacetArray(facets.source);
       let peerReviewedCount = 0;
       let preprintCount = 0;
 
-      console.log('Source facets:', sourceFacets);
+      console.log('Source facets:', sourceFacetsObj);
       console.log('Total results:', totalResults);
 
       // Classification based on source characteristics
@@ -164,7 +174,7 @@ export function FacetPanel({ facets, currentFilters, totalResults = 0 }: FacetPa
       const preprintSources = ['arxiv'];
 
       // Calculate unscaled counts from fetched results
-      Object.entries(sourceFacets).forEach(([source, count]) => {
+      Object.entries(sourceFacetsObj).forEach(([source, count]) => {
         const countNum = typeof count === 'number' ? count : 0;
         console.log(`Source: ${source}, Count: ${countNum}`);
         if (peerReviewedSources.includes(source)) {
@@ -177,7 +187,7 @@ export function FacetPanel({ facets, currentFilters, totalResults = 0 }: FacetPa
       console.log('Raw counts - Peer reviewed:', peerReviewedCount, 'Preprint:', preprintCount);
 
       // Check if all sources have the same count (indicating backend scaling issue)
-      const sourceCounts = Object.values(sourceFacets).filter(count => typeof count === 'number' && count > 0);
+      const sourceCounts = Object.values(sourceFacetsObj).filter(count => typeof count === 'number' && count > 0);
       const allSameCount = sourceCounts.length > 1 && sourceCounts.every(count => count === sourceCounts[0]);
       
       console.log('Source counts for detection:', sourceCounts);
@@ -242,12 +252,18 @@ export function FacetPanel({ facets, currentFilters, totalResults = 0 }: FacetPa
 
   const publicationTypeCounts = getPublicationTypeCounts();
   
+  const yearFacets = convertFacetArray(facets.year);
+  const venueFacets = convertFacetArray(facets.venue);
+  const publisherFacets = convertFacetArray(facets.publisher);
+  const topicsFacets = convertFacetArray(facets.topics);
+  const sourceFacets = convertFacetArray(facets.source);
+
   // Apply scaling fixes to all facet categories
-  const fixedYearFacets = detectAndFixScalingIssues(facets.year || {}, 'year');
-  const fixedVenueFacets = detectAndFixScalingIssues(facets.venue || {}, 'venue');
-  const fixedPublisherFacets = detectAndFixScalingIssues(facets.publisher || {}, 'publisher');
-  const fixedTopicsFacets = detectAndFixScalingIssues(facets.topics || {}, 'topics');
-  const fixedSourceFacets = detectAndFixScalingIssues(facets.source || {}, 'source');
+  const fixedYearFacets = detectAndFixScalingIssues(yearFacets, 'year');
+  const fixedVenueFacets = detectAndFixScalingIssues(venueFacets, 'venue');
+  const fixedPublisherFacets = detectAndFixScalingIssues(publisherFacets, 'publisher');
+  const fixedTopicsFacets = detectAndFixScalingIssues(topicsFacets, 'topics');
+  const fixedSourceFacets = detectAndFixScalingIssues(sourceFacets, 'source');
 
   return (
     <div className="space-y-6">

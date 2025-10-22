@@ -18,6 +18,8 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { SearchParams, SearchResponse, OARecord } from '@open-access-explorer/shared';
 import { SearchPipeline } from './lib/search-pipeline';
+import { EnhancedSearchPipeline } from './lib/enhanced-search-pipeline';
+import { SmartSourceConfigManager } from './lib/smart-source-config';
 import { 
   getSearchCache, 
   getPaperCache, 
@@ -46,12 +48,26 @@ fastify.register(helmet);
 
 // Initialize search pipeline
 const userAgent = `OpenAccessExplorer/1.0 (mailto:${process.env.UNPAYWALL_EMAIL || 'your-email@example.com'})`;
-const searchPipeline = new SearchPipeline({
+
+// Initialize smart source selection configuration
+const smartSourceConfig = new SmartSourceConfigManager({
+  enabled: process.env.ENABLE_SMART_SOURCE_SELECTION === 'true',
+  adaptiveLearning: process.env.ENABLE_ADAPTIVE_LEARNING === 'true',
+  performanceMonitoring: process.env.ENABLE_PERFORMANCE_MONITORING === 'true',
+  maxSources: parseInt(process.env.SMART_SOURCE_MAX_SOURCES || '4'),
+  timeoutMs: parseInt(process.env.SMART_SOURCE_TIMEOUT_MS || '8000'),
+  confidenceThreshold: parseFloat(process.env.SMART_SOURCE_CONFIDENCE_THRESHOLD || '0.6')
+});
+
+// Initialize enhanced search pipeline with smart source selection
+const searchPipeline = new EnhancedSearchPipeline({
   userAgent,
   maxResults: 100,
   enableEnrichment: true,
   enablePdfResolution: true,
-  enableCitations: false
+  enableCitations: false,
+  enableSmartSourceSelection: process.env.ENABLE_SMART_SOURCE_SELECTION === 'true',
+  enableAdaptiveLearning: process.env.ENABLE_ADAPTIVE_LEARNING === 'true'
 });
 
 // Search endpoint with advanced caching
@@ -126,7 +142,7 @@ fastify.post<{ Body: SearchParams }>('/api/search', async (request, reply) => {
     const responseTime = Date.now() - startTime;
     fastify.log.error({ 
       error: error.message, 
-      query: params.q,
+      query: request.body?.q,
       responseTime 
     }, 'Search error');
     reply.code(500);
@@ -574,6 +590,64 @@ const start = async () => {
     fastify.log.error(err);
     process.exit(1);
   }
-};
+}
+
+// Smart Source Selection Endpoints
+fastify.get('/api/smart-source/config', async (request, reply) => {
+  try {
+    const config = smartSourceConfig.getConfig();
+    return { success: true, config };
+  } catch (error) {
+    fastify.log.error({ error }, 'Error getting smart source config');
+    reply.code(500);
+    return { error: 'Failed to get smart source configuration' };
+  }
+});
+
+fastify.post('/api/smart-source/config', async (request, reply) => {
+  try {
+    const newConfig = request.body as any;
+    smartSourceConfig.updateConfig(newConfig);
+    const updatedConfig = smartSourceConfig.getConfig();
+    return { success: true, config: updatedConfig };
+  } catch (error) {
+    fastify.log.error({ error }, 'Error updating smart source config');
+    reply.code(500);
+    return { error: 'Failed to update smart source configuration' };
+  }
+});
+
+fastify.get('/api/smart-source/test', async (request, reply) => {
+  try {
+    const testResults = await smartSourceConfig.runTests();
+    return testResults;
+  } catch (error) {
+    fastify.log.error({ error }, 'Error running smart source tests');
+    reply.code(500);
+    return { error: 'Failed to run smart source tests' };
+  }
+});
+
+fastify.get('/api/smart-source/performance', async (request, reply) => {
+  try {
+    const recommendations = smartSourceConfig.getRecommendations();
+    return recommendations;
+  } catch (error) {
+    fastify.log.error({ error }, 'Error getting smart source performance');
+    reply.code(500);
+    return { error: 'Failed to get smart source performance data' };
+  }
+});
+
+fastify.get('/api/smart-source/export', async (request, reply) => {
+  try {
+    const exportData = smartSourceConfig.exportData();
+    return exportData;
+  } catch (error) {
+    fastify.log.error({ error }, 'Error exporting smart source data');
+    reply.code(500);
+    return { error: 'Failed to export smart source data' };
+  }
+});
 
 start();
