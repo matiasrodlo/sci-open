@@ -19,7 +19,7 @@ pnpm install
 Copy the example environment file:
 
 ```bash
-cp env.example .env
+cp docs/env.example .env
 ```
 
 Edit `.env` with your settings. Minimum required:

@@ -13,7 +13,8 @@ Open Access Explorer aggregates and searches research papers from arXiv, CORE, E
 pnpm install
 
 # Copy environment file
-cp env.example .env
+cp docs/env.example .env
+```
 
 # Start services (Redis, Typesense)
 docker-compose up -d
