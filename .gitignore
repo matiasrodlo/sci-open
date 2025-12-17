@@ -106,3 +106,9 @@ Thumbs.db
 # Search backend data
 typesense_data/
 meilisearch_data/
+
+# Old/temporary files
+*.old
+*.backup
+*.tmp
+*~
