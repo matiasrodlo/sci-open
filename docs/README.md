@@ -1,70 +1,63 @@
-# Open Access Explorer Documentation
+# Open Access Explorer
 
-A comprehensive research discovery platform for open-access academic papers with multi-source search capabilities.
+A modern search interface for discovering open-access research papers across multiple academic sources.
 
-## 📚 Documentation Index
+## Overview
 
-- [**Overview**](./overview.md) - Platform introduction and key features
-- [**Architecture**](./architecture.md) - System design and component structure  
-- [**API Reference**](./api.md) - REST API endpoints and usage
-- [**Deployment**](./deployment.md) - Production deployment guide
-- [**Development**](./development.md) - Development setup and guidelines
-- [**Configuration**](./configuration.md) - Environment and service configuration
-- [**HTTP Connection Pooling**](./http-connection-pooling.md) - Performance optimization with connection pooling
+Open Access Explorer aggregates and searches research papers from arXiv, CORE, Europe PMC, NCBI, and other open-access repositories. Built with Next.js and Fastify, it provides a clean, Web of Science-style interface with intelligent caching, smart source selection, and real-time faceting.
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
-# Clone and install
-git clone <repository-url>
-cd sci-open
+# Install dependencies
 pnpm install
 
-# Start development environment
+# Copy environment file
+cp env.example .env
+
+# Start services (Redis, Typesense)
+docker-compose up -d
+
+# Start development servers
 pnpm dev
 ```
 
-Visit `http://localhost:3000` to access the application.
+Visit `http://localhost:3000`
 
-## 🏗️ System Overview
+## Documentation
 
-**Open Access Explorer** is a Web of Science-style research discovery platform that aggregates and searches across multiple open-access repositories including arXiv, CORE, Europe PMC, NCBI, and more.
+- [Architecture](./architecture.md) - System design and components
+- [API Reference](./api.md) - Endpoints and data models
+- [Development](./development.md) - Setup and development guide
+- [Configuration](./configuration.md) - Environment variables and settings
 
-### Key Features
+## Features
 
-- **Multi-Source Search**: Simultaneous search across 8+ academic databases
-- **Smart PDF Resolution**: Automatic PDF access with intelligent fallback chains
-- **Advanced Filtering**: Filter by source, year, venue, and open access status
-- **Citation Export**: Support for 10+ citation formats (BibTeX, EndNote, APA, etc.)
-- **Modern UI**: Clean, responsive interface built with Next.js and Tailwind CSS
-- **Flexible Backend**: Support for Typesense, Meilisearch, and Algolia search engines
+- **Multi-source search** across academic repositories
+- **Smart PDF resolution** with automatic fallback chains
+- **Intelligent caching** with Redis and in-memory layers
+- **Adaptive source selection** based on query patterns
+- **Real-time faceting** by source, year, venue, and more
+- **Performance monitoring** and optimization
 
-### Tech Stack
+## Tech Stack
 
-- **Frontend**: Next.js 14, TypeScript, Tailwind CSS, shadcn/ui
-- **Backend**: Fastify API server with TypeScript
-- **Search**: Typesense (recommended), Meilisearch, Algolia
-- **Data Sources**: arXiv, CORE, Europe PMC, NCBI, bioRxiv, medRxiv, PLOS, OpenAIRE
+**Frontend:** Next.js 14, TypeScript, Tailwind CSS, shadcn/ui  
+**Backend:** Fastify, TypeScript, Node.js  
+**Search:** Typesense, Meilisearch, Algolia  
+**Cache:** Redis, NodeCache  
+**Data Sources:** arXiv, CORE, Europe PMC, NCBI, OpenAIRE, and more
 
-## 📖 Documentation Structure
+## Project Structure
 
-This documentation is organized into focused sections:
+```
+sci-open/
+├── apps/
+│   ├── web/          # Next.js frontend
+│   └── api/          # Fastify API server
+├── packages/
+│   ├── shared/       # Shared types
+│   └── search/       # Search adapters
+└── docs/             # Documentation
+```
 
-- **Overview**: Platform introduction, features, and use cases
-- **Architecture**: System design, data flow, and component relationships
-- **API Reference**: Complete REST API documentation with examples
-- **Deployment**: Production deployment for frontend, API, and search backends
-- **Development**: Local development setup, contributing guidelines, and project structure
-- **Configuration**: Environment variables, service configuration, and tuning
-
-## 🤝 Contributing
-
-We welcome contributions! Please see the [Development Guide](./development.md) for setup instructions and contribution guidelines.
-
-## 📄 License
-
-MIT License - see [LICENSE](../LICENSE) file for details.
-
----
-
-*Last updated: December 2024*
