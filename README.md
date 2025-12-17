@@ -1,10 +1,8 @@
 # Open Access Explorer
 
-A modern search interface for discovering open-access research papers across multiple academic sources.
+A modern search interface for discovering open-access research papers across leading academic sources. Unifies search across arXiv, CORE, Europe PMC, NCBI, OpenAIRE, and other repositories, providing access to more than 90 million papers worldwide.
 
-Open Access Explorer aggregates and searches research papers from arXiv, CORE, Europe PMC, NCBI, and other open-access repositories. Built with Next.js and Fastify, it provides a clean, Web of Science-style interface with intelligent caching, smart source selection, and real-time faceting.
-
-<img width="2972" height="2166" alt="image" src="https://github.com/user-attachments/assets/bd92ec68-d94f-4eec-8cfb-d6ef19bc4b3a" />
+<img width="2946" height="1972" alt="image" src="https://github.com/user-attachments/assets/2443de09-7920-4f7d-b50a-d6f0edb98278" />
 
 ## Features
 
@@ -16,6 +14,8 @@ Open Access Explorer aggregates and searches research papers from arXiv, CORE, E
 - **Performance monitoring** and optimization
 
 ## Quick Start
+
+**Prerequisites:** Node.js 18+, pnpm 8+, Docker
 
 ```bash
 # Install dependencies
@@ -37,7 +37,6 @@ Visit `http://localhost:3000`
 
 Comprehensive documentation is available in the [`/docs`](./docs) directory:
 
-- **[Overview](./docs/README.md)** - Project overview and quick start
 - **[Architecture](./docs/architecture.md)** - System design and components
 - **[API Reference](./docs/api.md)** - Endpoints and data models
 - **[Development](./docs/development.md)** - Setup and development guide
@@ -63,43 +62,6 @@ sci-open/
 │   └── search/       # Search adapters
 └── docs/             # Documentation
 ```
-
-## Prerequisites
-
-- Node.js 18+
-- pnpm 8+
-- Docker (for local services)
-
-## Environment Setup
-
-Minimum required environment variables:
-
-```env
-NEXT_PUBLIC_API_BASE=http://localhost:4000
-PORT=4000
-REDIS_URL=redis://localhost:6379
-```
-
-See [Configuration](./docs/configuration.md) for complete environment setup.
-
-## Development
-
-```bash
-# Start both API and web
-pnpm dev
-
-# Or separately
-pnpm dev:api    # API on :4000
-pnpm dev:web    # Web on :3000
-
-# Build
-pnpm build
-
-# Lint
-pnpm lint
-```
-
-See [Development Guide](./docs/development.md) for detailed instructions.
 
 ## License
 
