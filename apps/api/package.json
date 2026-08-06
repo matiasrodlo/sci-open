@@ -13,6 +13,7 @@
   "dependencies": {
     "@fastify/cors": "^8.4.0",
     "@fastify/helmet": "^11.1.1",
+    "@open-access-explorer/search": "workspace:*",
     "@open-access-explorer/shared": "workspace:*",
     "axios": "^1.5.0",
     "axios-retry": "^4.5.0",
