@@ -1,4 +1,5 @@
 import { SearchParams } from '@open-access-explorer/shared';
+import { QueryAnalysis } from './query-analyzer';
 
 export interface SourceCharacteristics {
   name: string;

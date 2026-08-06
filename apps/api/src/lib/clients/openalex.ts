@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { getPooledClient, getServiceConfig } from '../http-client-factory';
+import { getPooledClient } from '../http-client-factory';
 import { getServiceConfig as getHttpServiceConfig } from '../http-pool-config';
 
 export interface OpenAlexWork {
@@ -21,7 +21,14 @@ export interface OpenAlexWork {
       display_name: string;
       issn?: string[];
       publisher?: string;
+      host_organization_name?: string;
     };
+  };
+  // Legacy OpenAlex field, superseded by primary_location. Not included in the
+  // `select` list below, so it is absent from searchWorks() responses.
+  host_venue?: {
+    display_name?: string;
+    publisher?: string;
   };
   concepts: Array<{
     display_name: string;
@@ -34,6 +41,8 @@ export interface OpenAlexWork {
     oa_url?: string;
   };
   cited_by_count?: number;
+  // Also outside the `select` list; only present on full getWork() responses.
+  created_date?: string;
   type: string;
   language?: string;
 }

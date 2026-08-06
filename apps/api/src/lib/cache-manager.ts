@@ -44,7 +44,6 @@ export class CacheManager {
 
     // Initialize L2 cache (Redis)
     this.l2Cache = new Redis(redisUrl || process.env.REDIS_URL || 'redis://localhost:6379', {
-      retryDelayOnFailover: 100,
       maxRetriesPerRequest: 3,
       lazyConnect: true,
       keepAlive: 30000

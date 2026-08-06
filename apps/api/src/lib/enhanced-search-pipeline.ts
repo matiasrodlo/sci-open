@@ -178,7 +178,7 @@ export class EnhancedSearchPipeline {
         let sourceResults: EnrichedRecord[] = [];
         
         if (source === 'crossref') {
-          const crossrefWork = await this.crossrefClient.getWorkByDOI(doi);
+          const crossrefWork = await this.crossrefClient.getWork(doi);
           if (crossrefWork) {
             sourceResults = [this.enrichCrossrefWork(crossrefWork)];
           }
@@ -365,18 +365,6 @@ export class EnhancedSearchPipeline {
     return doiPattern.test(query);
   }
 
-  private applyFilters(records: EnrichedRecord[], filters: any): EnrichedRecord[] {
-    if (!filters) return records;
-    
-    return records.filter(record => {
-      if (filters.yearFrom && record.year && record.year < filters.yearFrom) return false;
-      if (filters.yearTo && record.year && record.year > filters.yearTo) return false;
-      if (filters.source && record.source !== filters.source) return false;
-      if (filters.oaStatus && record.oaStatus !== filters.oaStatus) return false;
-      return true;
-    });
-  }
-
   private sortResults(records: EnrichedRecord[], sort: string): EnrichedRecord[] {
     switch (sort) {
       case 'year':
@@ -458,7 +446,8 @@ export class EnhancedSearchPipeline {
   }
 
   private generateOaStatusFacets(records: EnrichedRecord[]): any[] {
-    const statusCounts = new Map<string, number>();
+    // oaStatus is optional, so undefined is a real bucket here
+    const statusCounts = new Map<string | undefined, number>();
     records.forEach(record => {
       const count = statusCounts.get(record.oaStatus) || 0;
       statusCounts.set(record.oaStatus, count + 1);
@@ -738,9 +727,9 @@ export class EnhancedSearchPipeline {
   private generatePublisherFacets(records: EnrichedRecord[]): any[] {
     const publisherCounts = new Map<string, number>();
     records.forEach(record => {
-      if ((record as any).publisher) {
-        const count = publisherCounts.get((record as any).publisher) || 0;
-        publisherCounts.set((record as any).publisher, count + 1);
+      if (record.publisher) {
+        const count = publisherCounts.get(record.publisher) || 0;
+        publisherCounts.set(record.publisher, count + 1);
       }
     });
 
@@ -813,7 +802,7 @@ export class EnhancedSearchPipeline {
 
       // Publisher filter
       if (filters?.publisher && filters.publisher.length > 0) {
-        const publisher = (record as any).publisher;
+        const publisher = record.publisher;
         if (!publisher || !filters.publisher.includes(publisher)) {
           return false;
         }

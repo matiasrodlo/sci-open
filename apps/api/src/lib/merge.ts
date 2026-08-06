@@ -22,9 +22,6 @@ export interface EnrichedRecord extends OARecord {
   // Citation information
   citationCount?: number;
   referenceCount?: number;
-  
-  // Source metadata
-  sourceMetadata?: Record<string, any>;
 }
 
 export interface MergeOptions {
@@ -323,13 +320,6 @@ export class RecordMerger {
    */
   private normalizeDOI(doi: string): string {
     return doi.toLowerCase().trim().replace(/^https?:\/\/doi\.org\//, '');
-  }
-
-  /**
-   * Deduplicate records by DOI
-   */
-  deduplicate(records: OARecord[]): EnrichedRecord[] {
-    return this.deduplicateByDOI(records);
   }
 
   /**

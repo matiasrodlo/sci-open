@@ -133,7 +133,8 @@ export class SearchPipeline {
     const normalizedDoi = this.normalizeDoi(doi);
     
     // Create fallbacks for DOI resolution
-    const fallbacks = createStagedFallbacks({
+    // Each stage resolves a different shape; convertToOARecord dispatches on source
+    const fallbacks = createStagedFallbacks<CrossrefWork | UnpaywallResponse | OpenAlexWork | null>({
       fast: [
         {
           name: 'crossref',
@@ -485,7 +486,7 @@ export class SearchPipeline {
 
     // Add publisher if available
     if (publisher) {
-      (record as any).publisher = publisher;
+      record.publisher = publisher;
     }
 
     return record;
@@ -754,14 +755,14 @@ export class SearchPipeline {
         return records.sort((a, b) => (a.citationCount || 0) - (b.citationCount || 0));
       case 'author':
         return records.sort((a, b) => {
-          const authorA = a.authors?.[0]?.name || '';
-          const authorB = b.authors?.[0]?.name || '';
+          const authorA = a.authors?.[0] || '';
+          const authorB = b.authors?.[0] || '';
           return authorA.localeCompare(authorB);
         });
       case 'author_desc':
         return records.sort((a, b) => {
-          const authorA = a.authors?.[0]?.name || '';
-          const authorB = b.authors?.[0]?.name || '';
+          const authorA = a.authors?.[0] || '';
+          const authorB = b.authors?.[0] || '';
           return authorB.localeCompare(authorA);
         });
       case 'venue':
@@ -1071,40 +1072,6 @@ export class SearchPipeline {
    */
   private normalizeDoi(doi: string): string {
     return doi.toLowerCase().trim().replace(/^https?:\/\/doi\.org\//, '');
-  }
-
-  /**
-   * Merge aggregator results into enriched records
-   */
-  private mergeAggregatorResults(aggregatorResults: AggregatorResult[]): EnrichedRecord[] {
-    const enrichedRecords: EnrichedRecord[] = [];
-
-    for (const result of aggregatorResults) {
-      if (result.error) {
-        console.warn(`Aggregator ${result.source} failed: ${result.error}`);
-        continue;
-      }
-
-      console.log(`Aggregator ${result.source} returned ${result.records.length} records in ${result.latency}ms`);
-
-      for (const record of result.records) {
-        const enrichedRecord: EnrichedRecord = {
-          ...record,
-          // Add aggregator-specific metadata
-          sourceMetadata: {
-            source: result.source,
-            latency: result.latency,
-            enriched: false // Aggregator records are not enriched by default
-          }
-        };
-
-        enrichedRecords.push(enrichedRecord);
-        console.log(`Added aggregator record: ${record.title} (DOI: ${record.doi || 'none'})`);
-      }
-    }
-
-    console.log(`Total aggregator records to merge: ${enrichedRecords.length}`);
-    return enrichedRecords;
   }
 
   /**

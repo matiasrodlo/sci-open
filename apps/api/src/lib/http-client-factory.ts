@@ -2,6 +2,16 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import axiosRetry from 'axios-retry';
 import { Http2Session } from 'http2';
 
+// Timing data the metrics interceptors stash on each request's config
+declare module 'axios' {
+  interface InternalAxiosRequestConfig {
+    metadata?: {
+      startTime: number;
+      baseUrl: string;
+    };
+  }
+}
+
 export interface HttpPoolConfig {
   maxConnections?: number;
   keepAliveTimeout?: number;
@@ -77,8 +87,8 @@ export class HttpClientFactory {
         'Connection': 'keep-alive',
         'Keep-Alive': `timeout=${config.keepAliveTimeout! / 1000}, max=1000`,
       },
-      // Enable HTTP/2 if supported
-      httpVersion: config.enableHttp2 ? '2' : '1.1',
+      // NOTE: axios has no `httpVersion` option; HTTP/2 negotiation is left to
+      // the underlying agent, so `config.enableHttp2` is not applied here.
       // Connection pooling configuration
       maxRedirects: 5,
       validateStatus: (status) => status < 500, // Don't throw on 4xx errors
@@ -135,7 +145,7 @@ export class HttpClientFactory {
         return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
                (error.code === 'ECONNRESET') ||
                (error.code === 'ETIMEDOUT') ||
-               (error.response?.status >= 500);
+               ((error.response?.status ?? 0) >= 500);
       },
       onRetry: (retryCount, error, requestConfig) => {
         console.log(`Retrying request (${retryCount}/${config.retryAttempts}): ${requestConfig.url}`);
@@ -227,6 +237,8 @@ export class HttpClientFactory {
   /**
    * Get metrics for a specific client
    */
+  getMetrics(baseUrl: string): HttpPoolMetrics | null;
+  getMetrics(): Map<string, HttpPoolMetrics>;
   getMetrics(baseUrl?: string): Map<string, HttpPoolMetrics> | HttpPoolMetrics | null {
     if (baseUrl) {
       return this.metrics.get(this.normalizeUrl(baseUrl)) || null;

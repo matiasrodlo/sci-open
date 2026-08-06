@@ -194,8 +194,8 @@ export class PerformanceMonitor {
   exportPerformanceData(): {
     reports: PerformanceReport[];
     sourceMetrics: Record<string, SourcePerformanceMetrics>;
-    trends: ReturnType<typeof this.getPerformanceTrends>;
-    recommendations: ReturnType<typeof this.getOptimizationRecommendations>;
+    trends: ReturnType<PerformanceMonitor['getPerformanceTrends']>;
+    recommendations: ReturnType<PerformanceMonitor['getOptimizationRecommendations']>;
   } {
     return {
       reports: [...this.performanceHistory],

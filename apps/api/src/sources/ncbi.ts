@@ -128,7 +128,7 @@ export class NCBIConnector implements SourceConnector {
     }
   }
 
-  private normalizeArticle(pubmedArticle: any): OARecord {
+  private normalizeArticle(pubmedArticle: any): OARecord | null {
     const medlineCitation = pubmedArticle.MedlineCitation?.[0] || pubmedArticle.MedlineCitation;
     
     // Extract PMID from the XML structure: <PMID Version="1">41109958</PMID>
@@ -284,7 +284,7 @@ export class NCBIConnector implements SourceConnector {
       return null;
     }
 
-    const record = {
+    const record: OARecord = {
       id: `ncbi:${pmid}`,
       title: title.trim(),
       authors,
