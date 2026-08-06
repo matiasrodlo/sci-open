@@ -63,7 +63,7 @@ export function EnhancedPaperActions({ paper }: EnhancedPaperActionsProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch PDF');
+        throw new Error(`PDF download failed with status ${response.status}`);
       }
 
       const blob = await response.blob();
@@ -73,14 +73,19 @@ export function EnhancedPaperActions({ paper }: EnhancedPaperActionsProps) {
       a.download = `${paper.title.slice(0, 50).replace(/[^a-z0-9]/gi, '_')}.pdf`;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      // Revoking straight after click can cancel the download before the
+      // browser has read the blob, so give it a moment first.
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
     } catch (error) {
       console.error('Download error:', error);
-      setDownloadError('Failed to download PDF');
-      // Fallback: open in new tab
-      if (paper.bestPdfUrl) {
-        window.open(paper.bestPdfUrl, '_blank');
+      // Fallback: open in new tab. Only report failure if the fallback
+      // can't run either, so a working download never shows an error.
+      const opened = paper.bestPdfUrl
+        ? window.open(paper.bestPdfUrl, '_blank')
+        : null;
+      if (!opened) {
+        setDownloadError('Failed to download PDF');
       }
     } finally {
       setIsDownloading(false);

@@ -31,6 +31,7 @@ import {
 } from './lib/cache';
 import { httpPerformanceMonitor } from './lib/http-performance-monitor';
 import { httpPerformanceTester } from './lib/http-performance-test';
+import { assertPublicHttpUrl, fetchPdfStream, PdfProxyError } from './lib/pdf-proxy';
 
 const fastify = Fastify({
   logger: {
@@ -302,6 +303,39 @@ fastify.get<{ Params: { id: string } }>('/api/paper/:id', async (request, reply)
   } catch (error: any) {
     fastify.log.error({ error: error.message }, 'Error fetching paper details');
     reply.code(500);
+    return { error: error.message };
+  }
+});
+
+// PDF download proxy. Publishers rarely allow a cross-origin fetch from the
+// browser, so the file is streamed through the API and handed to the client as
+// an attachment.
+fastify.post<{ Body: { paperId?: string; pdfUrl?: string } }>('/api/download-pdf', async (request, reply) => {
+  const { paperId, pdfUrl } = request.body || {};
+
+  if (!pdfUrl) {
+    reply.code(400);
+    return { error: 'pdfUrl is required' };
+  }
+
+  try {
+    const url = await assertPublicHttpUrl(pdfUrl);
+    const pdf = await fetchPdfStream(url, userAgent);
+
+    reply.header('Content-Type', 'application/pdf');
+    reply.header('Content-Disposition', `attachment; filename="${pdf.filename}"`);
+    if (pdf.contentLength) {
+      reply.header('Content-Length', pdf.contentLength.toString());
+    }
+    reply.header('Cache-Control', 'private, max-age=3600');
+
+    fastify.log.info({ paperId, pdfUrl: url.href }, 'Streaming PDF to client');
+    return reply.send(pdf.stream);
+
+  } catch (error: any) {
+    const statusCode = error instanceof PdfProxyError ? error.statusCode : 502;
+    fastify.log.warn({ paperId, pdfUrl, statusCode, error: error.message }, 'PDF download failed');
+    reply.code(statusCode);
     return { error: error.message };
   }
 });
