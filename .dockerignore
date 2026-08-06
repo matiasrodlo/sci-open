@@ -1,0 +1,31 @@
+# Dependencies are installed inside the image. The host's node_modules are pnpm
+# symlinks into a local store and would clobber the installed tree.
+node_modules
+**/node_modules
+.pnpm-store
+
+# Build output is generated inside the image
+dist
+**/dist
+.next
+**/.next
+.turbo
+**/.turbo
+*.tsbuildinfo
+
+# VCS and tooling
+.git
+.gitignore
+.claude
+.vscode
+.idea
+
+# Secrets are injected at runtime, never baked into an image
+.env
+.env.*
+
+# Local noise
+*.log
+.DS_Store
+typesense_data
+meilisearch_data
