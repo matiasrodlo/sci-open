@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **7 / 13** | **4,564** | **7 / 11** | **587** | **1** |
+| **7 / 13** | **4,564** | **9 / 11** | **604** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -325,7 +325,15 @@ Mechanical, independent, one at a time. Each provider lands with its own fixture
    > `doiLookup` stays **true**, and that is the case it is actually good for — a DataCite DOI resolves here and nowhere else in the fan-out, for the same reason. A keyword search is now skipped with the missing capability named, rather than silently contributing 600 records to a filter.
    >
    > The provider is still built and tested, so the decision is reversible and the records are described honestly if it is: 11 of 100 live records are datasets and are skipped by type; the rest get `stage` from `resourceTypeGeneral`, a landing page rather than a fabricated PDF, and no `'DataCite Repository'` venue.
-9. **bioRxiv.** No keyword index — it scans a 30-day window and greps client-side, spending ten HTTP requests to match nothing. Recommend `keywordSearch: false`, `doiLookup: true`.
+9. **bioRxiv — done, `keywordSearch: false`, `doiLookup: true` as recommended.** No keyword index — it scanned a 30-day window and grepped client-side, spending ten HTTP requests to match nothing.
+
+   > **The numbers behind the recommendation.** The recorded window reports **5,940 records** and the scan was capped at 5 pages of 30 per server: 150 of 5,940, across two servers, for ten requests — and blind to anything posted more than 30 days ago, in a corpus spanning years. A ceiling of 2.5% of one month. That is a property of the API, not an implementation to improve.
+   >
+   > **The DOI lookup was broken too, and the 404 hid it.** `encodeURIComponent` turns `10.1101/2025.10.27.684732` into `10.1101%2F2025…`, which the API answers with **404**. Since one of the two servers legitimately 404s on every lookup, that failure was indistinguishable from "not found" and read as an empty result. Verified live both ways: the raw slash returns 3 records, the escaped one returns 404.
+   >
+   > **A lookup returns every version of a preprint** — three for the recorded record — which is one work, not three. Merge would collapse them by DOI, but a provider reporting a work three times has already misreported what it retrieved. The highest version is kept.
+   >
+   > Smaller: the API writes the string `"NA"` where a value is absent, so `updatedAt: result.published || result.date` set `updatedAt` to the literal `"NA"` on every unpublished preprint — all of them in the recorded window.
 
 ### Done when (per provider)
 

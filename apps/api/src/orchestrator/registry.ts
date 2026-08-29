@@ -1,5 +1,6 @@
 import type { Paper, ProviderCapabilities, ProviderId, Query } from '@open-access-explorer/shared';
 import * as arxiv from '../providers/arxiv';
+import * as biorxiv from '../providers/biorxiv';
 import * as datacite from '../providers/datacite';
 import * as doaj from '../providers/doaj';
 import * as europepmc from '../providers/europepmc';
@@ -181,6 +182,22 @@ export const PROVIDERS: ProviderEntry[] = [
         ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
         skipped: result.skipped
       };
+    }
+  },
+  {
+    id: 'biorxiv',
+    capabilities: biorxiv.capabilities,
+    translate: (query, options) => biorxiv.translate(query, options),
+    normalizerVersion: 1,
+    async search({ query, offset, timeoutMs, signal, userAgent, now }) {
+      const result = await biorxiv.search(query, {
+        offset,
+        timeoutMs,
+        ...(signal ? { signal } : {}),
+        ...(userAgent ? { userAgent } : {}),
+        ...(now ? { now } : {})
+      });
+      return { papers: result.papers, skipped: result.skipped };
     }
   },
   {
