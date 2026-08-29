@@ -239,3 +239,71 @@ describe('facet truncation', () => {
     venues.forEach((b: any) => expect(b.count).toBe(1));
   });
 });
+
+/**
+ * Discovery is the one place an OpenAlex failure used to be fatal rather than
+ * partial: its output feeds `.map(work => work.doi)` with nothing in between,
+ * so a page that came back without records took the whole search down instead
+ * of costing one provider. These run against a stubbed client — the failure
+ * being reproduced is a resolved 429, which no network call can be relied on
+ * to produce on demand.
+ */
+describe('discoverWorks — a failed provider costs one provider', () => {
+  const withClient = (searchWorks: (...args: any[]) => Promise<any>) => {
+    const p = new EnhancedSearchPipeline({ userAgent: 'test/1.0 (mailto:test@example.com)' });
+    (p as any).openalexClient = { searchWorks };
+    return (...args: unknown[]) => (p as any).discoverWorks(...args);
+  };
+
+  const rateLimited = () =>
+    Object.assign(new Error('OpenAlex 429: Insufficient budget.'), { status: 429 });
+
+  it('returns no works instead of throwing', async () => {
+    const discover = withClient(() => Promise.reject(rateLimited()));
+
+    const discovery = await discover('crispr', {}, 50);
+    expect(discovery.works).toEqual([]);
+  });
+
+  it('never puts an undefined in the works array', async () => {
+    // The original crash in one assertion: a resolved response with no
+    // `results` used to be flattened in as `undefined`, and the caller read a
+    // field off it. Whatever else discovery returns, every entry is a work.
+    const discover = withClient(() => Promise.resolve({ meta: { count: 5 } }));
+
+    const discovery = await discover('crispr', {}, 50);
+    expect(discovery.works.every((w: unknown) => w !== undefined && w !== null)).toBe(true);
+  });
+
+  it('reports why it returned nothing, so an outage is not read as an empty corpus', async () => {
+    const discover = withClient(() => Promise.reject(rateLimited()));
+
+    const discovery = await discover('crispr', {}, 50);
+    expect(discovery.error).toContain('429');
+  });
+
+  it('sets no error when the provider simply matched nothing', async () => {
+    const discover = withClient(() => Promise.resolve({ results: [], meta: { count: 0 } }));
+
+    const discovery = await discover('nothing matches this', {}, 50);
+    expect(discovery.works).toEqual([]);
+    expect(discovery.totalHits).toBe(0);
+    expect(discovery.error).toBeUndefined();
+  });
+
+  it('keeps the pages that did answer when only some fail', async () => {
+    // Depth 400 is two pages at OpenAlex's 200 cap. Losing one is not a
+    // reason to discard the other.
+    let call = 0;
+    const discover = withClient(() =>
+      ++call === 1
+        ? Promise.resolve({ results: [{ id: 'W1', doi: '10.1/x' }], meta: { count: 2 } })
+        : Promise.reject(rateLimited())
+    );
+
+    const discovery = await discover('crispr', {}, 400);
+    expect(discovery.works).toHaveLength(1);
+    expect(discovery.totalHits).toBe(2);
+    expect(discovery.error).toContain('429');
+  });
+});

@@ -444,7 +444,12 @@ export class EnhancedSearchPipeline {
     return {
       records: deduplicatedRecords,
       providerTotals: [
-        { source: 'openalex', totalHits: discovery.totalHits, retrieved: discovery.works.length },
+        {
+          source: 'openalex',
+          totalHits: discovery.totalHits,
+          retrieved: discovery.works.length,
+          ...(discovery.error !== undefined ? { error: discovery.error } : {})
+        },
         ...aggregatorResults.map(r => ({
           source: r.source,
           totalHits: r.totalHits,
@@ -471,7 +476,7 @@ export class EnhancedSearchPipeline {
     query: string,
     params: SearchParams,
     depth: number
-  ): Promise<{ works: OpenAlexWork[]; totalHits?: number }> {
+  ): Promise<{ works: OpenAlexWork[]; totalHits?: number; error?: string }> {
     const filter = this.buildOpenAlexFilter(params.filters);
     const pageCount = Math.ceil(depth / OPENALEX_MAX_PER_PAGE);
 
@@ -484,19 +489,35 @@ export class EnhancedSearchPipeline {
 
       return this.openalexClient
         .searchWorks({ query, page, perPage, filter })
-        .then(response => ({ results: response.results, count: response.meta?.count }))
+        .then(response => ({
+          results: response.results,
+          count: response.meta?.count,
+          error: undefined as string | undefined
+        }))
         .catch(error => {
           log.error(`OpenAlex discovery error (page ${page}):`, error);
-          return { results: [] as OpenAlexWork[], count: undefined };
+          return {
+            results: [] as OpenAlexWork[],
+            count: undefined,
+            error: error instanceof Error ? error.message : String(error)
+          };
         });
     });
 
     const pages = await Promise.all(requests);
 
+    // A failed page contributes nothing rather than an `undefined` that the
+    // caller then reads a field off. The failure is carried out instead of
+    // logged and dropped: a discovery that returned nothing because OpenAlex
+    // refused is a different result from one that matched nothing, and only
+    // the reported error distinguishes them.
+    const failure = pages.find(p => p.error !== undefined);
+
     return {
-      works: pages.flatMap(p => p.results),
+      works: pages.flatMap(p => p.results ?? []),
       // Every page reports the same corpus-wide count; take the first that came back
-      totalHits: pages.find(p => typeof p.count === 'number')?.count
+      totalHits: pages.find(p => typeof p.count === 'number')?.count,
+      ...(failure?.error !== undefined ? { error: failure.error } : {})
     };
   }
 

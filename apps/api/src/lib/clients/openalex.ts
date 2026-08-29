@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { getPooledClient } from '../http-client-factory';
 import { extractContactEmail } from '../contact-email';
 import { getServiceConfig as getHttpServiceConfig } from '../http-pool-config';
@@ -56,6 +56,61 @@ export interface OpenAlexResponse {
     page: number;
     per_page: number;
   };
+}
+
+/**
+ * OpenAlex answered, but not with the page that was asked for.
+ *
+ * The pooled client sets `validateStatus: status < 500`, so a 429 resolves as
+ * a success and its body — an error object with no `results` key — was handed
+ * on as though it were a result page. Discovery flattened the missing array to
+ * `undefined`, read `.doi` off it, and every keyword search returned 500 while
+ * the quota was spent, even though the other eight providers were answering
+ * normally.
+ *
+ * Throwing is what lets the fan-out degrade to those eight and report OpenAlex
+ * as errored — a shape `providerTotals` already had a field for.
+ */
+export class OpenAlexUnavailableError extends Error {
+  readonly status: number;
+  /** Seconds until the quota resets, when OpenAlex says so. */
+  readonly retryAfterSeconds: number | undefined;
+
+  constructor(status: number, detail: string, retryAfterSeconds?: number) {
+    super(`OpenAlex ${status}: ${detail}`);
+    this.name = 'OpenAlexUnavailableError';
+    this.status = status;
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
+/**
+ * Whether a resolved response is actually the thing it was asked for.
+ *
+ * The status alone does not answer that here, and neither does the absence of
+ * a thrown error: both a rate-limited 429 and a well-formed page arrive as
+ * resolved responses. The shape is what distinguishes them, so it is checked
+ * rather than assumed.
+ */
+function assertUsable(response: AxiosResponse, expected: 'results' | 'work'): void {
+  const body = response.data as Record<string, unknown> | undefined;
+
+  if (response.status >= 400) {
+    const detail =
+      typeof body?.message === 'string' ? body.message
+      : typeof body?.error === 'string' ? body.error
+      : response.statusText || 'no message given';
+    const retryAfter = typeof body?.retryAfter === 'number' ? body.retryAfter : undefined;
+    throw new OpenAlexUnavailableError(response.status, detail, retryAfter);
+  }
+
+  if (expected === 'results' && !Array.isArray(body?.results)) {
+    throw new OpenAlexUnavailableError(response.status, 'a 2xx response carrying no results array');
+  }
+
+  if (expected === 'work' && typeof body?.id !== 'string') {
+    throw new OpenAlexUnavailableError(response.status, 'a 2xx response carrying no work');
+  }
 }
 
 export class OpenAlexClient {
@@ -116,6 +171,8 @@ export class OpenAlexClient {
       }
     });
 
+    assertUsable(response, 'results');
+
     return response.data;
   }
 
@@ -127,6 +184,8 @@ export class OpenAlexClient {
         'Accept': 'application/json'
       }
     });
+
+    assertUsable(response, 'work');
 
     return response.data;
   }
