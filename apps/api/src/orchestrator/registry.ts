@@ -3,6 +3,7 @@ import * as arxiv from '../providers/arxiv';
 import * as doaj from '../providers/doaj';
 import * as europepmc from '../providers/europepmc';
 import * as ncbi from '../providers/ncbi';
+import * as openaire from '../providers/openaire';
 import * as plos from '../providers/plos';
 
 /**
@@ -121,6 +122,28 @@ export const PROVIDERS: ProviderEntry[] = [
     normalizerVersion: 1,
     async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
       const result = await plos.search(query, {
+        pageSize: depth,
+        offset,
+        timeoutMs,
+        openAccessOnly,
+        ...(signal ? { signal } : {}),
+        ...(userAgent ? { userAgent } : {}),
+        ...(now ? { now } : {})
+      });
+      return {
+        papers: result.papers,
+        ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
+        skipped: result.skipped
+      };
+    }
+  },
+  {
+    id: 'openaire',
+    capabilities: openaire.capabilities,
+    translate: (query, options) => openaire.translate(query, options),
+    normalizerVersion: 1,
+    async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
+      const result = await openaire.search(query, {
         pageSize: depth,
         offset,
         timeoutMs,

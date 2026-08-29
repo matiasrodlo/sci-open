@@ -1,0 +1,63 @@
+{
+  "_comment": "Hand-built, unlike the recorded openaire.json — which holds one record because the payload is ~200 KB each. Attribute keys use the JSON API's '@' prefix, as the live API does; the old connector read the xml2js spelling instead.",
+  "response": {
+    "header": { "total": { "$": 5 } },
+    "results": {
+      "result": [
+        {
+          "_case": "a real PDF among the web resources",
+          "header": { "dri:objIdentifier": { "$": "od______1234::aaaa" } },
+          "metadata": { "oaf:entity": { "oaf:result": {
+            "title": { "$": "A record with a pdf" },
+            "creator": { "$": "Lovelace, Ada" },
+            "dateofacceptance": { "$": "2022-03-01" },
+            "bestaccessright": { "@classid": "OPEN", "@classname": "Open Access" },
+            "openaccesscolor": { "$": "gold" },
+            "pid": { "@classid": "doi", "$": "10.1000/withpdf" },
+            "children": { "instance": {
+              "refereed": { "@classid": "0001", "@classname": "peerReviewed" },
+              "webresource": [
+                { "url": { "$": "https://example.org/landing" } },
+                { "url": { "$": "https://example.org/paper.pdf" } }
+              ]
+            } }
+          } } }
+        },
+        {
+          "_case": "closed access",
+          "header": { "dri:objIdentifier": { "$": "od______1234::bbbb" } },
+          "metadata": { "oaf:entity": { "oaf:result": {
+            "title": { "$": "A closed record" },
+            "bestaccessright": { "@classid": "CLOSED", "@classname": "Closed Access" },
+            "pid": [{ "@classid": "pmid", "$": 41442816 }]
+          } } }
+        },
+        {
+          "_case": "green: a repository copy with no colour reported",
+          "header": { "dri:objIdentifier": { "$": "od______1234::cccc" } },
+          "metadata": { "oaf:entity": { "oaf:result": {
+            "title": { "$": "A green record" },
+            "bestaccessright": { "@classid": "OPEN", "@classname": "Open Access" },
+            "isgreen": { "$": true },
+            "language": { "@classid": "fra", "@classname": "French" },
+            "subject": [{ "@classid": "keyword", "$": "crispr" }, { "@classid": "keyword", "$": "CRISPR" }]
+          } } }
+        },
+        {
+          "_case": "markup in the title and abstract",
+          "header": { "dri:objIdentifier": { "$": "od______1234::dddd" } },
+          "metadata": { "oaf:entity": { "oaf:result": {
+            "title": { "$": "A title with <i>markup</i> &amp; entities" },
+            "description": { "$": "<p>An abstract   with tags.</p>" },
+            "bestaccessright": { "@classid": "OPEN" }
+          } } }
+        },
+        {
+          "_case": "unreadable: must cost exactly one record, not the page",
+          "header": { "dri:objIdentifier": { "$": "od______1234::eeee" } },
+          "metadata": {}
+        }
+      ]
+    }
+  }
+}

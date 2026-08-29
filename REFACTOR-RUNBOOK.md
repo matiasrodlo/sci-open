@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **7 / 13** | **4,564** | **5 / 11** | **531** | **1** |
+| **7 / 13** | **4,564** | **6 / 11** | **570** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -309,7 +309,13 @@ Mechanical, independent, one at a time. Each provider lands with its own fixture
    > **One thing this document implied that is not true.** The connector builds every PDF URL under `/plosone/` although PLOS has seven journals, and only 1 of 8 live results was PLOS ONE — which looks like a broken download for most records. Checked rather than assumed: PLOS routes by DOI and ignores the slug, and `/plosone/` returns `200 application/pdf` for a PLOS Genetics and a PLOS Biology DOI alike. Left as it is.
    >
    > Smaller: the year filter invented both ends of an open range — a missing lower bound became the year 2000 and a missing upper bound the current year — and abstracts kept the leading newline Solr wraps them in.
-7. **OpenAIRE.** Extract the DOI from `pid[]`, reading `@classid` and `$` rather than the xml2js `$.classid` and `_` — the same fix already applied to `bestaccessright`, in the place it was missed. Without it no OpenAIRE record can deduplicate against another provider. Then replace the `throw` in the normaliser with per-record isolation — one malformed record currently discards the whole page.
+7. **OpenAIRE — done.** Extract the DOI from `pid[]`, reading `@classid` and `$` rather than the xml2js `$.classid` and `_` — the same fix already applied to `bestaccessright`, in the place it was missed. Then replace the `throw` in the normaliser with per-record isolation.
+
+   > **The DOI was one of five fields read from the wrong key.** The connector reached for the xml2js spelling of a JSON payload throughout, and the recorded fixture shows what that produced: `id` was **`openaire:The-potential-and-innovative-applications-of-CRISP`** — a 50-character slug of the title, because `dri:objIdentifier` is one key with a prefix in its name and the connector read `header.dri.objIdentifier`, found nothing, and fell through to a title-derived fallback. `venue` was `"Elsevier BV"`, the publisher, because the connector assigned the publisher to both. `language` was `'en'` for every record because the code is at `@classid`. `topics` was `[]` despite a populated `subject`. So the identifier everything keys on was unstable, and the DOI was only the most consequential of the five.
+   >
+   > **OpenAIRE reports the open-access route, and nothing was reading it.** `openaccesscolor` holds `gold`, `hybrid` or `bronze` — Unpaywall's own vocabulary — and `isgreen` covers the rest. Live, a single page returns all four. It is the only provider so far that answers `oaStatus` with data rather than leaving it for enrichment.
+   >
+   > **`translate` returns request parameters, not a query.** OpenAIRE has no query language: the date bounds are parameters. Since the orchestrator keys the provider cache on whatever `translate` returns, a keywords-only string would have let a 2022–2023 search be served from an unbounded one. It returns a canonical serialisation of the whole parameter set instead.
 8. **DataCite.** It contributed 600 records of which zero survived filtering. Either fix what it emits, or set `keywordSearch: false` and stop paying for it.
 9. **bioRxiv.** No keyword index — it scans a 30-day window and greps client-side, spending ten HTTP requests to match nothing. Recommend `keywordSearch: false`, `doiLookup: true`.
 
