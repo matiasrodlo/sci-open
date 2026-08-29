@@ -1,0 +1,65 @@
+{
+  "_comment": "Hand-built, unlike the recorded datacite.json. Shapes the recorded page lacks: a dataset, an actual PDF, and a record with no title. Proportions are modelled on 100 live records for `crispr gene editing` — 11 datasets, 1 with a PDF format.",
+  "meta": { "total": 5 },
+  "data": [
+    {
+      "_case": "a dataset — a legitimate DataCite record and not a paper",
+      "id": "10.5281/zenodo.111",
+      "attributes": {
+        "doi": "10.5281/zenodo.111",
+        "titles": [{ "title": "A dataset of sequencing reads" }],
+        "creators": [{ "name": "Lovelace, Ada" }],
+        "publicationYear": 2022,
+        "publisher": "Zenodo",
+        "url": "https://zenodo.org/record/111",
+        "types": { "resourceTypeGeneral": "Dataset" }
+      }
+    },
+    {
+      "_case": "the rare record that really does carry a PDF",
+      "id": "10.5281/zenodo.222",
+      "attributes": {
+        "doi": "10.5281/zenodo.222",
+        "titles": [{ "title": "A preprint with a pdf" }],
+        "creators": [{ "givenName": "Grace", "familyName": "Hopper" }],
+        "publicationYear": 2023,
+        "publisher": "Zenodo",
+        "url": "https://zenodo.org/record/222/files/paper.pdf",
+        "formats": ["application/pdf"],
+        "types": { "resourceTypeGeneral": "Preprint" },
+        "subjects": [{ "subject": "crispr" }, { "subject": "gene editing" }],
+        "descriptions": [{ "descriptionType": "Abstract", "description": "Body text." }],
+        "language": "en"
+      }
+    },
+    {
+      "_case": "a journal article registered with DataCite, landing page only",
+      "id": "10.5281/zenodo.333",
+      "attributes": {
+        "doi": "10.5281/zenodo.333",
+        "titles": [{ "title": "A journal article with only a landing page" }],
+        "creators": [{ "name": "Turing, Alan" }],
+        "publicationYear": 2021,
+        "publisher": "A Repository",
+        "url": "https://repo.example.org/handle/1234",
+        "types": { "resourceTypeGeneral": "JournalArticle" }
+      }
+    },
+    {
+      "_case": "no resource type at all",
+      "id": "10.5281/zenodo.444",
+      "attributes": {
+        "doi": "10.5281/zenodo.444",
+        "titles": [{ "title": "A record with no resource type" }],
+        "creators": [],
+        "publicationYear": 2020,
+        "url": "https://repo.example.org/handle/4444"
+      }
+    },
+    {
+      "_case": "unreadable: must cost exactly one record",
+      "id": "10.5281/zenodo.555",
+      "attributes": { "doi": "10.5281/zenodo.555", "publicationYear": 2019 }
+    }
+  ]
+}

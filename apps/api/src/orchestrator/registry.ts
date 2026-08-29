@@ -1,5 +1,6 @@
 import type { Paper, ProviderCapabilities, ProviderId, Query } from '@open-access-explorer/shared';
 import * as arxiv from '../providers/arxiv';
+import * as datacite from '../providers/datacite';
 import * as doaj from '../providers/doaj';
 import * as europepmc from '../providers/europepmc';
 import * as ncbi from '../providers/ncbi';
@@ -148,6 +149,29 @@ export const PROVIDERS: ProviderEntry[] = [
         offset,
         timeoutMs,
         openAccessOnly,
+        ...(signal ? { signal } : {}),
+        ...(userAgent ? { userAgent } : {}),
+        ...(now ? { now } : {})
+      });
+      return {
+        papers: result.papers,
+        ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
+        skipped: result.skipped
+      };
+    }
+  },
+  {
+    id: 'datacite',
+    capabilities: datacite.capabilities,
+    translate: (query, options) => datacite.translate(query, options),
+    normalizerVersion: 1,
+    async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
+      const result = await datacite.search(query, {
+        pageSize: depth,
+        offset,
+        timeoutMs,
+        openAccessOnly,
+        ...(process.env.DATACITE_API_KEY ? { apiKey: process.env.DATACITE_API_KEY } : {}),
         ...(signal ? { signal } : {}),
         ...(userAgent ? { userAgent } : {}),
         ...(now ? { now } : {})

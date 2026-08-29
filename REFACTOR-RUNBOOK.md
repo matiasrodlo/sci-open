@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **7 / 13** | **4,564** | **6 / 11** | **570** | **1** |
+| **7 / 13** | **4,564** | **7 / 11** | **587** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -316,7 +316,15 @@ Mechanical, independent, one at a time. Each provider lands with its own fixture
    > **OpenAIRE reports the open-access route, and nothing was reading it.** `openaccesscolor` holds `gold`, `hybrid` or `bronze` — Unpaywall's own vocabulary — and `isgreen` covers the rest. Live, a single page returns all four. It is the only provider so far that answers `oaStatus` with data rather than leaving it for enrichment.
    >
    > **`translate` returns request parameters, not a query.** OpenAIRE has no query language: the date bounds are parameters. Since the orchestrator keys the provider cache on whatever `translate` returns, a keywords-only string would have let a 2022–2023 search be served from an unbounded one. It returns a canonical serialisation of the whole parameter set instead.
-8. **DataCite.** It contributed 600 records of which zero survived filtering. Either fix what it emits, or set `keywordSearch: false` and stop paying for it.
+8. **DataCite — done, and the answer is `keywordSearch: false`.** It contributed 600 records of which zero survived filtering. Either fix what it emits, or stop paying for it.
+
+   > **Decided on three measurements, all live.** Of 100 records, **1** carried `application/pdf` in `formats`, **0** carried an `IsPublishedIn` relation, and **no** registered URL ended in `.pdf` — DataCite registers DOIs, it does not host papers, so under a retrievability filter its records will always drop out. That is what the corpus is, not a defect to fix. Through the new provider, 87 records returned and **1** survived the policy filter.
+   >
+   > **The third measurement is the one that decided it, and it refuted the obvious counter-argument.** A provider that finds nothing readable can still earn its request by supplying DOIs for works *other* providers found, adding provenance to records that survive on someone else's full text — which is what the merge step is for. DataCite does not: of its 87 DOIs, **0** appeared in any of the six other providers' results. Not a small overlap, none. Its corpus is institutional-repository items, theses and datasets, disjoint from the literature providers' by construction.
+   >
+   > `doiLookup` stays **true**, and that is the case it is actually good for — a DataCite DOI resolves here and nowhere else in the fan-out, for the same reason. A keyword search is now skipped with the missing capability named, rather than silently contributing 600 records to a filter.
+   >
+   > The provider is still built and tested, so the decision is reversible and the records are described honestly if it is: 11 of 100 live records are datasets and are skipped by type; the rest get `stage` from `resourceTypeGeneral`, a landing page rather than a fabricated PDF, and no `'DataCite Repository'` venue.
 9. **bioRxiv.** No keyword index — it scans a 30-day window and greps client-side, spending ten HTTP requests to match nothing. Recommend `keywordSearch: false`, `doiLookup: true`.
 
 ### Done when (per provider)
