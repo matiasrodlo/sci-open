@@ -10,8 +10,10 @@ describe('toParams', () => {
       .toBe('crispr gene gene editing');
   });
 
-  it('sends a DOI as the keywords, there being no DOI field', () => {
-    expect(toParams(query({ doi: '10.1/x' })).keywords).toBe('10.1/x');
+  it('sends a DOI through the DOI parameter, not the keywords', () => {
+    // There *is* a DOI field, and it matters: as free text the slash is an
+    // operator to OpenAIRE's parser and the request answers HTTP 409.
+    expect(toParams(query({ doi: '10.1/x' })).doi).toBe('10.1/x');
   });
 
   it('takes the year bounds as request parameters rather than query terms', () => {
@@ -51,5 +53,26 @@ describe('translate — the cache key', () => {
     const q = query({ terms: ['crispr'], years: { from: 2022 } });
     expect(translate(q, { openAccessOnly: true })).toBe(translate(q, { openAccessOnly: true }));
     expect(translate(q, { openAccessOnly: true })).toBe('OA=true&fromDateAccepted=2022-01-01&keywords=crispr');
+  });
+});
+
+describe('toParams — a DOI is not free text', () => {
+  it('uses the doi parameter rather than keywords', () => {
+    // Sent as `keywords`, the slash is an operator to OpenAIRE's query parser:
+    // HTTP 409, "Syntax errors. expected boolean, got '/'". Every OpenAIRE DOI
+    // lookup answered that way.
+    const params = toParams(query({ doi: '10.1101/2025.10.27.684732' }));
+    expect(params.doi).toBe('10.1101/2025.10.27.684732');
+    expect(params.keywords).toBeUndefined();
+  });
+
+  it('keeps a DOI lookup distinct from the same string searched as words', () => {
+    expect(translate(query({ doi: '10.1101/x' }))).not.toBe(translate(query({ terms: ['10.1101/x'] })));
+  });
+
+  it('still applies the access and date bounds to a DOI lookup', () => {
+    const params = toParams(query({ doi: '10.1101/x', years: { from: 2022 } }), { openAccessOnly: true });
+    expect(params.OA).toBe('true');
+    expect(params.fromDateAccepted).toBe('2022-01-01');
   });
 });

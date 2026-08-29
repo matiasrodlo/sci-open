@@ -12,7 +12,17 @@ import type { Query } from '@open-access-explorer/shared';
  */
 
 export type OpenAireParams = {
-  keywords: string;
+  /** Free text. Absent for a DOI lookup, which uses `doi` instead. */
+  keywords?: string;
+  /**
+   * OpenAIRE's own DOI parameter.
+   *
+   * Not `keywords`. A DOI sent as free text makes the query parser fail —
+   * `HTTP 409`, `"Syntax errors. expected boolean, got '/'"` — because the
+   * slash is an operator to it. The old connector assigned the DOI to
+   * `keywords`, so every OpenAIRE DOI lookup has been answering 409.
+   */
+  doi?: string;
   format: 'json';
   OA?: 'true';
   fromDateAccepted?: string;
@@ -28,22 +38,23 @@ export type TranslateOptions = {
  * The parameters themselves. `translate` is the string form of this.
  */
 export function toParams(query: Query, options: TranslateOptions = {}): OpenAireParams {
-  // No query language means phrases cannot be marked as adjacent and terms
-  // cannot be marked as required; OpenAIRE decides. Joining them with spaces
-  // is the whole of what can be expressed.
-  const keywords = query.doi
-    ? query.doi
-    : [...query.terms, ...query.phrases].map(t => t.trim()).filter(Boolean).join(' ');
-
   const { from, to } = query.years ?? {};
 
-  return {
-    keywords,
-    format: 'json',
+  const bounds = {
+    format: 'json' as const,
     ...(options.openAccessOnly ? { OA: 'true' as const } : {}),
     ...(from !== undefined ? { fromDateAccepted: `${from}-01-01` } : {}),
     ...(to !== undefined ? { toDateAccepted: `${to}-12-31` } : {})
   };
+
+  if (query.doi) return { doi: query.doi, ...bounds };
+
+  // No query language means phrases cannot be marked as adjacent and terms
+  // cannot be marked as required; OpenAIRE decides. Joining them with spaces
+  // is the whole of what can be expressed.
+  const keywords = [...query.terms, ...query.phrases].map(t => t.trim()).filter(Boolean).join(' ');
+
+  return { keywords, ...bounds };
 }
 
 export function translate(query: Query, options: TranslateOptions = {}): string {

@@ -25,7 +25,7 @@ export async function search(query: Query, options: SearchOptions): Promise<Prov
   const { openAccessOnly, pageSize = 50, offset = 0, now = () => new Date(), ...fetchOptions } = options;
 
   const params = toParams(query, { openAccessOnly });
-  if (!params.keywords) return { papers: [], skipped: [], latency: 0 };
+  if (!params.keywords && !params.doi) return { papers: [], skipped: [], latency: 0 };
 
   const started = Date.now();
   const payload = await fetchPage(params, {

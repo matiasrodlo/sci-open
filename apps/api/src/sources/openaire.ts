@@ -84,8 +84,11 @@ export class OpenAIREConnector implements SourceConnector {
       let query = '';
       
       if (doi) {
-        // Search by DOI
-        query = doi;
+        // Quoted. Sent as bare free text the slash is an operator to
+        // OpenAIRE's query parser, which answers HTTP 409 with
+        // "Syntax errors. expected boolean, got '/'" — so every DOI lookup
+        // here failed.
+        query = `"${doi}"`;
       } else if (titleOrKeywords) {
         // Search by keywords in title/abstract
         query = titleOrKeywords;

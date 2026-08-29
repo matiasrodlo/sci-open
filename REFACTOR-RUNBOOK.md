@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **7 / 13** | **4,564** | **9 / 11** | **604** | **1** |
+| **7 / 13** | **4,564** | **9 / 11** | **607** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -314,6 +314,8 @@ Mechanical, independent, one at a time. Each provider lands with its own fixture
    > **The DOI was one of five fields read from the wrong key.** The connector reached for the xml2js spelling of a JSON payload throughout, and the recorded fixture shows what that produced: `id` was **`openaire:The-potential-and-innovative-applications-of-CRISP`** — a 50-character slug of the title, because `dri:objIdentifier` is one key with a prefix in its name and the connector read `header.dri.objIdentifier`, found nothing, and fell through to a title-derived fallback. `venue` was `"Elsevier BV"`, the publisher, because the connector assigned the publisher to both. `language` was `'en'` for every record because the code is at `@classid`. `topics` was `[]` despite a populated `subject`. So the identifier everything keys on was unstable, and the DOI was only the most consequential of the five.
    >
    > **OpenAIRE reports the open-access route, and nothing was reading it.** `openaccesscolor` holds `gold`, `hybrid` or `bronze` — Unpaywall's own vocabulary — and `isgreen` covers the rest. Live, a single page returns all four. It is the only provider so far that answers `oaStatus` with data rather than leaving it for enrichment.
+   >
+   > **Every OpenAIRE DOI lookup was answering HTTP 409.** Found by running one: the connector assigned the DOI to `keywords`, and as free text the slash is an operator to OpenAIRE's query parser — `{"status":"error","code":"500","message":"Fail to execute search","exception":"Syntax errors. expected boolean, got '/'"}`. There is a dedicated `doi` parameter, which the new provider uses; the old connector quotes the value, which also works. Neither path had ever resolved a DOI.
    >
    > **`translate` returns request parameters, not a query.** OpenAIRE has no query language: the date bounds are parameters. Since the orchestrator keys the provider cache on whatever `translate` returns, a keywords-only string would have let a 2022–2023 search be served from an unbounded one. It returns a canonical serialisation of the whole parameter set instead.
 8. **DataCite — done, and the answer is `keywordSearch: false`.** It contributed 600 records of which zero survived filtering. Either fix what it emits, or stop paying for it.
