@@ -18,13 +18,10 @@ export class SearchCacheManager {
     results: SearchResponse
   ): Promise<void> {
     const cacheKey = this.generateSearchKey(query, params);
-    
-    // Compress large search results
-    const compressedResults = this.compressSearchResults(results);
-    
+
     await this.cacheManager.set(
-      cacheKey, 
-      compressedResults, 
+      cacheKey,
+      results,
       CacheStrategy.SEARCH_RESULTS
     );
   }
@@ -39,11 +36,7 @@ export class SearchCacheManager {
     const cacheKey = this.generateSearchKey(query, params);
     const cached = await this.cacheManager.get<SearchResponse>(cacheKey, CacheStrategy.SEARCH_RESULTS);
     
-    if (cached) {
-      return this.decompressSearchResults(cached);
-    }
-    
-    return null;
+    return cached ?? null;
   }
 
   /**
@@ -61,11 +54,7 @@ export class SearchCacheManager {
     const partialKey = this.generatePartialKey(baseQuery, params, similarity);
     const cached = await this.cacheManager.get<SearchResponse>(partialKey, CacheStrategy.SEARCH_RESULTS);
     
-    if (cached) {
-      return this.decompressSearchResults(cached);
-    }
-    
-    return null;
+    return cached ?? null;
   }
 
   /**
@@ -195,30 +184,4 @@ export class SearchCacheManager {
     return createHash('md5').update(query).digest('hex');
   }
 
-  /**
-   * Compress search results to save memory
-   */
-  private compressSearchResults(results: SearchResponse): SearchResponse {
-    return {
-      ...results,
-      hits: results.hits.map(hit => ({
-        ...hit,
-        // Remove large fields that can be reconstructed
-        abstract: hit.abstract ? hit.abstract.substring(0, 500) : hit.abstract,
-        // Keep only essential metadata
-        sourceMetadata: hit.sourceMetadata ? {
-          source: hit.sourceMetadata.source,
-          latency: hit.sourceMetadata.latency
-        } : hit.sourceMetadata
-      }))
-    };
-  }
-
-  /**
-   * Decompress search results
-   */
-  private decompressSearchResults(results: SearchResponse): SearchResponse {
-    // Results are already in compressed format, just return as-is
-    return results;
-  }
 }
