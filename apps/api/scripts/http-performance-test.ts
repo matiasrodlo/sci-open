@@ -1,6 +1,19 @@
-import { httpPerformanceMonitor } from './http-performance-monitor';
-import { httpClientFactory } from './http-client-factory';
-import { getPooledClient } from './http-client-factory';
+/**
+ * Ad-hoc HTTP benchmark for the provider APIs.
+ *
+ * This used to live in `src/lib/` and was exposed on the running server through
+ * three `/api/performance/test*` routes, so a request could make the production
+ * process fire fifty concurrent requests at an arbitrary host. It is a
+ * development tool, so it lives with the other scripts and runs deliberately:
+ *
+ *   pnpm --filter @open-access-explorer/api exec tsx scripts/http-performance-test.ts
+ *
+ * It generates real traffic against services that owe you nothing. Keep the
+ * request counts modest and the contact address correct.
+ */
+import { httpPerformanceMonitor } from '../src/lib/http-performance-monitor';
+import { httpClientFactory } from '../src/lib/http-client-factory';
+import { getPooledClient } from '../src/lib/http-client-factory';
 
 export interface PerformanceTestConfig {
   service: string;

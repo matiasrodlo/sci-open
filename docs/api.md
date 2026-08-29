@@ -141,17 +141,21 @@ Cache hit/miss counts and response times.
 > [Configuration](./configuration.md#administrative-access).
 
 
-**POST** `/api/performance/test`
+**GET** `/api/performance/metrics`
 
-Run HTTP performance test.
+Aggregate HTTP client metrics across all provider services.
 
-**POST** `/api/performance/test/comprehensive`
+**GET** `/api/performance/metrics/:service`
 
-Run comprehensive performance tests.
+Metrics for one service.
 
-**GET** `/api/performance/monitor`
+**GET** `/api/performance/comparison/:service`
 
-Get performance monitoring data.
+Pooled versus unpooled comparison for one service.
+
+**GET** `/api/performance/report`
+
+A rendered summary of the above.
 
 ---
 

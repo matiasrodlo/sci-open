@@ -22,7 +22,6 @@ import {
   cacheManager
 } from './lib/cache';
 import { httpPerformanceMonitor } from './lib/http-performance-monitor';
-import { httpPerformanceTester } from './lib/http-performance-test';
 import { assertPublicHttpUrl, fetchPdfStream, PdfProxyError } from './lib/pdf-proxy';
 import { adminOnly, getAdminKey } from './lib/admin-auth';
 
@@ -52,10 +51,6 @@ const searchPipeline = new EnhancedSearchPipeline({
   enablePdfResolution: true,
   enableCitations: false
 });
-
-// Ceilings for the ad-hoc load tester on /api/performance/test
-const MAX_TEST_REQUESTS = 500;
-const MAX_TEST_CONCURRENCY = 50;
 
 // Search endpoint with advanced caching
 fastify.post<{ Body: SearchParams }>('/api/search', async (request, reply) => {
@@ -484,87 +479,6 @@ fastify.get('/api/performance/report', adminOnly, async (request, reply) => {
     return {
       success: true,
       data: { report },
-      timestamp: new Date().toISOString()
-    };
-  } catch (error: any) {
-    reply.code(500);
-    return { error: error.message };
-  }
-});
-
-fastify.post('/api/performance/test', adminOnly, async (request, reply) => {
-  try {
-    const { service, baseUrl, endpoint, requests = 50, concurrency = 10 } = request.body as any;
-    
-    if (!service || !baseUrl || !endpoint) {
-      reply.code(400);
-      return { error: 'Missing required parameters: service, baseUrl, endpoint' };
-    }
-
-    // baseUrl and endpoint both come from the request body, so this route would
-    // otherwise point the load tester at anything the server can reach. The
-    // same public-address check the PDF proxy uses applies here.
-    let target: URL;
-    try {
-      target = await assertPublicHttpUrl(String(baseUrl));
-    } catch (error: any) {
-      reply.code(error instanceof PdfProxyError ? error.statusCode : 400);
-      return { error: 'baseUrl must resolve to a public http or https address' };
-    }
-
-    // An absolute or protocol-relative endpoint overrides the axios baseURL,
-    // which would slip past the check above.
-    if (typeof endpoint !== 'string' || !endpoint.startsWith('/') || endpoint.startsWith('//')) {
-      reply.code(400);
-      return { error: 'endpoint must be a path beginning with a single /' };
-    }
-
-    // Bounded so an authenticated caller cannot turn this into an amplifier.
-    const boundedRequests = Math.min(Math.max(parseInt(String(requests), 10) || 1, 1), MAX_TEST_REQUESTS);
-    const boundedConcurrency = Math.min(Math.max(parseInt(String(concurrency), 10) || 1, 1), MAX_TEST_CONCURRENCY);
-
-    const result = await httpPerformanceTester.runTest({
-      service,
-      baseUrl: target.href,
-      endpoint,
-      requests: boundedRequests,
-      concurrency: boundedConcurrency,
-      warmupRequests: 5
-    });
-    
-    return {
-      success: true,
-      data: result,
-      timestamp: new Date().toISOString()
-    };
-  } catch (error: any) {
-    reply.code(500);
-    return { error: error.message };
-  }
-});
-
-fastify.post('/api/performance/test/comprehensive', adminOnly, async (request, reply) => {
-  try {
-    const results = await httpPerformanceTester.runComprehensiveTests();
-    
-    return {
-      success: true,
-      data: results,
-      timestamp: new Date().toISOString()
-    };
-  } catch (error: any) {
-    reply.code(500);
-    return { error: error.message };
-  }
-});
-
-fastify.post('/api/performance/test/compare', adminOnly, async (request, reply) => {
-  try {
-    const comparison = await httpPerformanceTester.comparePerformance();
-    
-    return {
-      success: true,
-      data: comparison,
       timestamp: new Date().toISOString()
     };
   } catch (error: any) {
