@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { OARecord, SourceConnector } from '@open-access-explorer/shared';
+import { OARecord, SourceConnector, SourceSearchResult } from '@open-access-explorer/shared';
 
 /**
  * OpenCitations API Integration
@@ -35,7 +35,7 @@ export class OpenCitationsConnector implements SourceConnector {
     titleOrKeywords?: string;
     yearFrom?: number;
     yearTo?: number;
-  }): Promise<OARecord[]> {
+  }): Promise<SourceSearchResult> {
     const { doi, titleOrKeywords } = params;
 
     console.log('🔍 OpenCitations search called with params:', params);
@@ -45,7 +45,7 @@ export class OpenCitationsConnector implements SourceConnector {
         // OpenCitations primarily works with DOIs for citation data
         // For keyword searches, we'd need to use a different approach
         console.log('OpenCitations requires DOI for citation search');
-        return [];
+        return { records: [] };
       }
 
       const headers: Record<string, string> = {
@@ -96,7 +96,7 @@ export class OpenCitationsConnector implements SourceConnector {
       }
 
       console.log(`OpenCitations returning ${records.length} citation records`);
-      return records;
+      return { records };
 
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -108,7 +108,7 @@ export class OpenCitationsConnector implements SourceConnector {
       } else {
         console.error('OpenCitations unexpected error:', error);
       }
-      return [];
+      return { records: [] };
     }
   }
 }

@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { OARecord, SourceConnector } from '@open-access-explorer/shared';
+import { OARecord, SourceConnector, SourceSearchParams, SourceSearchResult } from '@open-access-explorer/shared';
 import { getPooledClient } from '../lib/http-client-factory';
 import { getServiceConfig } from '../lib/http-pool-config';
 
@@ -8,6 +8,9 @@ import { getServiceConfig } from '../lib/http-pool-config';
  * Repository DOI registry and metadata
  * API Docs: https://support.datacite.org/docs/api
  */
+
+// DataCite caps a single page at 1000 DOIs
+const MAX_PAGE_SIZE = 1000;
 
 interface DataCiteResult {
   id: string;
@@ -73,30 +76,26 @@ export class DataCiteConnector implements SourceConnector {
     this.httpClient = getPooledClient(baseUrl, getServiceConfig('datacite'));
   }
 
-  async search(params: {
-    doi?: string;
-    titleOrKeywords?: string;
-    yearFrom?: number;
-    yearTo?: number;
-  }): Promise<OARecord[]> {
-    const { doi, titleOrKeywords, yearFrom, yearTo } = params;
-
-    console.log('🔍 DataCite search called with params:', params);
+  async search(params: SourceSearchParams): Promise<SourceSearchResult> {
+    const { doi, titleOrKeywords, yearFrom, yearTo, limit = 50, offset = 0 } = params;
 
     try {
       let query = '';
-      
+
       if (doi) {
         query = `doi:${doi}`;
       } else if (titleOrKeywords) {
         query = `titles.title:*${titleOrKeywords}*`;
       } else {
-        return [];
+        return { records: [] };
       }
 
+      const pageSize = Math.min(Math.max(limit, 1), MAX_PAGE_SIZE);
+
       const searchParams: any = {
-        'page[size]': 20,
-        'page[number]': 1,
+        'page[size]': pageSize,
+        // Pages are 1-based, so an offset lands exactly on page boundaries
+        'page[number]': Math.floor(Math.max(offset, 0) / pageSize) + 1,
         query
       };
 
@@ -117,13 +116,21 @@ export class DataCiteConnector implements SourceConnector {
         params: searchParams,
         headers
       });
-      
-      console.log(`DataCite response status: ${response.status}, total: ${response.data.meta.total}, results count: ${response.data.data.length}`);
-      if (response.data.data.length > 0) {
-        console.log(`First DataCite result title: ${response.data.data[0].attributes.titles[0]?.title}`);
+
+      // The pooled client is configured not to throw below 500, so a rejected
+      // or rate-limited request arrives here as a normal response carrying an
+      // error body with no `data` array
+      if (response.status >= 400 || !Array.isArray(response.data?.data)) {
+        console.warn(`DataCite returned no usable payload (status ${response.status})`);
+        return { records: [] };
       }
 
-      return response.data.data.map(result => this.normalizeResult(result));
+      const reported = Number(response.data.meta?.total);
+
+      return {
+        records: response.data.data.map(result => this.normalizeResult(result)),
+        totalHits: Number.isFinite(reported) ? reported : undefined
+      };
 
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -135,7 +142,7 @@ export class DataCiteConnector implements SourceConnector {
       } else {
         console.error('DataCite unexpected error:', error);
       }
-      return [];
+      return { records: [] };
     }
   }
 

@@ -1,11 +1,31 @@
 import axios from 'axios';
-import { OARecord, SourceConnector } from '@open-access-explorer/shared';
+import { OARecord, SourceConnector, SourceSearchParams, SourceSearchResult } from '@open-access-explorer/shared';
 
 /**
  * bioRxiv and medRxiv API Integration
  * Preprint servers for biology and medicine
  * API Docs: https://api.biorxiv.org/
+ *
+ * The API has no keyword endpoint. Keyword search is therefore a scan of a
+ * recent date window, filtered client-side, so it only ever surfaces preprints
+ * posted in the last RECENT_WINDOW_DAYS days. That is a real coverage limit,
+ * not a bug to work around here.
  */
+
+// The details endpoint returns a fixed 30 records per cursor page, and cursor
+// is a record offset that advances in the same steps.
+const PAGE_SIZE = 30;
+
+// Ceiling on pages read per server. Deep pagination is one request per 30
+// records, so this bounds a keyword scan to a request count the aggregator's
+// timeout budget can absorb.
+const MAX_PAGES_PER_SERVER = 5;
+
+// How far back a keyword scan reads
+const RECENT_WINDOW_DAYS = 30;
+
+const SERVERS = ['biorxiv', 'medrxiv'] as const;
+type BiorxivServer = (typeof SERVERS)[number];
 
 interface BiorxivResult {
   doi: string;
@@ -38,48 +58,44 @@ export class BiorxivConnector implements SourceConnector {
     this.baseUrl = baseUrl;
   }
 
-  async search(params: {
-    doi?: string;
-    titleOrKeywords?: string;
-    yearFrom?: number;
-    yearTo?: number;
-  }): Promise<OARecord[]> {
-    const { doi, titleOrKeywords, yearFrom, yearTo } = params;
+  async search(params: SourceSearchParams): Promise<SourceSearchResult> {
+    const { doi, titleOrKeywords, yearFrom, yearTo, limit = 50 } = params;
 
     try {
-      let results: OARecord[] = [];
+      const results: OARecord[] = [];
 
       // If DOI is provided, search by DOI
       if (doi) {
-        const doiResults = await this.searchByDoi(doi);
-        results = [...results, ...doiResults];
+        results.push(...await this.searchByDoi(doi));
       }
 
-      // If keywords provided, search both bioRxiv and medRxiv
+      // Both servers are separate endpoints, so they are read concurrently
+      // rather than one after the other
       if (titleOrKeywords) {
-        // Search bioRxiv
-        const bioRxivResults = await this.searchByKeywords(titleOrKeywords, 'biorxiv', yearFrom, yearTo);
-        results = [...results, ...bioRxivResults];
-
-        // Search medRxiv
-        const medRxivResults = await this.searchByKeywords(titleOrKeywords, 'medrxiv', yearFrom, yearTo);
-        results = [...results, ...medRxivResults];
+        const perServer = await Promise.all(
+          SERVERS.map(server =>
+            this.searchByKeywords(titleOrKeywords, server, limit, yearFrom, yearTo)
+          )
+        );
+        for (const serverResults of perServer) {
+          results.push(...serverResults);
+        }
       }
 
-      return results;
+      // The API exposes date windows, not a searchable index, so it reports
+      // no corpus-wide hit count for a keyword query.
+      return { records: results.slice(0, Math.max(limit, 1)) };
     } catch (error) {
       console.error('bioRxiv/medRxiv search error:', error);
-      return [];
+      return { records: [] };
     }
   }
 
   private async searchByDoi(doi: string): Promise<OARecord[]> {
     try {
-      // Try both servers
-      const servers = ['biorxiv', 'medrxiv'];
       const results: OARecord[] = [];
 
-      for (const server of servers) {
+      for (const server of SERVERS) {
         try {
           const response = await axios.get<BiorxivResponse>(
             `${this.baseUrl}/details/${server}/${doi}`,
@@ -87,8 +103,8 @@ export class BiorxivConnector implements SourceConnector {
           );
 
           if (response.data.collection && response.data.collection.length > 0) {
-            const normalized = response.data.collection.map(item => 
-              this.normalizeResult(item, server as 'biorxiv' | 'medrxiv')
+            const normalized = response.data.collection.map(item =>
+              this.normalizeResult(item, server)
             );
             results.push(...normalized);
           }
@@ -109,66 +125,90 @@ export class BiorxivConnector implements SourceConnector {
 
   private async searchByKeywords(
     keywords: string,
-    server: 'biorxiv' | 'medrxiv',
+    server: BiorxivServer,
+    limit: number,
     yearFrom?: number,
     yearTo?: number
   ): Promise<OARecord[]> {
-    try {
-      // The API doesn't support direct keyword search, so we'll use date range
-      // and filter by title/abstract match
-      // Get recent papers (last 30 days) and filter client-side
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - 30);
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - RECENT_WINDOW_DAYS);
 
-      const startDateStr = startDate.toISOString().split('T')[0];
-      const endDateStr = endDate.toISOString().split('T')[0];
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+    const windowUrl = `${this.baseUrl}/details/${server}/${startDateStr}/${endDateStr}`;
 
-      const response = await axios.get<BiorxivResponse>(
-        `${this.baseUrl}/details/${server}/${startDateStr}/${endDateStr}`,
-        { 
-          timeout: 10000,
-          params: {
-            cursor: 0,
-            format: 'json'
-          }
-        }
-      );
+    // The filter runs client-side, so the corpus it sees is only as wide as the
+    // number of pages read. One page is 30 records out of thousands in the
+    // window, which matches almost nothing — read up to the caller's limit,
+    // bounded by MAX_PAGES_PER_SERVER.
+    const pageCount = Math.min(
+      Math.max(Math.ceil(Math.max(limit, 1) / PAGE_SIZE), 1),
+      MAX_PAGES_PER_SERVER
+    );
 
-      if (!response.data.collection || response.data.collection.length === 0) {
-        return [];
-      }
+    const pages = await Promise.all(
+      Array.from({ length: pageCount }, (_, i) => this.fetchWindowPage(windowUrl, i * PAGE_SIZE, server))
+    );
 
-      // Filter by keywords and year
-      const keywordsLower = keywords.toLowerCase();
-      const filtered = response.data.collection.filter(item => {
-        // Check if keywords match title or abstract
-        const titleMatch = item.title?.toLowerCase().includes(keywordsLower);
-        const abstractMatch = item.abstract?.toLowerCase().includes(keywordsLower);
-        
-        if (!titleMatch && !abstractMatch) return false;
+    // The API has no query language, so matching happens here. Every term has
+    // to appear somewhere in the title or abstract, rather than the whole query
+    // appearing as one contiguous string — a phrase match means a multi-word
+    // query such as "crispr gene editing" matches nothing, since those words
+    // rarely sit adjacent in that order.
+    const terms = keywords.toLowerCase().split(/\s+/).filter(Boolean);
+    const matched: BiorxivResult[] = [];
 
-        // Check year range
+    for (const page of pages) {
+      for (const item of page) {
+        const haystack = `${item.title ?? ''} ${item.abstract ?? ''}`.toLowerCase();
+
+        if (!terms.every(term => haystack.includes(term))) continue;
+
         if (yearFrom || yearTo) {
           const itemYear = new Date(item.date).getFullYear();
-          if (yearFrom && itemYear < yearFrom) return false;
-          if (yearTo && itemYear > yearTo) return false;
+          if (yearFrom && itemYear < yearFrom) continue;
+          if (yearTo && itemYear > yearTo) continue;
         }
 
-        return true;
+        matched.push(item);
+      }
+    }
+
+    return matched.slice(0, Math.max(limit, 1)).map(item => this.normalizeResult(item, server));
+  }
+
+  /**
+   * Read one cursor page of the date window. A page that fails is dropped
+   * rather than failing the whole scan, so a single bad response still leaves
+   * the other pages usable.
+   */
+  private async fetchWindowPage(
+    windowUrl: string,
+    cursor: number,
+    server: BiorxivServer
+  ): Promise<BiorxivResult[]> {
+    try {
+      const response = await axios.get<BiorxivResponse>(windowUrl, {
+        // This endpoint answers in ~4s on its own and slower while the rest of
+        // the sweep is competing for the network. At 10s every page timed out
+        // during a full sweep and the source returned nothing; the aggregator
+        // allows this connector 20s in total.
+        timeout: 15000,
+        params: { cursor, format: 'json' }
       });
 
-      return filtered.slice(0, 50).map(item => this.normalizeResult(item, server));
+      return response.data.collection ?? [];
     } catch (error: any) {
-      // Don't log 404s as errors
+      // A cursor past the end of the window 404s, which is expected
       if (error.response?.status !== 404) {
-        console.error(`${server} keyword search error:`, error.message);
+        console.error(`${server} keyword search error at cursor ${cursor}:`, error.message);
       }
       return [];
     }
   }
 
-  private normalizeResult(result: BiorxivResult, server: 'biorxiv' | 'medrxiv'): OARecord {
+  private normalizeResult(result: BiorxivResult, server: BiorxivServer): OARecord {
     // Parse authors string (format: "LastName1, FirstName1; LastName2, FirstName2")
     const authors = result.authors
       ? result.authors.split(';').map(author => author.trim()).filter(Boolean)
@@ -178,13 +218,7 @@ export class BiorxivConnector implements SourceConnector {
     const year = result.date ? new Date(result.date).getFullYear() : undefined;
 
     // Construct PDF URL
-    const doiParts = result.doi.split('/');
-    const doiId = doiParts[doiParts.length - 1];
     const pdfUrl = `https://www.${server}.org/content/${result.doi}v${result.version || '1'}.full.pdf`;
-
-    // Determine source based on server
-    const source = server === 'biorxiv' ? 'arxiv' : 'arxiv'; // Map to arxiv type for now
-    // Actually, let's use the server name to distinguish
 
     return {
       id: `${server}:${result.doi}`,
@@ -194,7 +228,7 @@ export class BiorxivConnector implements SourceConnector {
       year,
       venue: server === 'biorxiv' ? 'bioRxiv' : 'medRxiv',
       abstract: result.abstract,
-      source: server, // Use the actual server name (biorxiv or medrxiv)
+      source: server,
       sourceId: result.doi,
       oaStatus: 'preprint',
       bestPdfUrl: pdfUrl,

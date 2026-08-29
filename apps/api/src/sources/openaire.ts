@@ -1,5 +1,8 @@
 import axios from 'axios';
-import { OARecord, SourceConnector } from '@open-access-explorer/shared';
+import { OARecord, SourceConnector, SourceSearchParams, SourceSearchResult } from '@open-access-explorer/shared';
+
+// OpenAIRE serves at most 100 results per page
+const MAX_PAGE_SIZE = 100;
 
 /**
  * OpenAIRE API Integration
@@ -22,7 +25,11 @@ interface OpenAIREResult {
         dateofacceptance?: { $: string } | string;
         publisher?: { $: string } | string;
         language?: { $: string } | string;
+        // The JSON API returns attributes with an "@" prefix. The "$" shape is
+        // what xml2js produces, so it is kept as a fallback for the XML path.
         bestaccessright?: {
+          '@classname'?: string;
+          '@classid'?: string;
           $?: { classname?: string };
         };
         pid?: Array<{
@@ -65,16 +72,11 @@ export class OpenAIREConnector implements SourceConnector {
     this.baseUrl = baseUrl;
   }
 
-  async search(params: {
-    doi?: string;
-    titleOrKeywords?: string;
-    yearFrom?: number;
-    yearTo?: number;
-  }): Promise<OARecord[]> {
-    const { doi, titleOrKeywords, yearFrom, yearTo } = params;
+  async search(params: SourceSearchParams): Promise<SourceSearchResult> {
+    const { doi, titleOrKeywords, yearFrom, yearTo, limit = 50, offset = 0 } = params;
 
     if (!doi && !titleOrKeywords) {
-      return [];
+      return { records: [] };
     }
 
     try {
@@ -88,11 +90,14 @@ export class OpenAIREConnector implements SourceConnector {
         query = titleOrKeywords;
       }
 
+      const size = Math.min(Math.max(limit, 1), MAX_PAGE_SIZE);
+
       const searchParams: any = {
         keywords: query,
         format: 'json',
-        size: 50,
-        page: 1,
+        size,
+        // Pages are 1-based, so an offset lands exactly on page boundaries
+        page: Math.floor(offset / size) + 1,
         // Only open access results
         OA: 'true',
       };
@@ -114,15 +119,19 @@ export class OpenAIREConnector implements SourceConnector {
       });
 
       const results = response.data?.response?.results?.result || [];
-      console.log(`OpenAIRE returned ${results.length} results for query: ${query}`);
-      
-      return results.map(result => this.normalizeResult(result));
+      const totalField = response.data?.response?.header?.total;
+      const reported = Number(typeof totalField === 'string' ? totalField : totalField?.$);
+
+      return {
+        records: results.map(result => this.normalizeResult(result)),
+        totalHits: Number.isFinite(reported) ? reported : undefined
+      };
     } catch (error: any) {
       // Don't log 404s as errors
       if (error.response?.status !== 404) {
         console.error('OpenAIRE search error:', error.message);
       }
-      return [];
+      return { records: [] };
     }
   }
 
@@ -217,7 +226,13 @@ export class OpenAIREConnector implements SourceConnector {
 
     // Determine OA status
     let oaStatus: 'preprint' | 'accepted' | 'published' | 'other' = 'other';
-    const accessRight = metadata.bestaccessright?.$?.classname?.toLowerCase() || '';
+    const bestAccessRight = metadata.bestaccessright;
+    const accessRight = (
+      bestAccessRight?.['@classname'] ||
+      bestAccessRight?.['@classid'] ||
+      bestAccessRight?.$?.classname ||
+      ''
+    ).toLowerCase();
     if (accessRight.includes('open')) {
       oaStatus = 'published';
     }

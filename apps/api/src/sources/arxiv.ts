@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { parseString } from 'xml2js';
-import { OARecord, SourceConnector } from '@open-access-explorer/shared';
+import { OARecord, SourceConnector, SourceSearchParams, SourceSearchResult } from '@open-access-explorer/shared';
+
+// arXiv asks that a single request stay at or below 2000 results
+const MAX_PAGE_SIZE = 2000;
 
 export class ArxivConnector implements SourceConnector {
   private baseUrl: string;
@@ -9,21 +12,15 @@ export class ArxivConnector implements SourceConnector {
     this.baseUrl = baseUrl;
   }
 
-  async search(params: {
-    doi?: string;
-    titleOrKeywords?: string;
-    yearFrom?: number;
-    yearTo?: number;
-  }): Promise<OARecord[]> {
-    console.log('🔍 arXiv search called with params:', params);
-    const { doi, titleOrKeywords, yearFrom, yearTo } = params;
+  async search(params: SourceSearchParams): Promise<SourceSearchResult> {
+    const { doi, titleOrKeywords, yearFrom, yearTo, limit = 50, offset = 0 } = params;
 
     try {
       let query = '';
       
       if (doi) {
         // For DOI, we can't search arXiv directly by DOI, so return empty
-        return [];
+        return { records: [] };
       }
 
       if (titleOrKeywords) {
@@ -41,17 +38,14 @@ export class ArxivConnector implements SourceConnector {
       }
 
       if (!query) {
-        return [];
+        return { records: [] };
       }
 
-      console.log(`arXiv searching for: ${query}`);
-      const url = `${this.baseUrl}?search_query=${encodeURIComponent(query)}&start=0&max_results=50&sortBy=relevance&sortOrder=descending`;
-      console.log(`arXiv full URL: ${url}`);
       const response = await axios.get(this.baseUrl, {
         params: {
           search_query: query,
-          start: 0,
-          max_results: 50,
+          start: Math.max(offset, 0),
+          max_results: Math.min(Math.max(limit, 1), MAX_PAGE_SIZE),
           sortBy: 'relevance',
           sortOrder: 'descending'
         },
@@ -75,10 +69,13 @@ export class ArxivConnector implements SourceConnector {
 
           try {
             const entries = result?.feed?.entry || [];
-            console.log(`arXiv processing ${entries.length} entries`);
             const records: OARecord[] = entries.map((entry: any) => this.normalizeEntry(entry));
-            console.log(`arXiv normalized ${records.length} records`);
-            resolve(records);
+            const reported = Number(result?.feed?.['opensearch:totalResults']?.[0]?._ ??
+                                    result?.feed?.['opensearch:totalResults']?.[0]);
+            resolve({
+              records,
+              totalHits: Number.isFinite(reported) ? reported : undefined
+            });
           } catch (error) {
             console.error('arXiv normalization error:', error);
             reject(error);
@@ -88,7 +85,7 @@ export class ArxivConnector implements SourceConnector {
     } catch (error) {
       console.error('arXiv search error:', error);
       console.error('arXiv error stack:', (error as Error).stack);
-      return [];
+      return { records: [] };
     }
   }
 

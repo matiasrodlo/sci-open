@@ -12,7 +12,6 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { SearchParams, SearchResponse, OARecord } from '@open-access-explorer/shared';
-import { SearchPipeline } from './lib/search-pipeline';
 import { EnhancedSearchPipeline } from './lib/enhanced-search-pipeline';
 import { SmartSourceConfigManager } from './lib/smart-source-config';
 import { 
@@ -59,7 +58,8 @@ const smartSourceConfig = new SmartSourceConfigManager({
 // Initialize enhanced search pipeline with smart source selection
 const searchPipeline = new EnhancedSearchPipeline({
   userAgent,
-  maxResults: 100,
+  // Ceiling on how deep a single request reads into each source
+  maxResults: parseInt(process.env.SEARCH_MAX_FETCH_DEPTH || '600'),
   enableEnrichment: true,
   enablePdfResolution: true,
   enableCitations: false,
@@ -212,7 +212,7 @@ fastify.get<{ Params: { id: string } }>('/api/paper/:id', async (request, reply)
     if (source === 'arxiv' || (!source && sourceId.match(/^\d{4}\.\d{4,5}(v\d+)?$/))) {
       const { ArxivConnector } = await import('./sources/arxiv');
       const arxivConnector = new ArxivConnector();
-      const results = await arxivConnector.search({ titleOrKeywords: sourceId });
+      const { records: results } = await arxivConnector.search({ titleOrKeywords: sourceId });
       paper = results[0] || null;
     } else if (source === 'core') {
       const { CoreConnector } = await import('./sources/core');
@@ -220,32 +220,32 @@ fastify.get<{ Params: { id: string } }>('/api/paper/:id', async (request, reply)
         process.env.CORE_BASE || 'https://api.core.ac.uk/v3',
         process.env.CORE_API_KEY || ''
       );
-      const results = await coreConnector.search({ titleOrKeywords: `id:${sourceId}` });
+      const { records: results } = await coreConnector.search({ titleOrKeywords: `id:${sourceId}` });
       paper = results[0] || null;
     } else if (source === 'europepmc') {
       const { EuropePMCConnector } = await import('./sources/europepmc');
       const pmcConnector = new EuropePMCConnector();
-      const results = await pmcConnector.search({ titleOrKeywords: sourceId });
+      const { records: results } = await pmcConnector.search({ titleOrKeywords: sourceId });
       paper = results[0] || null;
     } else if (source === 'ncbi') {
       const { NCBIConnector } = await import('./sources/ncbi');
       const ncbiConnector = new NCBIConnector();
-      const results = await ncbiConnector.search({ titleOrKeywords: sourceId });
+      const { records: results } = await ncbiConnector.search({ titleOrKeywords: sourceId });
       paper = results[0] || null;
     } else if (source === 'openaire') {
       const { OpenAIREConnector } = await import('./sources/openaire');
       const openaireConnector = new OpenAIREConnector();
-      const results = await openaireConnector.search({ titleOrKeywords: sourceId });
+      const { records: results } = await openaireConnector.search({ titleOrKeywords: sourceId });
       paper = results[0] || null;
     } else if (source === 'biorxiv' || source === 'medrxiv') {
       const { BiorxivConnector } = await import('./sources/biorxiv');
       const biorxivConnector = new BiorxivConnector();
-      const results = await biorxivConnector.search({ titleOrKeywords: sourceId });
+      const { records: results } = await biorxivConnector.search({ titleOrKeywords: sourceId });
       paper = results[0] || null;
     } else if (source === 'doaj') {
       const { DOAJConnector } = await import('./sources/doaj');
       const doajConnector = new DOAJConnector();
-      const results = await doajConnector.search({ titleOrKeywords: sourceId });
+      const { records: results } = await doajConnector.search({ titleOrKeywords: sourceId });
       paper = results[0] || null;
     } else if (source === 'openalex') {
       // Handle OpenAlex works directly via API

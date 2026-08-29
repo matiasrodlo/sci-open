@@ -2,7 +2,7 @@
 // connectors; the second are the metadata/OA clients the pipeline resolves
 // records from directly.
 export type OASource =
-  | "arxiv" | "core" | "europepmc" | "ncbi" | "openaire" | "biorxiv" | "medrxiv" | "doaj" | "opencitations" | "datacite"
+  | "arxiv" | "core" | "europepmc" | "ncbi" | "openaire" | "biorxiv" | "medrxiv" | "doaj" | "plos" | "opencitations" | "datacite"
   | "openalex" | "crossref" | "unpaywall";
 
 // Provenance attached by the pipeline when a record comes from an aggregator
@@ -65,12 +65,25 @@ export type SourceSelectionSummary = {
   confidence: number;
 };
 
+// Per-provider breakdown for one search. These are deliberately not summed:
+// the corpora overlap heavily, so a total across providers would count the same
+// paper many times and mean nothing.
+export type ProviderTotal = {
+  source: string;
+  // The provider's own count of everything matching the query
+  totalHits?: number;
+  // How many records this search actually pulled back from it, before merging
+  retrieved: number;
+  error?: string;
+};
+
 export type SearchResponse = {
   hits: OARecord[];
   facets: Record<string, any>;
   page: number;
   total: number;
   pageSize: number;
+  providerTotals?: ProviderTotal[];
   // Echoed back by the enhanced pipeline; absent from the basic pipeline
   filters?: SearchFilters;
   sort?: SearchSort;
@@ -98,11 +111,26 @@ export interface SearchAdapter {
   }): Promise<{ hits: OARecord[]; total: number; facets: Record<string, any> }>;
 }
 
+export type SourceSearchParams = {
+  doi?: string;
+  titleOrKeywords?: string;
+  yearFrom?: number;
+  yearTo?: number;
+  // How deep to read into the source. Connectors default to their own modest
+  // page size when these are absent, so a caller that wants more than the first
+  // page has to ask for it.
+  limit?: number;
+  offset?: number;
+};
+
+export type SourceSearchResult = {
+  records: OARecord[];
+  // What the provider reports as matching the query across its whole corpus,
+  // which is unrelated to how many records were retrieved. Undefined when the
+  // provider does not report one.
+  totalHits?: number;
+};
+
 export type SourceConnector = {
-  search(params: {
-    doi?: string;
-    titleOrKeywords?: string;
-    yearFrom?: number;
-    yearTo?: number;
-  }): Promise<OARecord[]>;
+  search(params: SourceSearchParams): Promise<SourceSearchResult>;
 };

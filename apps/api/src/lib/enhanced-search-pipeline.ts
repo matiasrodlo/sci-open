@@ -1,4 +1,4 @@
-import { SearchParams, SearchResponse, OARecord } from '@open-access-explorer/shared';
+import { SearchParams, SearchResponse, OARecord, SearchSort, ProviderTotal } from '@open-access-explorer/shared';
 import { OpenAlexClient, OpenAlexWork } from './clients/openalex';
 import { CrossrefClient, CrossrefWork } from './clients/crossref';
 import { UnpaywallClient, UnpaywallResponse } from './clients/unpaywall';
@@ -7,6 +7,20 @@ import { FallbackManager, createStagedFallbacks } from './fallback';
 import { AggregatorManager, AggregatorResult } from './aggregators';
 import { SmartSourceSelector, SourceSelectionResult } from './smart-source-selector';
 import { QueryAnalyzer } from './query-analyzer';
+
+// OpenAlex will not return more than 200 works in one response
+const OPENALEX_MAX_PER_PAGE = 200;
+
+// How many records to read from each source per search. The OA and
+// PDF-availability filters discard a large share of what comes back, so this
+// sits well above the number of results a page actually shows.
+const MAX_FETCH_DEPTH = 600;
+
+// Records retrieved for one search, alongside what each provider reported
+type SourcedRecords = {
+  records: EnrichedRecord[];
+  providerTotals: ProviderTotal[];
+};
 
 export interface EnhancedSearchPipelineOptions {
   userAgent: string;
@@ -84,24 +98,16 @@ export class EnhancedSearchPipeline {
         console.log(`Confidence: ${(sourceSelection.confidence * 100).toFixed(1)}%`);
       }
 
-      // Calculate actual total count from selected sources
-      const totalCountPromise = this.calculateTotalCount(normalizedQuery, params, sourceSelection);
+      let providerTotals: ProviderTotal[] = [];
 
       if (isDoiQuery) {
-        // Direct DOI lookup with smart source selection
-        enrichedRecords = await this.resolveDoiSmart(normalizedQuery, sourceSelection);
+        // A DOI resolves to a single work, so source selection does not apply
+        enrichedRecords = await this.resolveDoi(normalizedQuery);
       } else {
         // Keyword search with smart source selection
-        enrichedRecords = await this.searchByKeywordsSmart(normalizedQuery, params, sourceSelection);
-      }
-
-      // Always collect complete data for facet generation, regardless of smart source selection
-      let allRecordsForFacets: EnrichedRecord[] = [];
-      if (!isDoiQuery && this.options.enableSmartSourceSelection && sourceSelection) {
-        // Get data from all sources for comprehensive facet generation
-        allRecordsForFacets = await this.searchByKeywords(normalizedQuery, params);
-      } else {
-        allRecordsForFacets = enrichedRecords;
+        const sourced = await this.searchByKeywordsSmart(normalizedQuery, params, sourceSelection);
+        enrichedRecords = sourced.records;
+        providerTotals = sourced.providerTotals;
       }
 
       // Step 3: Apply filters
@@ -117,16 +123,19 @@ export class EnhancedSearchPipeline {
       const endIndex = startIndex + pageSize;
       const paginatedRecords = sortedRecords.slice(startIndex, endIndex);
 
-      // Step 6: Get total count and apply filters to it
-      const unfilteredTotalCount = await totalCountPromise;
-      const totalCount = this.applyFiltersToTotalCount(unfilteredTotalCount, params.filters);
+      // Step 6: The total is what we actually hold. Upstream sources report
+      // counts for their own corpus, which overlap and are not comparable
+      // across sources, so summing them produces a number no page of results
+      // can ever back up. Pagination is derived from this, so it has to be the
+      // real length of the result set.
+      const totalCount = sortedRecords.length;
 
-      // Step 7: Generate facets with scaling based on total count
-      // Always use all enriched records for facet generation, regardless of smart source selection
-      const facets = this.generateScaledFacets(sortedRecords, totalCount, allRecordsForFacets);
+      // Step 7: Facets describe the results being returned, so they are counted
+      // over the same filtered set that produced `hits`.
+      const facets = this.generateFacets(sortedRecords);
 
       const duration = Date.now() - startTime;
-      console.log(`Enhanced search pipeline completed in ${duration}ms, found ${sortedRecords.length} results, total available: ${totalCount}`);
+      console.log(`Enhanced search pipeline completed in ${duration}ms, found ${totalCount} results`);
 
       // Update performance metrics for smart source selection
       if (sourceSelection && this.options.enableAdaptiveLearning) {
@@ -139,6 +148,9 @@ export class EnhancedSearchPipeline {
         page,
         pageSize,
         total: totalCount,
+        // Reported per provider, never summed: the corpora overlap, so adding
+        // them would count the same paper repeatedly.
+        providerTotals: providerTotals.length ? providerTotals : undefined,
         // query: params.q, // Remove this line as it's not part of SearchResponse
         filters: params.filters,
         sort: params.sort || 'relevance',
@@ -157,48 +169,158 @@ export class EnhancedSearchPipeline {
   }
 
   /**
-   * Smart DOI resolution with source selection
+   * Resolve a single DOI.
+   *
+   * All three authorities are consulted rather than stopping at the first hit:
+   * Crossref carries the canonical metadata, Unpaywall is the authority on OA
+   * status and the best PDF, and OpenAlex fills in citations and topics. Merging
+   * them by DOI is what produces a record that survives the OA/PDF filters.
    */
-  private async resolveDoiSmart(doi: string, sourceSelection: SourceSelectionResult | null): Promise<EnrichedRecord[]> {
-    if (!sourceSelection || !this.options.enableSmartSourceSelection) {
-      // Fallback to original DOI resolution
-      return this.resolveDoi(doi);
-    }
+  private async resolveDoi(doi: string): Promise<EnrichedRecord[]> {
+    const normalizedDoi = this.normalizeDoi(doi);
 
-    const results: EnrichedRecord[] = [];
-    const selectedSources = sourceSelection.selectedSources;
-
-    // Prioritize DOI authorities
-    const doiSources = selectedSources.filter(source => 
-      ['crossref', 'openalex'].includes(source)
-    );
-
-    for (const source of doiSources) {
-      try {
-        let sourceResults: EnrichedRecord[] = [];
-        
-        if (source === 'crossref') {
-          const crossrefWork = await this.crossrefClient.getWork(doi);
-          if (crossrefWork) {
-            sourceResults = [this.enrichCrossrefWork(crossrefWork)];
-          }
-        } else if (source === 'openalex') {
-          const openalexWork = await this.openalexClient.getWorkByDOI(doi);
-          if (openalexWork) {
-            sourceResults = [this.enrichOpenAlexWork(openalexWork)];
-          }
+    // Each stage resolves a different shape; convertToOARecord dispatches on source
+    const fallbacks = createStagedFallbacks<CrossrefWork | UnpaywallResponse | OpenAlexWork | null>({
+      fast: [
+        {
+          name: 'crossref',
+          fn: () => this.crossrefClient.getWork(normalizedDoi),
+          timeout: 2000
+        },
+        {
+          name: 'unpaywall',
+          fn: () => this.unpaywallClient.resolveDOI(normalizedDoi),
+          timeout: 2000
         }
-
-        if (sourceResults.length > 0) {
-          results.push(...sourceResults);
-          break; // Stop at first successful result for DOI queries
+      ],
+      medium: [
+        {
+          name: 'openalex',
+          fn: () => this.openalexClient.getWorkByDOI(normalizedDoi),
+          timeout: 5000
         }
-      } catch (error) {
-        console.warn(`DOI resolution failed for ${source}:`, error);
+      ],
+      slow: []
+    });
+
+    const results = await this.fallbackManager.executeInStages(fallbacks);
+
+    const records: OARecord[] = [];
+    for (const result of results) {
+      if (result.success && result.data) {
+        const record = this.convertToOARecord(result.data, result.source);
+        if (record) {
+          records.push(record);
+        }
       }
     }
 
-    return results;
+    return this.recordMerger.deduplicateByDOI(records);
+  }
+
+  private normalizeDoi(doi: string): string {
+    return doi.toLowerCase().trim().replace(/^https?:\/\/doi\.org\//, '');
+  }
+
+  /**
+   * Convert a DOI-authority response to an OARecord, dispatching on the source
+   * that produced it.
+   */
+  private convertToOARecord(data: any, source: string): OARecord | null {
+    switch (source) {
+      case 'crossref':
+        return this.convertCrossrefToOARecord(data as CrossrefWork);
+      case 'unpaywall':
+        return this.convertUnpaywallToOARecord(data as UnpaywallResponse);
+      case 'openalex':
+        return this.convertOpenAlexToOARecord(data as OpenAlexWork);
+      default:
+        return null;
+    }
+  }
+
+  private convertCrossrefToOARecord(work: CrossrefWork): OARecord | null {
+    if (!work.title || work.title.length === 0) return null;
+
+    const title = Array.isArray(work.title) ? work.title[0] : work.title;
+    const venue = Array.isArray(work['container-title']) ? work['container-title'][0] : work['container-title'];
+    const license = CrossrefClient.extractLicense(work);
+
+    return {
+      id: `crossref:${work.DOI}`,
+      doi: work.DOI,
+      title,
+      authors: CrossrefClient.extractAuthors(work),
+      year: CrossrefClient.extractYear(work),
+      venue,
+      publisher: work.publisher,
+      abstract: work.abstract,
+      source: 'crossref',
+      sourceId: work.DOI,
+      oaStatus: license ? 'published' : 'other',
+      bestPdfUrl: CrossrefClient.extractPdfLink(work),
+      landingPage: `https://doi.org/${work.DOI}`,
+      topics: work.subject || [],
+      language: work.language || 'en',
+      citationCount: CrossrefClient.extractCitationCount(work),
+      createdAt: new Date().toISOString()
+    };
+  }
+
+  private convertUnpaywallToOARecord(response: UnpaywallResponse): OARecord | null {
+    if (!response.title) return null;
+
+    const authors = response.z_authors?.map(author =>
+      `${author.given} ${author.family}`.trim()
+    ) || [];
+
+    return {
+      id: `unpaywall:${response.doi}`,
+      doi: response.doi,
+      title: response.title,
+      authors,
+      year: response.year,
+      venue: response.journal_name,
+      abstract: response.abstract_inverted_index
+        ? UnpaywallClient.reconstructAbstract(response.abstract_inverted_index)
+        : undefined,
+      source: 'unpaywall',
+      sourceId: response.doi,
+      oaStatus: response.is_oa ? 'published' : 'other',
+      bestPdfUrl: UnpaywallClient.getBestPdfUrl(response),
+      landingPage: response.best_oa_location?.url_for_landing_page || `https://doi.org/${response.doi}`,
+      topics: [],
+      language: 'en',
+      createdAt: new Date().toISOString()
+    };
+  }
+
+  private convertOpenAlexToOARecord(work: OpenAlexWork): OARecord | null {
+    if (!work.title) return null;
+
+    const venue = work.host_venue?.display_name || work.primary_location?.source?.display_name;
+
+    return {
+      id: `openalex:${work.id}`,
+      doi: work.doi,
+      title: work.title,
+      authors: work.authorships?.map(a => a.author.display_name) || [],
+      year: work.publication_year,
+      venue,
+      publisher: work.host_venue?.publisher,
+      abstract: work.abstract_inverted_index
+        ? this.reconstructAbstract(work.abstract_inverted_index)
+        : undefined,
+      source: 'openalex',
+      sourceId: work.id,
+      oaStatus: work.open_access?.is_oa ? 'published' : 'other',
+      bestPdfUrl: work.open_access?.oa_url,
+      landingPage: work.doi ? `https://doi.org/${work.doi}` : work.id,
+      topics: work.concepts?.map(c => c.display_name) || [],
+      language: work.language || 'en',
+      citationCount: work.cited_by_count,
+      createdAt: work.created_date || new Date().toISOString()
+    };
   }
 
   /**
@@ -208,128 +330,100 @@ export class EnhancedSearchPipeline {
     query: string, 
     params: SearchParams, 
     sourceSelection: SourceSelectionResult | null
-  ): Promise<EnrichedRecord[]> {
+  ): Promise<SourcedRecords> {
     if (!sourceSelection || !this.options.enableSmartSourceSelection) {
       // Fallback to original keyword search
       return this.searchByKeywords(query, params);
     }
 
-    const results: EnrichedRecord[] = [];
     const selectedSources = sourceSelection.selectedSources;
+    const depth = this.fetchDepth();
+    const tasks: Array<Promise<SourcedRecords>> = [];
 
-    // Execute searches in parallel with smart source selection
-    const searchPromises = selectedSources.map(async (source) => {
-      try {
+    // Sources the pipeline queries directly, one request each
+    for (const source of selectedSources.filter(s => s === 'openalex' || s === 'crossref')) {
+      tasks.push((async () => {
         const startTime = Date.now();
-        let sourceResults: EnrichedRecord[] = [];
-
-        if (source === 'openalex') {
-          const discoveryResults = await this.discoverWorks(query, params);
-          const enrichedRecords = await this.enrichWorks(discoveryResults, []);
-          sourceResults = enrichedRecords;
-        } else if (source === 'crossref') {
-          const crossrefResults = await this.searchCrossrefWorks(query, params);
-          sourceResults = crossrefResults;
-        } else {
-          // Use aggregator manager for other sources
-          const aggregatorResults = await this.aggregatorManager.searchAggregators({
-            ...params,
-            q: query
-          });
-          const aggregatorRecords = this.mergeAggregatorResults(aggregatorResults);
-          sourceResults = aggregatorRecords;
-        }
-
-        const latency = Date.now() - startTime;
-        
-        // Update performance metrics
-        this.smartSourceSelector.updateSourcePerformance(
-          source,
-          latency,
-          true,
-          sourceResults.length
-        );
-
-        return { source, results: sourceResults, latency };
-      } catch (error) {
-        const latency = Date.now() - Date.now();
-        console.warn(`Search failed for ${source}:`, error);
-        
-        // Update performance metrics for failure
-        this.smartSourceSelector.updateSourcePerformance(
-          source,
-          latency,
-          false,
-          0
-        );
-
-        return { source, results: [], latency: 0 };
-      }
-    });
-
-    const searchResults = await Promise.allSettled(searchPromises);
-    
-    // Collect all successful results
-    for (const result of searchResults) {
-      if (result.status === 'fulfilled' && result.value.results.length > 0) {
-        results.push(...result.value.results);
-      }
-    }
-
-    // Deduplicate results
-    const deduplicatedResults = this.recordMerger.deduplicate(results);
-    console.log(`Smart search: ${results.length} total results, ${deduplicatedResults.length} after deduplication`);
-
-    return deduplicatedResults;
-  }
-
-  /**
-   * Calculate total count with smart source selection
-   */
-  private async calculateTotalCount(
-    query: string, 
-    params: SearchParams, 
-    sourceSelection: SourceSelectionResult | null
-  ): Promise<number> {
-    if (!sourceSelection || !this.options.enableSmartSourceSelection) {
-      // Fallback to original total count calculation
-      return this.calculateTotalCountOriginal(query, params);
-    }
-
-    try {
-      let totalCount = 0;
-      const selectedSources = sourceSelection.selectedSources;
-
-      // Get counts from selected sources only
-      const countPromises = selectedSources.map(async (source) => {
         try {
-          if (source === 'openalex') {
-            return await this.getOpenAlexCount(query, params);
-          } else if (source === 'crossref') {
-            return await this.getCrossrefCount(query, params);
-          } else {
-            // Estimate for aggregator sources
-            return 1000; // Conservative estimate
+          if (source === 'crossref') {
+            const records = await this.searchCrossrefWorks(query, params);
+            this.smartSourceSelector.updateSourcePerformance(source, Date.now() - startTime, true, records.length);
+            return { records, providerTotals: [] };
           }
+
+          const discovery = await this.discoverWorks(query, params, depth);
+          const records = await this.enrichWorks(discovery.works, []);
+
+          this.smartSourceSelector.updateSourcePerformance(
+            source, Date.now() - startTime, true, records.length
+          );
+
+          return {
+            records,
+            providerTotals: [{
+              source: 'openalex',
+              totalHits: discovery.totalHits,
+              retrieved: discovery.works.length
+            }]
+          };
         } catch (error) {
-          console.warn(`Count failed for ${source}:`, error);
-          return 0;
+          console.warn(`Search failed for ${source}:`, error);
+          this.smartSourceSelector.updateSourcePerformance(source, Date.now() - startTime, false, 0);
+          return { records: [], providerTotals: [{ source, retrieved: 0, error: String(error) }] };
         }
-      });
-
-      const counts = await Promise.allSettled(countPromises);
-      for (const count of counts) {
-        if (count.status === 'fulfilled') {
-          totalCount += count.value;
-        }
-      }
-
-      console.log(`Smart total count from ${selectedSources.length} sources: ${totalCount}`);
-      return totalCount;
-    } catch (error) {
-      console.error('Smart total count error:', error);
-      return 0;
+      })());
     }
+
+    // Every remaining source is served by the aggregator manager, which fans
+    // out to its own fixed set of connectors regardless of which source asked.
+    // One sweep therefore covers all of them — running it per source refetches
+    // the same records and inflates the result set with duplicates.
+    if (selectedSources.some(s => s !== 'openalex' && s !== 'crossref')) {
+      tasks.push((async () => {
+        try {
+          const aggregatorResults = await this.aggregatorManager.searchAggregators(
+            { ...params, q: query },
+            { limit: depth, offset: 0 }
+          );
+
+          // Attribute latency and yield to the connector that actually ran
+          for (const result of aggregatorResults) {
+            this.smartSourceSelector.updateSourcePerformance(
+              result.source, result.latency, !result.error, result.records.length
+            );
+          }
+
+          return {
+            records: this.mergeAggregatorResults(aggregatorResults),
+            providerTotals: aggregatorResults.map(r => ({
+              source: r.source,
+              totalHits: r.totalHits,
+              retrieved: r.records.length,
+              error: r.error
+            }))
+          };
+        } catch (error) {
+          console.warn('Aggregator search failed:', error);
+          return { records: [], providerTotals: [] };
+        }
+      })());
+    }
+
+    const settled = await Promise.allSettled(tasks);
+
+    const results: EnrichedRecord[] = [];
+    const providerTotals: ProviderTotal[] = [];
+    for (const outcome of settled) {
+      if (outcome.status === 'fulfilled') {
+        results.push(...outcome.value.records);
+        providerTotals.push(...outcome.value.providerTotals);
+      }
+    }
+
+    const deduplicatedResults = this.recordMerger.deduplicate(results);
+    console.log(`Smart search: ${results.length} fetched, ${deduplicatedResults.length} after deduplication`);
+
+    return { records: deduplicatedResults, providerTotals };
   }
 
   /**
@@ -365,52 +459,47 @@ export class EnhancedSearchPipeline {
     return doiPattern.test(query);
   }
 
-  private sortResults(records: EnrichedRecord[], sort: string): EnrichedRecord[] {
+  private sortResults(records: EnrichedRecord[], sort: SearchSort): EnrichedRecord[] {
     switch (sort) {
-      case 'year':
+      case 'date':
         return records.sort((a, b) => (b.year || 0) - (a.year || 0));
-      case 'title':
-        return records.sort((a, b) => a.title.localeCompare(b.title));
+      case 'date_asc':
+        return records.sort((a, b) => (a.year || 0) - (b.year || 0));
+      case 'citations':
+        return records.sort((a, b) => (b.citationCount || 0) - (a.citationCount || 0));
+      case 'citations_asc':
+        return records.sort((a, b) => (a.citationCount || 0) - (b.citationCount || 0));
       case 'author':
-        return records.sort((a, b) => (a.authors[0] || '').localeCompare(b.authors[0] || ''));
-      default: // relevance
+        return records.sort((a, b) => (a.authors?.[0] || '').localeCompare(b.authors?.[0] || ''));
+      case 'author_desc':
+        return records.sort((a, b) => (b.authors?.[0] || '').localeCompare(a.authors?.[0] || ''));
+      case 'venue':
+        return records.sort((a, b) => (a.venue || '').localeCompare(b.venue || ''));
+      case 'venue_desc':
+        return records.sort((a, b) => (b.venue || '').localeCompare(a.venue || ''));
+      case 'title':
+        return records.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+      case 'title_desc':
+        return records.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
+      case 'relevance':
+      default:
         return records;
     }
   }
 
-  private applyFiltersToTotalCount(totalCount: number, filters: any): number {
-    // Simple estimation - in practice, you'd want more sophisticated filtering
-    if (!filters) return totalCount;
-    
-    let estimatedCount = totalCount;
-    if (filters.yearFrom || filters.yearTo) estimatedCount *= 0.8;
-    if (filters.source) estimatedCount *= 0.3;
-    if (filters.oaStatus) estimatedCount *= 0.5;
-    
-    return Math.round(estimatedCount);
-  }
-
-  private generateScaledFacets(
-    records: EnrichedRecord[], 
-    totalCount: number, 
-    allRecords: EnrichedRecord[]
-  ): any {
-    // Generate facets based on available data
-    const sourceFacets = this.generateSourceFacets(allRecords);
-    const yearFacets = this.generateYearFacets(allRecords);
-    const oaStatusFacets = this.generateOaStatusFacets(allRecords);
-    const venueFacets = this.generateVenueFacets(allRecords);
-    const publisherFacets = this.generatePublisherFacets(allRecords);
-    const topicsFacets = this.generateTopicsFacets(allRecords);
-
-
+  /**
+   * Count each facet over the records being returned. Every bucket therefore
+   * sums to at most the reported total, and selecting one narrows the result
+   * set by exactly the count shown.
+   */
+  private generateFacets(records: EnrichedRecord[]): any {
     return {
-      source: sourceFacets,
-      year: yearFacets,
-      oaStatus: oaStatusFacets,
-      venue: venueFacets,
-      publisher: publisherFacets,
-      topics: topicsFacets
+      source: this.generateSourceFacets(records),
+      year: this.generateYearFacets(records),
+      oaStatus: this.generateOaStatusFacets(records),
+      venue: this.generateVenueFacets(records),
+      publisher: this.generatePublisherFacets(records),
+      topics: this.generateTopicsFacets(records)
     };
   }
 
@@ -460,48 +549,91 @@ export class EnhancedSearchPipeline {
   }
 
   // Include other necessary methods from original SearchPipeline
-  private async searchByKeywords(query: string, params: SearchParams): Promise<EnrichedRecord[]> {
+  private async searchByKeywords(query: string, params: SearchParams): Promise<SourcedRecords> {
+    const depth = this.fetchDepth();
+
     // Step 1: Discovery via OpenAlex
-    const discoveryResults = await this.discoverWorks(query, params);
-    
+    const discovery = await this.discoverWorks(query, params, depth);
+
     // Step 2: Search aggregators in parallel
-    const aggregatorResults = await this.aggregatorManager.searchAggregators(params);
-    
+    const aggregatorResults = await this.aggregatorManager.searchAggregators(
+      { ...params, q: query },
+      { limit: depth, offset: 0 }
+    );
+
     // Step 3: Extract DOIs for enrichment
-    const dois = discoveryResults
+    const dois = discovery.works
       .map(work => work.doi)
       .filter((doi): doi is string => Boolean(doi));
 
     // Step 4: Enrich with canonical metadata and OA resolution
-    const enrichedRecords = await this.enrichWorks(discoveryResults, dois);
-    
+    const enrichedRecords = await this.enrichWorks(discovery.works, dois);
+
     // Step 5: Merge aggregator results
     const aggregatorRecords = this.mergeAggregatorResults(aggregatorResults);
-    
+
     // Step 6: Combine and deduplicate all results
     const allRecords = [...enrichedRecords, ...aggregatorRecords];
-    console.log(`Combined ${enrichedRecords.length} enriched + ${aggregatorRecords.length} aggregator records = ${allRecords.length} total`);
-    
     const deduplicatedRecords = this.recordMerger.deduplicate(allRecords);
-    console.log(`After deduplication: ${deduplicatedRecords.length} records`);
+    console.log(`Combined ${allRecords.length} records, ${deduplicatedRecords.length} after deduplication`);
 
-    return deduplicatedRecords;
+    return {
+      records: deduplicatedRecords,
+      providerTotals: [
+        { source: 'openalex', totalHits: discovery.totalHits, retrieved: discovery.works.length },
+        ...aggregatorResults.map(r => ({
+          source: r.source,
+          totalHits: r.totalHits,
+          retrieved: r.records.length,
+          error: r.error
+        }))
+      ]
+    };
   }
 
-  private async discoverWorks(query: string, params: SearchParams): Promise<OpenAlexWork[]> {
-    try {
-      // Limit to 50 results for faster response
-      const response = await this.openalexClient.searchWorks({
-        query,
-        perPage: Math.min(this.options.maxResults || 50, 50),
-        filter: this.buildOpenAlexFilter(params.filters)
-      });
+  /**
+   * How deep to read into each source.
+   *
+   * Deliberately independent of which page is being viewed: the depth defines
+   * the result set, so letting it grow with the page would change the reported
+   * total as the user pages through it. Every page therefore answers from the
+   * same window, and `total` is a stable property of the query.
+   */
+  private fetchDepth(): number {
+    return this.options.maxResults || MAX_FETCH_DEPTH;
+  }
 
-      return response.results;
-    } catch (error) {
-      console.error('OpenAlex discovery error:', error);
-      return [];
-    }
+  private async discoverWorks(
+    query: string,
+    params: SearchParams,
+    depth: number
+  ): Promise<{ works: OpenAlexWork[]; totalHits?: number }> {
+    const filter = this.buildOpenAlexFilter(params.filters);
+    const pageCount = Math.ceil(depth / OPENALEX_MAX_PER_PAGE);
+
+    // OpenAlex caps a single response at 200. The depth is known up front, so
+    // the pages go out together rather than one after another — walking them
+    // in sequence put the whole round trip on the critical path once per page.
+    const requests = Array.from({ length: pageCount }, (_, index) => {
+      const page = index + 1;
+      const perPage = Math.min(depth - index * OPENALEX_MAX_PER_PAGE, OPENALEX_MAX_PER_PAGE);
+
+      return this.openalexClient
+        .searchWorks({ query, page, perPage, filter })
+        .then(response => ({ results: response.results, count: response.meta?.count }))
+        .catch(error => {
+          console.error(`OpenAlex discovery error (page ${page}):`, error);
+          return { results: [] as OpenAlexWork[], count: undefined };
+        });
+    });
+
+    const pages = await Promise.all(requests);
+
+    return {
+      works: pages.flatMap(p => p.results),
+      // Every page reports the same corpus-wide count; take the first that came back
+      totalHits: pages.find(p => typeof p.count === 'number')?.count
+    };
   }
 
   private buildOpenAlexFilter(filters: any): any {
@@ -605,107 +737,6 @@ export class EnhancedSearchPipeline {
   private async searchCrossrefWorks(query: string, params: SearchParams): Promise<EnrichedRecord[]> {
     // Implementation from original SearchPipeline
     return [];
-  }
-
-  private async getOpenAlexCount(query: string, params: SearchParams): Promise<number> {
-    try {
-      const response = await this.openalexClient.searchWorks({
-        query,
-        perPage: 1, // Only need 1 result to get the total count
-        filter: this.buildOpenAlexFilter(params.filters)
-      });
-      return response.meta.count;
-    } catch (error) {
-      console.error('OpenAlex count error:', error);
-      return 0;
-    }
-  }
-
-  private async getCrossrefCount(query: string, params: SearchParams): Promise<number> {
-    try {
-      const response = await this.crossrefClient.searchWorks({
-        query,
-        rows: 1, // Only need 1 result to get the total count
-        offset: 0
-      });
-      return response.message['total-results'];
-    } catch (error) {
-      console.error('Crossref count error:', error);
-      return 0;
-    }
-  }
-
-  private async getAggregatorCounts(query: string, params: SearchParams): Promise<number[]> {
-    try {
-      // For now, we'll estimate based on the aggregator results
-      // In the future, we could add count-only endpoints to each aggregator
-      const aggregatorResults = await this.aggregatorManager.searchAggregators({
-        ...params,
-        pageSize: 1 // Only fetch 1 result to minimize data transfer
-      });
-
-      // Estimate total counts based on the first page results
-      // This is not perfect but gives a reasonable estimate
-      const estimatedCounts = aggregatorResults.map(result => {
-        if (result.error) return 0;
-        // Rough estimation: if we got results, assume there are more
-        return result.records.length > 0 ? 1000 : 0;
-      });
-
-      return estimatedCounts;
-    } catch (error) {
-      console.error('Aggregator count error:', error);
-      return [0];
-    }
-  }
-
-  private async calculateTotalCountOriginal(query: string, params: SearchParams): Promise<number> {
-    try {
-      let totalCount = 0;
-
-      // Get OpenAlex count
-      const openAlexCount = await this.getOpenAlexCount(query, params);
-      if (openAlexCount > 0) {
-        totalCount += openAlexCount;
-      }
-
-      // Get Crossref count
-      const crossrefCount = await this.getCrossrefCount(query, params);
-      if (crossrefCount > 0) {
-        totalCount += crossrefCount;
-      }
-
-      // Get aggregator counts
-      const aggregatorCounts = await this.getAggregatorCounts(query, params);
-      for (const count of Object.values(aggregatorCounts)) {
-        if (count > 0) {
-          totalCount += count;
-        }
-      }
-
-      console.log(`Total count calculated: ${totalCount} (OpenAlex: ${openAlexCount}, Crossref: ${crossrefCount}, Aggregators: ${Object.values(aggregatorCounts).reduce((sum, count) => sum + count, 0)})`);
-      
-      return totalCount;
-    } catch (error) {
-      console.error('Error calculating total count:', error);
-      // Fallback to a reasonable estimate if calculation fails
-      return 50000;
-    }
-  }
-
-  private async resolveDoi(doi: string): Promise<EnrichedRecord[]> {
-    // Implementation from original SearchPipeline
-    return [];
-  }
-
-  private enrichCrossrefWork(work: CrossrefWork): EnrichedRecord {
-    // Implementation from original SearchPipeline
-    return {} as EnrichedRecord;
-  }
-
-  private enrichOpenAlexWork(work: OpenAlexWork): EnrichedRecord {
-    // Implementation from original SearchPipeline
-    return {} as EnrichedRecord;
   }
 
   private generateVenueFacets(records: EnrichedRecord[]): any[] {

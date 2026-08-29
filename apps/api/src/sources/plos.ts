@@ -1,5 +1,8 @@
 import axios from 'axios';
-import { OARecord, SourceConnector } from '@open-access-explorer/shared';
+import { OARecord, SourceConnector, SourceSearchParams, SourceSearchResult } from '@open-access-explorer/shared';
+
+// PLOS's Solr endpoint serves up to 1000 rows per request
+const MAX_PAGE_SIZE = 1000;
 
 /**
  * PLOS (Public Library of Science) API Integration
@@ -38,16 +41,11 @@ export class PLOSConnector implements SourceConnector {
     this.baseUrl = baseUrl;
   }
 
-  async search(params: {
-    doi?: string;
-    titleOrKeywords?: string;
-    yearFrom?: number;
-    yearTo?: number;
-  }): Promise<OARecord[]> {
-    const { doi, titleOrKeywords, yearFrom, yearTo } = params;
+  async search(params: SourceSearchParams): Promise<SourceSearchResult> {
+    const { doi, titleOrKeywords, yearFrom, yearTo, limit = 50, offset = 0 } = params;
 
     if (!doi && !titleOrKeywords) {
-      return [];
+      return { records: [] };
     }
 
     try {
@@ -61,7 +59,7 @@ export class PLOSConnector implements SourceConnector {
         // Use everything query for comprehensive search
         query = `everything:${titleOrKeywords}`;
       } else {
-        return [];
+        return { records: [] };
       }
 
       // Add year filter if provided
@@ -74,8 +72,8 @@ export class PLOSConnector implements SourceConnector {
       const response = await axios.get<PLOSResponse>(this.baseUrl, {
         params: {
           q: query,
-          rows: 50,
-          start: 0,
+          rows: Math.min(Math.max(limit, 1), MAX_PAGE_SIZE),
+          start: Math.max(offset, 0),
           wt: 'json',
           fl: 'id,title,title_display,author,author_display,abstract,publication_date,journal,article_type,doi,score',
           // Only research articles (exclude corrections, retractions, etc.)
@@ -88,18 +86,21 @@ export class PLOSConnector implements SourceConnector {
       });
 
       if (!response.data.response || !response.data.response.docs) {
-        return [];
+        return { records: [] };
       }
 
       const docs = response.data.response.docs;
-      console.log(`PLOS returned ${docs.length} results for query: ${query.substring(0, 50)}`);
-      
-      return docs.map(doc => this.normalizeResult(doc));
+      const reported = Number(response.data.response.numFound);
+
+      return {
+        records: docs.map(doc => this.normalizeResult(doc)),
+        totalHits: Number.isFinite(reported) ? reported : undefined
+      };
     } catch (error: any) {
       if (error.response?.status !== 404) {
         console.error('PLOS search error:', error.message);
       }
-      return [];
+      return { records: [] };
     }
   }
 
@@ -155,7 +156,7 @@ export class PLOSConnector implements SourceConnector {
       year,
       venue,
       abstract,
-      source: 'core', // Map to 'core' as PLOS is a publisher aggregator
+      source: 'plos',
       sourceId: plosId,
       oaStatus,
       bestPdfUrl,

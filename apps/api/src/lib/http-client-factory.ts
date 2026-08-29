@@ -61,18 +61,20 @@ export class HttpClientFactory {
    * Get or create a pooled HTTP client for a specific base URL
    */
   getClient(baseUrl: string, customConfig?: Partial<HttpPoolConfig>): AxiosInstance {
-    const normalizedUrl = this.normalizeUrl(baseUrl);
-    
-    if (this.clients.has(normalizedUrl)) {
-      return this.clients.get(normalizedUrl)!;
+    // Cache and configure by the full base URL, not just the origin. Several
+    // services live under a path (NCBI's /entrez/eutils, OpenAIRE's /search),
+    // and normalizing that away made axios resolve every request against the
+    // bare host — a silent 404 on each call. Metrics stay keyed by host.
+    if (this.clients.has(baseUrl)) {
+      return this.clients.get(baseUrl)!;
     }
 
     const config = { ...this.defaultConfig, ...customConfig };
-    const client = this.createPooledClient(normalizedUrl, config);
-    
-    this.clients.set(normalizedUrl, client);
-    this.initializeMetrics(normalizedUrl);
-    
+    const client = this.createPooledClient(baseUrl, config);
+
+    this.clients.set(baseUrl, client);
+    this.initializeMetrics(this.normalizeUrl(baseUrl));
+
     return client;
   }
 

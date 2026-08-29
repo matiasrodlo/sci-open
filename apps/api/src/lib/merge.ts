@@ -92,21 +92,40 @@ export class RecordMerger {
   }
 
   /**
+   * Merge a group of records describing the same work, best source first
+   */
+  private mergeGroup(records: OARecord[]): EnrichedRecord {
+    const sortedRecords = this.sortBySourcePriority(records);
+    const merged: EnrichedRecord = this.enrichRecord(sortedRecords[0]);
+
+    for (let i = 1; i < sortedRecords.length; i++) {
+      this.mergeFields(merged, sortedRecords[i]);
+    }
+
+    return merged;
+  }
+
+  /**
+   * Identity for records carrying no DOI. arXiv and other preprint sources
+   * never supply one, so without a fallback key they bypass deduplication
+   * entirely and the same paper can appear repeatedly in one result set.
+   */
+  private identityKey(record: OARecord): string {
+    const title = (record.title || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    if (title) {
+      return `title:${title}|${record.year ?? ''}`;
+    }
+    if (record.source && record.sourceId) {
+      return `src:${record.source}:${record.sourceId}`.toLowerCase();
+    }
+    return `id:${record.id}`;
+  }
+
+  /**
    * Merge a group of records with the same DOI
    */
   private mergeDoiGroup(doi: string, records: OARecord[]): EnrichedRecord {
-    // Sort records by source priority
-    const sortedRecords = this.sortBySourcePriority(records);
-    const primaryRecord = sortedRecords[0];
-
-    // Start with the primary record
-    const merged: EnrichedRecord = this.enrichRecord(primaryRecord);
-
-    // Merge fields from other records
-    for (let i = 1; i < sortedRecords.length; i++) {
-      const record = sortedRecords[i];
-      this.mergeFields(merged, record);
-    }
+    const merged = this.mergeGroup(records);
 
     // Ensure DOI is normalized
     merged.doi = doi;
@@ -139,7 +158,8 @@ export class RecordMerger {
       'redalyc': 18,    // Regional priority
       'doaj': 19,       // Directory priority
       'ncbi': 20,       // Lower priority - limited metadata
-      'opencitations': 21, // Lowest priority - citations only
+      'datacite': 21,   // Lower priority - registry items, sparse article metadata
+      'opencitations': 22, // Lowest priority - citations only
     };
 
     return records.sort((a, b) => {
@@ -195,13 +215,17 @@ export class RecordMerger {
       primary.topics = [...(primary.topics || []), ...newTopics];
     }
 
-    // Merge PDF URL (prefer publisher PDFs)
+    // Merge PDF URL (prefer publisher PDFs). bestPdfUrl is the field consumers
+    // read off OARecord, so it has to track pdfUrl — a record that only carried
+    // the merged-in URL on pdfUrl reads as having no PDF at all.
     if (secondary.bestPdfUrl) {
       if (this.options.preferPublisherPdf && secondary.source.includes('publisher')) {
         primary.pdfUrl = secondary.bestPdfUrl;
+        primary.bestPdfUrl = secondary.bestPdfUrl;
         primary.pdfSource = secondary.source;
       } else if (!primary.pdfUrl) {
         primary.pdfUrl = secondary.bestPdfUrl;
+        primary.bestPdfUrl = primary.bestPdfUrl || secondary.bestPdfUrl;
         primary.pdfSource = secondary.source;
       }
     }
@@ -369,36 +393,33 @@ export class RecordMerger {
       return [];
     }
 
-    // Group records by DOI
+    // Group records by DOI where there is one, and by title/year where there
+    // is not, so that no source can contribute the same work twice
     const doiGroups = new Map<string, OARecord[]>();
-    const nonDoiRecords: OARecord[] = [];
+    const nonDoiGroups = new Map<string, OARecord[]>();
 
     for (const record of records) {
-      if (record.doi) {
-        const doi = this.normalizeDOI(record.doi);
-        if (!doiGroups.has(doi)) {
-          doiGroups.set(doi, []);
-        }
-        doiGroups.get(doi)!.push(record);
-      } else {
-        nonDoiRecords.push(record);
+      const group = record.doi ? doiGroups : nonDoiGroups;
+      const key = record.doi ? this.normalizeDOI(record.doi) : this.identityKey(record);
+
+      if (!group.has(key)) {
+        group.set(key, []);
       }
+      group.get(key)!.push(record);
     }
 
     const deduplicatedRecords: EnrichedRecord[] = [];
 
-    // Merge DOI groups
     for (const [doi, group] of doiGroups) {
-      if (group.length === 1) {
-        deduplicatedRecords.push(this.enrichRecord(group[0]));
-      } else {
-        deduplicatedRecords.push(this.mergeDoiGroup(doi, group));
-      }
+      deduplicatedRecords.push(
+        group.length === 1 ? this.enrichRecord(group[0]) : this.mergeDoiGroup(doi, group)
+      );
     }
 
-    // Add non-DOI records as-is
-    for (const record of nonDoiRecords) {
-      deduplicatedRecords.push(this.enrichRecord(record));
+    for (const group of nonDoiGroups.values()) {
+      deduplicatedRecords.push(
+        group.length === 1 ? this.enrichRecord(group[0]) : this.mergeGroup(group)
+      );
     }
 
     return deduplicatedRecords;

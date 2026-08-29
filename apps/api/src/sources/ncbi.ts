@@ -1,8 +1,11 @@
 import axios, { AxiosInstance } from 'axios';
 import { parseString } from 'xml2js';
-import { OARecord, SourceConnector } from '@open-access-explorer/shared';
+import { OARecord, SourceConnector, SourceSearchParams, SourceSearchResult } from '@open-access-explorer/shared';
 import { getPooledClient } from '../lib/http-client-factory';
 import { getServiceConfig } from '../lib/http-pool-config';
+
+// Keep a single efetch payload manageable; PubMed abstract XML is bulky
+const MAX_PAGE_SIZE = 500;
 
 export class NCBIConnector implements SourceConnector {
   private baseUrl: string;
@@ -16,13 +19,8 @@ export class NCBIConnector implements SourceConnector {
     this.httpClient = getPooledClient(baseUrl, getServiceConfig('ncbi'));
   }
 
-  async search(params: {
-    doi?: string;
-    titleOrKeywords?: string;
-    yearFrom?: number;
-    yearTo?: number;
-  }): Promise<OARecord[]> {
-    const { doi, titleOrKeywords, yearFrom, yearTo } = params;
+  async search(params: SourceSearchParams): Promise<SourceSearchResult> {
+    const { doi, titleOrKeywords, yearFrom, yearTo, limit = 50, offset = 0 } = params;
     
     console.log('NCBI search called with params:', { doi, titleOrKeywords, yearFrom, yearTo });
 
@@ -35,7 +33,7 @@ export class NCBIConnector implements SourceConnector {
         query = titleOrKeywords;
       } else {
         console.log('NCBI: No query provided');
-        return [];
+        return { records: [] };
       }
 
       // Add year filter if provided
@@ -48,14 +46,17 @@ export class NCBIConnector implements SourceConnector {
         }
       }
 
-      // Add open access filter - only return open access articles
-      query = `${query} AND "open access"[Filter]`;
+      // Restrict to open access. PubMed has no "open access"[Filter]; quoting an
+      // unknown filter makes it a literal phrase that matches nothing, so the
+      // whole query silently returned zero. This is the real subset name.
+      query = `${query} AND pubmed pmc open access[filter]`;
 
       // First, search for PMIDs
       const searchParams: any = {
         db: 'pubmed',
         term: query,
-        retmax: 50,
+        retmax: Math.min(Math.max(limit, 1), MAX_PAGE_SIZE),
+        retstart: Math.max(offset, 0),
         retmode: 'json',
         usehistory: 'y',
       };
@@ -67,35 +68,41 @@ export class NCBIConnector implements SourceConnector {
 
       const searchResponse = await this.httpClient.get('/esearch.fcgi', {
         params: searchParams,
-        timeout: 5000
+        timeout: Math.min(10000 + searchParams.retmax * 20, 40000)
       });
 
       const searchData = searchResponse.data;
       const pmids = searchData.esearchresult?.idlist || [];
+      const reportedCount = Number(searchData.esearchresult?.count);
+      const totalHits = Number.isFinite(reportedCount) ? reportedCount : undefined;
       
       console.log('NCBI search response:', { query, pmids: pmids.length, firstFew: pmids.slice(0, 3) });
 
       if (pmids.length === 0) {
-        console.log('NCBI: No PMIDs found for query:', query);
-        return [];
+        return { records: [], totalHits };
       }
 
-      // Then fetch detailed records
-      const fetchParams: any = {
+      // Then fetch detailed records. The id list goes in a POST body: a few
+      // hundred PMIDs overflow the URI length limit, and NCBI answers an
+      // oversized GET with 414 — which the pooled client does not treat as an
+      // error, so the failure surfaced only as zero results.
+      const fetchBody = new URLSearchParams({
         db: 'pubmed',
         id: pmids.join(','),
         retmode: 'xml',
         rettype: 'abstract',
-      };
+      });
 
       // Only add API key if it's valid (not empty and not a placeholder)
       if (this.apiKey && this.apiKey !== 'your_ncbi_api_key_here' && this.apiKey.trim() !== '') {
-        fetchParams.api_key = this.apiKey;
+        fetchBody.set('api_key', this.apiKey);
       }
 
-      const fetchResponse = await this.httpClient.get('/efetch.fcgi', {
-        params: fetchParams,
-        timeout: 5000
+      const fetchResponse = await this.httpClient.post('/efetch.fcgi', fetchBody.toString(), {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        // Abstract XML for a few hundred PMIDs is large, so the budget scales
+        // with how many were asked for rather than sitting at a flat 5s
+        timeout: Math.min(10000 + pmids.length * 60, 45000)
       });
 
       return new Promise((resolve, reject) => {
@@ -114,8 +121,7 @@ export class NCBIConnector implements SourceConnector {
               .map((article: any) => this.normalizeArticle(article))
               .filter((record: OARecord | null): record is OARecord => record !== null);
             
-            console.log('NCBI normalized records:', { total: records.length, sample: records[0]?.title });
-            resolve(records);
+            resolve({ records, totalHits });
           } catch (error) {
             console.error('NCBI normalization error:', error);
             reject(error);
@@ -124,7 +130,7 @@ export class NCBIConnector implements SourceConnector {
       });
     } catch (error) {
       console.error('NCBI search error:', error);
-      return [];
+      return { records: [] };
     }
   }
 

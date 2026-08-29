@@ -1,5 +1,8 @@
 import axios from 'axios';
-import { OARecord, SourceConnector } from '@open-access-explorer/shared';
+import { OARecord, SourceConnector, SourceSearchParams, SourceSearchResult } from '@open-access-explorer/shared';
+
+// DOAJ caps a single page at 100 articles
+const MAX_PAGE_SIZE = 100;
 
 interface DOAJArticle {
   id: string;
@@ -51,15 +54,8 @@ export class DOAJConnector implements SourceConnector {
     this.apiKey = apiKey;
   }
 
-  async search(params: {
-    doi?: string;
-    titleOrKeywords?: string;
-    yearFrom?: number;
-    yearTo?: number;
-  }): Promise<OARecord[]> {
-    const { doi, titleOrKeywords, yearFrom, yearTo } = params;
-
-    console.log('🔍 DOAJ search called with params:', params);
+  async search(params: SourceSearchParams): Promise<SourceSearchResult> {
+    const { doi, titleOrKeywords, yearFrom, yearTo, limit = 50, offset = 0 } = params;
 
     try {
       let query = '';
@@ -70,7 +66,7 @@ export class DOAJConnector implements SourceConnector {
         // DOAJ supports various search fields
         query = `title:${titleOrKeywords} OR abstract:${titleOrKeywords} OR keywords:${titleOrKeywords}`;
       } else {
-        return [];
+        return { records: [] };
       }
 
       // Add year filters if provided
@@ -83,12 +79,13 @@ export class DOAJConnector implements SourceConnector {
         }
       }
 
-      console.log(`DOAJ searching for: ${query}`);
+      const pageSize = Math.min(Math.max(limit, 1), MAX_PAGE_SIZE);
 
       const searchParams: any = {
         q: query,
-        pageSize: 50,
-        page: 1,
+        pageSize,
+        // Pages are 1-based, so an offset lands exactly on page boundaries
+        page: Math.floor(offset / pageSize) + 1,
         sort: 'created_date:desc'
       };
 
@@ -110,15 +107,15 @@ export class DOAJConnector implements SourceConnector {
       console.log(`DOAJ response status: ${response.status}, results: ${response.data?.results?.length || 0}`);
 
       if (!response.data?.results) {
-        return [];
+        return { records: [] };
       }
 
-      const records: OARecord[] = response.data.results.map((article: DOAJArticle) => 
+      const records: OARecord[] = response.data.results.map((article: DOAJArticle) =>
         this.normalizeArticle(article)
       );
 
-      console.log(`DOAJ normalized ${records.length} records`);
-      return records;
+      const reported = Number(response.data.total);
+      return { records, totalHits: Number.isFinite(reported) ? reported : undefined };
 
     } catch (error) {
       console.error('DOAJ search error:', error);
@@ -126,7 +123,7 @@ export class DOAJConnector implements SourceConnector {
         console.error('DOAJ error status:', error.response?.status);
         console.error('DOAJ error data:', error.response?.data);
       }
-      return [];
+      return { records: [] };
     }
   }
 

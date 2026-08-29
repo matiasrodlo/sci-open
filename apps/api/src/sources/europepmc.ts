@@ -1,5 +1,8 @@
 import axios from 'axios';
-import { OARecord, SourceConnector } from '@open-access-explorer/shared';
+import { OARecord, SourceConnector, SourceSearchParams, SourceSearchResult } from '@open-access-explorer/shared';
+
+// Europe PMC accepts up to 1000 results per request
+const MAX_PAGE_SIZE = 1000;
 
 export class EuropePMCConnector implements SourceConnector {
   private baseUrl: string;
@@ -8,13 +11,8 @@ export class EuropePMCConnector implements SourceConnector {
     this.baseUrl = baseUrl;
   }
 
-  async search(params: {
-    doi?: string;
-    titleOrKeywords?: string;
-    yearFrom?: number;
-    yearTo?: number;
-  }): Promise<OARecord[]> {
-    const { doi, titleOrKeywords, yearFrom, yearTo } = params;
+  async search(params: SourceSearchParams): Promise<SourceSearchResult> {
+    const { doi, titleOrKeywords, yearFrom, yearTo, limit = 50, offset = 0 } = params;
 
     try {
       let query = '';
@@ -24,17 +22,26 @@ export class EuropePMCConnector implements SourceConnector {
       } else if (titleOrKeywords) {
         query = titleOrKeywords;
       } else {
-        return [];
+        return { records: [] };
       }
+
+      // Restrict to open access. There is no `openAccessOnly` request
+      // parameter — passing one is silently ignored and most of the page comes
+      // back closed, only to be discarded downstream. OPEN_ACCESS:y is a query
+      // term, so it also makes the reported hitCount reflect the OA subset.
+      query = `${query} AND OPEN_ACCESS:y`;
+
+      const pageSize = Math.min(Math.max(limit, 1), MAX_PAGE_SIZE);
 
       const searchParams: any = {
         query: query,
         format: 'json',
-        pageSize: 50,
+        pageSize,
+        // The API pages by 1-based page number, so an offset only lands
+        // exactly when it falls on a page boundary
+        page: Math.floor(offset / pageSize) + 1,
         resultType: 'core',
         sortBy: 'RELEVANCE',
-        // Only return open access results
-        openAccessOnly: true,
       };
 
       // Add year filter if provided
@@ -49,14 +56,23 @@ export class EuropePMCConnector implements SourceConnector {
 
       const response = await axios.get(`${this.baseUrl}/search`, {
         params: searchParams,
-        timeout: 5000
+        // A full 'core' result set runs to several megabytes, and decoding it
+        // competes with every other connector on the same thread. This is a
+        // backstop for direct callers; the aggregator's own budget is tighter
+        // and is what normally bounds a search.
+        timeout: Math.min(10000 + pageSize * 40, 45000)
       });
 
       const results = response.data?.resultList?.result || [];
-      return results.map((result: any) => this.normalizeResult(result));
+      const reported = Number(response.data?.hitCount);
+
+      return {
+        records: results.map((result: any) => this.normalizeResult(result)),
+        totalHits: Number.isFinite(reported) ? reported : undefined
+      };
     } catch (error) {
       console.error('Europe PMC search error:', error);
-      return [];
+      return { records: [] };
     }
   }
 

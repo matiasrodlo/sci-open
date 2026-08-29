@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { OARecord, SourceConnector } from '@open-access-explorer/shared';
+import { OARecord, SourceConnector, SourceSearchResult } from '@open-access-explorer/shared';
 import { getPooledClient } from '../lib/http-client-factory';
 import { getServiceConfig } from '../lib/http-pool-config';
 
@@ -20,13 +20,13 @@ export class CoreConnector implements SourceConnector {
     titleOrKeywords?: string;
     yearFrom?: number;
     yearTo?: number;
-  }): Promise<OARecord[]> {
+  }): Promise<SourceSearchResult> {
     const { doi, titleOrKeywords, yearFrom, yearTo } = params;
 
     // Skip CORE if no API key is provided or if it's a placeholder
     if (!this.apiKey || this.apiKey === '' || this.apiKey.includes('your_') || this.apiKey.includes('placeholder')) {
       console.log('CORE API key not provided or invalid, skipping CORE search');
-      return [];
+      return { records: [] };
     }
 
     try {
@@ -37,7 +37,7 @@ export class CoreConnector implements SourceConnector {
       } else if (titleOrKeywords) {
         query = titleOrKeywords;
       } else {
-        return [];
+        return { records: [] };
       }
 
       const searchParams: any = {
@@ -65,15 +65,19 @@ export class CoreConnector implements SourceConnector {
       });
 
       const results = response.data?.results || [];
-      console.log(`CORE returned ${results.length} results for query: ${query}`);
-      return results.map((result: any) => this.normalizeResult(result));
+      const reported = Number(response.data?.totalHits);
+
+      return {
+        records: results.map((result: any) => this.normalizeResult(result)),
+        totalHits: Number.isFinite(reported) ? reported : undefined
+      };
     } catch (error: any) {
       console.error('CORE search error:', error.message);
       if (error.response) {
         console.error('CORE error status:', error.response.status);
         console.error('CORE error data:', JSON.stringify(error.response.data).substring(0, 200));
       }
-      return [];
+      return { records: [] };
     }
   }
 
