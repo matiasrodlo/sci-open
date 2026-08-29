@@ -14,6 +14,26 @@ const OPENALEX_MAX_PER_PAGE = 200;
 // sits well above the number of results a page actually shows.
 const MAX_FETCH_DEPTH = 600;
 
+/**
+ * How many buckets an open-ended facet may carry.
+ *
+ * A result set of a few thousand records produces a bucket per distinct venue,
+ * publisher and topic — measured, a topics facet of 3,079 buckets, with the
+ * facets outweighing the results they describe by five to one. The panel
+ * renders ten to fifteen of each, so the rest was decoded and cached on every
+ * request to be discarded by the browser.
+ *
+ * Set above what the UI shows so a "show more" affordance has something to
+ * expand into without another round trip. The generators sort by count first,
+ * so what survives is the head of the distribution — the buckets a reader
+ * would actually narrow by.
+ */
+const MAX_FACET_BUCKETS = 25;
+
+function truncateFacet(buckets: Array<{ value: unknown; count: number }>) {
+  return buckets.length > MAX_FACET_BUCKETS ? buckets.slice(0, MAX_FACET_BUCKETS) : buckets;
+}
+
 // Records retrieved for one search, alongside what each provider reported
 type SourcedRecords = {
   records: EnrichedRecord[];
@@ -334,12 +354,15 @@ export class EnhancedSearchPipeline {
    */
   private generateFacets(records: EnrichedRecord[]): any {
     return {
+      // Bounded by the provider list and the status vocabulary, so these are
+      // small however many records came back and are sent whole.
       source: this.generateSourceFacets(records),
-      year: this.generateYearFacets(records),
       oaStatus: this.generateOaStatusFacets(records),
-      venue: this.generateVenueFacets(records),
-      publisher: this.generatePublisherFacets(records),
-      topics: this.generateTopicsFacets(records)
+      year: this.generateYearFacets(records),
+      // Open-ended: one bucket per distinct value across the whole result set.
+      venue: truncateFacet(this.generateVenueFacets(records)),
+      publisher: truncateFacet(this.generatePublisherFacets(records)),
+      topics: truncateFacet(this.generateTopicsFacets(records))
     };
   }
 

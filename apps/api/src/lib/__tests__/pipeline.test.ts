@@ -172,3 +172,70 @@ describe('facet generation', () => {
     Object.values(empty).forEach(buckets => expect(buckets).toEqual([]));
   });
 });
+
+describe('facet truncation', () => {
+  // One record per venue, so the venue facet has as many buckets as records.
+  const wide: EnrichedRecord[] = Array.from({ length: 200 }, (_, i) =>
+    rec({
+      source: 'europepmc',
+      sourceId: String(i),
+      title: `Paper ${i}`,
+      year: 2020,
+      venue: `Journal ${i}`,
+      publisher: `Publisher ${i}`,
+      topics: [`topic-${i}`],
+      oaStatus: 'published',
+      bestPdfUrl: PDF
+    })
+  );
+
+  const facets = () => call('generateFacets', wide);
+
+  it.each(['venue', 'publisher', 'topics'])('caps the open-ended %s facet', key => {
+    // Without this the response carries a bucket per distinct value — measured
+    // at 3,079 topics against a panel that renders fifteen.
+    expect(facets()[key].length).toBe(25);
+  });
+
+  it('keeps the largest buckets, not an arbitrary slice', () => {
+    const skewed = [
+      ...wide,
+      ...Array.from({ length: 30 }, (_, i) =>
+        rec({
+          source: 'europepmc',
+          sourceId: `hot-${i}`,
+          title: `Hot ${i}`,
+          year: 2020,
+          venue: 'Nature',
+          oaStatus: 'published',
+          bestPdfUrl: PDF
+        })
+      )
+    ];
+    const venues = call('generateFacets', skewed).venue;
+    expect(venues[0]).toEqual({ value: 'Nature', count: 30 });
+  });
+
+  it('leaves the bounded facets whole', () => {
+    // source is capped by the provider list and oaStatus by its vocabulary, so
+    // truncating them would hide a filter the user can legitimately apply.
+    const mixed = [
+      ...wide,
+      rec({ source: 'arxiv', sourceId: 'a', year: 2019, oaStatus: 'preprint', bestPdfUrl: PDF })
+    ];
+    const f = call('generateFacets', mixed);
+    expect(f.source.map((b: any) => b.value).sort()).toEqual(['arxiv', 'europepmc']);
+    expect(f.oaStatus.map((b: any) => b.value).sort()).toEqual(['preprint', 'published']);
+  });
+
+  it('does not pad a facet that is already short', () => {
+    expect(facets().source.length).toBe(1);
+  });
+
+  it('leaves counts accurate on the buckets it keeps', () => {
+    // Truncation drops buckets; it must never rescale the ones that remain,
+    // or selecting a facet stops narrowing by the number shown.
+    const venues = facets().venue;
+    venues.forEach((b: any) => expect(b.count).toBe(1));
+  });
+});
