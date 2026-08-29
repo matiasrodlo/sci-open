@@ -12,7 +12,9 @@ Standalone SVG renders live in [`diagrams/`](./diagrams):
 | Paper detail and PDF download | [`diagrams/paper-pdf-flow.svg`](./diagrams/paper-pdf-flow.svg) |
 | Repository layout | [`diagrams/repo-layout.svg`](./diagrams/repo-layout.svg) |
 
-Regenerate them after editing a block below:
+Regenerate them after editing a block below — the committed SVGs predate the
+phase-2 deletions and still show the removed cache-warming and source-selection
+nodes:
 
 ```bash
 npx -p @mermaid-js/mermaid-cli mmdc -i docs/architecture-diagram.md -o docs/diagrams/out.svg -b white
@@ -70,9 +72,8 @@ flowchart TB
       end
       GATE{{"requireAdmin<br/>Bearer ADMIN_API_KEY<br/>fails closed when unset"}}
       subgraph ADMROUTES["Administrative"]
-        R_CACHE["/api/cache/metrics · /warm · /clear"]
+        R_CACHE["/api/cache/metrics · /clear"]
         R_PERF["/api/performance/*"]
-        R_SMART["/api/smart-source/*"]
         R_DEBUG["/debug/sources · /debug/aggregators"]
       end
       GATE --> ADMROUTES
@@ -81,8 +82,6 @@ flowchart TB
     subgraph PIPE["EnhancedSearchPipeline"]
       direction TB
       P1["normalizeQuery + isDoiQuery"]
-      P2["QueryAnalyzer"]
-      P3["SmartSourceSelector<br/>picks sources · adaptive learning"]
       P4["Parallel fan-out<br/>FallbackManager · Promise.allSettled"]
       P5["RecordMerger<br/>dedupe by DOI + identity key"]
       P6["enrichWorks<br/>OpenAlex → Crossref → Unpaywall"]
@@ -92,7 +91,6 @@ flowchart TB
 
     AGG["AggregatorManager<br/>fans out to all connectors"]
     PDFPROXY["pdf-proxy.ts<br/>SSRF guard + stream"]
-    SSCONF["SmartSourceConfigManager"]
     PERFMON["httpPerformanceMonitor<br/>httpPerformanceTester"]
     HTTPF["http-client-factory<br/>keep-alive pooling · http-pool-config"]
     SEED["seed.ts — index into search backend"]
@@ -107,8 +105,6 @@ flowchart TB
     L3[("L3 · in-memory map<br/>long TTL, ~24 h")]
     SCM["SearchCacheManager<br/>exact + similar-query hits"]
     PCM["PaperCacheManager<br/>by id and by DOI"]
-    ACM["APICacheManager"]
-    WARM["CacheWarmer<br/>records usage, pre-populates"]
   end
 
   %% ============ SHARED PACKAGES ============
@@ -176,22 +172,18 @@ flowchart TB
   %% ---- edges: routes → internals ----
   PLUGINS -.-> ROUTES
   R_SEARCH --> SCM
-  R_SEARCH --> WARM
   R_SEARCH --> PIPE
   R_PAPER --> PCM
   R_PAPER -->|"dynamic import by source prefix"| SOURCES
   R_PAPER --> C_OA
   R_PDF --> PDFPROXY
   R_CACHE --> CM
-  R_CACHE --> WARM
   R_PERF --> PERFMON
-  R_SMART --> SSCONF
   R_DEBUG --> PIPE
   R_DEBUG --> AGG
-  SSCONF -.->|config| P3
 
   %% ---- pipeline internal order ----
-  P1 --> P2 --> P3 --> P4 --> P5 --> P6 --> P7 --> P8
+  P1 --> P4 --> P5 --> P6 --> P7 --> P8
 
   P4 -->|openalex| C_OA
   P4 -->|crossref| C_CR
@@ -219,8 +211,6 @@ flowchart TB
   %% ---- cache wiring ----
   SCM --> CM
   PCM --> CM
-  ACM --> CM
-  WARM --> CM
   CM --> L1
   CM --> L2
   CM --> L3
@@ -242,7 +232,7 @@ flowchart TB
   class HOME,RESULTS,PAPERPG page
   class L1,L2,L3,REDIS,TYPESENSE,MEILI store
   class S_ARXIV,S_EPMC,S_NCBI,S_DOAJ,S_PLOS,S_OPENAIRE,S_CORE,S_BIO,S_DATACITE,S_OC,S_CR,S_UP,C_OA,C_CR,C_UP,PUBLISHERS,ALGOLIA ext
-  class P3,P5,P6 core
+  class P5,P6 core
 ```
 
 `OpenCitations` is the one dotted edge: it is registered in `AggregatorManager`
@@ -265,7 +255,6 @@ sequenceDiagram
     participant F as Fastify POST /api/search
     participant SC as SearchCacheManager
     participant CM as CacheManager L1-L3
-    participant SS as SmartSourceSelector
     participant AG as AggregatorManager
     participant OA as OpenAlex / Crossref / Unpaywall
     participant RM as RecordMerger
@@ -284,7 +273,6 @@ sequenceDiagram
         SC-->>F: SearchResponse
         F-->>N: 200 · X-Cache-Hit: similar
     else cache miss
-        F->>F: cacheWarmer.recordQueryUsage(q)
         F->>SS: selectSources(params)
         SS-->>F: sources + confidence + reasoning
         par direct clients

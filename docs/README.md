@@ -4,7 +4,7 @@ A modern search interface for discovering open-access research papers across mul
 
 ## Overview
 
-Open Access Explorer aggregates and searches research papers from arXiv, CORE, Europe PMC, NCBI, and other open-access repositories. Built with Next.js and Fastify, it provides a clean, Web of Science-style interface with intelligent caching, smart source selection, and real-time faceting.
+Open Access Explorer aggregates and searches research papers from arXiv, CORE, Europe PMC, NCBI, and other open-access repositories. Built with Next.js and Fastify, it provides a clean, Web of Science-style interface with intelligent caching, per-source coverage reporting, and real-time faceting.
 
 ## Quick Start
 

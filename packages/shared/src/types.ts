@@ -57,14 +57,6 @@ export type SearchParams = {
   sort?: SearchSort;
 };
 
-// Describes which sources the smart selector picked for a query
-export type SourceSelectionSummary = {
-  selectedSources: string[];
-  reasoning: string;
-  estimatedLatency: number;
-  confidence: number;
-};
-
 // Per-provider breakdown for one search. These are deliberately not summed:
 // the corpora overlap heavily, so a total across providers would count the same
 // paper many times and mean nothing.
@@ -88,7 +80,6 @@ export type SearchResponse = {
   filters?: SearchFilters;
   sort?: SearchSort;
   duration?: number;
-  sourceSelection?: SourceSelectionSummary;
 };
 
 export type PaperResponse = {

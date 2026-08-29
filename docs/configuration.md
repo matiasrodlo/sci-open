@@ -98,7 +98,7 @@ UNPAYWALL_POOL_CONFIG={"maxConnections": 40, "maxSockets": 120}
 
 ### Administrative Access
 
-The cache, performance, smart-source and debug endpoints are operational
+The cache, performance and debug endpoints are operational
 controls rather than part of the public API. They are gated behind a shared key:
 
 ```bash
@@ -113,17 +113,6 @@ startup. This is deliberate: `apps/web/next.config.js` proxies `/api/*` straight
 through, so an ungated route is reachable from any browser that can load the
 site. `/api/search`, `/api/paper/:id`, `/api/download-pdf` and `/health` stay
 public.
-
-### Smart Source Selection
-
-```env
-ENABLE_SMART_SOURCE_SELECTION=true
-ENABLE_ADAPTIVE_LEARNING=true
-ENABLE_PERFORMANCE_MONITORING=true
-SMART_SOURCE_MAX_SOURCES=4
-SMART_SOURCE_TIMEOUT_MS=8000
-SMART_SOURCE_CONFIDENCE_THRESHOLD=0.6
-```
 
 ## Docker Compose
 
@@ -187,14 +176,5 @@ Increase for high-traffic scenarios:
 ```env
 HTTP_POOL_MAX_CONNECTIONS=50
 HTTP_POOL_MAX_SOCKETS=200
-```
-
-### Source Selection
-
-Optimize for your use case:
-
-```env
-SMART_SOURCE_MAX_SOURCES=6        # More sources = slower but comprehensive
-SMART_SOURCE_TIMEOUT_MS=5000     # Lower timeout = faster but may miss results
 ```
 

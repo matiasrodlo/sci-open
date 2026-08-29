@@ -5,8 +5,6 @@ import { UnpaywallClient, UnpaywallResponse } from './clients/unpaywall';
 import { RecordMerger, EnrichedRecord } from './merge';
 import { FallbackManager, createStagedFallbacks } from './fallback';
 import { AggregatorManager, AggregatorResult } from './aggregators';
-import { SmartSourceSelector, SourceSelectionResult } from './smart-source-selector';
-import { QueryAnalyzer } from './query-analyzer';
 
 // OpenAlex will not return more than 200 works in one response
 const OPENALEX_MAX_PER_PAGE = 200;
@@ -29,8 +27,6 @@ export interface EnhancedSearchPipelineOptions {
   enablePdfResolution?: boolean;
   enableCitations?: boolean;
   enableTotalCount?: boolean;
-  enableSmartSourceSelection?: boolean;
-  enableAdaptiveLearning?: boolean;
 }
 
 export class EnhancedSearchPipeline {
@@ -40,8 +36,6 @@ export class EnhancedSearchPipeline {
   private recordMerger: RecordMerger;
   private fallbackManager: FallbackManager;
   private aggregatorManager: AggregatorManager;
-  private smartSourceSelector: SmartSourceSelector;
-  private queryAnalyzer: QueryAnalyzer;
   private options: EnhancedSearchPipelineOptions;
 
   constructor(options: EnhancedSearchPipelineOptions) {
@@ -51,8 +45,6 @@ export class EnhancedSearchPipeline {
       enablePdfResolution: true,
       enableCitations: false,
       enableTotalCount: true,
-      enableSmartSourceSelection: true,
-      enableAdaptiveLearning: true,
       ...options
     };
 
@@ -61,8 +53,6 @@ export class EnhancedSearchPipeline {
     this.unpaywallClient = new UnpaywallClient(options.userAgent);
     this.recordMerger = new RecordMerger();
     this.aggregatorManager = new AggregatorManager();
-    this.smartSourceSelector = new SmartSourceSelector();
-    this.queryAnalyzer = new QueryAnalyzer();
     
     this.fallbackManager = new FallbackManager({
       maxConcurrency: 12,
@@ -72,7 +62,6 @@ export class EnhancedSearchPipeline {
     });
 
     // Configure adaptive learning
-    this.smartSourceSelector.setAdaptiveLearning(this.options.enableAdaptiveLearning || false);
   }
 
   /**
@@ -87,25 +76,12 @@ export class EnhancedSearchPipeline {
       const isDoiQuery = this.isDoiQuery(normalizedQuery);
 
       let enrichedRecords: EnrichedRecord[] = [];
-      let sourceSelection: SourceSelectionResult | null = null;
-
-      // Step 2: Smart source selection (if enabled)
-      if (this.options.enableSmartSourceSelection && !isDoiQuery) {
-        sourceSelection = this.smartSourceSelector.selectSources(params);
-        console.log(`Smart source selection: ${sourceSelection.selectedSources.join(', ')}`);
-        console.log(`Reasoning: ${sourceSelection.reasoning}`);
-        console.log(`Estimated latency: ${sourceSelection.estimatedLatency}ms`);
-        console.log(`Confidence: ${(sourceSelection.confidence * 100).toFixed(1)}%`);
-      }
-
       let providerTotals: ProviderTotal[] = [];
 
       if (isDoiQuery) {
-        // A DOI resolves to a single work, so source selection does not apply
         enrichedRecords = await this.resolveDoi(normalizedQuery);
       } else {
-        // Keyword search with smart source selection
-        const sourced = await this.searchByKeywordsSmart(normalizedQuery, params, sourceSelection);
+        const sourced = await this.searchByKeywords(normalizedQuery, params);
         enrichedRecords = sourced.records;
         providerTotals = sourced.providerTotals;
       }
@@ -137,11 +113,6 @@ export class EnhancedSearchPipeline {
       const duration = Date.now() - startTime;
       console.log(`Enhanced search pipeline completed in ${duration}ms, found ${totalCount} results`);
 
-      // Update performance metrics for smart source selection
-      if (sourceSelection && this.options.enableAdaptiveLearning) {
-        this.updateSourcePerformanceMetrics(sourceSelection, enrichedRecords, duration);
-      }
-
       return {
         hits: paginatedRecords,
         facets,
@@ -154,13 +125,7 @@ export class EnhancedSearchPipeline {
         // query: params.q, // Remove this line as it's not part of SearchResponse
         filters: params.filters,
         sort: params.sort || 'relevance',
-        duration,
-        sourceSelection: sourceSelection ? {
-          selectedSources: sourceSelection.selectedSources,
-          reasoning: sourceSelection.reasoning,
-          estimatedLatency: sourceSelection.estimatedLatency,
-          confidence: sourceSelection.confidence
-        } : undefined
+        duration
       };
     } catch (error) {
       console.error('Enhanced search pipeline error:', error);
@@ -323,132 +288,7 @@ export class EnhancedSearchPipeline {
     };
   }
 
-  /**
-   * Smart keyword search with source selection
-   */
-  private async searchByKeywordsSmart(
-    query: string, 
-    params: SearchParams, 
-    sourceSelection: SourceSelectionResult | null
-  ): Promise<SourcedRecords> {
-    if (!sourceSelection || !this.options.enableSmartSourceSelection) {
-      // Fallback to original keyword search
-      return this.searchByKeywords(query, params);
-    }
 
-    const selectedSources = sourceSelection.selectedSources;
-    const depth = this.fetchDepth();
-    const tasks: Array<Promise<SourcedRecords>> = [];
-
-    // Sources the pipeline queries directly, one request each
-    for (const source of selectedSources.filter(s => s === 'openalex' || s === 'crossref')) {
-      tasks.push((async () => {
-        const startTime = Date.now();
-        try {
-          if (source === 'crossref') {
-            const records = await this.searchCrossrefWorks(query, params);
-            this.smartSourceSelector.updateSourcePerformance(source, Date.now() - startTime, true, records.length);
-            return { records, providerTotals: [] };
-          }
-
-          const discovery = await this.discoverWorks(query, params, depth);
-          const records = await this.enrichWorks(discovery.works, []);
-
-          this.smartSourceSelector.updateSourcePerformance(
-            source, Date.now() - startTime, true, records.length
-          );
-
-          return {
-            records,
-            providerTotals: [{
-              source: 'openalex',
-              totalHits: discovery.totalHits,
-              retrieved: discovery.works.length
-            }]
-          };
-        } catch (error) {
-          console.warn(`Search failed for ${source}:`, error);
-          this.smartSourceSelector.updateSourcePerformance(source, Date.now() - startTime, false, 0);
-          return { records: [], providerTotals: [{ source, retrieved: 0, error: String(error) }] };
-        }
-      })());
-    }
-
-    // Every remaining source is served by the aggregator manager, which fans
-    // out to its own fixed set of connectors regardless of which source asked.
-    // One sweep therefore covers all of them — running it per source refetches
-    // the same records and inflates the result set with duplicates.
-    if (selectedSources.some(s => s !== 'openalex' && s !== 'crossref')) {
-      tasks.push((async () => {
-        try {
-          const aggregatorResults = await this.aggregatorManager.searchAggregators(
-            { ...params, q: query },
-            { limit: depth, offset: 0 }
-          );
-
-          // Attribute latency and yield to the connector that actually ran
-          for (const result of aggregatorResults) {
-            this.smartSourceSelector.updateSourcePerformance(
-              result.source, result.latency, !result.error, result.records.length
-            );
-          }
-
-          return {
-            records: this.mergeAggregatorResults(aggregatorResults),
-            providerTotals: aggregatorResults.map(r => ({
-              source: r.source,
-              totalHits: r.totalHits,
-              retrieved: r.records.length,
-              error: r.error
-            }))
-          };
-        } catch (error) {
-          console.warn('Aggregator search failed:', error);
-          return { records: [], providerTotals: [] };
-        }
-      })());
-    }
-
-    const settled = await Promise.allSettled(tasks);
-
-    const results: EnrichedRecord[] = [];
-    const providerTotals: ProviderTotal[] = [];
-    for (const outcome of settled) {
-      if (outcome.status === 'fulfilled') {
-        results.push(...outcome.value.records);
-        providerTotals.push(...outcome.value.providerTotals);
-      }
-    }
-
-    const deduplicatedResults = this.recordMerger.deduplicate(results);
-    console.log(`Smart search: ${results.length} fetched, ${deduplicatedResults.length} after deduplication`);
-
-    return { records: deduplicatedResults, providerTotals };
-  }
-
-  /**
-   * Update performance metrics for adaptive learning
-   */
-  private updateSourcePerformanceMetrics(
-    sourceSelection: SourceSelectionResult,
-    results: EnrichedRecord[],
-    totalLatency: number
-  ): void {
-    const avgLatency = totalLatency / sourceSelection.selectedSources.length;
-    
-    for (const source of sourceSelection.selectedSources) {
-      this.smartSourceSelector.updateSourcePerformance(
-        source,
-        avgLatency,
-        true,
-        results.length
-      );
-    }
-  }
-
-  // Include all the original methods from SearchPipeline
-  // (normalizeQuery, isDoiQuery, applyFilters, sortResults, etc.)
-  // ... (copy all methods from original SearchPipeline)
 
   private normalizeQuery(query: string): string {
     return query.trim().toLowerCase();
@@ -732,11 +572,6 @@ export class EnhancedSearchPipeline {
     }
     
     return allRecords;
-  }
-
-  private async searchCrossrefWorks(query: string, params: SearchParams): Promise<EnrichedRecord[]> {
-    // Implementation from original SearchPipeline
-    return [];
   }
 
   private generateVenueFacets(records: EnrichedRecord[]): any[] {

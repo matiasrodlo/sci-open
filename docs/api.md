@@ -155,29 +155,6 @@ Get performance monitoring data.
 
 ---
 
-### Smart Source Selection
-
-> Requires `Authorization: Bearer $ADMIN_API_KEY`. Returns `401` without a
-> valid key, or `503` when `ADMIN_API_KEY` is unset. See
-> [Configuration](./configuration.md#administrative-access).
-
-
-**GET** `/api/smart-source/config`
-
-Get smart source selection configuration.
-
-**POST** `/api/smart-source/config`
-
-Update configuration.
-
-**GET** `/api/smart-source/test`
-
-Run source selection tests.
-
-**GET** `/api/smart-source/performance`
-
-Get performance recommendations.
-
 ## Data Models
 
 ### OARecord
