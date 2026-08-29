@@ -31,9 +31,9 @@ describe('translate', () => {
   });
 
   it('keeps an OR join from swallowing the clauses beside it', () => {
-    // `a OR b AND PUB_YEAR:>=2020` does not mean what it looks like.
+    // `a OR b AND PUB_YEAR:[2020 TO *]` does not mean what it looks like.
     const out = translate(query({ terms: ['a', 'b'], join: 'OR', years: { from: 2020 } }));
-    expect(out).toBe('(a OR b) AND PUB_YEAR:>=2020');
+    expect(out).toBe('(a OR b) AND PUB_YEAR:[2020 TO *]');
   });
 
   it('escapes a quote inside a phrase', () => {
@@ -45,13 +45,22 @@ describe('translate', () => {
     expect(out).toBe('DOI:"10.1234/abc"');
   });
 
-  it('expresses both year bounds', () => {
+  // Range syntax, not comparison operators. Europe PMC accepts `PUB_YEAR:>=n`
+  // and silently ignores it, returning the unbounded corpus with an unchanged
+  // hit count — after which the orchestrator's own year filter discarded the
+  // whole page and a year-bounded search returned nothing.
+  it('expresses both year bounds as a range', () => {
     const out = translate(query({ terms: ['x'], years: { from: 2019, to: 2023 } }));
-    expect(out).toBe('x AND PUB_YEAR:>=2019 AND PUB_YEAR:<=2023');
+    expect(out).toBe('x AND PUB_YEAR:[2019 TO 2023]');
   });
 
-  it('expresses one year bound without inventing the other', () => {
-    expect(translate(query({ terms: ['x'], years: { to: 2023 } }))).toBe('x AND PUB_YEAR:<=2023');
+  it('leaves the open end of a one-sided bound as a wildcard', () => {
+    expect(translate(query({ terms: ['x'], years: { to: 2023 } }))).toBe('x AND PUB_YEAR:[* TO 2023]');
+    expect(translate(query({ terms: ['x'], years: { from: 2019 } }))).toBe('x AND PUB_YEAR:[2019 TO *]');
+  });
+
+  it('emits no year clause when neither bound is set', () => {
+    expect(translate(query({ terms: ['x'], years: {} }))).toBe('x');
   });
 
   it('adds the open-access term only when asked', () => {

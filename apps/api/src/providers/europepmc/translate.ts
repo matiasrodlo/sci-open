@@ -50,8 +50,16 @@ export function translate(query: Query, options: TranslateOptions = {}): string 
     clauses.push(...phrases);
   }
 
-  if (query.years?.from !== undefined) clauses.push(`PUB_YEAR:>=${query.years.from}`);
-  if (query.years?.to !== undefined) clauses.push(`PUB_YEAR:<=${query.years.to}`);
+  // Range syntax, not comparison operators. Europe PMC accepts
+  // `PUB_YEAR:>=2022` without complaint and then ignores it — measured, and
+  // the failure is silent in the worst way: the hit count comes back identical
+  // to the unbounded query, the page is the newest records in the whole
+  // corpus, and the orchestrator's own year filter then discards every one of
+  // them. A year-bounded search returned nothing at all.
+  const { from, to } = query.years ?? {};
+  if (from !== undefined || to !== undefined) {
+    clauses.push(`PUB_YEAR:[${from ?? '*'} TO ${to ?? '*'}]`);
+  }
 
   if (options.openAccessOnly) clauses.push('OPEN_ACCESS:y');
 
