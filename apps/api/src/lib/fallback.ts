@@ -119,42 +119,6 @@ export class FallbackManager {
   }
 
   /**
-   * Execute fallbacks with early return on first success
-   */
-  async executeWithEarlyReturn<T>(
-    fallbacks: Array<{
-      name: string;
-      fn: () => Promise<T>;
-      priority?: number;
-      timeout?: number;
-    }>
-  ): Promise<FallbackResult<T> | null> {
-    const sortedFallbacks = fallbacks.sort((a, b) => (a.priority || 100) - (b.priority || 100));
-
-    for (const fallback of sortedFallbacks) {
-      try {
-        const startTime = Date.now();
-        const timeout = fallback.timeout || this.options.timeoutMs!;
-        const data = await this.withTimeout(fallback.fn(), timeout);
-        
-        const duration = Date.now() - startTime;
-        return {
-          success: true,
-          data,
-          source: fallback.name,
-          duration,
-          attempt: 1
-        };
-      } catch (error) {
-        // Continue to next fallback
-        continue;
-      }
-    }
-
-    return null; // All fallbacks failed
-  }
-
-  /**
    * Execute fallbacks in stages (fast sources first, then slower ones)
    */
   async executeInStages<T>(
@@ -200,62 +164,6 @@ export class FallbackManager {
    */
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  /**
-   * Get telemetry data about fallback performance
-   */
-  getTelemetry(results: FallbackResult<any>[]): {
-    totalRequests: number;
-    successfulRequests: number;
-    failedRequests: number;
-    averageDuration: number;
-    sourcePerformance: Record<string, {
-      successRate: number;
-      averageDuration: number;
-      totalRequests: number;
-    }>;
-  } {
-    const totalRequests = results.length;
-    const successfulRequests = results.filter(r => r.success).length;
-    const failedRequests = totalRequests - successfulRequests;
-    const averageDuration = results.reduce((sum, r) => sum + r.duration, 0) / totalRequests;
-
-    const sourcePerformance: Record<string, {
-      successRate: number;
-      averageDuration: number;
-      totalRequests: number;
-    }> = {};
-
-    // Group by source
-    const sourceGroups = results.reduce((groups, result) => {
-      if (!groups[result.source]) {
-        groups[result.source] = [];
-      }
-      groups[result.source].push(result);
-      return groups;
-    }, {} as Record<string, FallbackResult<any>[]>);
-
-    // Calculate performance metrics per source
-    for (const [source, sourceResults] of Object.entries(sourceGroups)) {
-      const sourceSuccessful = sourceResults.filter(r => r.success).length;
-      const sourceTotal = sourceResults.length;
-      const sourceAverageDuration = sourceResults.reduce((sum, r) => sum + r.duration, 0) / sourceTotal;
-
-      sourcePerformance[source] = {
-        successRate: sourceSuccessful / sourceTotal,
-        averageDuration: sourceAverageDuration,
-        totalRequests: sourceTotal
-      };
-    }
-
-    return {
-      totalRequests,
-      successfulRequests,
-      failedRequests,
-      averageDuration,
-      sourcePerformance
-    };
   }
 }
 

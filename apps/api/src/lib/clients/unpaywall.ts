@@ -91,36 +91,6 @@ export class UnpaywallClient {
     }
   }
 
-  async resolveDOIs(dois: string[]): Promise<Map<string, UnpaywallResponse>> {
-    const results = new Map<string, UnpaywallResponse>();
-    
-    // Process in batches to avoid overwhelming the API
-    const batchSize = 5;
-    for (let i = 0; i < dois.length; i += batchSize) {
-      const batch = dois.slice(i, i + batchSize);
-      
-      const promises = batch.map(async (doi) => {
-        try {
-          const result = await this.resolveDOI(doi);
-          if (result) {
-            results.set(doi, result);
-          }
-        } catch (error) {
-          console.error(`Unpaywall error for DOI ${doi}:`, error);
-        }
-      });
-
-      await Promise.allSettled(promises);
-      
-      // Add small delay between batches to be polite
-      if (i + batchSize < dois.length) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-    }
-
-    return results;
-  }
-
   private normalizeDOI(doi: string): string {
     // Remove doi.org prefix and normalize
     let normalized = doi.toLowerCase().trim();
@@ -148,30 +118,8 @@ export class UnpaywallClient {
   }
 
   // Helper method to get license
-  static getLicense(response: UnpaywallResponse): string | undefined {
-    // Prefer publisher license
-    const publisherLicense = response.oa_locations?.find(loc => 
-      loc.host_type === 'publisher' && loc.license
-    )?.license;
-    
-    if (publisherLicense) return publisherLicense;
-    
-    // Fall back to best OA location license
-    return response.best_oa_location?.license;
-  }
 
   // Helper method to get OA version
-  static getOAVersion(response: UnpaywallResponse): string | undefined {
-    // Prefer published version
-    const publishedVersion = response.oa_locations?.find(loc => 
-      loc.version === 'publishedVersion'
-    )?.version;
-    
-    if (publishedVersion) return publishedVersion;
-    
-    // Fall back to best OA location version
-    return response.best_oa_location?.version;
-  }
 
   // Helper method to reconstruct abstract from inverted index
   static reconstructAbstract(invertedIndex: Record<string, number[]>): string {

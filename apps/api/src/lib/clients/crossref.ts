@@ -72,49 +72,6 @@ export class CrossrefClient {
     this.httpClient = getPooledClient(this.baseUrl, getServiceConfig('crossref'));
   }
 
-  async searchWorks(params: {
-    query?: string;
-    doi?: string;
-    rows?: number;
-    offset?: number;
-    sort?: string;
-    order?: string;
-    filter?: string;
-  }): Promise<CrossrefResponse> {
-    const { query, doi, rows = 20, offset = 0, sort = 'relevance', order = 'desc', filter } = params;
-
-    let searchQuery = '';
-    if (doi) {
-      searchQuery = doi;
-    } else if (query) {
-      searchQuery = query;
-    } else {
-      throw new Error('Either query or doi must be provided');
-    }
-
-    const searchParams: any = {
-      query: searchQuery,
-      rows,
-      offset,
-      sort,
-      order
-    };
-
-    if (filter) {
-      searchParams.filter = filter;
-    }
-
-    const response = await this.httpClient.get('/works', {
-      params: searchParams,
-      headers: {
-        'User-Agent': this.userAgent,
-        'Accept': 'application/json'
-      }
-    });
-
-    return response.data;
-  }
-
   async getWork(doi: string): Promise<CrossrefWork | null> {
     try {
       const response = await this.httpClient.get(`/works/${encodeURIComponent(doi)}`, {

@@ -34,18 +34,3 @@ export function getCachedPaper(id: string): OARecord | null {
   return null;
 }
 
-export function clearPaperCache(): void {
-  if (typeof window === 'undefined') return;
-  
-  try {
-    const keys = Object.keys(sessionStorage);
-    keys.forEach(key => {
-      if (key.startsWith(CACHE_KEY_PREFIX)) {
-        sessionStorage.removeItem(key);
-      }
-    });
-  } catch (error) {
-    console.error('Error clearing paper cache:', error);
-  }
-}
-

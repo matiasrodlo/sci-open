@@ -45,53 +45,6 @@ export class RecordMerger {
   }
 
   /**
-   * Merge multiple records with the same DOI into a single enriched record
-   */
-  mergeRecords(records: OARecord[]): EnrichedRecord {
-    if (records.length === 0) {
-      throw new Error('Cannot merge empty record list');
-    }
-
-    if (records.length === 1) {
-      return this.enrichRecord(records[0]);
-    }
-
-    // Group by DOI for deduplication
-    const doiGroups = new Map<string, OARecord[]>();
-    const nonDoiRecords: OARecord[] = [];
-
-    for (const record of records) {
-      if (record.doi) {
-        const doi = this.normalizeDOI(record.doi);
-        if (!doiGroups.has(doi)) {
-          doiGroups.set(doi, []);
-        }
-        doiGroups.get(doi)!.push(record);
-      } else {
-        nonDoiRecords.push(record);
-      }
-    }
-
-    // Merge DOI groups
-    const mergedRecords: EnrichedRecord[] = [];
-    for (const [doi, group] of doiGroups) {
-      mergedRecords.push(this.mergeDoiGroup(doi, group));
-    }
-
-    // Add non-DOI records as-is
-    for (const record of nonDoiRecords) {
-      mergedRecords.push(this.enrichRecord(record));
-    }
-
-    // If we have multiple merged records, pick the best one
-    if (mergedRecords.length === 1) {
-      return mergedRecords[0];
-    }
-
-    return this.selectBestRecord(mergedRecords);
-  }
-
-  /**
    * Merge a group of records describing the same work, best source first
    */
   private mergeGroup(records: OARecord[]): EnrichedRecord {
@@ -234,83 +187,6 @@ export class RecordMerger {
     if (!primary.landingPage && secondary.landingPage) {
       primary.landingPage = secondary.landingPage;
     }
-  }
-
-  /**
-   * Select the best record from multiple candidates
-   */
-  private selectBestRecord(records: EnrichedRecord[]): EnrichedRecord {
-    // Score records based on completeness and quality
-    const scoredRecords = records.map(record => ({
-      record,
-      score: this.scoreRecord(record)
-    }));
-
-    // Sort by score (highest first)
-    scoredRecords.sort((a, b) => b.score - a.score);
-
-    return scoredRecords[0].record;
-  }
-
-  /**
-   * Score a record based on completeness and quality
-   */
-  private scoreRecord(record: EnrichedRecord): number {
-    let score = 0;
-
-    // Basic fields
-    if (record.title) score += 10;
-    if (record.authors.length > 0) score += 10;
-    if (record.year) score += 5;
-    if (record.venue) score += 5;
-    if (record.abstract) score += 10;
-
-    // Enhanced fields
-    if (record.canonicalTitle) score += 5;
-    if (record.canonicalAuthors) score += 5;
-    if (record.canonicalYear) score += 3;
-    if (record.canonicalVenue) score += 3;
-    if (record.canonicalAbstract) score += 5;
-
-    // PDF availability
-    if (record.pdfUrl) score += 15;
-    if (record.pdfSource?.includes('publisher')) score += 5;
-
-    // Licensing information
-    if (record.license) score += 5;
-    if (record.isRedistributable) score += 3;
-
-    // Citation information
-    if (record.citationCount) score += 3;
-    if (record.referenceCount) score += 2;
-
-    // Source quality bonus
-    const sourceBonus: Record<string, number> = {
-      'crossref': 10,
-      'openalex': 8,
-      'unpaywall': 7,
-      'europepmc': 6,
-      'core': 5,
-      'openaire': 5,
-      'plos': 4,
-      'mdpi': 4,
-      'elife': 4,
-      'frontiers': 4,
-      'arxiv': 3,
-      'biorxiv': 3,
-      'medrxiv': 3,
-      'zenodo': 3,
-      'osf': 3,
-      'hal': 3,
-      'scielo': 2,
-      'redalyc': 2,
-      'doaj': 2,
-      'ncbi': 1,
-    };
-
-    score += sourceBonus[record.source] || 0;
-
-    return score;
   }
 
   /**

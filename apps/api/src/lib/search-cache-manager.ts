@@ -47,27 +47,6 @@ export class SearchCacheManager {
   }
 
   /**
-   * Cache partial search results for similar queries
-   */
-  async cachePartialResults(
-    baseQuery: string,
-    params: SearchParams,
-    results: SearchResponse,
-    similarity: number
-  ): Promise<void> {
-    if (similarity < 0.7) return; // Only cache if similarity is high enough
-    
-    const partialKey = this.generatePartialKey(baseQuery, params, similarity);
-    const compressedResults = this.compressSearchResults(results);
-    
-    await this.cacheManager.set(
-      partialKey,
-      compressedResults,
-      CacheStrategy.SEARCH_RESULTS
-    );
-  }
-
-  /**
    * Get similar cached results
    */
   async getSimilarResults(

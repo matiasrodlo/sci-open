@@ -42,16 +42,6 @@ export function FacetPanel({ facets, currentFilters }: FacetPanelProps) {
     updateFilters({ sources: newSources });
   };
 
-  const getSourceLabel = (source: string) => {
-    const labels = {
-      arxiv: 'arXiv',
-      core: 'CORE',
-      europepmc: 'Europe PMC',
-      ncbi: 'NCBI/PMC',
-    };
-    return labels[source as keyof typeof labels] || source;
-  };
-
   const getOAStatusLabel = (status: string) => {
     const labels = {
       preprint: 'Preprint',
