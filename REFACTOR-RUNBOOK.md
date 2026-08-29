@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **7 / 13** | **4,564** | **1 / 11** | **367** | **1** |
+| **7 / 13** | **4,564** | **2 / 11** | **391** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -272,7 +272,13 @@ Mechanical, independent, one at a time. Each provider lands with its own fixture
    > The service does not survive that. `http-client-factory.ts:98` sets `validateStatus: status < 500`, so the 429 resolves as a success; `discoverWorks` flattens the missing `results` into `undefined`; and `searchByKeywords` then throws `Cannot read properties of undefined (reading 'doi')` — **every keyword search returns 500 while the quota is spent**, even though the other eight providers answered normally. The last five keyword queries of the sweep failed this way.
    >
    > Degrading to the remaining providers, with OpenAlex reported as errored in `providerTotals`, is a shape the response already supports.
-2. **arXiv.** Query translation: quote phrases, join terms with `AND`. Today `all:crispr gene editing` becomes `all:crispr OR all:gene OR all:editing`, which is why Gene Ontology papers top a CRISPR search.
+2. **arXiv — done.** Query translation: quote phrases, join terms with `AND`. `all:crispr gene editing` became `all:crispr OR all:gene OR all:editing` — measured at 23,510 hits whose top two results were *Primer on the Gene Ontology* and *Gene Ontology: Pitfalls, Biases, Remedies*, neither about CRISPR. The `AND` form returns 16, all on the subject.
+
+   > **The year filter was worse than the OR join.** The connector built `submittedDate:[202201010000 TO *]`, and both bounds as two AND-ed clauses. arXiv answers a wildcard endpoint with **HTTP 500** and an error document in the feed; the connector's catch-all turned that into `{ records: [] }`, so **arXiv left every year-filtered search entirely and silently** — the same defect already known for DOAJ, in a provider this document did not flag. Both endpoints are now concrete, verified against responses: 16 hits narrow to 3, all in range.
+   >
+   > **That error document is shaped like a paper.** One entry, with a title (`Error`), an author (`arXiv api core`) and a summary. Nothing about it stops a normaliser accepting it, and at HTTP 200 the old connector would have returned it as a search result. The normaliser now recognises it and reports a provider error instead.
+   >
+   > **Two fields nobody was reading.** `arxiv:doi` carries the published version's DOI and `arxiv:journal_ref` the venue — 3 and 2 of 16 live entries. The old connector read neither, so an arXiv record fell back to a title-and-year identity key, and a preprint's submission year rarely matches its publication year: the same paper survived the merge as two results. `doiLookup` is now declared `false`, so a DOI lookup is skipped with the missing capability named rather than answered with a silent empty set.
 3. **NCBI.** Extract the DOI from `ArticleIdList` — the loop already walks past it, so PubMed records currently cannot deduplicate against other providers. Map MeSH headings into `topics`. Use the real publication date. Consider `explicitArray: false` in xml2js to remove ~15 defensive `?.[0] ||` ladders.
 4. **DOAJ.** Parenthesise the field terms and join year bounds with `AND` — any year filter currently makes DOAJ answer HTTP 400 and drop out silently. Stop treating `type: 'fulltext'` links as PDFs. Declare `yearFilter` honestly in capabilities.
 5. **CORE.** Accept `limit` and `offset` (it hardcodes 100). Reorder PDF resolution so the reader URL becomes `landingPage` and the last resort, not the advertised PDF for every record.

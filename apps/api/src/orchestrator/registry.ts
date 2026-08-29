@@ -1,13 +1,14 @@
 import type { Paper, ProviderCapabilities, ProviderId, Query } from '@open-access-explorer/shared';
+import * as arxiv from '../providers/arxiv';
 import * as europepmc from '../providers/europepmc';
 
 /**
  * Every provider in the new shape, and how to drive it.
  *
- * One entry today. The orchestrator is built against Europe PMC alone
- * deliberately — a fan-out of one provider is still a fan-out, and every part
- * of the pipeline can be proven before breadth is added. Phase 08 migrates the
- * rest, and each arrival is one row here.
+ * Phase 08 is migrating these one at a time, and each arrival is one row here.
+ * The orchestrator was built against Europe PMC alone deliberately — a fan-out
+ * of one provider is still a fan-out, and every part of the pipeline could be
+ * proven before breadth was added.
  */
 
 export type ProviderSearchArgs = {
@@ -42,6 +43,28 @@ export type ProviderEntry = {
 };
 
 export const PROVIDERS: ProviderEntry[] = [
+  {
+    id: 'arxiv',
+    capabilities: arxiv.capabilities,
+    translate: (query, options) => arxiv.translate(query, options),
+    normalizerVersion: 1,
+    async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
+      const result = await arxiv.search(query, {
+        pageSize: depth,
+        offset,
+        timeoutMs,
+        openAccessOnly,
+        ...(signal ? { signal } : {}),
+        ...(userAgent ? { userAgent } : {}),
+        ...(now ? { now } : {})
+      });
+      return {
+        papers: result.papers,
+        ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
+        skipped: result.skipped
+      };
+    }
+  },
   {
     id: 'europepmc',
     capabilities: europepmc.capabilities,
