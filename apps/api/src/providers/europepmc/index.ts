@@ -1,7 +1,7 @@
 import type { Paper, Query } from '@open-access-explorer/shared';
 import { capabilities } from './capabilities';
 import { translate, type TranslateOptions } from './translate';
-import { fetchPage, type FetchOptions } from './fetch';
+import { fetchPage, EuropePmcUnavailableError, type FetchOptions } from './fetch';
 import { normalize, type SkippedRecord } from './normalize';
 
 /**
@@ -14,7 +14,7 @@ import { normalize, type SkippedRecord } from './normalize';
  * DOI lookup, or a fixture-recording script.
  */
 
-export { capabilities, translate, fetchPage, normalize };
+export { capabilities, translate, fetchPage, normalize, EuropePmcUnavailableError };
 export type { TranslateOptions, FetchOptions, SkippedRecord };
 
 export type SearchOptions = TranslateOptions &

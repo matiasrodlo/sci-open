@@ -217,7 +217,9 @@ The largest phase, and the one that earns the refactor. A fan-out of one provide
 - [ ] Page 2 and a sort change are served from provider cache — milliseconds, not a re-fetch.
 - [ ] Concurrent identical searches produce one upstream fan-out.
 - [ ] Results are no longer contiguous provider blocks. Verify by run-length encoding the source sequence of a full result set — the current output is 13 blocks.
-- [ ] A forced provider failure appears as `status: 'error'` and sets `complete: false`. Measured during phase 01: Europe PMC returned `retrieved: 0` with no error on one run and 600 on the next, and nothing in the response distinguishes a timeout from an empty result. That is what this status field is for.
+- [x] A forced provider failure appears as `status: 'error'` and sets `complete: false`. Measured during phase 01: Europe PMC returned `retrieved: 0` with no error on one run and 600 on the next, and nothing in the response distinguishes a timeout from an empty result. That is what this status field is for.
+
+  > **The unforced case needed a fix the fan-out could not make.** A thrown error was always reported; a provider that answers HTTP 200 with something that is not a result page was not, because nothing threw. Observed live on 2026-08-29, during phase 08: Europe PMC served `{"version":"6.9"}` and nothing else — no `hitCount`, no `resultList` — for every query including `cancer`, and the provider read it as an empty corpus. `retrieved: 0`, `status: 'ok'`, `complete: true`: precisely the phase 01 symptom, reproduced. The same shape as the OpenAlex 429, which resolved as a success for the same reason. Each provider now checks that a 200 actually carried an answer, and a genuine empty result set — which still reports `hitCount: 0` — is untouched.
 - [ ] Filtering by `oaStatus` changes the result set, and a merged-in abstract appears on the returned record.
 
 > **Risk**
