@@ -3,6 +3,7 @@ import * as arxiv from '../providers/arxiv';
 import * as doaj from '../providers/doaj';
 import * as europepmc from '../providers/europepmc';
 import * as ncbi from '../providers/ncbi';
+import * as plos from '../providers/plos';
 
 /**
  * Every provider in the new shape, and how to drive it.
@@ -102,6 +103,28 @@ export const PROVIDERS: ProviderEntry[] = [
         timeoutMs,
         openAccessOnly,
         ...(process.env.DOAJ_API_KEY ? { apiKey: process.env.DOAJ_API_KEY } : {}),
+        ...(signal ? { signal } : {}),
+        ...(userAgent ? { userAgent } : {}),
+        ...(now ? { now } : {})
+      });
+      return {
+        papers: result.papers,
+        ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
+        skipped: result.skipped
+      };
+    }
+  },
+  {
+    id: 'plos',
+    capabilities: plos.capabilities,
+    translate: (query, options) => plos.translate(query, options),
+    normalizerVersion: 1,
+    async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
+      const result = await plos.search(query, {
+        pageSize: depth,
+        offset,
+        timeoutMs,
+        openAccessOnly,
         ...(signal ? { signal } : {}),
         ...(userAgent ? { userAgent } : {}),
         ...(now ? { now } : {})

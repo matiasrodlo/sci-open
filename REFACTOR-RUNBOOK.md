@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **7 / 13** | **4,564** | **4 / 11** | **495** | **1** |
+| **7 / 13** | **4,564** | **5 / 11** | **531** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -300,7 +300,15 @@ Mechanical, independent, one at a time. Each provider lands with its own fixture
    >
    > **The PDF fix is real in `Paper` and lost on the way out.** Not one link in the recorded page is a PDF and one is explicitly `text/html`, so `fullText.kind` is now `html` — but `toOARecord` maps `fullText.url` to `bestPdfUrl` whatever the kind, so the legacy shape still cannot express the distinction. The format is correct in the new model and flattened by the adapter, the same cost it already documents for `sources` and `fieldSources`. It resolves when the frontend moves onto `Paper` in phase 11.
 5. **CORE.** Accept `limit` and `offset` (it hardcodes 100). Reorder PDF resolution so the reader URL becomes `landingPage` and the last resort, not the advertised PDF for every record.
-6. **PLOS.** Straightforward. Add the `plos` branch the paper-detail endpoint is missing — PLOS was a quarter of a typical result set and every "Details" click on it 404s.
+6. **PLOS — done.** Straightforward. Add the `plos` branch the paper-detail endpoint is missing — PLOS was a quarter of a typical result set and every "Details" click on it 404s.
+
+   > **Straightforward held for the query and not for the identifier.** `everything:` already ANDs its terms — 5,940 hits whether the AND is spelled or not — so there was no disjunction defect. But PLOS has **no `doi` field**, and asking for one returns the corpus rather than an error: `doi:"10.1371/journal.pgen.1002441"` matched **64,432** documents where `id:"..."` matches the one. A PLOS id *is* its DOI. So every PLOS DOI lookup answered with an arbitrary page of the corpus — and the detail branch added here would have inherited it, since the route calls the old connector. Fixed in both.
+   >
+   > **`topics` was the article type.** The connector never requested `subject` and put `article_type` in `topics`, so every PLOS record carried the single topic "Research Article" — identical across the corpus and useless as a facet. `subject` holds hierarchical paths like `/Biology and life sciences/Genetics/Genomics/Repeated sequences/CRISPRs`; the leaf is taken, since keeping the path would give every level its own bucket. 25 of 25 live records now carry real topics.
+   >
+   > **One thing this document implied that is not true.** The connector builds every PDF URL under `/plosone/` although PLOS has seven journals, and only 1 of 8 live results was PLOS ONE — which looks like a broken download for most records. Checked rather than assumed: PLOS routes by DOI and ignores the slug, and `/plosone/` returns `200 application/pdf` for a PLOS Genetics and a PLOS Biology DOI alike. Left as it is.
+   >
+   > Smaller: the year filter invented both ends of an open range — a missing lower bound became the year 2000 and a missing upper bound the current year — and abstracts kept the leading newline Solr wraps them in.
 7. **OpenAIRE.** Extract the DOI from `pid[]`, reading `@classid` and `$` rather than the xml2js `$.classid` and `_` — the same fix already applied to `bestaccessright`, in the place it was missed. Without it no OpenAIRE record can deduplicate against another provider. Then replace the `throw` in the normaliser with per-record isolation — one malformed record currently discards the whole page.
 8. **DataCite.** It contributed 600 records of which zero survived filtering. Either fix what it emits, or set `keywordSearch: false` and stop paying for it.
 9. **bioRxiv.** No keyword index — it scans a 30-day window and greps client-side, spending ten HTTP requests to match nothing. Recommend `keywordSearch: false`, `doiLookup: true`.

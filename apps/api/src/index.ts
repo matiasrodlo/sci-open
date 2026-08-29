@@ -266,6 +266,15 @@ fastify.get<{ Params: { id: string } }>('/api/paper/:id', async (request, reply)
       const doajConnector = new DOAJConnector();
       const { records: results } = await doajConnector.search({ titleOrKeywords: sourceId });
       paper = results[0] || null;
+    } else if (source === 'plos') {
+      const { PLOSConnector } = await import('./sources/plos');
+      const plosConnector = new PLOSConnector();
+      // A PLOS id *is* its DOI, so this is a DOI lookup. Sending it as
+      // keywords would tokenise the identifier and match the wrong article or
+      // none — and with no branch here at all, every "Details" click on a PLOS
+      // result answered 404, on roughly a quarter of a typical result set.
+      const { records: results } = await plosConnector.search({ doi: sourceId });
+      paper = results[0] || null;
     } else if (source === 'openalex') {
       // Handle OpenAlex works directly via API
       try {

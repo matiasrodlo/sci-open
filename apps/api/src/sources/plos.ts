@@ -53,8 +53,10 @@ export class PLOSConnector implements SourceConnector {
       let query = '';
       
       if (doi) {
-        // Search by DOI
-        query = `doi:"${doi}"`;
+        // `id`, not `doi`. A PLOS article's id is its DOI and there is no
+        // `doi` field; asking for one returns the whole corpus instead of an
+        // error — 64,432 documents against the one `id:` matches.
+        query = `id:"${doi}"`;
       } else if (titleOrKeywords) {
         // Search in title, abstract, and full text
         // Use everything query for comprehensive search

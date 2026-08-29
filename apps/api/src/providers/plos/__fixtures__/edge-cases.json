@@ -1,0 +1,50 @@
+{
+  "_comment": "Hand-built, unlike the recorded plos.json. The recorded page was captured before `subject` was requested, so it carries none — which is exactly the field the old connector's topics defect is about. Subject paths are copied verbatim from a live query.",
+  "response": {
+    "numFound": 4,
+    "start": 0,
+    "docs": [
+      {
+        "_case": "hierarchical subject paths, the field the old connector never asked for",
+        "id": "10.1371/journal.pgen.1002441",
+        "title_display": "A PLOS Genetics article with subject terms",
+        "author_display": ["Ada Lovelace"],
+        "abstract": ["Body text."],
+        "publication_date": "2012-01-05T00:00:00Z",
+        "journal": "PLoS Genetics",
+        "article_type": "Research Article",
+        "doi": ["10.1371/journal.pgen.1002441"],
+        "subject": [
+          "/Biology and life sciences/Genetics/Genomics",
+          "/Biology and life sciences/Genetics/Genomics/Repeated sequences/CRISPRs",
+          "/Biology and life sciences/Genetics/Genomics"
+        ]
+      },
+      {
+        "_case": "no subject at all: topics must be empty, not filled with the article type",
+        "id": "10.1371/journal.pone.0000002",
+        "title_display": "A record with no subject terms",
+        "author_display": ["Grace Hopper"],
+        "publication_date": "2020-06-01T00:00:00Z",
+        "journal": "PLOS ONE",
+        "article_type": "Research Article",
+        "doi": ["10.1371/journal.pone.0000002"]
+      },
+      {
+        "_case": "no DOI: no pdf and no landing page can be built",
+        "id": "10.1371/journal.pone.0000003",
+        "title_display": "A record with no doi",
+        "author": ["Alan Turing"],
+        "publication_date": "2019-06-01T00:00:00Z",
+        "journal": "PLOS ONE",
+        "article_type": "Research Article"
+      },
+      {
+        "_case": "unreadable: must cost exactly one record",
+        "id": "10.1371/journal.pone.0000004",
+        "publication_date": "2018-06-01T00:00:00Z",
+        "journal": "PLOS ONE"
+      }
+    ]
+  }
+}
