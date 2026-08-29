@@ -20,7 +20,6 @@ import {
   generateCacheKey,
   searchCacheManager,
   paperCacheManager,
-  cacheWarmer,
   cacheManager
 } from './lib/cache';
 import { httpPerformanceMonitor } from './lib/http-performance-monitor';
@@ -77,12 +76,7 @@ fastify.post<{ Body: SearchParams }>('/api/search', async (request, reply) => {
   
   try {
     const params = request.body;
-    
-    // Record query usage for cache warming
-    if (params.q) {
-      await cacheWarmer.recordQueryUsage(params.q);
-    }
-    
+
     // Check advanced cache first
     const cached = await searchCacheManager.getCachedSearchResults(params.q || '', params);
     if (cached) {
@@ -157,10 +151,7 @@ fastify.get<{ Params: { id: string } }>('/api/paper/:id', async (request, reply)
   
   try {
     const { id } = request.params;
-    
-    // Record paper access for cache warming
-    await cacheWarmer.recordPaperAccess(id, 'Unknown Title');
-    
+
     // Check advanced cache first
     const cached = await paperCacheManager.getCachedPaper(id);
     if (cached) {
@@ -353,26 +344,8 @@ fastify.get('/health', async (request, reply) => {
 // Cache metrics endpoint
 fastify.get('/api/cache/metrics', adminOnly, async (request, reply) => {
   try {
-    const metrics = cacheManager.getMetrics();
-    const warmingStats = cacheWarmer.getWarmingStats();
-    
     return {
-      cache: metrics,
-      warming: warmingStats,
-      timestamp: new Date().toISOString()
-    };
-  } catch (error: any) {
-    reply.code(500);
-    return { error: error.message };
-  }
-});
-
-// Cache warming endpoint
-fastify.post('/api/cache/warm', adminOnly, async (request, reply) => {
-  try {
-    await cacheWarmer.startWarming();
-    return { 
-      message: 'Cache warming started',
+      cache: cacheManager.getMetrics(),
       timestamp: new Date().toISOString()
     };
   } catch (error: any) {
@@ -625,13 +598,7 @@ const start = async () => {
         'ADMIN_API_KEY is not set: the cache, performance, smart-source and debug endpoints are disabled'
       );
     }
-    
-    // Start cache warming in background
-    console.log('Starting cache warming...');
-    cacheWarmer.startWarming().catch(err => {
-      console.error('Cache warming failed:', err);
-    });
-    
+
     // Start HTTP performance monitoring
     console.log('Starting HTTP performance monitoring...');
     httpPerformanceMonitor.startMonitoring(30000); // 30 second intervals

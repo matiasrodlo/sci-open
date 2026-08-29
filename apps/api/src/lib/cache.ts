@@ -2,8 +2,6 @@ import NodeCache from 'node-cache';
 import { CacheManager, cacheManager } from './cache-manager';
 import { SearchCacheManager } from './search-cache-manager';
 import { PaperCacheManager } from './paper-cache-manager';
-import { APICacheManager } from './api-cache-manager';
-import { CacheWarmer } from './cache-warmer';
 
 // Legacy cache instances for backward compatibility
 const searchCache = new NodeCache({ 
@@ -19,8 +17,6 @@ const paperCache = new NodeCache({
 // Initialize advanced cache managers
 const searchCacheManager = new SearchCacheManager(cacheManager);
 const paperCacheManager = new PaperCacheManager(cacheManager);
-const apiCacheManager = new APICacheManager(cacheManager);
-const cacheWarmer = new CacheWarmer(cacheManager, searchCacheManager, paperCacheManager, apiCacheManager);
 
 // Legacy functions for backward compatibility
 export function getSearchCache() {
@@ -46,7 +42,5 @@ export function generateCacheKey(prefix: string, params: any): string {
 export {
   cacheManager,
   searchCacheManager,
-  paperCacheManager,
-  apiCacheManager,
-  cacheWarmer
+  paperCacheManager
 };

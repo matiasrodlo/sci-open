@@ -124,17 +124,13 @@ Returns server status.
 > [Configuration](./configuration.md#administrative-access).
 
 
-**POST** `/api/cache/warm`
-
-Start cache warming process.
-
 **POST** `/api/cache/clear`
 
 Clear all caches.
 
-**GET** `/api/cache/stats`
+**GET** `/api/cache/metrics`
 
-Get cache statistics.
+Cache hit/miss counts and response times.
 
 ---
 
