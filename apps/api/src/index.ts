@@ -26,6 +26,9 @@ import { assertPublicHttpUrl, fetchPdfStream, PdfProxyError } from './lib/pdf-pr
 import { adminOnly, getAdminKey } from './lib/admin-auth';
 import { SingleFlight } from './lib/single-flight';
 import { log, useLogger } from './lib/logger';
+import { resolveSearchPath } from './lib/search-path';
+import { ProviderCache } from './orchestrator';
+import { runOrchestrator } from './orchestrator/from-search-params';
 
 const fastify = Fastify({
   logger: {
@@ -63,12 +66,32 @@ const searchPipeline = new EnhancedSearchPipeline({
 // of seconds across every provider, which is a wide window for duplicates.
 const searchFlights = new SingleFlight();
 
+// Which implementation serves `/api/search`. Read once, at boot: a value that
+// could change mid-process would let one response cache hold bodies from two
+// different code paths, and the cache key has no room to tell them apart.
+// Flipping it means a restart, which empties that cache — it is an in-memory
+// NodeCache — so a response recorded by one path is never served by the other.
+const searchPath = resolveSearchPath();
+log.info(`Search path: ${searchPath}`);
+
+// Lives for the process, not the request. Caching what each provider returned
+// only pays across requests — it is what makes a page-2 click reuse the
+// fan-out instead of repeating it. Built either way; an unused one is an
+// empty Map.
+const providerCache = new ProviderCache();
+
 // Search endpoint with advanced caching
 fastify.post<{ Body: SearchParams }>('/api/search', async (request, reply) => {
   const startTime = Date.now();
   
   try {
     const params = request.body;
+
+    // Set before the cache checks so every reply carries it, including the two
+    // that return early. A cached body is attributable to this path too: the
+    // flag is fixed at boot and the cache does not outlive the process, so
+    // nothing in it was produced by the other one.
+    reply.header('X-Search-Path', searchPath);
 
     // Check advanced cache first
     const cached = await searchCacheManager.getCachedSearchResults(params.q || '', params);
@@ -107,7 +130,12 @@ fastify.post<{ Body: SearchParams }>('/api/search', async (request, reply) => {
     const { value: searchResult, coalesced } = await searchFlights.run(
       searchCacheManager.keyFor(params.q || '', params),
       async () => {
-        const result = await searchPipeline.search(params);
+        // Inside the flight deliberately: both paths get the same coalescing
+        // and the same cache write, so the flag changes what runs and nothing
+        // about how the request is served around it.
+        const result = searchPath === 'orchestrator'
+          ? await runOrchestrator(params, { cache: providerCache, userAgent })
+          : await searchPipeline.search(params);
 
         await searchCacheManager.cacheSearchResults(params.q || '', params, result);
         if (result.facets) {
@@ -127,7 +155,8 @@ fastify.post<{ Body: SearchParams }>('/api/search', async (request, reply) => {
       totalResults: searchResult.total,
       query: params.q,
       responseTime,
-      coalesced
+      coalesced,
+      searchPath
     }, 'Search pipeline completed');
     
     return searchResult;

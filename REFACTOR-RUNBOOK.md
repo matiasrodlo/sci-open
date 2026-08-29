@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **2 / 13** | **4,564** | **11** | **154** | **1** |
+| **7 / 13** | **4,564** | **1 / 11** | **367** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -18,13 +18,13 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 >
 > Phases 00 and 01 are done, and running them against the tree disproved four things this document previously asserted. Each is corrected in place below, but they are worth reading together, because they are all the same kind of error — a plausible inference recorded as a measurement.
 >
-> **OpenAlex is not rate-limiting.** Tested directly: HTTP 200, 199,281 results, before and after the contact email was fixed. **Unpaywall accepts the malformed address** the User-Agent parser produced — the parsing bug was real, the failure it was blamed for was not. **Abstract reconstruction does not drop repeated words**; all three implementations rebuild an inverted index correctly. And **the salvage anchor was a dangling commit** unreachable from `main`.
+> **OpenAlex was not rate-limiting.** Tested directly: HTTP 200, 199,281 results, before and after the contact email was fixed. *It is now* — see the note under phase 08. The claim was true when measured and stopped being true; the correction is dated for that reason. **Unpaywall accepts the malformed address** the User-Agent parser produced — the parsing bug was real, the failure it was blamed for was not. **Abstract reconstruction does not drop repeated words**; all three implementations rebuild an inverted index correctly. And **the salvage anchor was a dangling commit** unreachable from `main`.
 >
 > Phase 01 found three defects this document did not know about, listed under the phases that will fix them. Every remaining measurement quoted here has now been reproduced live.
 
 ## Phase map
 
-**GROUND** · `00` Stabilise the tree ✔ · `01` Safety net ✔ · `02` Delete · `03` Stop the bleeding · **BUILD** · `04` New contracts · `05` First provider · `06` Orchestrator · `07` Flag routing · `08` Migrate providers · `09` Authorities · **LAND** · `10` Cut over · `11` Frontend · `12` Deploy hardening
+**GROUND** · `00` Stabilise the tree ✔ · `01` Safety net ✔ · `02` Delete ✔ · `03` Stop the bleeding ✔ · **BUILD** · `04` New contracts ✔ · `05` First provider ✔ · `06` Orchestrator ✔ · `07` Flag routing ✔ · `08` Migrate providers · `09` Authorities · **LAND** · `10` Cut over · `11` Frontend · `12` Deploy hardening
 
 ## 00 · Stabilise the tree — *Done*
 
@@ -78,7 +78,7 @@ There were zero tests, no CI, and no lint config — the documented `pnpm lint` 
 >
 > **Merging hides abstracts.** `preferCanonical` defaults true, so a secondary record's abstract goes to `canonicalAbstract` — and of the five `canonical*` fields written, only `canonicalVenue` is ever read back. When one provider has the record and another has the abstract, the merged result carries no abstract. The same shape as the `bestPdfUrl`/`pdfUrl` bug, in the fields beside it. Fixed in phase 6.
 
-## 02 · Delete — *1 day*
+## 02 · Delete — *Done*
 
 **Next.** 4,564 lines never execute or execute without effect — the four groups below, counted exactly. Removing them now means less surface to carry through the migration, and the 154 tests from phase 1 prove nothing broke.
 
@@ -107,7 +107,7 @@ There were zero tests, no CI, and no lint config — the documented `pnpm lint` 
 >
 > Deleting something reachable by a path the import graph missed — dynamic `import()`, or a string-keyed lookup. Two mitigations: delete in the order above as separate commits, and run a real search after each. The `/api/paper/:id` route uses dynamic imports for its source branches, so check that specifically.
 
-## 03 · Stop the bleeding — *1–2 days*
+## 03 · Stop the bleeding — *Done*
 
 Four fixes that are not superseded by the new architecture, and that between them account for most of what a user currently experiences as broken. Doing these now means the rest of the refactor happens on a system people can actually use.
 
@@ -131,7 +131,7 @@ Four fixes that are not superseded by the new architecture, and that between the
 - [ ] A search response is under ~30 KB rather than ~170 KB.
 - [ ] One search produces tens of structured log lines, not thousands of unstructured ones.
 
-## 04 · Define the new contracts — *1–2 days*
+## 04 · Define the new contracts — *Done*
 
 The types are the architecture. Nothing else moves until `Query`, `Paper`, `ProviderReport` and `ProviderCapabilities` are settled in `packages/shared` — the healthiest module in the repo, which both apps already compile against.
 
@@ -159,7 +159,7 @@ The types are the architecture. Nothing else moves until `Query`, `Paper`, `Prov
 >
 > **Are a preprint and its published version one paper?** Today they are two — different DOIs, often different years. Under a model whose premise is `sources: [...]`, users will expect one entry. Merging is better UX and needs version awareness. Settle it now: retrofitting means changing `id` generation, which everything keys on.
 
-## 05 · First provider, end to end — *2–3 days*
+## 05 · First provider, end to end — *Done*
 
 Prove the provider shape on one API before committing to it eleven times. Europe PMC is the right candidate: highest-yield contributor in testing, a sane JSON API, and it already reports totals honestly.
 
@@ -191,7 +191,7 @@ Prove the provider shape on one API before committing to it eleven times. Europe
 - [ ] A malformed record in the fixture costs exactly one record.
 - [ ] The old Europe PMC connector is still in place and still used — nothing has switched yet.
 
-## 06 · The orchestrator — *1–2 weeks*
+## 06 · The orchestrator — *Done*
 
 The largest phase, and the one that earns the refactor. A fan-out of one provider is still a fan-out — build the whole pipeline against Europe PMC alone before adding breadth.
 
@@ -224,7 +224,7 @@ The largest phase, and the one that earns the refactor. A fan-out of one provide
 >
 > **Ranking is a research problem wearing a task's clothing.** It is easy to spend the whole refactor tuning it. Timebox it: rank fusion plus title term overlap, shipped and measured, beats a better scheme that never lands. Everything else in this phase is verifiable; ranking quality is a judgement call, so give it an explicit stopping point.
 
-## 07 · Route by flag — *half a day*
+## 07 · Route by flag — *Done*
 
 Put the new path in front of real traffic without moving the frontend or committing to it.
 
@@ -236,11 +236,26 @@ Put the new path in front of real traffic without moving the frontend or committ
 2. **Convert on the way out** via `toOARecord`, so the response contract is byte-compatible and the frontend does not change.
 3. **Add a comparison script.** Run a set of ~20 representative queries through both paths and diff: result count, overlap, ordering, per-provider contribution, latency. This is how you decide the new path is actually better rather than merely different.
 
-### Done when
+### What happened
 
-- [ ] Flipping one config value switches paths with no other change.
-- [ ] The frontend is untouched and works against both.
-- [ ] The comparison report shows the new path matching or beating the old on count, overlap and latency.
+- [x] **`SEARCH_PATH` dispatches inside the single-flight block**, so both paths share the coalescing and the cache write and the flag changes only what runs. Verified live over HTTP: `X-Search-Path` on every reply, pagination and sort correct, `providerTotals` and `complete` populated. An unrecognised value falls back to `pipeline` rather than failing to boot.
+- [x] **`from-search-params.ts` converts on the way in**, mirroring `to-search-response.ts` on the way out. It lives beside the orchestrator rather than in the route because the comparison script needs the same conversion — a harness that reimplemented it would measure something the service does not run.
+- [x] **The frontend is untouched.** No file under `apps/web` changed, and the response is contract-identical apart from the additive `complete`. Not the same as having exercised the UI against both paths, which has not been done.
+- [x] **`scripts/compare-paths.ts` runs 22 queries through both paths in process** and diffs count, set overlap, ordering, per-provider contribution, field completeness and latency. In process rather than over HTTP: going through the route would put the response cache between the harness and the thing being measured.
+- [ ] **The new path does not yet match the old on count** — 600 against ~2,950 per query. Expected, and not resolvable until phase 08: nine providers against one. This box stays open by design.
+
+### What the comparison found
+
+- **Europe PMC is exactly at parity.** Old connector against new provider, called directly on 21 keyword queries: 100% overlap, Spearman 1.00, identical reported hit counts every time. The rewrite changed nothing about which records come back or in what order.
+- **`venue` 0% → 99% and `citationCount` 0% → 100%**, on the same records. The old connector populated neither. Everything else — DOI 96%, abstract 91%, year 99%, topics 77%, landing page 100% — is unchanged.
+- **Whole path: the new path is a strict subset.** ~100% of what it returns is also in the old path's set for every query. It finds real records; it finds fewer of them.
+- **A DOI reaches the new provider as a DOI.** Given `10.1038/s41586-020-2008-3`, the old connector searched it as free text — 267 hits, 200 records returned. The new one translated it to `DOI:"..."` and returned the one record.
+
+> **Two defects found here**
+>
+> **The Europe PMC year filter returned nothing at all.** `translate` emitted `PUB_YEAR:>=2022 AND PUB_YEAR:<=2024`. Europe PMC accepts that syntax, ignores it, and answers with the hit count of the unbounded query — 155,751 either way, against 58,349 for the correct `PUB_YEAR:[2022 TO 2024]`. The page then came back newest-first (585 of 600 from 2026), the orchestrator's own year filter discarded every record, and a year-bounded search returned zero results while `capabilities.yearFilter: true` claimed the bound had been applied upstream. Fixed here, with the range form and a test; the bounded query now reports 58,349 and returns only records in range. A silent-acceptance failure is the reason capabilities have to be checked against responses and not just documentation.
+>
+> **OpenAlex now meters requests, and one 429 takes the whole service down.** See phase 08. Twenty-two queries exhausted the daily budget mid-sweep, and every keyword search after that returned HTTP 500. The old path's numbers for the last five queries are therefore missing rather than low, and are excluded from the comparison above.
 
 ## 08 · Migrate the remaining providers — *1–2 days each*
 
@@ -250,7 +265,13 @@ Mechanical, independent, one at a time. Each provider lands with its own fixture
 
 ### Order and the fix each one carries
 
-1. **OpenAlex.** Add `host_venue` and `created_date` to the `select` list — or read `primary_location.source.publisher`, which is already selected. Today publisher is always empty for the largest provider and every record is stamped with the request time. Handle 429 explicitly.
+1. **OpenAlex.** Add `host_venue` and `created_date` to the `select` list — or read `primary_location.source.publisher`, which is already selected. Today publisher is always empty for the largest provider and every record is stamped with the request time. **Handle 429 explicitly — this is now urgent rather than tidy.**
+
+   > **OpenAlex meters requests now.** Measured 2026-08-29, during the phase 07 comparison sweep: once the daily budget is spent it answers `HTTP 429` with `{"error":"Rate limit exceeded","message":"Insufficient budget ... Resets at midnight UTC", retryAfter, creditsRemaining, ...}` and no `results` key. Twenty-two queries were enough to exhaust it.
+   >
+   > The service does not survive that. `http-client-factory.ts:98` sets `validateStatus: status < 500`, so the 429 resolves as a success; `discoverWorks` flattens the missing `results` into `undefined`; and `searchByKeywords` then throws `Cannot read properties of undefined (reading 'doi')` — **every keyword search returns 500 while the quota is spent**, even though the other eight providers answered normally. The last five keyword queries of the sweep failed this way.
+   >
+   > Degrading to the remaining providers, with OpenAlex reported as errored in `providerTotals`, is a shape the response already supports.
 2. **arXiv.** Query translation: quote phrases, join terms with `AND`. Today `all:crispr gene editing` becomes `all:crispr OR all:gene OR all:editing`, which is why Gene Ontology papers top a CRISPR search.
 3. **NCBI.** Extract the DOI from `ArticleIdList` — the loop already walks past it, so PubMed records currently cannot deduplicate against other providers. Map MeSH headings into `topics`. Use the real publication date. Consider `explicitArray: false` in xml2js to remove ~15 defensive `?.[0] ||` ladders.
 4. **DOAJ.** Parenthesise the field terms and join year bounds with `AND` — any year filter currently makes DOAJ answer HTTP 400 and drop out silently. Stop treating `type: 'fulltext'` links as PDFs. Declare `yearFilter` honestly in capabilities.
@@ -366,4 +387,12 @@ Independent of the refactor and currently blocking any environment that is not a
 
 *Runbook for the provider / orchestrator / provenance refactor, originally written against commit `56817406` plus the uncommitted working tree. Phases 00 and 01 have since been executed, and this document was revised against what they found: four claims corrected, three new defects added, and every surviving measurement reproduced live — 145.5 KB of facets behind 29.7 KB of hits, a 3,079-bucket topics facet, 4,428 log lines and 31.9 seconds for one search, page one returning a single provider's records in one block.*
 
-*Phase 02 is next. Line counts in it are exact as of the current tree.*
+*Phases 00 through 07 have landed. Phase 08 is next — migrating the remaining
+nine providers into the shape Europe PMC proved, each with the specific defect
+fix listed against it. Line counts quoted in phases 02 and 03 were exact when
+those phases ran; the tree has moved since.*
+
+*The acceptance checkboxes under phases 02 through 06 were not ticked as those
+phases landed, and have not been retro-audited item by item. The headings
+record what was committed; the boxes are still worth walking before phase 10
+deletes the old path on their authority.*

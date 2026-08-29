@@ -1,4 +1,4 @@
-import type { Paper, ProviderReport, Query } from '@open-access-explorer/shared';
+import type { Paper, ProviderReport, Query, SearchSort } from '@open-access-explorer/shared';
 import { PROVIDERS, type ProviderEntry } from './registry';
 import { plan } from './plan';
 import { fanOut, isComplete } from './fanout';
@@ -7,9 +7,10 @@ import { mergePapers } from './merge';
 import { rank } from './rank';
 import { applyPolicy, type PolicyOptions, type UserFilters } from './policy';
 import { generateFacets, type Facets } from './facet';
+import { sortPapers } from './sort';
 
 export * from './parse-query';
-export { PROVIDERS, plan, fanOut, isComplete, ProviderCache, mergePapers, rank, applyPolicy, generateFacets };
+export { PROVIDERS, plan, fanOut, isComplete, ProviderCache, mergePapers, rank, applyPolicy, generateFacets, sortPapers };
 
 /**
  * plan -> fan out -> merge/dedupe -> rank -> filter -> facet -> paginate
@@ -28,6 +29,8 @@ export type SearchOptions = {
   /** Per-provider budget, owned here rather than by the connectors. */
   timeoutMs?: number;
   filters?: UserFilters;
+  /** Replaces the ranked order. `relevance` keeps it. */
+  sort?: SearchSort;
   policy?: PolicyOptions;
   /** Passed to providers that support it. Default true, matching prior behaviour. */
   openAccessOnly?: boolean;
@@ -67,6 +70,7 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
     depth = DEFAULT_DEPTH,
     timeoutMs = DEFAULT_TIMEOUT_MS,
     filters = {},
+    sort = 'relevance',
     policy = {},
     openAccessOnly = true,
     cache,
@@ -87,16 +91,19 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
   const merged = mergePapers(fetched);
   const ranked = rank(merged, { query, ...(now ? { now: now().getTime() } : {}) }).map(s => s.paper);
   const filtered = applyPolicy(ranked, filters, policy);
+  // After filtering so it only orders what will be returned, and before
+  // pagination so a page is a slice of the sorted set.
+  const sorted = sortPapers(filtered, sort);
 
   // Facets describe the filtered set, so a bucket count is exactly how far
   // selecting it narrows what is on screen.
-  const facets = generateFacets(filtered);
+  const facets = generateFacets(sorted);
 
   const start = Math.max(page - 1, 0) * pageSize;
 
   return {
-    papers: filtered.slice(start, start + pageSize),
-    total: filtered.length,
+    papers: sorted.slice(start, start + pageSize),
+    total: sorted.length,
     page,
     pageSize,
     facets,

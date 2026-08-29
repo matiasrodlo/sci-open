@@ -80,6 +80,12 @@ export type SearchResponse = {
   filters?: SearchFilters;
   sort?: SearchSort;
   duration?: number;
+  /**
+   * False when a provider failed or timed out, which makes `total` a lower
+   * bound rather than an answer. Absent from the old pipeline, which has no
+   * way to tell the difference.
+   */
+  complete?: boolean;
 };
 
 export type PaperResponse = {

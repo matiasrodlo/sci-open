@@ -14,7 +14,23 @@ NEXT_PUBLIC_API_BASE=http://localhost:4000
 PORT=4000
 NODE_ENV=development
 LOG_LEVEL=debug
+SEARCH_PATH=pipeline
 ```
+
+`SEARCH_PATH` chooses which implementation serves `POST /api/search`:
+`pipeline` (the default) or `orchestrator`. Anything else, including an unset
+value, falls back to `pipeline` rather than failing to start — a typo should
+not take the search endpoint down.
+
+It is read once at boot, so changing it takes a restart. That is deliberate:
+the response cache is in-memory and holds no record of which path produced an
+entry, and a restart empties it, so a body written by one path can never be
+served by the other. Every reply carries `X-Search-Path` saying which one
+answered.
+
+The default does not flip until `scripts/compare-paths.ts` says the new path
+is better rather than merely different, and the flag stays in place for a
+release after it does, so a rollback is a config change rather than a deploy.
 
 `LOG_LEVEL` takes any pino level — `trace`, `debug`, `info`, `warn`, `error`,
 `fatal` — and defaults to `info` under `NODE_ENV=production`, `debug`
