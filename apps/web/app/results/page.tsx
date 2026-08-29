@@ -6,6 +6,7 @@ import { PaginatedResults } from '@/components/PaginatedResults';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { ExportButton } from '@/components/ExportButton';
+import { ProviderCoverage } from '@/components/ProviderCoverage';
 import { searchPapers } from '@/lib/fetcher';
 import { SearchParams } from '@open-access-explorer/shared';
 
@@ -79,7 +80,7 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
                     <div className="flex items-baseline gap-3">
                       <h1 className="text-xl font-semibold">{query}</h1>
                       <span className="text-sm text-muted-foreground">
-                        {results.total.toLocaleString()} results
+                        {results.total.toLocaleString()} retrievable open-access papers
                       </span>
                     </div>
                     <ExportButton 
@@ -92,10 +93,14 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
                   </div>
                 </div>
 
+                {results.providerTotals && results.providerTotals.length > 0 && (
+                  <ProviderCoverage providers={results.providerTotals} />
+                )}
+
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                   {/* Facets */}
                   <div className="lg:col-span-1">
-                    <FacetPanel facets={results.facets} currentFilters={currentFilters} totalResults={results.total} />
+                    <FacetPanel facets={results.facets} currentFilters={currentFilters} />
                   </div>
 
                   {/* Results */}

@@ -10,15 +10,11 @@ interface FacetPanelProps {
     yearFrom?: number;
     yearTo?: number;
   };
-  totalResults?: number;
 }
 
-export function FacetPanel({ facets, currentFilters, totalResults = 0 }: FacetPanelProps) {
+export function FacetPanel({ facets, currentFilters }: FacetPanelProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  // Debug logging
-  console.log('FacetPanel props:', { facets, totalResults, currentFilters });
 
   const updateFilters = (newFilters: any) => {
     const params = new URLSearchParams(searchParams);
@@ -94,177 +90,38 @@ export function FacetPanel({ facets, currentFilters, totalResults = 0 }: FacetPa
     }, {} as Record<string, number>);
   };
 
-  // Utility function to detect and fix scaling issues in any facet category
-  const detectAndFixScalingIssues = (facetData: Record<string, number>, categoryName: string) => {
-    try {
-      const counts = Object.values(facetData).filter(count => typeof count === 'number' && count > 0);
-      const totalSum = counts.reduce((sum, count) => sum + count, 0);
-      const validTotalResults = typeof totalResults === 'number' && totalResults > 0 ? totalResults : 0;
-      
-      // Check for various scaling issues
-      const allSameCount = counts.length > 1 && counts.every(count => count === counts[0]);
-      const sumTooHigh = totalSum > validTotalResults * 1.5; // More than 150% of total
-      const sumTooLow = totalSum < validTotalResults * 0.5; // Less than 50% of total
-      
-      console.log(`${categoryName} analysis:`, {
-        totalSum,
-        validTotalResults,
-        ratio: totalSum / validTotalResults,
-        allSameCount,
-        sumTooHigh,
-        sumTooLow
-      });
-      
-      if (allSameCount || sumTooHigh || sumTooLow) {
-        console.log(`Detected backend scaling issue in ${categoryName}`);
-        console.log(`${categoryName} counts:`, counts);
-        
-        // For source facets, use realistic distribution
-        if (categoryName === 'source') {
-          const estimatedPeerReviewedRatio = 0.75;
-          
-          return {
-            'europepmc': Math.round(validTotalResults * estimatedPeerReviewedRatio * 0.4),
-            'ncbi': Math.round(validTotalResults * estimatedPeerReviewedRatio * 0.6),
-            'arxiv': Math.round(validTotalResults * (1 - estimatedPeerReviewedRatio)),
-            'openalex': Math.round(validTotalResults * 0.1) // Small portion for openalex
-          };
-        }
-        
-        // For other categories, scale to match total results
-        let scaleFactor = 1;
-        if (sumTooHigh) {
-          scaleFactor = validTotalResults / totalSum;
-        } else if (sumTooLow) {
-          scaleFactor = validTotalResults / totalSum;
-        } else if (allSameCount) {
-          scaleFactor = 0.5; // Conservative scaling for identical counts
-        }
-        
-        console.log(`Applying scale factor ${scaleFactor} to ${categoryName}`);
-        const scaledFacets: Record<string, number> = {};
-        
-        Object.entries(facetData).forEach(([key, value]) => {
-          scaledFacets[key] = Math.round((value as number) * scaleFactor);
-        });
-        
-        return scaledFacets;
-      }
-      
-      return facetData;
-    } catch (error) {
-      console.error(`Error fixing scaling issues for ${categoryName}:`, error);
-      return facetData;
-    }
-  };
-
-  // Calculate publication type counts with proper scaling
+  // Roll the per-source counts up into the two publication types. Sources the
+  // backend does not classify (and so cannot filter on) fall into neither
+  // bucket, which is why these two need not add up to the total.
   const getPublicationTypeCounts = () => {
-    try {
-      // Convert source facets from array format to object format
-      const sourceFacetsObj = convertFacetArray(facets.source);
-      let peerReviewedCount = 0;
-      let preprintCount = 0;
+    const sourceFacetsObj = convertFacetArray(facets.source);
+    const peerReviewedSources = ['europepmc', 'ncbi'];
+    const preprintSources = ['arxiv'];
 
-      console.log('Source facets:', sourceFacetsObj);
-      console.log('Total results:', totalResults);
+    let peerReviewedCount = 0;
+    let preprintCount = 0;
 
-      // Classification based on source characteristics
-      const peerReviewedSources = ['europepmc', 'ncbi'];
-      const preprintSources = ['arxiv'];
-
-      // Calculate unscaled counts from fetched results
-      Object.entries(sourceFacetsObj).forEach(([source, count]) => {
-        const countNum = typeof count === 'number' ? count : 0;
-        console.log(`Source: ${source}, Count: ${countNum}`);
-        if (peerReviewedSources.includes(source)) {
-          peerReviewedCount += countNum;
-        } else if (preprintSources.includes(source)) {
-          preprintCount += countNum;
-        }
-      });
-
-      console.log('Raw counts - Peer reviewed:', peerReviewedCount, 'Preprint:', preprintCount);
-
-      // Check if all sources have the same count (indicating backend scaling issue)
-      const sourceCounts = Object.values(sourceFacetsObj).filter(count => typeof count === 'number' && count > 0);
-      const allSameCount = sourceCounts.length > 1 && sourceCounts.every(count => count === sourceCounts[0]);
-      
-      console.log('Source counts for detection:', sourceCounts);
-      console.log('All same count detection:', allSameCount);
-      
-      if (allSameCount) {
-        console.log('Detected backend scaling issue - all sources have same count, using estimated distribution');
-        // Use estimated distribution based on typical academic database patterns
-        // Peer-reviewed sources typically represent 70-80% of academic papers
-        const estimatedPeerReviewedRatio = 0.75;
-        const validTotalResults = typeof totalResults === 'number' && totalResults > 0 ? totalResults : 0;
-        
-        return {
-          'peer-reviewed': Math.round(validTotalResults * estimatedPeerReviewedRatio),
-          'preprint': Math.round(validTotalResults * (1 - estimatedPeerReviewedRatio))
-        };
+    Object.entries(sourceFacetsObj).forEach(([source, count]) => {
+      const countNum = typeof count === 'number' ? count : 0;
+      if (peerReviewedSources.includes(source)) {
+        peerReviewedCount += countNum;
+      } else if (preprintSources.includes(source)) {
+        preprintCount += countNum;
       }
+    });
 
-      // Calculate the scaling factor to match total results
-      const totalSourceCount = peerReviewedCount + preprintCount;
-      
-      // If we have no source counts, return 0
-      if (totalSourceCount === 0) {
-        console.log('No source counts found, returning 0');
-        return {
-          'peer-reviewed': 0,
-          'preprint': 0
-        };
-      }
-      
-      // Ensure totalResults is a valid number
-      const validTotalResults = typeof totalResults === 'number' && totalResults > 0 ? totalResults : 0;
-      
-      // If no total results, return unscaled counts
-      if (validTotalResults === 0) {
-        console.log('No valid total results, returning unscaled counts');
-        return {
-          'peer-reviewed': peerReviewedCount,
-          'preprint': preprintCount
-        };
-      }
-      
-      // Scale the counts proportionally to match the total
-      const scaleFactor = validTotalResults / totalSourceCount;
-      console.log('Scale factor:', scaleFactor);
-
-      const result = {
-        'peer-reviewed': Math.round(peerReviewedCount * scaleFactor),
-        'preprint': Math.round(preprintCount * scaleFactor)
-      };
-
-      console.log('Final publication type counts:', result);
-      return result;
-    } catch (error) {
-      console.error('Error calculating publication type counts:', error);
-      return {
-        'peer-reviewed': 0,
-        'preprint': 0
-      };
-    }
+    return {
+      'peer-reviewed': peerReviewedCount,
+      'preprint': preprintCount
+    };
   };
 
   const publicationTypeCounts = getPublicationTypeCounts();
-  
+
   const yearFacets = convertFacetArray(facets.year);
   const venueFacets = convertFacetArray(facets.venue);
   const publisherFacets = convertFacetArray(facets.publisher);
   const topicsFacets = convertFacetArray(facets.topics);
-  const sourceFacets = convertFacetArray(facets.source);
-
-
-  // Apply scaling fixes to all facet categories
-  const fixedYearFacets = detectAndFixScalingIssues(yearFacets, 'year');
-  const fixedVenueFacets = detectAndFixScalingIssues(venueFacets, 'venue');
-  const fixedPublisherFacets = detectAndFixScalingIssues(publisherFacets, 'publisher');
-  const fixedTopicsFacets = detectAndFixScalingIssues(topicsFacets, 'topics');
-  const fixedSourceFacets = detectAndFixScalingIssues(sourceFacets, 'source');
 
   return (
     <div className="space-y-6">
@@ -322,13 +179,13 @@ export function FacetPanel({ facets, currentFilters, totalResults = 0 }: FacetPa
       </div>
 
       {/* Years */}
-      {fixedYearFacets && Object.keys(fixedYearFacets).length > 0 && (
+      {yearFacets && Object.keys(yearFacets).length > 0 && (
         <div>
           <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
             Year
           </h3>
           <div className="space-y-2">
-            {Object.entries(fixedYearFacets)
+            {Object.entries(yearFacets)
               .sort(([a], [b]) => parseInt(b) - parseInt(a))
               .slice(0, 10)
               .map(([year, count]) => (
@@ -360,13 +217,13 @@ export function FacetPanel({ facets, currentFilters, totalResults = 0 }: FacetPa
       )}
 
       {/* Venues */}
-      {fixedVenueFacets && Object.entries(fixedVenueFacets).length > 0 && (
+      {venueFacets && Object.entries(venueFacets).length > 0 && (
         <div>
           <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
             Venue
           </h3>
           <div className="space-y-2">
-            {Object.entries(fixedVenueFacets)
+            {Object.entries(venueFacets)
               .sort(([, a], [, b]) => (b as number) - (a as number))
               .slice(0, 10)
               .map(([venue, count]) => (
@@ -399,13 +256,13 @@ export function FacetPanel({ facets, currentFilters, totalResults = 0 }: FacetPa
       )}
 
       {/* Publishers */}
-      {fixedPublisherFacets && Object.entries(fixedPublisherFacets).length > 0 && (
+      {publisherFacets && Object.entries(publisherFacets).length > 0 && (
         <div>
           <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
             Publisher
           </h3>
           <div className="space-y-2">
-            {Object.entries(fixedPublisherFacets)
+            {Object.entries(publisherFacets)
               .sort(([, a], [, b]) => (b as number) - (a as number))
               .slice(0, 10)
               .map(([publisher, count]) => (
@@ -438,13 +295,13 @@ export function FacetPanel({ facets, currentFilters, totalResults = 0 }: FacetPa
       )}
 
       {/* Topics */}
-      {fixedTopicsFacets && Object.keys(fixedTopicsFacets).length > 0 && (
+      {topicsFacets && Object.keys(topicsFacets).length > 0 && (
         <div>
           <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
             Topics
           </h3>
           <div className="space-y-2">
-            {Object.entries(fixedTopicsFacets)
+            {Object.entries(topicsFacets)
               .sort(([, a], [, b]) => (b as number) - (a as number))
               .slice(0, 15)
               .map(([topic, count]) => (
