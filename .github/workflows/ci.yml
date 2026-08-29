@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: typecheck · lint · test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8.10.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # `typecheck` and `test` both depend on ^build, so turbo builds the
+      # shared package first; the apps compile against its dist output.
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      # Every suite runs offline against committed fixtures. If this job ever
+      # needs network access, something has leaked into the unit suite.
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+  audit:
+    name: dependency audit
+    runs-on: ubuntu-latest
+    # Reports without blocking. There are 60 high-severity advisories on the
+    # current dependency tree, most of which `pnpm update` resolves — that is
+    # phase 12's task, and this gate becomes blocking when it lands.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8.10.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit
+        run: pnpm audit --audit-level high
