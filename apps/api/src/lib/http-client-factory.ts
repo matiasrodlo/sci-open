@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import axiosRetry from 'axios-retry';
-import { Http2Session } from 'http2';
+import http from 'http';
+import https from 'https';
 
 // Timing data the metrics interceptors stash on each request's config
 declare module 'axios' {
@@ -113,9 +114,6 @@ export class HttpClientFactory {
    */
   private configureConnectionPooling(client: AxiosInstance, config: HttpPoolConfig): void {
     // Configure the underlying HTTP agent for connection pooling
-    const https = require('https');
-    const http = require('http');
-    
     const agentConfig = {
       keepAlive: true,
       keepAliveMsecs: config.keepAliveTimeout,

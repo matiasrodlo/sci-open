@@ -140,7 +140,7 @@ export class PLOSConnector implements SourceConnector {
     const landingPage = doi ? `https://doi.org/${doi}` : undefined;
 
     // Determine OA status - all PLOS papers are open access
-    const oaStatus: 'published' = 'published';
+    const oaStatus = 'published' as const;
 
     // Extract topics from article type
     const topics: string[] = [];

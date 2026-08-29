@@ -1,4 +1,4 @@
-import { HttpPoolMetrics } from './http-client-factory';
+import { HttpPoolMetrics, httpClientFactory } from './http-client-factory';
 
 export interface PerformanceMetrics {
   timestamp: Date;
@@ -70,7 +70,6 @@ export class HttpPerformanceMonitor {
    * Collect current metrics from HTTP client factory
    */
   private collectMetrics(): void {
-    const { httpClientFactory } = require('./http-client-factory');
     const allMetrics = httpClientFactory.getMetrics();
 
     if (allMetrics instanceof Map) {

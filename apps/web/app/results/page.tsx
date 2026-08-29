@@ -54,7 +54,7 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
       topics: topics ? topics.split(',') : undefined,
       publicationType: publicationType ? publicationType.split(',') : undefined,
       openAccessOnly: true, // Always active
-      // @ts-ignore - pass year as array for exact matching
+      // @ts-expect-error - pass year as array for exact matching
       year: year ? year.split(',') : undefined,
     },
   };

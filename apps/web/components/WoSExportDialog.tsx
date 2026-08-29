@@ -59,10 +59,11 @@ export function WoSExportDialog({ results, query, totalResults, currentPage, pag
         return results;
       case 'page':
         return results;
-      case 'range':
+      case 'range': {
         const start = Math.max(0, settings.startRecord - 1);
         const end = Math.min(results.length, settings.endRecord);
         return results.slice(start, end);
+      }
       default:
         return results;
     }
