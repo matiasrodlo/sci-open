@@ -13,7 +13,13 @@ NEXT_PUBLIC_API_BASE=http://localhost:4000
 ```env
 PORT=4000
 NODE_ENV=development
+LOG_LEVEL=debug
 ```
+
+`LOG_LEVEL` takes any pino level — `trace`, `debug`, `info`, `warn`, `error`,
+`fatal` — and defaults to `info` under `NODE_ENV=production`, `debug`
+otherwise. Everything the service logs goes through Fastify's logger, so this
+one setting governs connector and pipeline output as well as request logging.
 
 ### Cache
 
