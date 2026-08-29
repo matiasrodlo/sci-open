@@ -16,10 +16,15 @@
  * measured — the second path to run would be compared against a cached copy of
  * itself — and would need two servers with different flags to compare at all.
  *
- * Read the report knowing that the new path has one provider and the old has
- * nine. It will lose on raw count, and that is arithmetic, not a regression.
- * The comparison that means something today is the Europe PMC slice, where both
- * paths are answering from the same corpus.
+ * Read the report knowing the two paths no longer differ mainly in breadth.
+ * Phase 08 migrated eight providers, and two of them — DataCite and bioRxiv —
+ * are deliberately `keywordSearch: false`, so the new path asks six where the
+ * old asks nine. A count difference is as likely to be a provider declining to
+ * guess as it is coverage lost, which is why skips are reported separately
+ * from errors below.
+ *
+ * The Europe PMC slice remains the cleanest like-for-like: both paths asking
+ * the same corpus the same question.
  */
 import dotenv from 'dotenv';
 import path from 'path';
@@ -39,10 +44,11 @@ import { runOrchestrator } from '../src/orchestrator/from-search-params';
  * Twenty queries, chosen to exercise the parts that differ rather than to be
  * representative of traffic — there is no traffic yet.
  *
- * Mostly biomedical, because Europe PMC is the only migrated provider and a
- * query it cannot answer measures nothing about the new path's merge, rank or
- * policy code. The three off-domain queries are in deliberately: they are where
- * the one-provider coverage gap shows up as a number instead of a caveat.
+ * Mostly biomedical, from when Europe PMC was the only migrated provider and a
+ * query it could not answer measured nothing about the new path's merge, rank
+ * or policy code. The three off-domain queries are in deliberately: they were
+ * where the coverage gap showed up as a number rather than a caveat, and with
+ * arXiv now migrated they are also the only queries in the set it can serve.
  */
 const QUERIES: Array<{ label: string; params: SearchParams; note?: string }> = [
   { label: 'crispr gene editing', params: { q: 'crispr gene editing' } },
@@ -462,26 +468,41 @@ function report(rows: Row[]): void {
   line('-'.repeat(96));
 
   const contribution = (pick: (r: Row) => ProviderTotal[]) => {
-    const totals = new Map<string, { retrieved: number; errors: number; queries: number }>();
+    const totals = new Map<string, { retrieved: number; errors: number; skips: number; queries: number }>();
     for (const row of rows) {
       for (const t of pick(row)) {
-        const entry = totals.get(t.source) ?? { retrieved: 0, errors: 0, queries: 0 };
+        const entry = totals.get(t.source) ?? { retrieved: 0, errors: 0, skips: 0, queries: 0 };
         entry.retrieved += t.retrieved ?? 0;
         entry.queries += 1;
-        if (t.error) entry.errors += 1;
+        // A provider the orchestrator declined to ask is not a failure. The
+        // old response shape has one field for "why nothing came back", so
+        // `to-search-response` writes a skip into `error` prefixed with
+        // `skipped:` — counting those as errors would report DataCite and
+        // bioRxiv, both deliberately `keywordSearch: false`, as broken on
+        // every query.
+        if (t.error?.startsWith('skipped:')) entry.skips += 1;
+        else if (t.error) entry.errors += 1;
         totals.set(t.source, entry);
       }
     }
     return [...totals.entries()].sort((a, b) => b[1].retrieved - a[1].retrieved);
   };
 
+  const contributionLine = (
+    source: string,
+    t: { retrieved: number; errors: number; skips: number; queries: number }
+  ) =>
+    `  ${source.padEnd(16)}${num(t.retrieved).padStart(9)} retrieved   ${t.queries} queries   ` +
+    `${t.errors} errored` +
+    (t.skips ? `   ${t.skips} skipped` : '');
+
   line('OLD PATH');
   for (const [source, t] of contribution(r => r.old.providerTotals)) {
-    line(`  ${source.padEnd(16)}${num(t.retrieved).padStart(9)} retrieved   ${t.queries} queries   ${t.errors} errored`);
+    line(contributionLine(source, t));
   }
   line('NEW PATH');
   for (const [source, t] of contribution(r => r.new.providerTotals)) {
-    line(`  ${source.padEnd(16)}${num(t.retrieved).padStart(9)} retrieved   ${t.queries} queries   ${t.errors} errored`);
+    line(contributionLine(source, t));
   }
 
   // --- Latency --------------------------------------------------------------
