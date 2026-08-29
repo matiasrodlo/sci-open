@@ -1,0 +1,51 @@
+{
+  "_comment": "Hand-built, unlike the recorded europepmc.json. Each record isolates a shape the recorded fixture happens not to contain. Keep them minimal: they are here to pin behaviour, not to look realistic.",
+  "hitCount": 5,
+  "resultList": {
+    "result": [
+      {
+        "_case": "exactly one full-text URL, returned as a bare object rather than an array — the shape that used to throw",
+        "id": "SINGLE1",
+        "source": "MED",
+        "doi": "10.1000/single",
+        "title": "A record with exactly one full text url",
+        "pubYear": "2021",
+        "journalInfo": { "journal": { "title": "Journal of Single Things" } },
+        "fullTextUrlList": {
+          "fullTextUrl": {
+            "documentStyle": "html",
+            "availability": "Open access",
+            "url": "https://europepmc.org/articles/PMC0000001"
+          }
+        }
+      },
+      {
+        "_case": "no title — unreadable, must cost exactly one record",
+        "id": "NOTITLE1",
+        "source": "MED",
+        "pubYear": "2021"
+      },
+      {
+        "_case": "no id at all — unreadable, and cannot even be named in the skip report",
+        "source": "MED",
+        "title": "A record with no identifier"
+      },
+      {
+        "_case": "preprint, indexed by Europe PMC under the PPR source",
+        "id": "PPR12345",
+        "source": "PPR",
+        "doi": "10.1101/2021.01.01.000001",
+        "title": "A preprint about things",
+        "pubYear": "2021",
+        "authorString": "Lovelace A, Babbage C",
+        "journalInfo": { "journal": { "title": "bioRxiv" } }
+      },
+      {
+        "_case": "minimal readable record — no urls, no authors, no journal",
+        "id": "BARE1",
+        "source": "MED",
+        "title": "A bare but readable record"
+      }
+    ]
+  }
+}
