@@ -24,6 +24,7 @@ import {
 import { httpPerformanceMonitor } from './lib/http-performance-monitor';
 import { assertPublicHttpUrl, fetchPdfStream, PdfProxyError } from './lib/pdf-proxy';
 import { adminOnly, getAdminKey } from './lib/admin-auth';
+import { SingleFlight } from './lib/single-flight';
 
 const fastify = Fastify({
   logger: {
@@ -51,6 +52,10 @@ const searchPipeline = new EnhancedSearchPipeline({
   enablePdfResolution: true,
   enableCitations: false
 });
+
+// Collapses concurrent identical searches onto one fan-out. A miss costs tens
+// of seconds across every provider, which is a wide window for duplicates.
+const searchFlights = new SingleFlight();
 
 // Search endpoint with advanced caching
 fastify.post<{ Body: SearchParams }>('/api/search', async (request, reply) => {
@@ -91,26 +96,32 @@ fastify.post<{ Body: SearchParams }>('/api/search', async (request, reply) => {
     
     fastify.log.info({ query: params.q }, 'No cache hit, performing fresh search');
 
-    // Use the search pipeline
-    const searchResult = await searchPipeline.search(params);
+    // Everything from here to the cache write happens once per key, however
+    // many callers are waiting on it.
+    const { value: searchResult, coalesced } = await searchFlights.run(
+      searchCacheManager.keyFor(params.q || '', params),
+      async () => {
+        const result = await searchPipeline.search(params);
 
-    // Cache the result using advanced cache manager
-    await searchCacheManager.cacheSearchResults(params.q || '', params, searchResult);
-    
-    // Cache facets separately for better performance
-    if (searchResult.facets) {
-      await searchCacheManager.cacheFacets(params.q || '', params, searchResult.facets);
-    }
-    
+        await searchCacheManager.cacheSearchResults(params.q || '', params, result);
+        if (result.facets) {
+          await searchCacheManager.cacheFacets(params.q || '', params, result.facets);
+        }
+
+        return result;
+      }
+    );
+
     const responseTime = Date.now() - startTime;
     reply.header('Cache-Control', 'public, max-age=300');
-    reply.header('X-Cache-Hit', 'false');
+    reply.header('X-Cache-Hit', coalesced ? 'coalesced' : 'false');
     reply.header('X-Response-Time', responseTime.toString());
     
-    fastify.log.info({ 
+    fastify.log.info({
       totalResults: searchResult.total,
       query: params.q,
-      responseTime
+      responseTime,
+      coalesced
     }, 'Search pipeline completed');
     
     return searchResult;

@@ -91,6 +91,16 @@ export class SearchCacheManager {
   /**
    * Generate cache key for search results
    */
+  /**
+   * The identity of a search. Public because the single-flight guard has to
+   * collapse exactly the requests this cache would treat as the same entry —
+   * if the two disagreed, concurrent duplicates would slip past the guard and
+   * then overwrite each other in the cache.
+   */
+  keyFor(query: string, params: SearchParams): string {
+    return this.generateSearchKey(query, params);
+  }
+
   private generateSearchKey(query: string, params: SearchParams): string {
     const normalizedQuery = this.normalizeQuery(query);
     const keyData = {
