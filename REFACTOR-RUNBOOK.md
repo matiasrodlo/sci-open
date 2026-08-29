@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **7 / 13** | **4,564** | **9 / 11** | **607** | **1** |
+| **7 / 13** | **4,564** | **8 / 11** | **607** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -267,7 +267,7 @@ Mechanical, independent, one at a time. Each provider lands with its own fixture
 
 ### Order and the fix each one carries
 
-1. **OpenAlex.** Add `host_venue` and `created_date` to the `select` list — or read `primary_location.source.publisher`, which is already selected. Today publisher is always empty for the largest provider and every record is stamped with the request time. **Handle 429 explicitly — this is now urgent rather than tidy.**
+1. **OpenAlex — the urgent half done, the migration blocked.** The 429 handling landed first because it was taking the service down; the move into the provider layout needs a recorded fixture, and the daily budget was still spent at 17:20 UTC (`retryAfter` ~8h at first contact, resets midnight UTC). Add `host_venue` and `created_date` to the `select` list — or read `primary_location.source.publisher`, which is already selected. Today publisher is always empty for the largest provider and every record is stamped with the request time. **Handle 429 explicitly — this is now urgent rather than tidy.**
 
    > **OpenAlex meters requests now.** Measured 2026-08-29, during the phase 07 comparison sweep: once the daily budget is spent it answers `HTTP 429` with `{"error":"Rate limit exceeded","message":"Insufficient budget ... Resets at midnight UTC", retryAfter, creditsRemaining, ...}` and no `results` key. Twenty-two queries were enough to exhaust it.
    >
@@ -299,7 +299,9 @@ Mechanical, independent, one at a time. Each provider lands with its own fixture
    > **`language` was hardcoded `'en'`** under a comment saying DOAJ does not supply one. It is at `bibjson.journal.language`. A missing journal title fell back to the literal string `'DOAJ Journal'`, which is a fabricated venue.
    >
    > **The PDF fix is real in `Paper` and lost on the way out.** Not one link in the recorded page is a PDF and one is explicitly `text/html`, so `fullText.kind` is now `html` — but `toOARecord` maps `fullText.url` to `bestPdfUrl` whatever the kind, so the legacy shape still cannot express the distinction. The format is correct in the new model and flattened by the adapter, the same cost it already documents for `sources` and `fieldSources`. It resolves when the frontend moves onto `Paper` in phase 11.
-5. **CORE.** Accept `limit` and `offset` (it hardcodes 100). Reorder PDF resolution so the reader URL becomes `landingPage` and the last resort, not the advertised PDF for every record.
+5. **CORE — blocked, not done.** Accept `limit` and `offset` (it hardcodes 100). Reorder PDF resolution so the reader URL becomes `landingPage` and the last resort, not the advertised PDF for every record.
+
+   > **`CORE_API_KEY` is the literal placeholder `your_core_api_key_here`.** The connector already skips itself when it sees that, so CORE contributes nothing today and there is no way to record a fixture or check a single claim against a response. The `Done when` list requires both. Left for whoever has a key; the two fixes above are still the right ones as far as reading the code can establish, which is exactly the standard this phase has been declining to accept.
 6. **PLOS — done.** Straightforward. Add the `plos` branch the paper-detail endpoint is missing — PLOS was a quarter of a typical result set and every "Details" click on it 404s.
 
    > **Straightforward held for the query and not for the identifier.** `everything:` already ANDs its terms — 5,940 hits whether the AND is spelled or not — so there was no disjunction defect. But PLOS has **no `doi` field**, and asking for one returns the corpus rather than an error: `doi:"10.1371/journal.pgen.1002441"` matched **64,432** documents where `id:"..."` matches the one. A PLOS id *is* its DOI. So every PLOS DOI lookup answered with an arbitrary page of the corpus — and the detail branch added here would have inherited it, since the route calls the old connector. Fixed in both.
