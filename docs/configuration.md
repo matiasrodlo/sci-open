@@ -6,7 +6,6 @@
 
 ```env
 NEXT_PUBLIC_API_BASE=http://localhost:4000
-NEXT_PUBLIC_SEARCH_BACKEND=typesense
 ```
 
 ### API Server
@@ -47,35 +46,6 @@ OPENAIRE_BASE=https://api.openaire.eu/search
 
 # Unpaywall
 UNPAYWALL_EMAIL=your-email@example.com
-```
-
-### Search Backends
-
-#### Typesense
-
-```env
-SEARCH_BACKEND=typesense
-TYPESENSE_HOST=localhost
-TYPESENSE_PORT=8108
-TYPESENSE_PROTOCOL=http
-TYPESENSE_API_KEY=xyz
-```
-
-#### Meilisearch
-
-```env
-SEARCH_BACKEND=meili
-MEILI_HOST=http://localhost:7700
-MEILI_MASTER_KEY=xyz
-```
-
-#### Algolia
-
-```env
-SEARCH_BACKEND=algolia
-ALGOLIA_APP_ID=your_app_id
-ALGOLIA_API_KEY=your_api_key
-ALGOLIA_INDEX=oa_records
 ```
 
 ### Performance
@@ -119,8 +89,6 @@ public.
 The `docker-compose.yml` provides local services:
 
 - **Redis** (port 6379) - Cache backend
-- **Typesense** (port 8108) - Search backend
-- **Meilisearch** (port 7700) - Alternative search backend
 
 Start all services:
 
@@ -148,7 +116,6 @@ REDIS_URL=redis://your-redis-host:6379
 
 ```env
 NEXT_PUBLIC_API_BASE=https://api.yourdomain.com
-NEXT_PUBLIC_SEARCH_BACKEND=typesense
 ```
 
 ### Security

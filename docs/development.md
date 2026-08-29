@@ -63,17 +63,16 @@ apps/
 └── api/                   # Fastify API
     ├── src/
     │   ├── index.ts       # Main server
-    │   ├── sources/       # Data source connectors
+    │   ├── sources/       # Provider connectors
     │   └── lib/          # Core libraries
-    │       ├── search-pipeline.ts
     │       ├── enhanced-search-pipeline.ts
+    │       ├── aggregators.ts
     │       ├── cache.ts
     │       └── ...
-    └── seed.ts            # Data seeding script
+    └── scripts/           # Developer tools, not shipped in the image
 
 packages/
-├── shared/                # Shared TypeScript types
-└── search/                # Search backend adapters
+└── shared/                # Shared TypeScript types
 ```
 
 ## Adding a Data Source
@@ -107,32 +106,6 @@ Update `apps/api/src/lib/aggregators.ts` to include the new source.
 3. **Update Types**
 
 Add source identifier to `packages/shared/src/types.ts` if needed.
-
-## Adding a Search Backend
-
-1. **Create Adapter**
-
-Create `packages/search/src/newsource.ts`:
-
-```typescript
-import { SearchAdapter, OARecord } from '@open-access-explorer/shared';
-
-export class NewSearchAdapter implements SearchAdapter {
-  async ensureIndex(): Promise<void> {}
-  async upsertMany(records: OARecord[]): Promise<void> {}
-  async search(params: any): Promise<any> {
-    return { hits: [], total: 0, facets: {} };
-  }
-}
-```
-
-2. **Export**
-
-Add to `packages/search/src/index.ts`.
-
-3. **Configure**
-
-Update API server to support the new backend.
 
 ## Testing
 
@@ -180,12 +153,6 @@ curl -X POST http://localhost:4000/api/performance/test \
 ```
 
 ## Common Tasks
-
-### Seed Search Index
-
-```bash
-pnpm seed
-```
 
 ### Clear Build Artifacts
 

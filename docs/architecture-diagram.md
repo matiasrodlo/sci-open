@@ -93,7 +93,6 @@ flowchart TB
     PDFPROXY["pdf-proxy.ts<br/>SSRF guard + stream"]
     PERFMON["httpPerformanceMonitor<br/>httpPerformanceTester"]
     HTTPF["http-client-factory<br/>keep-alive pooling · http-pool-config"]
-    SEED["seed.ts — index into search backend"]
   end
 
   %% ============ CACHE ============
@@ -110,7 +109,6 @@ flowchart TB
   %% ============ SHARED PACKAGES ============
   subgraph PKGS["packages/"]
     SHARED["shared — OARecord · SearchParams<br/>SearchResponse · SourceConnector"]
-    SEARCHPKG["search — SearchAdapter<br/>Typesense · Meilisearch · Algolia"]
   end
 
   %% ============ EXTERNAL ============
@@ -138,8 +136,6 @@ flowchart TB
 
   subgraph INFRA["Infrastructure — docker-compose.yml"]
     REDIS[("Redis 7")]
-    TYPESENSE[("Typesense 0.25")]
-    MEILI[("Meilisearch 1.5")]
   end
 
   PUBLISHERS[["Publisher / repository PDF hosts"]]
@@ -219,10 +215,6 @@ flowchart TB
   %% ---- packages / infra ----
   SHARED -.->|types| WEB
   SHARED -.->|types| API
-  SEED --> SEARCHPKG
-  SEARCHPKG --> TYPESENSE
-  SEARCHPKG --> MEILI
-  SEARCHPKG -.->|optional| ALGOLIA(["Algolia SaaS"])
 
   %% ---- styling (stroke only, so it reads in light and dark) ----
   classDef page stroke:#2563eb,stroke-width:2px
@@ -230,8 +222,7 @@ flowchart TB
   classDef ext stroke:#059669,stroke-width:2px
   classDef core stroke:#dc2626,stroke-width:2px
   class HOME,RESULTS,PAPERPG page
-  class L1,L2,L3,REDIS,TYPESENSE,MEILI store
-  class S_ARXIV,S_EPMC,S_NCBI,S_DOAJ,S_PLOS,S_OPENAIRE,S_CORE,S_BIO,S_DATACITE,S_OC,S_CR,S_UP,C_OA,C_CR,C_UP,PUBLISHERS,ALGOLIA ext
+  class L1,L2,L3,REDIS store
   class P5,P6 core
 ```
 
@@ -337,14 +328,13 @@ flowchart LR
   ROOT --> DC["docker-compose.yml"]
 
   APPS --> W["web — Next.js<br/>app/ · components/ · lib/ · Dockerfile"]
-  APPS --> A["api — Fastify<br/>src/index.ts · lib/ · sources/ · seed.ts · Dockerfile"]
+  APPS --> A["api — Fastify<br/>src/index.ts · lib/ · sources/ · scripts/ · Dockerfile"]
 
   PKG --> SH["shared — types contract"]
-  PKG --> SE["search — Typesense · Meilisearch · Algolia adapters"]
 
   W -.->|"@open-access-explorer/shared"| SH
   A -.->|"@open-access-explorer/shared"| SH
   A -.->|"@open-access-explorer/search"| SE
 
-  DC --> SVC["typesense · meilisearch · redis · api"]
+  DC --> SVC["redis · api"]
 ```

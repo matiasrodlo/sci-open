@@ -13,7 +13,6 @@
     "dev:api": "turbo run dev --filter=api",
     "build": "turbo run build",
     "lint": "turbo run lint",
-    "seed": "turbo run seed --filter=api",
     "clean": "turbo run clean",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck"

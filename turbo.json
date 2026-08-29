@@ -23,9 +23,6 @@
         "^lint"
       ]
     },
-    "seed": {
-      "cache": false
-    },
     "clean": {
       "cache": false
     },

@@ -90,18 +90,6 @@ export type PaperResponse = {
   };
 };
 
-export interface SearchAdapter {
-  ensureIndex(): Promise<void>;
-  upsertMany(records: OARecord[]): Promise<void>;
-  search(params: {
-    q?: string;
-    filters?: Record<string, string[] | number[]>;
-    page?: number;
-    pageSize?: number;
-    sort?: SearchSort;
-  }): Promise<{ hits: OARecord[]; total: number; facets: Record<string, any> }>;
-}
-
 export type SourceSearchParams = {
   doi?: string;
   titleOrKeywords?: string;
