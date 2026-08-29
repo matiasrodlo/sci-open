@@ -359,7 +359,7 @@ function report(rows: Row[]): void {
 
   // --- Whole-path -----------------------------------------------------------
   line();
-  line('WHOLE PATH — old (9 providers) vs new (Europe PMC only)');
+  line('WHOLE PATH — old (9 providers) vs new (8 migrated, 6 answering a keyword query)');
   line('-'.repeat(96));
   line(
     'query'.padEnd(29) + 'old'.padStart(8) + 'new'.padStart(8) + 'shared'.padStart(8) +
@@ -388,8 +388,8 @@ function report(rows: Row[]): void {
   line();
   line('  `old` and `new` are the reported totals, which are what each path holds');
   line('  after filtering, not what the corpus contains. Both read 600 deep per');
-  line('  provider, so both are floors — the old path just has nine providers of');
-  line('  it to merge and the new path has one.');
+  line('  provider, so both are floors. The old path asks nine; the new asks the');
+  line('  six of its eight that declare a keyword index.');
 
   line();
   line(`EUROPE PMC — old connector vs new provider, called directly, depth ${CONNECTOR_DEPTH}`);
