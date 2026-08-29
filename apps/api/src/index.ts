@@ -25,12 +25,18 @@ import { httpPerformanceMonitor } from './lib/http-performance-monitor';
 import { assertPublicHttpUrl, fetchPdfStream, PdfProxyError } from './lib/pdf-proxy';
 import { adminOnly, getAdminKey } from './lib/admin-auth';
 import { SingleFlight } from './lib/single-flight';
+import { log, useLogger } from './lib/logger';
 
 const fastify = Fastify({
   logger: {
-    level: process.env.NODE_ENV === 'production' ? 'info' : 'debug'
+    level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug')
   }
 });
+
+// Connectors and pipeline code log through lib/logger, which forwards here.
+// Until this runs they stay silent apart from warnings and errors, so nothing
+// during module load escapes the configured level.
+useLogger(fastify.log);
 
 // Register plugins
 fastify.register(cors, {
@@ -262,7 +268,7 @@ fastify.get<{ Params: { id: string } }>('/api/paper/:id', async (request, reply)
           createdAt: work.created_date || new Date().toISOString()
         };
       } catch (error) {
-        console.error('OpenAlex fetch error:', error);
+        log.error('OpenAlex fetch error:', error);
         paper = null;
       }
     }
@@ -498,12 +504,10 @@ fastify.get('/api/performance/report', adminOnly, async (request, reply) => {
   }
 });
 
-// Start server with cache warming
 const start = async () => {
   try {
     const port = parseInt(process.env.PORT || '4000');
     await fastify.listen({ port, host: '0.0.0.0' });
-    console.log(`Server listening on port ${port}`);
 
     if (!getAdminKey()) {
       fastify.log.warn(
@@ -511,13 +515,12 @@ const start = async () => {
       );
     }
 
-    // Start HTTP performance monitoring
-    console.log('Starting HTTP performance monitoring...');
+    log.info('HTTP performance monitoring started');
     httpPerformanceMonitor.startMonitoring(30000); // 30 second intervals
     
     // Graceful shutdown
     process.on('SIGINT', async () => {
-      console.log('Shutting down gracefully...');
+      log.info('Shutting down gracefully');
       httpPerformanceMonitor.stopMonitoring();
       await cacheManager.close();
       await fastify.close();
@@ -525,7 +528,7 @@ const start = async () => {
     });
     
     process.on('SIGTERM', async () => {
-      console.log('Shutting down gracefully...');
+      log.info('Shutting down gracefully');
       httpPerformanceMonitor.stopMonitoring();
       await cacheManager.close();
       await fastify.close();

@@ -5,6 +5,7 @@ import { UnpaywallClient, UnpaywallResponse } from './clients/unpaywall';
 import { RecordMerger, EnrichedRecord } from './merge';
 import { FallbackManager, createStagedFallbacks } from './fallback';
 import { AggregatorManager, AggregatorResult } from './aggregators';
+import { log } from './logger';
 
 // OpenAlex will not return more than 200 works in one response
 const OPENALEX_MAX_PER_PAGE = 200;
@@ -131,7 +132,7 @@ export class EnhancedSearchPipeline {
       const facets = this.generateFacets(sortedRecords);
 
       const duration = Date.now() - startTime;
-      console.log(`Enhanced search pipeline completed in ${duration}ms, found ${totalCount} results`);
+      log.debug(`Enhanced search pipeline completed in ${duration}ms, found ${totalCount} results`);
 
       return {
         hits: paginatedRecords,
@@ -148,7 +149,7 @@ export class EnhancedSearchPipeline {
         duration
       };
     } catch (error) {
-      console.error('Enhanced search pipeline error:', error);
+      log.error('Enhanced search pipeline error:', error);
       throw error;
     }
   }
@@ -438,7 +439,7 @@ export class EnhancedSearchPipeline {
     // Step 6: Combine and deduplicate all results
     const allRecords = [...enrichedRecords, ...aggregatorRecords];
     const deduplicatedRecords = this.recordMerger.deduplicate(allRecords);
-    console.log(`Combined ${allRecords.length} records, ${deduplicatedRecords.length} after deduplication`);
+    log.debug(`Combined ${allRecords.length} records, ${deduplicatedRecords.length} after deduplication`);
 
     return {
       records: deduplicatedRecords,
@@ -485,7 +486,7 @@ export class EnhancedSearchPipeline {
         .searchWorks({ query, page, perPage, filter })
         .then(response => ({ results: response.results, count: response.meta?.count }))
         .catch(error => {
-          console.error(`OpenAlex discovery error (page ${page}):`, error);
+          log.error(`OpenAlex discovery error (page ${page}):`, error);
           return { results: [] as OpenAlexWork[], count: undefined };
         });
     });
@@ -561,7 +562,7 @@ export class EnhancedSearchPipeline {
         
         enrichedRecords.push(enrichedRecord);
       } catch (error) {
-        console.error('Error enriching work:', error);
+        log.error('Error enriching work:', error);
       }
     }
     

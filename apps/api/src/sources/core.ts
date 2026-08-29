@@ -2,6 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { OARecord, SourceConnector, SourceSearchResult } from '@open-access-explorer/shared';
 import { getPooledClient } from '../lib/http-client-factory';
 import { getServiceConfig } from '../lib/http-pool-config';
+import { log } from '../lib/logger';
 
 export class CoreConnector implements SourceConnector {
   private baseUrl: string;
@@ -25,7 +26,7 @@ export class CoreConnector implements SourceConnector {
 
     // Skip CORE if no API key is provided or if it's a placeholder
     if (!this.apiKey || this.apiKey === '' || this.apiKey.includes('your_') || this.apiKey.includes('placeholder')) {
-      console.log('CORE API key not provided or invalid, skipping CORE search');
+      log.debug('CORE API key not provided or invalid, skipping CORE search');
       return { records: [] };
     }
 
@@ -72,10 +73,10 @@ export class CoreConnector implements SourceConnector {
         totalHits: Number.isFinite(reported) ? reported : undefined
       };
     } catch (error: any) {
-      console.error('CORE search error:', error.message);
+      log.error('CORE search error:', error.message);
       if (error.response) {
-        console.error('CORE error status:', error.response.status);
-        console.error('CORE error data:', JSON.stringify(error.response.data).substring(0, 200));
+        log.error('CORE error status:', error.response.status);
+        log.error('CORE error data:', JSON.stringify(error.response.data).substring(0, 200));
       }
       return { records: [] };
     }

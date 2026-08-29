@@ -2,6 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { OARecord, SourceConnector, SourceSearchParams, SourceSearchResult } from '@open-access-explorer/shared';
 import { getPooledClient } from '../lib/http-client-factory';
 import { getServiceConfig } from '../lib/http-pool-config';
+import { log } from '../lib/logger';
 
 /**
  * DataCite API Integration
@@ -121,7 +122,7 @@ export class DataCiteConnector implements SourceConnector {
       // or rate-limited request arrives here as a normal response carrying an
       // error body with no `data` array
       if (response.status >= 400 || !Array.isArray(response.data?.data)) {
-        console.warn(`DataCite returned no usable payload (status ${response.status})`);
+        log.warn(`DataCite returned no usable payload (status ${response.status})`);
         return { records: [] };
       }
 
@@ -134,13 +135,13 @@ export class DataCiteConnector implements SourceConnector {
 
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        console.error('DataCite search error:', error.message);
+        log.error('DataCite search error:', error.message);
         if (error.response) {
-          console.error('DataCite error status:', error.response.status);
-          console.error('DataCite error data:', error.response.data);
+          log.error('DataCite error status:', error.response.status);
+          log.error('DataCite error data:', error.response.data);
         }
       } else {
-        console.error('DataCite unexpected error:', error);
+        log.error('DataCite unexpected error:', error);
       }
       return { records: [] };
     }

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { OARecord, SourceConnector, SourceSearchParams, SourceSearchResult } from '@open-access-explorer/shared';
+import { log } from '../lib/logger';
 
 // DOAJ caps a single page at 100 articles
 const MAX_PAGE_SIZE = 100;
@@ -104,7 +105,7 @@ export class DOAJConnector implements SourceConnector {
         timeout: 15000
       });
 
-      console.log(`DOAJ response status: ${response.status}, results: ${response.data?.results?.length || 0}`);
+      log.debug(`DOAJ response status: ${response.status}, results: ${response.data?.results?.length || 0}`);
 
       if (!response.data?.results) {
         return { records: [] };
@@ -118,10 +119,10 @@ export class DOAJConnector implements SourceConnector {
       return { records, totalHits: Number.isFinite(reported) ? reported : undefined };
 
     } catch (error) {
-      console.error('DOAJ search error:', error);
+      log.error('DOAJ search error:', error);
       if (axios.isAxiosError(error)) {
-        console.error('DOAJ error status:', error.response?.status);
-        console.error('DOAJ error data:', error.response?.data);
+        log.error('DOAJ error status:', error.response?.status);
+        log.error('DOAJ error data:', error.response?.data);
       }
       return { records: [] };
     }

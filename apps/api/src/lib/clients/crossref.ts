@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { getPooledClient } from '../http-client-factory';
 import { getServiceConfig } from '../http-pool-config';
+import { log } from '../logger';
 
 export interface CrossrefWork {
   DOI: string;
@@ -86,7 +87,7 @@ export class CrossrefClient {
       if (axios.isAxiosError(error) && error.response?.status === 404) {
         return null;
       }
-      console.error('Crossref work lookup error:', error);
+      log.error('Crossref work lookup error:', error);
       return null;
     }
   }

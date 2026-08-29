@@ -2,6 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { getPooledClient } from '../http-client-factory';
 import { extractContactEmail } from '../contact-email';
 import { getServiceConfig } from '../http-pool-config';
+import { log } from '../logger';
 
 export interface UnpaywallResponse {
   doi: string;
@@ -58,7 +59,7 @@ export class UnpaywallClient {
     // loud at construction rather than as a run of failed lookups.
     this.contactEmail = extractContactEmail(userAgent);
     if (!this.contactEmail) {
-      console.warn(
+      log.warn(
         'Unpaywall: no contact address in the User-Agent. Set UNPAYWALL_EMAIL to a real mailbox; requests will be rejected without it.'
       );
     }
@@ -86,7 +87,7 @@ export class UnpaywallClient {
       if (axios.isAxiosError(error) && error.response?.status === 404) {
         return null;
       }
-      console.error('Unpaywall DOI resolution error:', error);
+      log.error('Unpaywall DOI resolution error:', error);
       return null;
     }
   }

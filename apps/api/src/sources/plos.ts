@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { OARecord, SourceConnector, SourceSearchParams, SourceSearchResult } from '@open-access-explorer/shared';
+import { log } from '../lib/logger';
 
 // PLOS's Solr endpoint serves up to 1000 rows per request
 const MAX_PAGE_SIZE = 1000;
@@ -98,7 +99,7 @@ export class PLOSConnector implements SourceConnector {
       };
     } catch (error: any) {
       if (error.response?.status !== 404) {
-        console.error('PLOS search error:', error.message);
+        log.error('PLOS search error:', error.message);
       }
       return { records: [] };
     }

@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { parseString } from 'xml2js';
 import { OARecord, SourceConnector, SourceSearchParams, SourceSearchResult } from '@open-access-explorer/shared';
+import { log } from '../lib/logger';
 
 // arXiv asks that a single request stay at or below 2000 results
 const MAX_PAGE_SIZE = 2000;
@@ -54,18 +55,16 @@ export class ArxivConnector implements SourceConnector {
         },
         timeout: 30000
       });
-      console.log(`arXiv response status: ${response.status}, data length: ${response.data.length}`);
-      console.log(`arXiv response preview: ${response.data.substring(0, 200)}...`);
+      log.debug(`arXiv response status: ${response.status}, data length: ${response.data.length}`);
 
       return new Promise((resolve, reject) => {
         parseString(response.data, (err, result) => {
           if (err) {
-            console.error('arXiv XML parsing error:', err);
+            log.error('arXiv XML parsing error:', err);
             reject(err);
             return;
           }
-          console.log('arXiv XML parsed successfully, entries:', result?.feed?.entry?.length || 0);
-          console.log('arXiv XML structure:', JSON.stringify(result?.feed, null, 2).substring(0, 500));
+          log.debug('arXiv XML parsed successfully, entries:', result?.feed?.entry?.length || 0);
 
           try {
             const entries = result?.feed?.entry || [];
@@ -77,14 +76,14 @@ export class ArxivConnector implements SourceConnector {
               totalHits: Number.isFinite(reported) ? reported : undefined
             });
           } catch (error) {
-            console.error('arXiv normalization error:', error);
+            log.error('arXiv normalization error:', error);
             reject(error);
           }
         });
       });
     } catch (error) {
-      console.error('arXiv search error:', error);
-      console.error('arXiv error stack:', (error as Error).stack);
+      log.error('arXiv search error:', error);
+      log.error('arXiv error stack:', (error as Error).stack);
       return { records: [] };
     }
   }

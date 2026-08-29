@@ -1,4 +1,5 @@
 import { HttpPoolMetrics, httpClientFactory } from './http-client-factory';
+import { log } from './logger';
 
 export interface PerformanceMetrics {
   timestamp: Date;
@@ -42,7 +43,7 @@ export class HttpPerformanceMonitor {
    */
   startMonitoring(intervalMs: number = 30000): void {
     if (this.isMonitoring) {
-      console.log('HTTP performance monitoring is already running');
+      log.debug('HTTP performance monitoring is already running');
       return;
     }
 
@@ -51,7 +52,7 @@ export class HttpPerformanceMonitor {
       this.collectMetrics();
     }, intervalMs);
 
-    console.log(`HTTP performance monitoring started (interval: ${intervalMs}ms)`);
+    log.debug(`HTTP performance monitoring started (interval: ${intervalMs}ms)`);
   }
 
   /**
@@ -63,7 +64,7 @@ export class HttpPerformanceMonitor {
       this.monitoringInterval = undefined;
     }
     this.isMonitoring = false;
-    console.log('HTTP performance monitoring stopped');
+    log.debug('HTTP performance monitoring stopped');
   }
 
   /**
@@ -129,7 +130,7 @@ export class HttpPerformanceMonitor {
    */
   setBaseline(service: string, metric: PerformanceMetrics): void {
     this.baselineMetrics.set(service, metric);
-    console.log(`Baseline metrics set for ${service}:`, {
+    log.debug(`Baseline metrics set for ${service}:`, {
       connectionReuseRate: metric.connectionReuseRate,
       averageResponseTime: metric.averageResponseTime,
       errorRate: metric.errorRate,
@@ -293,7 +294,7 @@ export class HttpPerformanceMonitor {
   clearMetrics(): void {
     this.metrics.clear();
     this.baselineMetrics.clear();
-    console.log('All HTTP performance metrics cleared');
+    log.debug('All HTTP performance metrics cleared');
   }
 }
 

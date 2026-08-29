@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { OARecord, SourceConnector, SourceSearchParams, SourceSearchResult } from '@open-access-explorer/shared';
+import { log } from '../lib/logger';
 
 /**
  * bioRxiv and medRxiv API Integration
@@ -86,7 +87,7 @@ export class BiorxivConnector implements SourceConnector {
       // no corpus-wide hit count for a keyword query.
       return { records: results.slice(0, Math.max(limit, 1)) };
     } catch (error) {
-      console.error('bioRxiv/medRxiv search error:', error);
+      log.error('bioRxiv/medRxiv search error:', error);
       return { records: [] };
     }
   }
@@ -111,14 +112,14 @@ export class BiorxivConnector implements SourceConnector {
         } catch (error: any) {
           // 404 is expected if DOI not found in this server
           if (error.response?.status !== 404) {
-            console.error(`${server} DOI search error:`, error.message);
+            log.error(`${server} DOI search error:`, error.message);
           }
         }
       }
 
       return results;
     } catch (error) {
-      console.error('bioRxiv/medRxiv DOI search error:', error);
+      log.error('bioRxiv/medRxiv DOI search error:', error);
       return [];
     }
   }
@@ -200,9 +201,17 @@ export class BiorxivConnector implements SourceConnector {
 
       return response.data.collection ?? [];
     } catch (error: any) {
-      // A cursor past the end of the window 404s, which is expected
+      // A cursor past the end of the window 404s, which is expected. Anything
+      // else costs this page and not the scan, so it is a degradation rather
+      // than a failure — the shortfall is already visible in what this provider
+      // reports having retrieved.
       if (error.response?.status !== 404) {
-        console.error(`${server} keyword search error at cursor ${cursor}:`, error.message);
+        log.warn('Dropped a page of the bioRxiv window scan', {
+          server,
+          cursor,
+          status: error.response?.status,
+          reason: error.message
+        });
       }
       return [];
     }

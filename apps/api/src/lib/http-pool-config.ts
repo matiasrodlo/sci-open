@@ -1,4 +1,5 @@
 import { HttpPoolConfig } from './http-client-factory';
+import { log } from './logger';
 
 export interface HttpPoolEnvironmentConfig {
   // Connection pool settings
@@ -74,7 +75,7 @@ export class HttpPoolConfigManager {
           const serviceConfig = JSON.parse(configValue);
           this.serviceConfigs.set(service.toLowerCase(), serviceConfig);
         } catch (error) {
-          console.warn(`Invalid ${configKey} configuration:`, error);
+          log.warn(`Invalid ${configKey} configuration:`, error);
         }
       }
     }

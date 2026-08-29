@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { OARecord, SourceConnector, SourceSearchResult } from '@open-access-explorer/shared';
+import { log } from '../lib/logger';
 
 /**
  * OpenCitations API Integration
@@ -38,13 +39,13 @@ export class OpenCitationsConnector implements SourceConnector {
   }): Promise<SourceSearchResult> {
     const { doi, titleOrKeywords } = params;
 
-    console.log('🔍 OpenCitations search called with params:', params);
+    log.debug('🔍 OpenCitations search called with params:', params);
 
     try {
       if (!doi) {
         // OpenCitations primarily works with DOIs for citation data
         // For keyword searches, we'd need to use a different approach
-        console.log('OpenCitations requires DOI for citation search');
+        log.debug('OpenCitations requires DOI for citation search');
         return { records: [] };
       }
 
@@ -63,7 +64,7 @@ export class OpenCitationsConnector implements SourceConnector {
         timeout: 15000
       });
 
-      console.log(`OpenCitations response status: ${response.status}, citations count: ${Object.keys(response.data).length}`);
+      log.debug(`OpenCitations response status: ${response.status}, citations count: ${Object.keys(response.data).length}`);
 
       // Convert citation data to OARecord format
       const records: OARecord[] = [];
@@ -95,18 +96,18 @@ export class OpenCitationsConnector implements SourceConnector {
         }
       }
 
-      console.log(`OpenCitations returning ${records.length} citation records`);
+      log.debug(`OpenCitations returning ${records.length} citation records`);
       return { records };
 
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        console.error('OpenCitations search error:', error.message);
+        log.error('OpenCitations search error:', error.message);
         if (error.response) {
-          console.error('OpenCitations error status:', error.response.status);
-          console.error('OpenCitations error data:', error.response.data);
+          log.error('OpenCitations error status:', error.response.status);
+          log.error('OpenCitations error data:', error.response.data);
         }
       } else {
-        console.error('OpenCitations unexpected error:', error);
+        log.error('OpenCitations unexpected error:', error);
       }
       return { records: [] };
     }

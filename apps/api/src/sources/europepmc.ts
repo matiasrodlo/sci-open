@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { OARecord, SourceConnector, SourceSearchParams, SourceSearchResult } from '@open-access-explorer/shared';
+import { log } from '../lib/logger';
 
 // Europe PMC accepts up to 1000 results per request
 const MAX_PAGE_SIZE = 1000;
@@ -71,7 +72,7 @@ export class EuropePMCConnector implements SourceConnector {
         totalHits: Number.isFinite(reported) ? reported : undefined
       };
     } catch (error) {
-      console.error('Europe PMC search error:', error);
+      log.error('Europe PMC search error:', error);
       return { records: [] };
     }
   }

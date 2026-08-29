@@ -1,6 +1,7 @@
 import NodeCache from 'node-cache';
 import Redis from 'ioredis';
 import { createHash } from 'crypto';
+import { log } from './logger';
 
 export enum CacheStrategy {
   SEARCH_RESULTS = 'search_results',
@@ -71,11 +72,11 @@ export class CacheManager {
 
     // Setup Redis event handlers
     this.l2Cache.on('connect', () => {
-      console.log('Redis connected');
+      log.debug('Redis connected');
     });
 
     this.l2Cache.on('error', (err) => {
-      console.error('Redis error:', err);
+      log.error('Redis error:', err);
     });
   }
 
@@ -111,7 +112,7 @@ export class CacheManager {
           return parsedValue;
         }
       } catch (redisError) {
-        console.warn('Redis cache error, falling back to L3:', redisError);
+        log.warn('Redis cache error, falling back to L3:', redisError);
       }
 
       // L3 Cache (Database/File) - persistent
@@ -122,7 +123,7 @@ export class CacheManager {
         try {
           await this.l2Cache.setex(key, config.l2, JSON.stringify(l3Value));
         } catch (redisError) {
-          console.warn('Failed to store in Redis:', redisError);
+          log.warn('Failed to store in Redis:', redisError);
         }
         this.l1Cache.set(key, l3Value, config.l1);
         
@@ -138,7 +139,7 @@ export class CacheManager {
       return null;
 
     } catch (error) {
-      console.error('Cache get error:', error);
+      log.error('Cache get error:', error);
       this.metrics.misses++;
       this.updateMetrics(startTime);
       return null;
@@ -159,7 +160,7 @@ export class CacheManager {
       try {
         await this.l2Cache.setex(key, config.l2, JSON.stringify(value));
       } catch (redisError) {
-        console.warn('Failed to store in Redis:', redisError);
+        log.warn('Failed to store in Redis:', redisError);
       }
       
       // L3 Cache (Database/File)
@@ -171,7 +172,7 @@ export class CacheManager {
       }
       
     } catch (error) {
-      console.error('Cache set error:', error);
+      log.error('Cache set error:', error);
     }
   }
 
@@ -187,14 +188,14 @@ export class CacheManager {
       try {
         await this.l2Cache.del(key);
       } catch (redisError) {
-        console.warn('Failed to delete from Redis:', redisError);
+        log.warn('Failed to delete from Redis:', redisError);
       }
       
       // L3 Cache
       this.l3Cache.delete(key);
       
     } catch (error) {
-      console.error('Cache delete error:', error);
+      log.error('Cache delete error:', error);
     }
   }
 
@@ -215,7 +216,7 @@ export class CacheManager {
           await this.l2Cache.del(...keys);
         }
       } catch (redisError) {
-        console.warn('Failed to invalidate Redis pattern:', redisError);
+        log.warn('Failed to invalidate Redis pattern:', redisError);
       }
       
       // L3 Cache
@@ -226,7 +227,7 @@ export class CacheManager {
       }
       
     } catch (error) {
-      console.error('Cache pattern invalidation error:', error);
+      log.error('Cache pattern invalidation error:', error);
     }
   }
 
@@ -255,7 +256,7 @@ export class CacheManager {
       try {
         await this.l2Cache.flushdb();
       } catch (redisError) {
-        console.warn('Failed to clear Redis:', redisError);
+        log.warn('Failed to clear Redis:', redisError);
       }
       
       // L3 Cache
@@ -273,7 +274,7 @@ export class CacheManager {
       };
       
     } catch (error) {
-      console.error('Cache clear error:', error);
+      log.error('Cache clear error:', error);
     }
   }
 
@@ -324,7 +325,7 @@ export class CacheManager {
     try {
       await this.l2Cache.quit();
     } catch (error) {
-      console.error('Error closing Redis connection:', error);
+      log.error('Error closing Redis connection:', error);
     }
   }
 }

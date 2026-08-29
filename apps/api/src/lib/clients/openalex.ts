@@ -2,6 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { getPooledClient } from '../http-client-factory';
 import { extractContactEmail } from '../contact-email';
 import { getServiceConfig as getHttpServiceConfig } from '../http-pool-config';
+import { log } from '../logger';
 
 export interface OpenAlexWork {
   id: string;
@@ -135,7 +136,7 @@ export class OpenAlexClient {
       const response = await this.searchWorks({ doi, perPage: 1 });
       return response.results[0] || null;
     } catch (error) {
-      console.error('OpenAlex DOI lookup error:', error);
+      log.error('OpenAlex DOI lookup error:', error);
       return null;
     }
   }

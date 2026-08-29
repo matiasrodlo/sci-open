@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { OARecord, SourceConnector, SourceSearchParams, SourceSearchResult } from '@open-access-explorer/shared';
+import { log } from '../lib/logger';
 
 // OpenAIRE serves at most 100 results per page
 const MAX_PAGE_SIZE = 100;
@@ -129,7 +130,7 @@ export class OpenAIREConnector implements SourceConnector {
     } catch (error: any) {
       // Don't log 404s as errors
       if (error.response?.status !== 404) {
-        console.error('OpenAIRE search error:', error.message);
+        log.error('OpenAIRE search error:', error.message);
       }
       return { records: [] };
     }

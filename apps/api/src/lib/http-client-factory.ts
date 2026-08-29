@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import axiosRetry from 'axios-retry';
 import http from 'http';
 import https from 'https';
+import { log } from './logger';
 
 // Timing data the metrics interceptors stash on each request's config
 declare module 'axios' {
@@ -148,7 +149,7 @@ export class HttpClientFactory {
                ((error.response?.status ?? 0) >= 500);
       },
       onRetry: (retryCount, error, requestConfig) => {
-        console.log(`Retrying request (${retryCount}/${config.retryAttempts}): ${requestConfig.url}`);
+        log.debug(`Retrying request (${retryCount}/${config.retryAttempts}): ${requestConfig.url}`);
       }
     });
   }
@@ -326,7 +327,7 @@ export class HttpClientFactory {
           client.defaults.httpsAgent.destroy();
         }
       } catch (error) {
-        console.error(`Error closing connections for ${url}:`, error);
+        log.error(`Error closing connections for ${url}:`, error);
       }
     }
     

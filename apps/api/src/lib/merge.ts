@@ -1,4 +1,5 @@
 import { OARecord, OASource } from '@open-access-explorer/shared';
+import { log } from './logger';
 
 export interface EnrichedRecord extends OARecord {
   // Enhanced fields from enrichment
@@ -221,7 +222,7 @@ export class RecordMerger {
    * Deduplicate records by DOI
    */
   deduplicateByDOI(records: OARecord[]): EnrichedRecord[] {
-    console.log(`[Dedup] Starting with ${records.length} records`);
+    log.debug(`[Dedup] Starting with ${records.length} records`);
     const doiGroups = new Map<string, OARecord[]>();
     const nonDoiRecords: OARecord[] = [];
 
@@ -238,7 +239,7 @@ export class RecordMerger {
       }
     }
 
-    console.log(`[Dedup] ${doiGroups.size} DOI groups, ${nonDoiRecords.length} non-DOI records`);
+    log.debug(`[Dedup] ${doiGroups.size} DOI groups, ${nonDoiRecords.length} non-DOI records`);
 
     const mergedRecords: EnrichedRecord[] = [];
 
@@ -252,7 +253,7 @@ export class RecordMerger {
       mergedRecords.push(this.enrichRecord(record));
     }
 
-    console.log(`[Dedup] Returning ${mergedRecords.length} merged records`);
+    log.debug(`[Dedup] Returning ${mergedRecords.length} merged records`);
     return mergedRecords;
   }
 
