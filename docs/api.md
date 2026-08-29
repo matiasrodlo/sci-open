@@ -119,6 +119,11 @@ Returns server status.
 
 ### Cache Management
 
+> Requires `Authorization: Bearer $ADMIN_API_KEY`. Returns `401` without a
+> valid key, or `503` when `ADMIN_API_KEY` is unset. See
+> [Configuration](./configuration.md#administrative-access).
+
+
 **POST** `/api/cache/warm`
 
 Start cache warming process.
@@ -135,6 +140,11 @@ Get cache statistics.
 
 ### Performance
 
+> Requires `Authorization: Bearer $ADMIN_API_KEY`. Returns `401` without a
+> valid key, or `503` when `ADMIN_API_KEY` is unset. See
+> [Configuration](./configuration.md#administrative-access).
+
+
 **POST** `/api/performance/test`
 
 Run HTTP performance test.
@@ -150,6 +160,11 @@ Get performance monitoring data.
 ---
 
 ### Smart Source Selection
+
+> Requires `Authorization: Bearer $ADMIN_API_KEY`. Returns `401` without a
+> valid key, or `503` when `ADMIN_API_KEY` is unset. See
+> [Configuration](./configuration.md#administrative-access).
+
 
 **GET** `/api/smart-source/config`
 

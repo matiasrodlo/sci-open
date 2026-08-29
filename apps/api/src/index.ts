@@ -27,6 +27,7 @@ import {
 import { httpPerformanceMonitor } from './lib/http-performance-monitor';
 import { httpPerformanceTester } from './lib/http-performance-test';
 import { assertPublicHttpUrl, fetchPdfStream, PdfProxyError } from './lib/pdf-proxy';
+import { adminOnly, getAdminKey } from './lib/admin-auth';
 
 const fastify = Fastify({
   logger: {
@@ -65,6 +66,10 @@ const searchPipeline = new EnhancedSearchPipeline({
   enableSmartSourceSelection: process.env.ENABLE_SMART_SOURCE_SELECTION === 'true',
   enableAdaptiveLearning: process.env.ENABLE_ADAPTIVE_LEARNING === 'true'
 });
+
+// Ceilings for the ad-hoc load tester on /api/performance/test
+const MAX_TEST_REQUESTS = 500;
+const MAX_TEST_CONCURRENCY = 50;
 
 // Search endpoint with advanced caching
 fastify.post<{ Body: SearchParams }>('/api/search', async (request, reply) => {
@@ -346,7 +351,7 @@ fastify.get('/health', async (request, reply) => {
 });
 
 // Cache metrics endpoint
-fastify.get('/api/cache/metrics', async (request, reply) => {
+fastify.get('/api/cache/metrics', adminOnly, async (request, reply) => {
   try {
     const metrics = cacheManager.getMetrics();
     const warmingStats = cacheWarmer.getWarmingStats();
@@ -363,7 +368,7 @@ fastify.get('/api/cache/metrics', async (request, reply) => {
 });
 
 // Cache warming endpoint
-fastify.post('/api/cache/warm', async (request, reply) => {
+fastify.post('/api/cache/warm', adminOnly, async (request, reply) => {
   try {
     await cacheWarmer.startWarming();
     return { 
@@ -377,7 +382,7 @@ fastify.post('/api/cache/warm', async (request, reply) => {
 });
 
 // Cache clear endpoint
-fastify.post('/api/cache/clear', async (request, reply) => {
+fastify.post('/api/cache/clear', adminOnly, async (request, reply) => {
   try {
     await cacheManager.clear();
     return { 
@@ -391,7 +396,7 @@ fastify.post('/api/cache/clear', async (request, reply) => {
 });
 
 // Debug endpoint for testing sources
-fastify.get('/debug/sources', async (request, reply) => {
+fastify.get('/debug/sources', adminOnly, async (request, reply) => {
   try {
     const testParams = { titleOrKeywords: 'ai' };
     
@@ -420,7 +425,7 @@ fastify.get('/debug/sources', async (request, reply) => {
 });
 
 // Debug endpoint for testing aggregators
-fastify.get('/debug/aggregators', async (request, reply) => {
+fastify.get('/debug/aggregators', adminOnly, async (request, reply) => {
   try {
     const { AggregatorManager } = await import('./lib/aggregators');
     const aggregatorManager = new AggregatorManager();
@@ -457,7 +462,7 @@ fastify.get('/debug/aggregators', async (request, reply) => {
 });
 
 // HTTP Performance Monitoring Endpoints
-fastify.get('/api/performance/metrics', async (request, reply) => {
+fastify.get('/api/performance/metrics', adminOnly, async (request, reply) => {
   try {
     const overall = httpPerformanceMonitor.getOverallPerformance();
     return {
@@ -471,7 +476,7 @@ fastify.get('/api/performance/metrics', async (request, reply) => {
   }
 });
 
-fastify.get('/api/performance/metrics/:service', async (request, reply) => {
+fastify.get('/api/performance/metrics/:service', adminOnly, async (request, reply) => {
   try {
     const { service } = request.params as { service: string };
     const metrics = httpPerformanceMonitor.getCurrentMetrics(service);
@@ -492,7 +497,7 @@ fastify.get('/api/performance/metrics/:service', async (request, reply) => {
   }
 });
 
-fastify.get('/api/performance/comparison/:service', async (request, reply) => {
+fastify.get('/api/performance/comparison/:service', adminOnly, async (request, reply) => {
   try {
     const { service } = request.params as { service: string };
     const comparison = httpPerformanceMonitor.getPerformanceComparison(service);
@@ -513,7 +518,7 @@ fastify.get('/api/performance/comparison/:service', async (request, reply) => {
   }
 });
 
-fastify.get('/api/performance/report', async (request, reply) => {
+fastify.get('/api/performance/report', adminOnly, async (request, reply) => {
   try {
     const report = httpPerformanceMonitor.generateReport();
     return {
@@ -527,7 +532,7 @@ fastify.get('/api/performance/report', async (request, reply) => {
   }
 });
 
-fastify.post('/api/performance/test', async (request, reply) => {
+fastify.post('/api/performance/test', adminOnly, async (request, reply) => {
   try {
     const { service, baseUrl, endpoint, requests = 50, concurrency = 10 } = request.body as any;
     
@@ -535,13 +540,35 @@ fastify.post('/api/performance/test', async (request, reply) => {
       reply.code(400);
       return { error: 'Missing required parameters: service, baseUrl, endpoint' };
     }
-    
+
+    // baseUrl and endpoint both come from the request body, so this route would
+    // otherwise point the load tester at anything the server can reach. The
+    // same public-address check the PDF proxy uses applies here.
+    let target: URL;
+    try {
+      target = await assertPublicHttpUrl(String(baseUrl));
+    } catch (error: any) {
+      reply.code(error instanceof PdfProxyError ? error.statusCode : 400);
+      return { error: 'baseUrl must resolve to a public http or https address' };
+    }
+
+    // An absolute or protocol-relative endpoint overrides the axios baseURL,
+    // which would slip past the check above.
+    if (typeof endpoint !== 'string' || !endpoint.startsWith('/') || endpoint.startsWith('//')) {
+      reply.code(400);
+      return { error: 'endpoint must be a path beginning with a single /' };
+    }
+
+    // Bounded so an authenticated caller cannot turn this into an amplifier.
+    const boundedRequests = Math.min(Math.max(parseInt(String(requests), 10) || 1, 1), MAX_TEST_REQUESTS);
+    const boundedConcurrency = Math.min(Math.max(parseInt(String(concurrency), 10) || 1, 1), MAX_TEST_CONCURRENCY);
+
     const result = await httpPerformanceTester.runTest({
       service,
-      baseUrl,
+      baseUrl: target.href,
       endpoint,
-      requests,
-      concurrency,
+      requests: boundedRequests,
+      concurrency: boundedConcurrency,
       warmupRequests: 5
     });
     
@@ -556,7 +583,7 @@ fastify.post('/api/performance/test', async (request, reply) => {
   }
 });
 
-fastify.post('/api/performance/test/comprehensive', async (request, reply) => {
+fastify.post('/api/performance/test/comprehensive', adminOnly, async (request, reply) => {
   try {
     const results = await httpPerformanceTester.runComprehensiveTests();
     
@@ -571,7 +598,7 @@ fastify.post('/api/performance/test/comprehensive', async (request, reply) => {
   }
 });
 
-fastify.post('/api/performance/test/compare', async (request, reply) => {
+fastify.post('/api/performance/test/compare', adminOnly, async (request, reply) => {
   try {
     const comparison = await httpPerformanceTester.comparePerformance();
     
@@ -592,6 +619,12 @@ const start = async () => {
     const port = parseInt(process.env.PORT || '4000');
     await fastify.listen({ port, host: '0.0.0.0' });
     console.log(`Server listening on port ${port}`);
+
+    if (!getAdminKey()) {
+      fastify.log.warn(
+        'ADMIN_API_KEY is not set: the cache, performance, smart-source and debug endpoints are disabled'
+      );
+    }
     
     // Start cache warming in background
     console.log('Starting cache warming...');
@@ -627,7 +660,7 @@ const start = async () => {
 }
 
 // Smart Source Selection Endpoints
-fastify.get('/api/smart-source/config', async (request, reply) => {
+fastify.get('/api/smart-source/config', adminOnly, async (request, reply) => {
   try {
     const config = smartSourceConfig.getConfig();
     return { success: true, config };
@@ -638,7 +671,7 @@ fastify.get('/api/smart-source/config', async (request, reply) => {
   }
 });
 
-fastify.post('/api/smart-source/config', async (request, reply) => {
+fastify.post('/api/smart-source/config', adminOnly, async (request, reply) => {
   try {
     const newConfig = request.body as any;
     smartSourceConfig.updateConfig(newConfig);
@@ -651,7 +684,7 @@ fastify.post('/api/smart-source/config', async (request, reply) => {
   }
 });
 
-fastify.get('/api/smart-source/test', async (request, reply) => {
+fastify.get('/api/smart-source/test', adminOnly, async (request, reply) => {
   try {
     const testResults = await smartSourceConfig.runTests();
     return testResults;
@@ -662,7 +695,7 @@ fastify.get('/api/smart-source/test', async (request, reply) => {
   }
 });
 
-fastify.get('/api/smart-source/performance', async (request, reply) => {
+fastify.get('/api/smart-source/performance', adminOnly, async (request, reply) => {
   try {
     const recommendations = smartSourceConfig.getRecommendations();
     return recommendations;
@@ -673,7 +706,7 @@ fastify.get('/api/smart-source/performance', async (request, reply) => {
   }
 });
 
-fastify.get('/api/smart-source/export', async (request, reply) => {
+fastify.get('/api/smart-source/export', adminOnly, async (request, reply) => {
   try {
     const exportData = smartSourceConfig.exportData();
     return exportData;

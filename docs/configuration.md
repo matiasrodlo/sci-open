@@ -96,6 +96,24 @@ CROSSREF_POOL_CONFIG={"maxConnections": 25, "maxSockets": 80}
 UNPAYWALL_POOL_CONFIG={"maxConnections": 40, "maxSockets": 120}
 ```
 
+### Administrative Access
+
+The cache, performance, smart-source and debug endpoints are operational
+controls rather than part of the public API. They are gated behind a shared key:
+
+```bash
+ADMIN_API_KEY=
+```
+
+Requests must carry it as `Authorization: Bearer <key>` (or `X-Admin-Key`).
+
+The gate fails closed. With no key configured every one of those routes returns
+`503` instead of being served unauthenticated, and the server logs a warning at
+startup. This is deliberate: `apps/web/next.config.js` proxies `/api/*` straight
+through, so an ungated route is reachable from any browser that can load the
+site. `/api/search`, `/api/paper/:id`, `/api/download-pdf` and `/health` stay
+public.
+
 ### Smart Source Selection
 
 ```env
