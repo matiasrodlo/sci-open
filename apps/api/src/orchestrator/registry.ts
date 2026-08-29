@@ -1,5 +1,6 @@
 import type { Paper, ProviderCapabilities, ProviderId, Query } from '@open-access-explorer/shared';
 import * as arxiv from '../providers/arxiv';
+import * as doaj from '../providers/doaj';
 import * as europepmc from '../providers/europepmc';
 import * as ncbi from '../providers/ncbi';
 
@@ -78,6 +79,29 @@ export const PROVIDERS: ProviderEntry[] = [
         timeoutMs,
         openAccessOnly,
         ...(process.env.NCBI_API_KEY ? { apiKey: process.env.NCBI_API_KEY } : {}),
+        ...(signal ? { signal } : {}),
+        ...(userAgent ? { userAgent } : {}),
+        ...(now ? { now } : {})
+      });
+      return {
+        papers: result.papers,
+        ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
+        skipped: result.skipped
+      };
+    }
+  },
+  {
+    id: 'doaj',
+    capabilities: doaj.capabilities,
+    translate: (query, options) => doaj.translate(query, options),
+    normalizerVersion: 1,
+    async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
+      const result = await doaj.search(query, {
+        pageSize: depth,
+        offset,
+        timeoutMs,
+        openAccessOnly,
+        ...(process.env.DOAJ_API_KEY ? { apiKey: process.env.DOAJ_API_KEY } : {}),
         ...(signal ? { signal } : {}),
         ...(userAgent ? { userAgent } : {}),
         ...(now ? { now } : {})

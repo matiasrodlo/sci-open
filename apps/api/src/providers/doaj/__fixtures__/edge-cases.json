@@ -1,0 +1,77 @@
+{
+  "_comment": "Hand-built, unlike the recorded doaj.json. Each record isolates a shape the recorded page happens not to contain — most importantly an actual PDF link, since not one of the three recorded records has one.",
+  "total": 6,
+  "results": [
+    {
+      "_case": "a real PDF, which the recorded fixture has none of",
+      "id": "pdf0000000000000000000000000001",
+      "last_updated": "2024-01-01T00:00:00Z",
+      "bibjson": {
+        "title": "A record with an actual pdf link",
+        "year": "2022",
+        "author": [{ "name": "Ada Lovelace" }],
+        "journal": { "title": "A Journal", "publisher": "A Publisher", "language": ["EN"] },
+        "identifier": [{ "type": "doi", "id": "10.1000/pdf" }],
+        "link": [
+          { "type": "fulltext", "content_type": "text/html", "url": "https://example.org/article" },
+          { "type": "fulltext", "content_type": "application/pdf", "url": "https://example.org/article.pdf" }
+        ],
+        "keywords": ["crispr"]
+      }
+    },
+    {
+      "_case": "fulltext link with no content_type at all — the majority shape",
+      "id": "html000000000000000000000000002",
+      "bibjson": {
+        "title": "A record whose only link is an untyped fulltext",
+        "year": "2021",
+        "author": [{ "name": "Grace Hopper" }],
+        "journal": { "title": "A Journal", "language": ["FR"] },
+        "identifier": [{ "type": "doi", "id": "10.1000/html" }],
+        "link": [{ "type": "fulltext", "url": "https://example.org/reader" }]
+      }
+    },
+    {
+      "_case": "no links: landing page must fall back to the DOI",
+      "id": "nolink00000000000000000000000003",
+      "bibjson": {
+        "title": "A record with no links",
+        "year": "2020",
+        "author": [{ "name": "Alan Turing" }],
+        "journal": { "title": "A Journal" },
+        "identifier": [{ "type": "doi", "id": "10.1000/nolink" }]
+      }
+    },
+    {
+      "_case": "no journal title, and no DOI either",
+      "id": "novenue0000000000000000000000004",
+      "bibjson": {
+        "title": "A record with no journal title",
+        "year": "2019",
+        "author": [{ "name": "Katherine Johnson" }],
+        "journal": {},
+        "identifier": [{ "type": "eissn", "id": "1234-5678" }]
+      }
+    },
+    {
+      "_case": "LCC subject terms alongside keywords",
+      "id": "subject0000000000000000000000005",
+      "bibjson": {
+        "title": "A record carrying subject terms",
+        "year": "2023",
+        "author": [{ "name": "Jean Bartik" }],
+        "journal": { "title": "A Journal", "language": ["EN"] },
+        "keywords": ["crispr", "Microbiology"],
+        "subject": [
+          { "code": "QR1-502", "scheme": "LCC", "term": "Microbiology" },
+          { "code": "QH301-705.5", "scheme": "LCC", "term": "Biology" }
+        ]
+      }
+    },
+    {
+      "_case": "unreadable: must cost exactly one record",
+      "id": "notitle0000000000000000000000006",
+      "bibjson": { "year": "2018", "author": [{ "name": "Nobody" }] }
+    }
+  ]
+}

@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **7 / 13** | **4,564** | **3 / 11** | **452** | **1** |
+| **7 / 13** | **4,564** | **4 / 11** | **495** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -288,7 +288,17 @@ Mechanical, independent, one at a time. Each provider lands with its own fixture
    > **MeSH alone would not have fixed topics.** PubMed assigns MeSH only once an article is indexed, and none of the three recorded articles carry any — while all three carry a `KeywordList`. Taking both means recent records get topics too; MeSH alone would have left them empty on exactly the records that were already failing. 25 of 25 live records now carry topics, against 0 before.
    >
    > **`explicitArray: false` was considered and declined.** The parity test needs the old normaliser and the new one to run against the same parsed fixture, and a repeated element is still an array under that option, so the unwrapping helper is needed either way. Three helpers collapse all ~15 ladders instead — including the one that called `String()` on whatever it found and then guarded against the literal `'[object Object]'` reaching a result title. A collective author, rendered blank by the old connector, is now named.
-4. **DOAJ.** Parenthesise the field terms and join year bounds with `AND` — any year filter currently makes DOAJ answer HTTP 400 and drop out silently. Stop treating `type: 'fulltext'` links as PDFs. Declare `yearFilter` honestly in capabilities.
+4. **DOAJ — done.** Parenthesise the field terms and join year bounds with `AND` — any year filter made DOAJ answer HTTP 400 and drop out silently. Stop treating `type: 'fulltext'` links as PDFs. Declare `yearFilter` honestly in capabilities.
+
+   > **Two of the connector's field names were silently dead.** DOAJ accepts an unqualified field it does not know and answers HTTP 200 with zero results. Measured: `keywords:crispr` returns **0** against 8,467 for `bibjson.keywords:crispr`, and `year:2022` returns **0** against 1,153,036 for `bibjson.year:2022`. The old connector used both spellings — so a third of its OR clause matched nothing on every search, and its year filter could not have worked even without the 400 beside it. Every field is now fully qualified.
+   >
+   > **The 400 was a wildcard endpoint, the same trap as arXiv.** `bibjson.year:[2024 TO *]` is rejected; two concrete endpoints are not. So `yearFilter` is honestly **true**, not false as this document expected — a 7,738-hit query splits into 2,011 + 2,658 + 3,067 across three adjacent bounds. The old connector also joined its two bounds with `OR`, which matches everything either side of them.
+   >
+   > **DOAJ was sorted by date too.** The connector forced `sort=created_date:desc`; DOAJ's default is relevance. The same defect as PubMed, found by looking for it: the default returns a mix of 2021, 2022 and 2024 where the forced sort returns 2026 three times.
+   >
+   > **`language` was hardcoded `'en'`** under a comment saying DOAJ does not supply one. It is at `bibjson.journal.language`. A missing journal title fell back to the literal string `'DOAJ Journal'`, which is a fabricated venue.
+   >
+   > **The PDF fix is real in `Paper` and lost on the way out.** Not one link in the recorded page is a PDF and one is explicitly `text/html`, so `fullText.kind` is now `html` — but `toOARecord` maps `fullText.url` to `bestPdfUrl` whatever the kind, so the legacy shape still cannot express the distinction. The format is correct in the new model and flattened by the adapter, the same cost it already documents for `sources` and `fieldSources`. It resolves when the frontend moves onto `Paper` in phase 11.
 5. **CORE.** Accept `limit` and `offset` (it hardcodes 100). Reorder PDF resolution so the reader URL becomes `landingPage` and the last resort, not the advertised PDF for every record.
 6. **PLOS.** Straightforward. Add the `plos` branch the paper-detail endpoint is missing — PLOS was a quarter of a typical result set and every "Details" click on it 404s.
 7. **OpenAIRE.** Extract the DOI from `pid[]`, reading `@classid` and `$` rather than the xml2js `$.classid` and `_` — the same fix already applied to `bestaccessright`, in the place it was missed. Without it no OpenAIRE record can deduplicate against another provider. Then replace the `throw` in the normaliser with per-record isolation — one malformed record currently discards the whole page.
