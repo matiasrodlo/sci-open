@@ -213,7 +213,7 @@ export class DataCiteConnector implements SourceConnector {
 
     // Add publisher if available
     if (attrs.publisher) {
-      (record as any).publisher = attrs.publisher;
+      record.publisher = attrs.publisher;
     }
 
     return record;

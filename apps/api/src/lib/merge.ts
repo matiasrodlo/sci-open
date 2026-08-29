@@ -1,4 +1,4 @@
-import { OARecord } from '@open-access-explorer/shared';
+import { OARecord, OASource } from '@open-access-explorer/shared';
 
 export interface EnrichedRecord extends OARecord {
   // Enhanced fields from enrichment
@@ -90,29 +90,24 @@ export class RecordMerger {
    * Sort records by source priority (canonical sources first)
    */
   private sortBySourcePriority(records: OARecord[]): OARecord[] {
-    const sourcePriority: Record<string, number> = {
-      'crossref': 1,    // Highest priority - canonical metadata
-      'openalex': 2,    // High priority - comprehensive data
-      'unpaywall': 3,   // High priority - OA resolution
-      'europepmc': 4,   // Good priority - biomedical focus
-      'core': 5,        // Good priority - repository aggregator
-      'openaire': 6,    // Good priority - EU research
-      'plos': 7,        // Publisher priority
-      'mdpi': 8,        // Publisher priority
-      'elife': 9,       // Publisher priority
-      'frontiers': 10,  // Publisher priority
-      'arxiv': 11,      // Repository priority
-      'biorxiv': 12,    // Repository priority
-      'medrxiv': 13,    // Repository priority
-      'zenodo': 14,     // Repository priority
-      'osf': 15,        // Repository priority
-      'hal': 16,        // Repository priority
-      'scielo': 17,     // Regional priority
-      'redalyc': 18,    // Regional priority
-      'doaj': 19,       // Directory priority
-      'ncbi': 20,       // Lower priority - limited metadata
-      'datacite': 21,   // Lower priority - registry items, sparse article metadata
-      'opencitations': 22, // Lowest priority - citations only
+    // One entry per source that can actually produce a record. Ranked by how
+    // trustworthy that source's metadata is when two of them describe the same
+    // work: the record from the lower number supplies the merged fields.
+    const sourcePriority: Record<OASource, number> = {
+      'crossref': 1,       // canonical publisher metadata
+      'openalex': 2,       // broad coverage, good structure
+      'unpaywall': 3,      // authority on OA status and best PDF
+      'europepmc': 4,      // rich biomedical records
+      'core': 5,           // repository aggregator
+      'openaire': 6,       // EU research aggregator
+      'plos': 7,           // publisher, full text
+      'arxiv': 8,          // preprints, no DOI
+      'biorxiv': 9,        // preprints
+      'medrxiv': 10,       // preprints
+      'doaj': 11,          // directory, journal-level metadata
+      'ncbi': 12,          // limited metadata, no DOI extracted yet
+      'datacite': 13,      // registry items, sparse article metadata
+      'opencitations': 14  // citation counts only
     };
 
     return records.sort((a, b) => {

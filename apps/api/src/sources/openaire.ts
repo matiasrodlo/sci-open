@@ -303,7 +303,7 @@ export class OpenAIREConnector implements SourceConnector {
 
     // Add publisher if available
     if (publisher) {
-      (record as any).publisher = publisher;
+      record.publisher = publisher;
     }
 
     return record;
