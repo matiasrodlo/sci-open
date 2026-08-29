@@ -183,15 +183,31 @@ export class OpenAIREConnector implements SourceConnector {
       abstract = (descriptionData as any).$ || '';
     }
     
+    // OpenAIRE puts stray values in the description list — one record carries
+    // `[{"$": 75}, {"$": "Alzheimer's disease is…"}]`, where the abstract is
+    // the second entry. Reading the first gave a number, which is truthy and
+    // has no `.replace`, so the throw escaped to the search-level catch and
+    // cost every record on the page: OpenAIRE returned nothing for that query
+    // and reported no error.
+    if (typeof abstract !== 'string' || /^\d+$/.test(abstract.trim())) {
+      const alternative = (Array.isArray(descriptionData) ? descriptionData : [])
+        .map(d => (typeof d === 'string' ? d : (d as any)?.$))
+        .find(v => typeof v === 'string' && !/^\d+$/.test(v.trim()));
+      abstract = typeof alternative === 'string' ? alternative : '';
+    }
+
     // Clean up HTML/XML tags from abstract
     if (abstract) {
       abstract = abstract
         .replace(/<[^>]*>/g, '') // Remove HTML/XML tags
         .replace(/&lt;/g, '<')   // Decode HTML entities
         .replace(/&gt;/g, '>')
-        .replace(/&amp;/g, '&')
         .replace(/&quot;/g, '"')
+        // `&apos;` is a standard XML entity OpenAIRE emits, and it was missing
+        // from this list, so abstracts read "Alzheimer&apos;s disease".
+        .replace(/&apos;/g, "'")
         .replace(/&#39;/g, "'")
+        .replace(/&amp;/g, '&') // last, so `&amp;quot;` is not decoded twice
         .replace(/\s+/g, ' ')    // Normalize whitespace
         .trim();
     }

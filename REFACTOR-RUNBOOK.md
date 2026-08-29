@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **7 / 13** | **4,564** | **8 / 11** | **607** | **1** |
+| **7 / 13** | **4,564** | **8 / 11** | **612** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -318,6 +318,10 @@ Mechanical, independent, one at a time. Each provider lands with its own fixture
    > **OpenAIRE reports the open-access route, and nothing was reading it.** `openaccesscolor` holds `gold`, `hybrid` or `bronze` — Unpaywall's own vocabulary — and `isgreen` covers the rest. Live, a single page returns all four. It is the only provider so far that answers `oaStatus` with data rather than leaving it for enrichment.
    >
    > **Every OpenAIRE DOI lookup was answering HTTP 409.** Found by running one: the connector assigned the DOI to `keywords`, and as free text the slash is an operator to OpenAIRE's query parser — `{"status":"error","code":"500","message":"Fail to execute search","exception":"Syntax errors. expected boolean, got '/'"}`. There is a dedicated `doi` parameter, which the new provider uses; the old connector quotes the value, which also works. Neither path had ever resolved a DOI.
+   >
+   > **A stray entry in `description` cost OpenAIRE a whole page.** Found by the phase-08 comparison sweep, which logged `OpenAIRE search error: abstract.replace is not a function` on `alzheimer amyloid beta`. One record carries `[{"$": 75}, {"$": "Alzheimer's disease is…"}]` — 75 is presumably a page count, and the abstract is the *second* entry. The old connector read `description[0]`, got a number, and `75.replace` threw to the search-level catch: **100 records became 0, reported as an empty result rather than an error**. The new provider did not throw but reported an abstract of `"75"`. Both now skip a value that is only digits. `title` had the same shape without the same luck — 77 of 100 records carry a `main title` and a `subtitle`, and `title[0]` was the main title on all 100 by OpenAIRE's ordering alone — so it is selected by `@classid` rather than by position.
+   >
+   > **`&apos;` was missing from the entity decode list**, so abstracts reached the reader as "Alzheimer&apos;s disease". `&amp;` now decodes last, so an escaped entity is not decoded twice.
    >
    > **`translate` returns request parameters, not a query.** OpenAIRE has no query language: the date bounds are parameters. Since the orchestrator keys the provider cache on whatever `translate` returns, a keywords-only string would have let a 2022–2023 search be served from an unbounded one. It returns a canonical serialisation of the whole parameter set instead.
 8. **DataCite — done, and the answer is `keywordSearch: false`.** It contributed 600 records of which zero survived filtering. Either fix what it emits, or stop paying for it.

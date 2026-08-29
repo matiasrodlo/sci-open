@@ -44,9 +44,15 @@ function stripMarkup(text: string): string {
     .replace(/<[^>]*>/g, '')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
+    // `&apos;` is a standard XML entity and OpenAIRE emits it — the decode
+    // list left it out, so abstracts reached the reader as
+    // "Alzheimer&apos;s disease".
+    .replace(/&apos;/g, "'")
     .replace(/&#39;/g, "'")
+    // Last, so a literally-escaped entity such as `&amp;quot;` survives as
+    // `&quot;` rather than being decoded twice.
+    .replace(/&amp;/g, '&')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -115,18 +121,53 @@ function pickTopics(result: any): string[] {
     });
 }
 
+/**
+ * The abstract, out of however many `description` entries there are.
+ *
+ * Not `description[0]`. OpenAIRE puts stray values in that list: one record for
+ * `alzheimer amyloid beta` carries `[{"$": 75}, {"$": "Alzheimer's disease
+ * is…"}]`, where 75 is presumably a page count and the abstract is second.
+ * Taking the first entry made the old connector throw — `75.replace` is not a
+ * function — which cost it the whole page, and made this provider report an
+ * abstract of `"75"`.
+ *
+ * A value that is nothing but digits is not a description, so it is skipped
+ * and OpenAIRE's own ordering decides among the rest.
+ */
+function pickAbstract(result: any): string | undefined {
+  for (const entry of asArray(result?.description)) {
+    const text = value(entry);
+    if (text && !/^\d+$/.test(text)) return text;
+  }
+  return undefined;
+}
+
+/**
+ * The main title.
+ *
+ * 77 of 100 records in that same page carry more than one `title`, tagged
+ * `main title` or `subtitle`. `title[0]` was the main title on all 100, but
+ * that is OpenAIRE's ordering rather than a guarantee — and trusting the
+ * position of a list entry is precisely what went wrong one field above.
+ */
+function pickTitle(result: any): string | undefined {
+  const titles = asArray(result?.title);
+  const main = titles.find(t => attr(t, 'classid') === 'main title');
+  return value(main) ?? value(titles[0]);
+}
+
 function normalizeOne(raw: any, ref: SourceRef): Paper {
   const result = raw?.metadata?.['oaf:entity']?.['oaf:result'];
   if (!result) throw new Error('record has no oaf:result');
 
-  const title = value(asArray(result.title)[0]);
+  const title = pickTitle(result);
   if (!title) throw new Error('record has no title');
 
   const nativeId = ref.nativeId;
   if (!nativeId) throw new Error('record has no objIdentifier');
 
   const doi = pickDoi(result);
-  const abstract = value(asArray(result.description)[0]);
+  const abstract = pickAbstract(result);
   const accepted = value(result.dateofacceptance);
   const year = Number.parseInt(accepted?.slice(0, 4) ?? '', 10);
   const fullText = pickFullText(result);

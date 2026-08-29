@@ -115,3 +115,58 @@ describe('normalize — record shapes', () => {
     expect(totalHits(RECORDED)).toBe(17473);
   });
 });
+
+describe('normalize — stray entries in a list', () => {
+  const strays = () => run(EDGE).papers.find(p => p.id === 'openaire:od_____10208::ffff')!;
+
+  it('skips a numeric description and takes the real abstract', () => {
+    // Verbatim from a live page: `[{"$": 75}, {"$": "Alzheimer's disease is…"}]`.
+    // 75 is presumably a page count. Reading `description[0]` made the old
+    // connector throw — `75.replace` is not a function — which escaped to the
+    // search-level catch and cost every record on the page, and made this
+    // provider report an abstract of "75".
+    expect(strays().abstract).toBe("Alzheimer's disease is the most common neurodegenerative disorder to date.");
+  });
+
+  it('never reports an abstract that is only digits', () => {
+    expect(run(EDGE).papers.every(p => !/^\d+$/.test(p.abstract ?? 'x'))).toBe(true);
+  });
+
+  it('takes the main title rather than whichever title is first', () => {
+    // 77 of 100 records on that page carry both a `main title` and a
+    // `subtitle`. `title[0]` happened to be the main title on all of them,
+    // which is OpenAIRE's ordering rather than a guarantee — and trusting a
+    // list position is exactly what went wrong with the description.
+    expect(strays().title).toBe('The main title');
+  });
+});
+
+describe('normalize — entity decoding', () => {
+  it("decodes &apos;, which the decode list left out", () => {
+    // OpenAIRE emits it, and abstracts reached the reader as
+    // "Alzheimer&apos;s disease".
+    const paper = run(EDGE).papers.find(p => p.id === 'openaire:od_____10208::ffff')!;
+    expect(paper.abstract).not.toContain('&apos;');
+    expect(paper.abstract).toContain("Alzheimer's");
+  });
+
+  it('decodes &amp; last, so an escaped entity is not decoded twice', () => {
+    const outcome = normalize(
+      {
+        response: {
+          header: { total: { $: 1 } },
+          results: { result: [{
+            header: { 'dri:objIdentifier': { $: 'x' } },
+            metadata: { 'oaf:entity': { 'oaf:result': {
+              title: { $: 'T' },
+              description: { $: 'a &amp;quot;quoted&amp;quot; word' },
+              bestaccessright: { '@classid': 'OPEN' }
+            } } }
+          }] }
+        }
+      } as any,
+      { retrievedAt: AT }
+    );
+    expect(outcome.papers[0].abstract).toBe('a &quot;quoted&quot; word');
+  });
+});
