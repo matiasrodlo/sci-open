@@ -8,7 +8,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit"
   },
