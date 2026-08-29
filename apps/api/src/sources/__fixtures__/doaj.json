@@ -1,0 +1,294 @@
+{
+  "total": 2762,
+  "page": 1,
+  "pageSize": 3,
+  "timestamp": "2026-08-29T01:44:23.089475Z",
+  "query": "title:crispr gene editing",
+  "results": [
+    {
+      "last_updated": "2025-08-19T22:35:05Z",
+      "bibjson": {
+        "identifier": [
+          {
+            "id": "10.3390/v14092045",
+            "type": "doi"
+          },
+          {
+            "id": "1999-4915",
+            "type": "eissn"
+          }
+        ],
+        "journal": {
+          "volume": "14",
+          "number": "9",
+          "country": "CH",
+          "issns": [
+            "1999-4915"
+          ],
+          "publisher": "MDPI AG",
+          "language": [
+            "EN"
+          ],
+          "title": "Viruses"
+        },
+        "month": "09",
+        "keywords": [
+          "herpesvirus",
+          "MDV",
+          "monoclonal antibody",
+          "CRISPR/Cas9",
+          "pp38",
+          "IFA"
+        ],
+        "year": "2022",
+        "start_page": "2045",
+        "subject": [
+          {
+            "code": "QR1-502",
+            "scheme": "LCC",
+            "term": "Microbiology"
+          }
+        ],
+        "author": [
+          {
+            "affiliation": "Key Laboratory of Animal Immunology, Ministry of Agriculture and Rural Affairs of China & Henan Provincial Key Laboratory of Animal Immunology, Henan Academy of Agricultural Sciences, Zhengzhou 450002, China",
+            "name": "Man Teng"
+          },
+          {
+            "affiliation": "Key Laboratory of Animal Immunology, Ministry of Agriculture and Rural Affairs of China & Henan Provincial Key Laboratory of Animal Immunology, Henan Academy of Agricultural Sciences, Zhengzhou 450002, China",
+            "name": "Zi-Yu Zhou"
+          },
+          {
+            "affiliation": "The Pirbright Institute & UK-China Centre of Excellence for Research on Avian Diseases, Pirbright, Ash Road, Guildford GU24 0NF, UK",
+            "name": "Yongxiu Yao"
+          },
+          {
+            "affiliation": "The Pirbright Institute & UK-China Centre of Excellence for Research on Avian Diseases, Pirbright, Ash Road, Guildford GU24 0NF, UK",
+            "name": "Venugopal Nair"
+          },
+          {
+            "affiliation": "International Joint Research Center of National Animal Immunology & College of Veterinary Medicine, Henan Agricultural University, Zhengzhou 450002, China",
+            "name": "Gai-Ping Zhang"
+          },
+          {
+            "affiliation": "Key Laboratory of Animal Immunology, Ministry of Agriculture and Rural Affairs of China & Henan Provincial Key Laboratory of Animal Immunology, Henan Academy of Agricultural Sciences, Zhengzhou 450002, China",
+            "name": "Jun Luo"
+          }
+        ],
+        "link": [
+          {
+            "content_type": "text/html",
+            "type": "fulltext",
+            "url": "https://www.mdpi.com/1999-4915/14/9/2045"
+          }
+        ],
+        "abstract": "Marek’s disease virus (MDV) is an important oncogenic α-herpesvirus that induces Marek’s disease (MD), characterized by severe immunosuppression and rapid-onset T-cell lymphomas in its natural chicken hosts. Historically, MD is regarded as an ideal biomedical model for studying virally induced cancers. Monoclonal antibodies (mAbs) against viral or host antigenic epitopes are crucial for virology research, especially in the exploration of gene functions, clinical therapy, and the development of diagnostic reagents. Utilizing the CRISPR/Cas9-based gene-editing technology, we produced a pp38-deleted MDV-1 mutant—GX0101Δpp38—and used it for the rapid screening and identification of pp38-specific mAbs from a pool of MDV-specific antibodies from 34 hybridomas. The cross-staining of parental and mutated MDV plaques with hybridoma supernatants was first performed by immunofluorescence assay (IFA). Four monoclonal hybridomas—namely, 4F9, 31G7, 34F2, and 35G9—were demonstrated to secrete specific antibodies against MDV-1’s pp38 protein, which was further confirmed by IFA staining and confocal analysis. Further experiments using Western blotting, immunoprecipitation (IP), liquid chromatography–tandem mass spectrometry (LC–MS/MS), and immunohistochemistry (IHC) analysis demonstrated that the pp38-specific mAb 31G7 has high specificity and wide application potential for further research in MD biology. To the best of our knowledge, this is the first demonstration of the use of CRISPR/Cas9-based gene-editing technology for efficient screening and identification of mAbs against a specific viral protein, and provides a meaningful reference for the future production of antibodies against other viruses—especially for large DNA viruses such as herpesviruses.",
+        "title": "A New Strategy for Efficient Screening and Identification of Monoclonal Antibodies against Oncogenic Avian Herpesvirus Utilizing CRISPR/Cas9-Based Gene-Editing Technology"
+      },
+      "id": "0004c647c9864254aaa1ba2acba7f495",
+      "created_date": "2022-09-22T13:24:22Z"
+    },
+    {
+      "last_updated": "2025-08-19T21:09:14Z",
+      "bibjson": {
+        "identifier": [
+          {
+            "id": "2169-3536",
+            "type": "eissn"
+          },
+          {
+            "id": "10.1109/ACCESS.2017.2775703",
+            "type": "doi"
+          }
+        ],
+        "journal": {
+          "volume": "5",
+          "country": "US",
+          "issns": [
+            "2169-3536"
+          ],
+          "publisher": "IEEE",
+          "language": [
+            "EN"
+          ],
+          "title": "IEEE Access"
+        },
+        "end_page": "26590",
+        "keywords": [
+          "CRISPR/Cas9 system",
+          "sgRNAs",
+          "maximal-relevance-minimal-redundancy",
+          "incremental feature selection",
+          "protein disorder"
+        ],
+        "year": "2017",
+        "start_page": "26582",
+        "subject": [
+          {
+            "code": "TK1-9971",
+            "scheme": "LCC",
+            "term": "Electrical engineering. Electronics. Nuclear engineering"
+          }
+        ],
+        "author": [
+          {
+            "orcid_id": "https://orcid.org/0000-0003-3068-1583",
+            "affiliation": "College of Information Engineering, Shanghai Maritime University, Shanghai, China",
+            "name": "Lei Chen"
+          },
+          {
+            "affiliation": "School of Life Sciences, Shanghai University, Shanghai, China",
+            "name": "Shaopeng Wang"
+          },
+          {
+            "affiliation": "Chinese Academy of Sciences, Institute of Health Sciences, Shanghai Institutes for Biological Sciences, Shanghai, China",
+            "name": "Yu-Hang Zhang"
+          },
+          {
+            "affiliation": "School of Life Sciences, Shanghai University, Shanghai, China",
+            "name": "Jiarui Li"
+          },
+          {
+            "affiliation": "Chinese Academy of Sciences, Institute of Health Sciences, Shanghai Institutes for Biological Sciences, Shanghai, China",
+            "name": "Zhi-Hao Xing"
+          },
+          {
+            "affiliation": "Department of Genetics and Genomics Sciences, Icahn School of Medicine at Mount Sinai, New York, NY, USA",
+            "name": "Jialiang Yang"
+          },
+          {
+            "affiliation": "Chinese Academy of Sciences, Institute of Health Sciences, Shanghai Institutes for Biological Sciences, Shanghai, China",
+            "name": "Tao Huang"
+          },
+          {
+            "affiliation": "School of Life Sciences, Shanghai University, Shanghai, China",
+            "name": "Yu-Dong Cai"
+          }
+        ],
+        "link": [
+          {
+            "type": "fulltext",
+            "url": "https://ieeexplore.ieee.org/document/8115130/"
+          }
+        ],
+        "abstract": "The CRISPR/Cas9 system is a creative and innovative gene editing biotechnology tool in genetic engineering. Although several achievements have been attained using the CRISPR/Cas9 system, it is still a challenge to avoid off-target effects and improve the editing efficacy. Previous efforts on evaluating the efficacy and designing the guide RNA mainly focused on DNA properties. However, some DNA features have not been characterized but can be reflected by protein properties, such as the disorder features and the sequence conservation. In this paper, we provided a computational framework to identify important features related to the efficacy of CRISPR/Cas9 focusing on the properties of the proteins encoded by the target DNA fragments. The feature selection method, maximal-relevance-minimal-redundancy, was adopted to analyze these features. And incremental feature selection together with support vector machine, were employed to extract optimal features, on which an optimal classifier can be constructed. As a result, 152 important features were extracted, with which an optimal classifier based on support vector machine was built. This classifier obtained the highest MCC value of 0.355. Finally, a series of detailed biological analyses were performed on the optimal features. From the results, we found that some key factors may differentially affect the binding activity of sgRNAs to their targets. Among them, the disorder status of the target protein sequences was found to be a major factor that is related to the efficacy of sgRNAs, suggesting the DNA features associated with the protein disorder status could also affect the CRISPR/Cas9 efficacy.",
+        "title": "Identify Key Sequence Features to Improve CRISPR sgRNA Efficacy"
+      },
+      "id": "001eee8c3f994a22a95ac1b02b06637f",
+      "created_date": "2021-03-29T21:18:41Z"
+    },
+    {
+      "last_updated": "2025-08-19T20:58:29Z",
+      "bibjson": {
+        "identifier": [
+          {
+            "id": "2162-2531",
+            "type": "pissn"
+          },
+          {
+            "id": "10.1016/j.omtn.2022.07.016",
+            "type": "doi"
+          }
+        ],
+        "journal": {
+          "volume": "29",
+          "number": "",
+          "country": "US",
+          "issns": [
+            "2162-2531"
+          ],
+          "publisher": "Elsevier",
+          "language": [
+            "EN"
+          ],
+          "title": "Molecular Therapy: Nucleic Acids"
+        },
+        "month": "09",
+        "end_page": "412",
+        "keywords": [
+          "MT: RNA/DNA editing",
+          "gene therapy",
+          "CRISPR-Cas9",
+          "hearing loss",
+          "KCNQ4",
+          "DFNA2"
+        ],
+        "year": "2022",
+        "start_page": "400",
+        "subject": [
+          {
+            "code": "RM1-950",
+            "scheme": "LCC",
+            "term": "Therapeutics. Pharmacology"
+          }
+        ],
+        "author": [
+          {
+            "affiliation": "ENT Institute and Department of Otorhinolaryngology, Eye &amp; ENT Hospital, State Key Laboratory of Medical Neurobiology and MOE Frontiers Center for Brain Science, Fudan University, Shanghai 200031, China; Institutes of Biomedical Sciences, Fudan University, Shanghai 200032, China; NHC Key Laboratory of Hearing Medicine, Fudan University, Shanghai 200031, China",
+            "name": "Chong Cui"
+          },
+          {
+            "affiliation": "ENT Institute and Department of Otorhinolaryngology, Eye &amp; ENT Hospital, State Key Laboratory of Medical Neurobiology and MOE Frontiers Center for Brain Science, Fudan University, Shanghai 200031, China; Institutes of Biomedical Sciences, Fudan University, Shanghai 200032, China; NHC Key Laboratory of Hearing Medicine, Fudan University, Shanghai 200031, China",
+            "name": "Daqi Wang"
+          },
+          {
+            "affiliation": "ENT Institute and Department of Otorhinolaryngology, Eye &amp; ENT Hospital, State Key Laboratory of Medical Neurobiology and MOE Frontiers Center for Brain Science, Fudan University, Shanghai 200031, China; Institutes of Biomedical Sciences, Fudan University, Shanghai 200032, China; NHC Key Laboratory of Hearing Medicine, Fudan University, Shanghai 200031, China",
+            "name": "Bowei Huang"
+          },
+          {
+            "affiliation": "ENT Institute and Department of Otorhinolaryngology, Eye &amp; ENT Hospital, State Key Laboratory of Medical Neurobiology and MOE Frontiers Center for Brain Science, Fudan University, Shanghai 200031, China; Institutes of Biomedical Sciences, Fudan University, Shanghai 200032, China; NHC Key Laboratory of Hearing Medicine, Fudan University, Shanghai 200031, China",
+            "name": "Fang Wang"
+          },
+          {
+            "affiliation": "ENT Institute and Department of Otorhinolaryngology, Eye &amp; ENT Hospital, State Key Laboratory of Medical Neurobiology and MOE Frontiers Center for Brain Science, Fudan University, Shanghai 200031, China; Institutes of Biomedical Sciences, Fudan University, Shanghai 200032, China; NHC Key Laboratory of Hearing Medicine, Fudan University, Shanghai 200031, China",
+            "name": "Yuxin Chen"
+          },
+          {
+            "affiliation": "ENT Institute and Department of Otorhinolaryngology, Eye &amp; ENT Hospital, State Key Laboratory of Medical Neurobiology and MOE Frontiers Center for Brain Science, Fudan University, Shanghai 200031, China; Institutes of Biomedical Sciences, Fudan University, Shanghai 200032, China; NHC Key Laboratory of Hearing Medicine, Fudan University, Shanghai 200031, China",
+            "name": "Jun Lv"
+          },
+          {
+            "affiliation": "Department of Otolaryngology-Head and Neck Surgery, Affiliated Hospital, Nantong University, Nantong 226006, China",
+            "name": "Luping Zhang"
+          },
+          {
+            "affiliation": "ENT Institute and Department of Otorhinolaryngology, Eye &amp; ENT Hospital, State Key Laboratory of Medical Neurobiology and MOE Frontiers Center for Brain Science, Fudan University, Shanghai 200031, China; Institutes of Biomedical Sciences, Fudan University, Shanghai 200032, China; NHC Key Laboratory of Hearing Medicine, Fudan University, Shanghai 200031, China",
+            "name": "Lei Han"
+          },
+          {
+            "affiliation": "School of Life Sciences, Nantong Laboratory of Development and Diseases, Key Laboratory of Neuroregeneration of Jiangsu and Ministry of Education, Co-innovation Center of Neuroregeneration, Nantong University, Nantong 226019, China",
+            "name": "Dong Liu"
+          },
+          {
+            "affiliation": "Department of Otolaryngology-Head and Neck Surgery, Graduate Program in Speech and Hearing Bioscience and Technology and Program in Neuroscience, Harvard Medical School, Boston, MA 02115, USA; Eaton-Peabody Laboratory, Massachusetts Eye and Ear Infirmary, 243 Charles St., Boston, MA 02114, USA",
+            "name": "Zheng-Yi Chen"
+          },
+          {
+            "affiliation": "ENT Institute and Department of Otorhinolaryngology, Eye &amp; ENT Hospital, State Key Laboratory of Medical Neurobiology and MOE Frontiers Center for Brain Science, Fudan University, Shanghai 200031, China; NHC Key Laboratory of Hearing Medicine, Fudan University, Shanghai 200031, China",
+            "name": "Geng-Lin Li"
+          },
+          {
+            "affiliation": "ENT Institute and Department of Otorhinolaryngology, Eye &amp; ENT Hospital, State Key Laboratory of Medical Neurobiology and MOE Frontiers Center for Brain Science, Fudan University, Shanghai 200031, China; Institutes of Biomedical Sciences, Fudan University, Shanghai 200032, China; NHC Key Laboratory of Hearing Medicine, Fudan University, Shanghai 200031, China",
+            "name": "Huawei Li"
+          },
+          {
+            "affiliation": "ENT Institute and Department of Otorhinolaryngology, Eye &amp; ENT Hospital, State Key Laboratory of Medical Neurobiology and MOE Frontiers Center for Brain Science, Fudan University, Shanghai 200031, China; Institutes of Biomedical Sciences, Fudan University, Shanghai 200032, China; NHC Key Laboratory of Hearing Medicine, Fudan University, Shanghai 200031, China; Corresponding author Yilai Shu, ENT institute and Department of Otorhinolaryngology, Eye &amp; ENT Hospital, State Key Laboratory of Medical Neurobiology and MOE Frontiers Center for Brain Science, Fudan University, Shanghai 200031, China.",
+            "name": "Yilai Shu"
+          }
+        ],
+        "link": [
+          {
+            "type": "fulltext",
+            "url": "http://www.sciencedirect.com/science/article/pii/S2162253122001858"
+          }
+        ],
+        "abstract": "Gene therapy would benefit from the effective editing of targeted cells with CRISPR-Cas9 tools. However, it is difficult to precisely assess the editing performance in vivo because the tissues contain many non-targeted cells, which is one of the major barriers to clinical translation. Here, in the Atoh1-GFP;Kcnq4+/G229D mice, recapitulating a novel mutation we identified in a hereditary hearing loss pedigree, the high-efficiency editing of CRISPR-Cas9 in hair cells (34.10% on average) was precisely detected by sorting out labeled cells compared with only 1.45% efficiency in the whole cochlear tissue. After injection of the developed AAV_SaCas9-KKH_sgRNA agents, the Kcnq4+/G229D mice showed significantly lower auditory brainstem response (ABR) and distortion product otoacoustic emission (DPOAE) thresholds, shorter ABR wave I latencies, higher ABR wave I amplitudes, increased number of surviving outer hair cells (OHCs), and more hyperpolarized resting membrane potentials of OHCs. These findings provide an innovative approach to accurately assess the underestimated editing efficiency of CRISPR-Cas9 in vivo and offer a promising strategy for the treatment of KCNQ4-related deafness.",
+        "title": "Precise detection of CRISPR-Cas9 editing in hair cells in the treatment of autosomal dominant hearing loss"
+      },
+      "id": "00257e5ff9874d46b092959adb4ca12b",
+      "created_date": "2022-08-07T04:19:28Z"
+    }
+  ],
+  "next": "https://doaj.org/api/v4/search/articles/title:crispr%20gene%20editing?page=2&pageSize=3",
+  "last": "https://doaj.org/api/v4/search/articles/title:crispr%20gene%20editing?page=921&pageSize=3"
+}

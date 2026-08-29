@@ -1,0 +1,742 @@
+{
+  "version": "6.9",
+  "hitCount": 100424,
+  "nextCursorMark": "AoIIQaoBKyg1NTE0MTgyNg==",
+  "nextPageUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=crispr gene editing AND OPEN_ACCESS:y&cursorMark=AoIIQaoBKyg1NTE0MTgyNg==&resultType=core&pageSize=3&format=json",
+  "request": {
+    "queryString": "crispr gene editing AND OPEN_ACCESS:y",
+    "resultType": "core",
+    "cursorMark": "*",
+    "pageSize": 3,
+    "sort": "",
+    "synonym": false
+  },
+  "resultList": {
+    "result": [
+      {
+        "id": "42129132",
+        "source": "MED",
+        "pmid": "42129132",
+        "pmcid": "PMC13172344",
+        "fullTextIdList": {
+          "fullTextId": [
+            "PMC13172344"
+          ]
+        },
+        "doi": "10.1038/s41421-026-00889-2",
+        "title": "Decoding the role of chromatin context in the off-target effects of CRISPR gene editing with EGOLD.",
+        "authorString": "Feng H, Zheng J, Li N, Xie L, Zuo E.",
+        "authorList": {
+          "author": [
+            {
+              "fullName": "Feng H",
+              "firstName": "Hu",
+              "lastName": "Feng",
+              "initials": "H",
+              "authorId": {
+                "type": "ORCID",
+                "value": "0000-0002-0865-0206"
+              },
+              "authorAffiliationDetailsList": {
+                "authorAffiliation": [
+                  {
+                    "affiliation": "State Key Laboratory of Genome and Multi-omics Technologies, Shenzhen Branch, Guangdong Laboratory of Lingnan Modern Agriculture, Key Laboratory of Gene Editing Technologies (Hainan), Ministry of Agriculture and Rural Affairs, Agricultural Genomics Institute at Shenzhen, Guangdong, Chinese Academy of Agricultural Sciences, Shenzhen, Guangdong, China."
+                  }
+                ]
+              }
+            },
+            {
+              "fullName": "Zheng J",
+              "firstName": "Jitan",
+              "lastName": "Zheng",
+              "initials": "J",
+              "authorAffiliationDetailsList": {
+                "authorAffiliation": [
+                  {
+                    "affiliation": "State Key Laboratory of Genome and Multi-omics Technologies, Shenzhen Branch, Guangdong Laboratory of Lingnan Modern Agriculture, Key Laboratory of Gene Editing Technologies (Hainan), Ministry of Agriculture and Rural Affairs, Agricultural Genomics Institute at Shenzhen, Guangdong, Chinese Academy of Agricultural Sciences, Shenzhen, Guangdong, China."
+                  },
+                  {
+                    "affiliation": "State Key Laboratory for Conservation and Utilization of Subtropical Agro-Bioresources, College of Animal Science and Technology, Guangxi University, Nanning, Guangxi, China."
+                  }
+                ]
+              }
+            },
+            {
+              "fullName": "Li N",
+              "firstName": "Nana",
+              "lastName": "Li",
+              "initials": "N",
+              "authorId": {
+                "type": "ORCID",
+                "value": "0000-0001-7082-0379"
+              },
+              "authorAffiliationDetailsList": {
+                "authorAffiliation": [
+                  {
+                    "affiliation": "State Key Laboratory of Genome and Multi-omics Technologies, Shenzhen Branch, Guangdong Laboratory of Lingnan Modern Agriculture, Key Laboratory of Gene Editing Technologies (Hainan), Ministry of Agriculture and Rural Affairs, Agricultural Genomics Institute at Shenzhen, Guangdong, Chinese Academy of Agricultural Sciences, Shenzhen, Guangdong, China."
+                  },
+                  {
+                    "affiliation": "Key Laboratory of Agricultural Animal Genetics, Breeding and Reproduction of Ministry of Education & Key Lab of Swine Genetics and Breeding of Ministry of Agriculture and Rural Affairs, Huazhong Agricultural University, Wuhan, Hubei, China."
+                  }
+                ]
+              }
+            },
+            {
+              "fullName": "Xie L",
+              "firstName": "Long",
+              "lastName": "Xie",
+              "initials": "L",
+              "authorAffiliationDetailsList": {
+                "authorAffiliation": [
+                  {
+                    "affiliation": "State Key Laboratory of Genome and Multi-omics Technologies, Shenzhen Branch, Guangdong Laboratory of Lingnan Modern Agriculture, Key Laboratory of Gene Editing Technologies (Hainan), Ministry of Agriculture and Rural Affairs, Agricultural Genomics Institute at Shenzhen, Guangdong, Chinese Academy of Agricultural Sciences, Shenzhen, Guangdong, China."
+                  }
+                ]
+              }
+            },
+            {
+              "fullName": "Zuo E",
+              "firstName": "Erwei",
+              "lastName": "Zuo",
+              "initials": "E",
+              "authorId": {
+                "type": "ORCID",
+                "value": "0000-0001-8259-0275"
+              },
+              "authorAffiliationDetailsList": {
+                "authorAffiliation": [
+                  {
+                    "affiliation": "State Key Laboratory of Genome and Multi-omics Technologies, Shenzhen Branch, Guangdong Laboratory of Lingnan Modern Agriculture, Key Laboratory of Gene Editing Technologies (Hainan), Ministry of Agriculture and Rural Affairs, Agricultural Genomics Institute at Shenzhen, Guangdong, Chinese Academy of Agricultural Sciences, Shenzhen, Guangdong, China. zuoerwei@caas.cn."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "authorIdList": {
+          "authorId": [
+            {
+              "type": "ORCID",
+              "value": "0000-0001-7082-0379"
+            },
+            {
+              "type": "ORCID",
+              "value": "0000-0001-8259-0275"
+            },
+            {
+              "type": "ORCID",
+              "value": "0000-0002-0865-0206"
+            }
+          ]
+        },
+        "dataLinksTagsList": {
+          "dataLinkstag": [
+            "altmetrics",
+            "supporting_data"
+          ]
+        },
+        "journalInfo": {
+          "issue": "1",
+          "volume": "12",
+          "journalIssueId": 4190352,
+          "dateOfPublication": "2026 May",
+          "monthOfPublication": 5,
+          "yearOfPublication": 2026,
+          "printPublicationDate": "2026-05-01",
+          "journal": {
+            "title": "Cell discovery",
+            "medlineAbbreviation": "Cell Discov",
+            "isoabbreviation": "Cell Discov",
+            "nlmid": "101661034",
+            "issn": "2056-5968",
+            "essn": "2056-5968"
+          }
+        },
+        "pubYear": "2026",
+        "pageInfo": "32",
+        "abstractText": "Despite the power of CRISPR in genome editing, its clinical application is limited by off-target effects; these effects are currently difficult to evaluate at the genome level but are likely to involve chromatin context. Here, we developed the Endogenous Genome-wide Off-target Library Detection (EGOLD) method for high-throughput detection of off-target effects and identification of chromatin context bias in gene editor evaluation. Applying EGOLD to define the off-target characteristics of 17 base-editing tools revealed 2,145,592 total off-targets, with 1236-618,774 events detected per tool. The frequency of off-targets of CRISPR/Cas9 and derivative base editors ranged from 40% to 80% and were strongly influenced by the chromatin context. Using a large-scale endogenous off-target dataset with strict target site conditions to exclude the influence of sequence context, we found that off-target effects occurred in open chromatin genomic regions at a significantly greater frequency than in closed chromatin regions. The incorporation of EGOLD-Seq off-target chromatin context data to train machine learning-based models of gene editor activity substantially improved off-target prediction accuracy. These findings and the accompanying toolkit can guide mechanistic research and the development of safe and precise CRISPR-based tools.",
+        "affiliation": "State Key Laboratory of Genome and Multi-omics Technologies, Shenzhen Branch, Guangdong Laboratory of Lingnan Modern Agriculture, Key Laboratory of Gene Editing Technologies (Hainan), Ministry of Agriculture and Rural Affairs, Agricultural Genomics Institute at Shenzhen, Guangdong, Chinese Academy of Agricultural Sciences, Shenzhen, Guangdong, China.",
+        "publicationStatus": "epublish",
+        "language": "eng",
+        "pubModel": "Electronic",
+        "pubTypeList": {
+          "pubType": [
+            "research-article",
+            "Journal Article"
+          ]
+        },
+        "grantsList": {
+          "grant": [
+            {
+              "grantId": "32371549",
+              "agency": "National Natural Science Foundation of China (National Science Foundation of China)",
+              "orderIn": 0
+            }
+          ]
+        },
+        "fullTextUrlList": {
+          "fullTextUrl": [
+            {
+              "availability": "Subscription required",
+              "availabilityCode": "S",
+              "documentStyle": "doi",
+              "site": "DOI",
+              "url": "https://doi.org/10.1038/s41421-026-00889-2"
+            },
+            {
+              "availability": "Open access",
+              "availabilityCode": "OA",
+              "documentStyle": "html",
+              "site": "Europe_PMC",
+              "url": "https://europepmc.org/articles/PMC13172344"
+            },
+            {
+              "availability": "Open access",
+              "availabilityCode": "OA",
+              "documentStyle": "pdf",
+              "site": "Europe_PMC",
+              "url": "https://europepmc.org/articles/PMC13172344?pdf=render"
+            }
+          ]
+        },
+        "isOpenAccess": "Y",
+        "inEPMC": "Y",
+        "inPMC": "Y",
+        "hasPDF": "Y",
+        "hasBook": "N",
+        "hasSuppl": "Y",
+        "citedByCount": 0,
+        "hasData": "Y",
+        "hasReferences": "Y",
+        "hasTextMinedTerms": "Y",
+        "hasDbCrossReferences": "N",
+        "hasLabsLinks": "Y",
+        "license": "cc by",
+        "hasEvaluations": "N",
+        "authMan": "N",
+        "epmcAuthMan": "N",
+        "nihAuthMan": "N",
+        "hasTMAccessionNumbers": "Y",
+        "tmAccessionTypeList": {
+          "accessionType": [
+            "gca"
+          ]
+        },
+        "dateOfCompletion": "2026-05-13",
+        "dateOfCreation": "2026-05-13",
+        "firstIndexDate": "2026-05-15",
+        "fullTextReceivedDate": "2026-05-20",
+        "dateOfRevision": "2026-08-13",
+        "electronicPublicationDate": "2026-05-13",
+        "firstPublicationDate": "2026-05-13"
+      },
+      {
+        "id": "41775694",
+        "source": "MED",
+        "pmid": "41775694",
+        "pmcid": "PMC12957359",
+        "fullTextIdList": {
+          "fullTextId": [
+            "PMC12957359"
+          ]
+        },
+        "doi": "10.1038/s41392-026-02605-8",
+        "title": "CRISPR gene editing of angiopoietin-like 3: toward one-time precision therapy for dyslipidaemia.",
+        "authorString": "Mondal A, Misra A.",
+        "authorList": {
+          "author": [
+            {
+              "fullName": "Mondal A",
+              "firstName": "Amandeep",
+              "lastName": "Mondal",
+              "initials": "A",
+              "authorId": {
+                "type": "ORCID",
+                "value": "0009-0009-4498-6485"
+              },
+              "authorAffiliationDetailsList": {
+                "authorAffiliation": [
+                  {
+                    "affiliation": "Heart Research Institute, Sydney, NSW, Australia."
+                  }
+                ]
+              }
+            },
+            {
+              "fullName": "Misra A",
+              "firstName": "Ashish",
+              "lastName": "Misra",
+              "initials": "A",
+              "authorId": {
+                "type": "ORCID",
+                "value": "0000-0002-8901-4788"
+              },
+              "authorAffiliationDetailsList": {
+                "authorAffiliation": [
+                  {
+                    "affiliation": "Heart Research Institute, Sydney, NSW, Australia. Ashish.misra@hri.org.au."
+                  },
+                  {
+                    "affiliation": "Faculty of Medicine and Health, The University of Sydney, Sydney, NSW, Australia. Ashish.misra@hri.org.au."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "authorIdList": {
+          "authorId": [
+            {
+              "type": "ORCID",
+              "value": "0000-0002-8901-4788"
+            },
+            {
+              "type": "ORCID",
+              "value": "0009-0009-4498-6485"
+            }
+          ]
+        },
+        "journalInfo": {
+          "issue": "1",
+          "volume": "11",
+          "journalIssueId": 4138058,
+          "dateOfPublication": "2026 Mar",
+          "monthOfPublication": 3,
+          "yearOfPublication": 2026,
+          "printPublicationDate": "2026-03-01",
+          "journal": {
+            "title": "Signal transduction and targeted therapy",
+            "medlineAbbreviation": "Signal Transduct Target Ther",
+            "isoabbreviation": "Signal Transduct Target Ther",
+            "nlmid": "101676423",
+            "issn": "2095-9907",
+            "essn": "2059-3635"
+          }
+        },
+        "pubYear": "2026",
+        "pageInfo": "77",
+        "affiliation": "Heart Research Institute, Sydney, NSW, Australia.",
+        "publicationStatus": "epublish",
+        "language": "eng",
+        "pubModel": "Electronic",
+        "pubTypeList": {
+          "pubType": [
+            "brief-report",
+            "Journal Article"
+          ]
+        },
+        "subsetList": {
+          "subset": [
+            {
+              "code": "IM",
+              "name": "Index Medicus"
+            }
+          ]
+        },
+        "fullTextUrlList": {
+          "fullTextUrl": [
+            {
+              "availability": "Subscription required",
+              "availabilityCode": "S",
+              "documentStyle": "doi",
+              "site": "DOI",
+              "url": "https://doi.org/10.1038/s41392-026-02605-8"
+            },
+            {
+              "availability": "Open access",
+              "availabilityCode": "OA",
+              "documentStyle": "html",
+              "site": "Europe_PMC",
+              "url": "https://europepmc.org/articles/PMC12957359"
+            },
+            {
+              "availability": "Open access",
+              "availabilityCode": "OA",
+              "documentStyle": "pdf",
+              "site": "Europe_PMC",
+              "url": "https://europepmc.org/articles/PMC12957359?pdf=render"
+            }
+          ]
+        },
+        "isOpenAccess": "Y",
+        "inEPMC": "Y",
+        "inPMC": "Y",
+        "hasPDF": "Y",
+        "hasBook": "N",
+        "hasSuppl": "N",
+        "citedByCount": 0,
+        "hasData": "N",
+        "hasReferences": "Y",
+        "hasTextMinedTerms": "Y",
+        "hasDbCrossReferences": "N",
+        "hasLabsLinks": "N",
+        "license": "cc by-nc-nd",
+        "hasEvaluations": "N",
+        "authMan": "N",
+        "epmcAuthMan": "N",
+        "nihAuthMan": "N",
+        "hasTMAccessionNumbers": "N",
+        "dateOfCreation": "2026-03-03",
+        "firstIndexDate": "2026-03-04",
+        "fullTextReceivedDate": "2026-03-05",
+        "dateOfRevision": "2026-08-13",
+        "electronicPublicationDate": "2026-03-04",
+        "firstPublicationDate": "2026-03-04"
+      },
+      {
+        "id": "41849748",
+        "source": "MED",
+        "pmid": "41849748",
+        "pmcid": "PMC12999195",
+        "fullTextIdList": {
+          "fullTextId": [
+            "PMC12999195"
+          ]
+        },
+        "doi": "10.1111/tpj.70794",
+        "title": "CRISPR gene editing of AtRING1 unravels a critical role of RAWUL domain in PRC1 repression of transcription.",
+        "authorString": "Wang Q, Chen D, Berr A, Shen WH.",
+        "authorList": {
+          "author": [
+            {
+              "fullName": "Wang Q",
+              "firstName": "Qiannan",
+              "lastName": "Wang",
+              "initials": "Q",
+              "authorId": {
+                "type": "ORCID",
+                "value": "0000-0003-0696-0494"
+              },
+              "authorAffiliationDetailsList": {
+                "authorAffiliation": [
+                  {
+                    "affiliation": "Institut de Biologie Moléculaire des Plantes (IBMP), CNRS, Université de Strasbourg, Strasbourg, France."
+                  },
+                  {
+                    "affiliation": "Laboratory of Cell Fate Control, School of Life Sciences, Westlake University, Hangzhou, China."
+                  }
+                ]
+              }
+            },
+            {
+              "fullName": "Chen D",
+              "firstName": "Donghong",
+              "lastName": "Chen",
+              "initials": "D",
+              "authorAffiliationDetailsList": {
+                "authorAffiliation": [
+                  {
+                    "affiliation": "Institut de Biologie Moléculaire des Plantes (IBMP), CNRS, Université de Strasbourg, Strasbourg, France."
+                  },
+                  {
+                    "affiliation": "National Key Laboratory for Development and Utilization of Forest Food Resources, Zhejiang A&F University, Hangzhou, 311300, China."
+                  }
+                ]
+              }
+            },
+            {
+              "fullName": "Berr A",
+              "firstName": "Alexandre",
+              "lastName": "Berr",
+              "initials": "A",
+              "authorAffiliationDetailsList": {
+                "authorAffiliation": [
+                  {
+                    "affiliation": "Institut de Biologie Moléculaire des Plantes (IBMP), CNRS, Université de Strasbourg, Strasbourg, France."
+                  }
+                ]
+              }
+            },
+            {
+              "fullName": "Shen WH",
+              "firstName": "Wen-Hui",
+              "lastName": "Shen",
+              "initials": "WH",
+              "authorAffiliationDetailsList": {
+                "authorAffiliation": [
+                  {
+                    "affiliation": "Institut de Biologie Moléculaire des Plantes (IBMP), CNRS, Université de Strasbourg, Strasbourg, France."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "authorIdList": {
+          "authorId": [
+            {
+              "type": "ORCID",
+              "value": "0000-0003-0696-0494"
+            }
+          ]
+        },
+        "dataLinksTagsList": {
+          "dataLinkstag": [
+            "altmetrics",
+            "supporting_data"
+          ]
+        },
+        "journalInfo": {
+          "issue": "6",
+          "volume": "125",
+          "journalIssueId": 4150673,
+          "dateOfPublication": "2026 Mar",
+          "monthOfPublication": 3,
+          "yearOfPublication": 2026,
+          "printPublicationDate": "2026-03-01",
+          "journal": {
+            "title": "The Plant journal : for cell and molecular biology",
+            "medlineAbbreviation": "Plant J",
+            "isoabbreviation": "Plant J",
+            "nlmid": "9207397",
+            "issn": "0960-7412",
+            "essn": "1365-313X"
+          }
+        },
+        "pubYear": "2026",
+        "pageInfo": "e70794",
+        "abstractText": "Polycomb Group (PcG) proteins, including members of Polycomb Repressive Complex 1 and 2 (PRC1 and PRC2), regulate many key developmental processes through transcriptional gene repression. While the molecular mechanisms of PRC2 and its histone methyltransferase involved in depositing histone 3 lysine 27 trimethylation (H3K27me3) are well understood, the components and E3 ubiquitin ligase functions of PRC1 in plants remain largely elusive. In Arabidopsis, AtRING1 is a key PRC1 component, containing an N-terminal RING-finger domain and a C-terminal RAWUL domain. Previous studies have relied on T-DNA insertion mutants in the investigation of AtRING1 function. By editing AtRING1A using CRISPR/Cas9 technology in the atring1b-1 background, here we have generated and characterized one N-terminal stop mutant atring1<sup>ko</sup> and two C-terminal deletion mutants atring1<sup>▵C-terminal</sup> lacking the RAWUL domain. We show evidence that atring1<sup>ko</sup> represents the strongest loss-of-function mutant, exhibiting embryonic callus-like structures, demonstrating the essential role of AtRING1 in cell differentiation. Remarkably, the atring1<sup>▵C-terminal</sup> mutants exhibit mild developmental defects, suggesting that the RING domain alone retains partial function, while the RAWUL domain fine-tunes PRC1 activity. Our molecular analyses support a model in which AtRING1/PRC1-mediated H2A monoubiquitination (H2Aub1) often precedes PRC2-mediated H3K27me3 deposition at some target loci. Strikingly, the RAWUL domain is required for efficient H2Aub1 enrichment and influences H3K27me3 deposition in a locus-specific manner. Taken together, our study provides new insights into the molecular mechanism underlying PRC1 E3 ligase activity, supporting that PRC1 function facilitates PRC2 activity in epigenetic gene silencing.",
+        "affiliation": "Institut de Biologie Moléculaire des Plantes (IBMP), CNRS, Université de Strasbourg, Strasbourg, France.",
+        "publicationStatus": "ppublish",
+        "language": "eng",
+        "pubModel": "Print",
+        "pubTypeList": {
+          "pubType": [
+            "research-article",
+            "Journal Article"
+          ]
+        },
+        "grantsList": {
+          "grant": [
+            {
+              "agency": "Centre National de la Recherche Scientifique",
+              "orderIn": 0
+            },
+            {
+              "grantId": "ANR-12-BSV2-0013-02",
+              "agency": "Agence National de la Recherche",
+              "orderIn": 0
+            }
+          ]
+        },
+        "meshHeadingList": {
+          "meshHeading": [
+            {
+              "majorTopic_YN": "Y",
+              "descriptorName": "Arabidopsis",
+              "meshQualifierList": {
+                "meshQualifier": [
+                  {
+                    "abbreviation": "GE",
+                    "qualifierName": "genetics",
+                    "majorTopic_YN": "N"
+                  },
+                  {
+                    "abbreviation": "ME",
+                    "qualifierName": "metabolism",
+                    "majorTopic_YN": "N"
+                  }
+                ]
+              }
+            },
+            {
+              "majorTopic_YN": "N",
+              "descriptorName": "Ubiquitin-Protein Ligases",
+              "meshQualifierList": {
+                "meshQualifier": [
+                  {
+                    "abbreviation": "GE",
+                    "qualifierName": "genetics",
+                    "majorTopic_YN": "N"
+                  },
+                  {
+                    "abbreviation": "ME",
+                    "qualifierName": "metabolism",
+                    "majorTopic_YN": "N"
+                  }
+                ]
+              }
+            },
+            {
+              "majorTopic_YN": "N",
+              "descriptorName": "Glucosyltransferases"
+            },
+            {
+              "majorTopic_YN": "N",
+              "descriptorName": "Histones",
+              "meshQualifierList": {
+                "meshQualifier": [
+                  {
+                    "abbreviation": "ME",
+                    "qualifierName": "metabolism",
+                    "majorTopic_YN": "N"
+                  }
+                ]
+              }
+            },
+            {
+              "majorTopic_YN": "Y",
+              "descriptorName": "Arabidopsis Proteins",
+              "meshQualifierList": {
+                "meshQualifier": [
+                  {
+                    "abbreviation": "GE",
+                    "qualifierName": "genetics",
+                    "majorTopic_YN": "N"
+                  },
+                  {
+                    "abbreviation": "ME",
+                    "qualifierName": "metabolism",
+                    "majorTopic_YN": "N"
+                  }
+                ]
+              }
+            },
+            {
+              "majorTopic_YN": "N",
+              "descriptorName": "Transcription, Genetic"
+            },
+            {
+              "majorTopic_YN": "N",
+              "descriptorName": "Gene Expression Regulation, Plant"
+            },
+            {
+              "majorTopic_YN": "N",
+              "descriptorName": "RING Finger Domains"
+            },
+            {
+              "majorTopic_YN": "Y",
+              "descriptorName": "Polycomb Repressive Complex 1",
+              "meshQualifierList": {
+                "meshQualifier": [
+                  {
+                    "abbreviation": "GE",
+                    "qualifierName": "genetics",
+                    "majorTopic_YN": "N"
+                  },
+                  {
+                    "abbreviation": "ME",
+                    "qualifierName": "metabolism",
+                    "majorTopic_YN": "N"
+                  }
+                ]
+              }
+            },
+            {
+              "majorTopic_YN": "N",
+              "descriptorName": "CRISPR-Cas Systems"
+            },
+            {
+              "majorTopic_YN": "N",
+              "descriptorName": "Protein Domains"
+            },
+            {
+              "majorTopic_YN": "N",
+              "descriptorName": "Gene Editing"
+            }
+          ]
+        },
+        "keywordList": {
+          "keyword": [
+            "Arabidopsis",
+            "Plant development",
+            "H3k27me3",
+            "Atring1",
+            "H2aub1",
+            "Rawul Domain"
+          ]
+        },
+        "chemicalList": {
+          "chemical": [
+            {
+              "name": "PRC1 protein, Arabidopsis",
+              "registryNumber": "EC 2.4.1.-"
+            },
+            {
+              "name": "Histones",
+              "registryNumber": "0"
+            },
+            {
+              "name": "Glucosyltransferases",
+              "registryNumber": "EC 2.4.1.-"
+            },
+            {
+              "name": "Arabidopsis Proteins",
+              "registryNumber": "0"
+            },
+            {
+              "name": "Ubiquitin-Protein Ligases",
+              "registryNumber": "EC 2.3.2.27"
+            },
+            {
+              "name": "Polycomb Repressive Complex 1",
+              "registryNumber": "EC 2.3.2.27"
+            }
+          ]
+        },
+        "subsetList": {
+          "subset": [
+            {
+              "code": "IM",
+              "name": "Index Medicus"
+            }
+          ]
+        },
+        "fullTextUrlList": {
+          "fullTextUrl": [
+            {
+              "availability": "Subscription required",
+              "availabilityCode": "S",
+              "documentStyle": "doi",
+              "site": "DOI",
+              "url": "https://doi.org/10.1111/tpj.70794"
+            },
+            {
+              "availability": "Open access",
+              "availabilityCode": "OA",
+              "documentStyle": "html",
+              "site": "Europe_PMC",
+              "url": "https://europepmc.org/articles/PMC12999195"
+            },
+            {
+              "availability": "Open access",
+              "availabilityCode": "OA",
+              "documentStyle": "pdf",
+              "site": "Europe_PMC",
+              "url": "https://europepmc.org/articles/PMC12999195?pdf=render"
+            }
+          ]
+        },
+        "isOpenAccess": "Y",
+        "inEPMC": "Y",
+        "inPMC": "Y",
+        "hasPDF": "Y",
+        "hasBook": "N",
+        "hasSuppl": "Y",
+        "citedByCount": 0,
+        "hasData": "Y",
+        "hasReferences": "Y",
+        "hasTextMinedTerms": "Y",
+        "hasDbCrossReferences": "N",
+        "hasLabsLinks": "Y",
+        "license": "cc by",
+        "hasEvaluations": "N",
+        "authMan": "N",
+        "epmcAuthMan": "N",
+        "nihAuthMan": "N",
+        "hasTMAccessionNumbers": "Y",
+        "tmAccessionTypeList": {
+          "accessionType": [
+            "uniprot"
+          ]
+        },
+        "dateOfCompletion": "2026-07-11",
+        "dateOfCreation": "2026-03-18",
+        "firstIndexDate": "2026-03-18",
+        "fullTextReceivedDate": "2026-03-19",
+        "dateOfRevision": "2026-08-13",
+        "firstPublicationDate": "2026-03-01"
+      }
+    ]
+  }
+}

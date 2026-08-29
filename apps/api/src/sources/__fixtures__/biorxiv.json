@@ -1,0 +1,87 @@
+{
+  "messages": [
+    {
+      "status": "ok",
+      "category": "all",
+      "interval": "2026-07-30:2026-08-29",
+      "funder": "all",
+      "cursor": 0,
+      "count": 30,
+      "count_new_papers": "4323",
+      "total": "5940"
+    }
+  ],
+  "collection": [
+    {
+      "title": "Symmetric brain-liver circuits mediate lateralized regulation of hepatic glucose output in mice",
+      "authors": "Wang, Z.; Gong, X.; Jiang, L.; Wang, K.; Sun, X.; Li, Y.; Ran, M.; Chen, Y.; Wang, H.; Chu, X.; Wang, S.; Wang, J.; Zheng, X.; Hao, H.; Xie, H.",
+      "author_corresponding": "Hao Xie",
+      "author_corresponding_institution": "China Pharmaceutical University",
+      "doi": "10.1101/2025.10.27.684732",
+      "date": "2026-07-30",
+      "version": "3",
+      "type": "new results",
+      "license": "cc_by",
+      "category": "neuroscience",
+      "jatsxml": "https://www.biorxiv.org/content/early/2026/07/30/2025.10.27.684732.source.xml",
+      "abstract": "Neural lateralization is well recognized in the control of contralateral somatic movement, yet its relevance to visceral organ regulation remains poorly understood. This study aimed to determine whether the central nervous system exerts lateralized control over hepatic glucose metabolism and to localize the site of peripheral sympathetic crossover to the liver. Pseudorabies virus (PRV) tracing revealed bilateral projections from the lateral paragigantocellular nucleus (LPGi) with preferential innervation of the contralateral hepatic lobes. Unilateral LPGi activation elevated systemic glucose by enhancing glycogenolysis and gluconeogenesis specifically in contralateral lobes, whereas bilateral activation produced additive effects. Following unilateral hepatic denervation, contralateral LPGi activation induced metabolic compensation in the remaining innervated lobes, characterized by increased norepinephrine release, glucose production, and glycogen depletion. Whole-mount tissue clearing and dual viral tracing localized the sympathetic crossover to the porta hepatis. Developmental analysis showed that lobar-specific innervation along the vasculature emerges by postnatal week 2. These findings demonstrate that the brainstem can exert lobe-specific, lateralized control of hepatic glucose metabolism via bilaterally projecting brain - liver sympathetic pathways. This contralateral regulation arises from a peripheral decussation at the porta hepatis, and the compensatory activation observed after denervation reveals an intrinsic neuroadaptive mechanism that helps safeguard systemic glucose homeostasis.\n\nHighlightsO_LIBrain-liver sympathetic projections exhibit predominant contralateral innervation\nC_LIO_LIUnilateral LPGi activation drives glucose production in contralateral hepatic lobes\nC_LIO_LIUnilateral denervation augments contralateral LPGi-mediated metabolic compensation\nC_LIO_LISympathetic crossover to the liver localizes at the porta hepatis\nC_LI",
+      "funder": "NA",
+      "published": "NA",
+      "server": "bioRxiv"
+    },
+    {
+      "title": "An integrated genomic framework for Aeromonas genomic species delineation using average nucleotide identify, core-genome phylogeny and digital DNA-DNA hybridization",
+      "authors": "Lu, A. C.; Wu, R.; Lan, R.; Zhang, L.",
+      "author_corresponding": "Li Zhang",
+      "author_corresponding_institution": "UNSW",
+      "doi": "10.64898/2026.02.04.703925",
+      "date": "2026-07-30",
+      "version": "5",
+      "type": "new results",
+      "license": "cc_by_nc_nd",
+      "category": "microbiology",
+      "jatsxml": "https://www.biorxiv.org/content/early/2026/07/30/2026.02.04.703925.source.xml",
+      "abstract": "Aeromonas taxonomy has long been complicated by overlapping phenotypic, biochemical, and protein profiles. Here, we establish a robust genome-based framework for Aeromonas genomic species delineation. We analysed average nucleotide identity (ANI) across 4,366 available Aeromonas genomes and demonstrated that at 96% ANI threshold, skANI and fastANI generated too many clusters (65 and 57 respectively) and these clusters were not supported by core genome phylogeny. We identified 95.4% skANI (equivalent to 95.6% fastANI) as an operational threshold for the delineating Aeromonas genomic species. Using the 95.4% skANI threshold, we identified 44 ANI clusters among the 4,366 genomes, of which 43 clusters were genomic species supported by the core-genome phylogeny. Thirty-four of the 43 genomic species corresponded to existing taxonomic species, whilst the remaining nine are currently not recognised as taxonomic species. All recognised taxonomic species represented in the dataset retained their existing species designation except Aeromonas mytilicola, which was not separated from Aeromonas rivipollensis in both ANI clusters and the core-genome phylogeny. The digital DNA-DNA hybridisation (dDDH) values between the genomic species were below 70%, further supporting genomic species delineation. We further developed AeromonasGStyper, a genomic species typing tool that assigns query genomes based on ANI similarity to medoid genomes. In conclusion, this study establishes a genomic species framework for genome-based classification of Aeromonas and provides a practical approach for future genomic surveillance.\n\nImpact StatementAeromonas species have gained increased attention as emerging human enteric pathogens. Aeromonas taxonomy has long been complicated by overlapping phenotypic, biochemical, and protein profiles. Although a 96% average nucleotide identity (ANI) threshold was proposed previously for Aeromonas species delineation, analysis of 4,366 Aeromonas genomes demonstrated that this threshold generated excessive genomic clusters that were not supported by the core-genome phylogeny. We identified 95.4% skANI (equivalent to 95.6% fastANI) as an operational threshold for delineating Aeromonas genomic species, supported by core-genome phylogeny and digital DNA-DNA hybridisation (dDDH). The framework identified 43 genomic species, including 34 corresponding to recognised taxonomic species and nine genomic species that do not correspond to currently recognised taxonomic species. In addition, our data showed that Aeromonas mytilicola was not separated from Aeromonas rivipollensis by ANI clustering and core-genome phylogeny, supporting further taxonomic reassessment of the distinction between these two species.",
+      "funder": [
+        {
+          "name": "University of New South Wales",
+          "id": "",
+          "id-type": "ROR",
+          "award": "IR001/BABS/PS46772;"
+        }
+      ],
+      "published": "NA",
+      "server": "bioRxiv"
+    },
+    {
+      "title": "BRD4 represses developmental and neuronal genes through interaction with PRC1.6",
+      "authors": "Boulet, F.; Patel, M.; Zanjani, Z. S.; Andres-Sanchez, N.; Ijaz, A.; Pal, D.; Dubey, P.; Murray, A.; Nizetic, D.; LeClaire, M. D.; Bursch, K. L.; Smith, B. C.; Madapura, P. M.",
+      "author_corresponding": "Pradeepa M Madapura",
+      "author_corresponding_institution": "Queen Mary University of London",
+      "doi": "10.64898/2026.01.31.702994",
+      "date": "2026-07-30",
+      "version": "3",
+      "type": "new results",
+      "license": "cc_by",
+      "category": "molecular biology",
+      "jatsxml": "https://www.biorxiv.org/content/early/2026/07/30/2026.01.31.702994.source.xml",
+      "abstract": "BRD4 is best known as a transcriptional co-activator, yet heterozygous loss-of-function variants cause craniofacial and neurodevelopmental abnormalities through unclear mechanisms. Using human embryonic stem cells and neural organoids as an in vitro model of human embryonic brain development, we show that BRD4 represses polycomb-regulated developmental and neuronal genes. BRD4 co-occupies bivalent promoters with PRC1.6 and directly interacts with PCGF6 and RING1B through its C-terminal domain. H3K23ac contributes to BRD4 recruitment through BD2, linking acetylated chromatin recognition to polycomb-associated repression. Acute BRD4 depletion alters PRC1.6 occupancy, reduces ubiquitination of H2AK119 and rapidly increases developmental gene transcription. In neural organoids, BRD4 BD2 mutations alter neuronal cell composition and increase expression and chromatin accessibility associated with neuronal transcription-factor programmes. These findings establish BRD4 as a context-dependent chromatin regulator that prevents premature activation of developmental genes and provide mechanistic insight into BRD4-associated neurodevelopmental disorders.",
+      "funder": [
+        {
+          "name": "Medical Research Council",
+          "id": "https://ror.org/03x94j517",
+          "id-type": "ROR",
+          "award": "MR/T000783/1;MR/X008479/1;"
+        },
+        {
+          "name": "Barts Charity",
+          "id": "https://ror.org/0513pp416",
+          "id-type": "ROR",
+          "award": "G-002379;"
+        }
+      ],
+      "published": "NA",
+      "server": "bioRxiv"
+    }
+  ]
+}

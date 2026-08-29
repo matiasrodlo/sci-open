@@ -1,0 +1,64 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/maMDwxzzjaApsVYaweVj5OUZDA0</id>
+  <title>arXiv Query: search_query=all:crispr&amp;id_list=&amp;start=0&amp;max_results=3</title>
+  <updated>2026-08-29T01:44:21Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:crispr&amp;start=0&amp;max_results=3&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>3</opensearch:itemsPerPage>
+  <opensearch:totalResults>111</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2202.07171v1</id>
+    <title>Investigating the genomic background of CRISPR-Cas genomes for CRISPR-based antimicrobials</title>
+    <updated>2022-02-15T03:47:26Z</updated>
+    <link href="https://arxiv.org/abs/2202.07171v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2202.07171v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>CRISPR-Cas systems are an adaptive immunity that protects prokaryotes against foreign genetic elements. Genetic templates acquired during past infection events enable DNA-interacting enzymes to recognize foreign DNA for destruction. Due to the programmability and specificity of these genetic templates, CRISPR-Cas systems are potential alternative antibiotics that can be engineered to self-target antimicrobial resistance genes on the chromosome or plasmid. However, several fundamental questions remain to repurpose these tools against drug-resistant bacteria. For endogenous CRISPR-Cas self-targeting, antimicrobial resistance genes and functional CRISPR-Cas systems have to co-occur in the target cell. Furthermore, these tools have to outplay DNA repair pathways that respond to the nuclease activities of Cas proteins, even for exogenous CRISPR-Cas delivery. Here, we conduct a comprehensive survey of CRISPR-Cas genomes. First, we address the co-occurrence of CRISPR-Cas systems and antimicrobial resistance genes in the CRISPR-Cas genomes. We show that the average number of these genes varies greatly by the CRISPR-Cas type, and some CRISPR-Cas types (IE and IIIA) have over 20 genes per genome. Next, we investigate the DNA repair pathways of these CRISPR-Cas genomes, revealing that the diversity and frequency of these pathways differ by the CRISPR-Cas type. The interplay between CRISPR-Cas systems and DNA repair pathways is essential for the acquisition of new spacers in CRISPR arrays. We conduct simulation studies to demonstrate that the efficiency of these DNA repair pathways may be inferred from the time-series patterns in the RNA structure of CRISPR repeats. This bioinformatic survey of CRISPR-Cas genomes elucidates the necessity to consider multifaceted interactions between different genes and systems to design effective CRISPR-based antimicrobials.</summary>
+    <category term="q-bio.GN" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2022-02-15T03:47:26Z</published>
+    <arxiv:comment>27 pages, 5 figures</arxiv:comment>
+    <arxiv:primary_category term="q-bio.GN"/>
+    <author>
+      <name>Hyunjin Shim</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/1008.2714v1</id>
+    <title>Heterogeneous diversity of spacers within CRISPR</title>
+    <updated>2010-08-16T17:20:13Z</updated>
+    <link href="https://arxiv.org/abs/1008.2714v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/1008.2714v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Clustered regularly interspaced short palindromic repeats (CRISPR) in bacterial and archaeal DNA have recently been shown to be a new type of anti-viral immune system in these organisms. We here study the diversity of spacers in CRISPR under selective pressure. We propose a population dynamics model that explains the biological observation that the leader-proximal end of CRISPR is more diversified and the leader-distal end of CRISPR is more conserved. This result is shown to be in agreement with recent experiments. Our results show thatthe CRISPR spacer structure is influenced by and provides a record of the viral challenges that bacteria face.</summary>
+    <category term="q-bio.PE" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cond-mat.stat-mech" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2010-08-16T17:20:13Z</published>
+    <arxiv:comment>5 pages, 5 figures, to appear in Phys. Rev. Lett</arxiv:comment>
+    <arxiv:primary_category term="q-bio.PE"/>
+    <author>
+      <name>Jiankui He</name>
+    </author>
+    <author>
+      <name>Michael W. Deem</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2409.05938v1</id>
+    <title>DeepFM-Crispr: Prediction of CRISPR On-Target Effects via Deep Learning</title>
+    <updated>2024-09-09T17:33:54Z</updated>
+    <link href="https://arxiv.org/abs/2409.05938v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2409.05938v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Since the advent of CRISPR-Cas9, a groundbreaking gene-editing technology that enables precise genomic modifications via a short RNA guide sequence, there has been a marked increase in the accessibility and application of this technology across various fields. The success of CRISPR-Cas9 has spurred further investment and led to the discovery of additional CRISPR systems, including CRISPR-Cas13. Distinct from Cas9, which targets DNA, Cas13 targets RNA, offering unique advantages for gene modulation. We focus on Cas13d, a variant known for its collateral activity where it non-specifically cleaves adjacent RNA molecules upon activation, a feature critical to its function. We introduce DeepFM-Crispr, a novel deep learning model developed to predict the on-target efficiency and evaluate the off-target effects of Cas13d. This model harnesses a large language model to generate comprehensive representations rich in evolutionary and structural data, thereby enhancing predictions of RNA secondary structures and overall sgRNA efficacy. A transformer-based architecture processes these inputs to produce a predictive efficacy score. Comparative experiments show that DeepFM-Crispr not only surpasses traditional models but also outperforms recent state-of-the-art deep learning methods in terms of prediction accuracy and reliability.</summary>
+    <category term="q-bio.QM" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-09-09T17:33:54Z</published>
+    <arxiv:comment>11 page, 2 figures, accepted to ICMLA 2024</arxiv:comment>
+    <arxiv:primary_category term="q-bio.QM"/>
+    <author>
+      <name>Condy Bao</name>
+    </author>
+    <author>
+      <name>Fuxiao Liu</name>
+    </author>
+  </entry>
+</feed>

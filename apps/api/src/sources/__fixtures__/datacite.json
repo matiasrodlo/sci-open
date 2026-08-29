@@ -1,0 +1,343 @@
+{
+  "data": [
+    {
+      "id": "10.25434/susanna-croci_phd2020",
+      "type": "dois",
+      "attributes": {
+        "doi": "10.25434/susanna-croci_phd2020",
+        "identifiers": [],
+        "creators": [
+          {
+            "nameType": "Personal",
+            "givenName": "SUSANNA",
+            "familyName": "CROCI",
+            "name": "Susanna Croci",
+            "nameIdentifiers": [
+              {
+                "nameIdentifierScheme": "ORCID",
+                "schemeUri": "https://orcid.org",
+                "nameIdentifier": "https://orcid.org/0000-0003-2963-7809"
+              }
+            ],
+            "affiliation": []
+          }
+        ],
+        "titles": [
+          {
+            "title": "CRISPR-Cas9 gene editing: a new promising treatment for Rett syndrome"
+          }
+        ],
+        "publisher": "Universit� degli Studi di Siena",
+        "container": {},
+        "publicationYear": 2020,
+        "subjects": [],
+        "contributors": [],
+        "dates": [
+          {
+            "date": "2020",
+            "dateType": "Issued"
+          }
+        ],
+        "language": "en",
+        "types": {
+          "schemaOrg": "ScholarlyArticle",
+          "resourceTypeGeneral": "Text",
+          "citeproc": "article-journal",
+          "bibtex": "article",
+          "ris": "RPRT",
+          "resourceType": "\n\tText\n"
+        },
+        "relatedIdentifiers": [],
+        "relatedItems": [],
+        "sizes": [],
+        "formats": [],
+        "version": null,
+        "rightsList": [],
+        "descriptions": [
+          {
+            "descriptionType": "Abstract",
+            "description": "Rett syndrome (RTT) is a neurodevelopmental disorder affecting the central nervous system and is one of the most common causes of intellectual disability in girls, resulting in severe cognitive and physical disabilities. Mutations in MECP2 and FOXG1 genes cause the classic form and the congenital variant of Rett syndrome, respectively. Both genes are transcriptional regulators and both under- and over-expression of these gene cause disease in humans. To characterize the biological mechanisms implicated in disease pathogenesis, we established and characterized a human neuronal model based on genetic reprogramming of patient fibroblasts into induced Pluripotent Stem Cells (iPSCs). Functional analyses performed in MECP2 iPSC-derived neurons demonstrated that these cells closely mimic the impairment of molecular pathway characterizing the disease revealing defects in GABAergic system and cytoskeleton dynamics. Furthermore, we explored the possibility to use iPSC-derived neurons to develop and study a new treatment for RTT patients. Effective therapies are not currently available and the need for tight regulation of MeCP2 and FOXG1 expression for proper brain functioning makes gene replacement therapy risky. Therefore, gene editing would be much more effective. Gene editing based on CRISPR/Cas9 technology and Homology Directed Repair appears an appealing option for the development of new therapeutic approaches. We have engineered a two-plasmid system to correct FOXG1 (c.688C&gt;T (p(Arg230Cys)); C.765G&gt;A (p.Trp255Ter)) and MECP2 (c.473C&gt;T-p.Thr158Met) variants.. Mutation-specific sgRNAs and donor DNAs have been selected and cloned together with an mCherry/GFP reporter system. Cas9 flanked by sgRNA recognition sequences for auto-cleaving has been cloned in a second plasmid. The system has been designed to be ready for in vivo delivery via Adeno-Associated Viral (AAV) vectors. NGS analysis of corrected cells from MECP2 and FOXG1 patients demonstrated an high editing efficiency, ranging from 20 to 80 % of HDR and confirmed that this correction strategy is feasible in neurons. Functional analyses in edited cells confirm the correction of molecular defects due to the mutation. Based on the use of AAV viruses and their capacity to cross the Blood Brain Barrier (BBB) following intravenous injection these experiments will allow us to demonstrate the full potential of gene editing as a therapeutic option for RTT and for other neurodevelopmental disorders currently lacking an effective treatment."
+          }
+        ],
+        "geoLocations": [],
+        "fundingReferences": [],
+        "url": "https://usiena-air.unisi.it//handle/11365/1120546",
+        "contentUrl": null,
+        "metadataVersion": 1720,
+        "schemaVersion": "http://datacite.org/schema/kernel-4",
+        "source": "mds",
+        "isActive": true,
+        "state": "findable",
+        "reason": null,
+        "viewCount": 0,
+        "downloadCount": 0,
+        "referenceCount": 0,
+        "citationCount": 0,
+        "partCount": 0,
+        "partOfCount": 0,
+        "versionCount": 0,
+        "versionOfCount": 0,
+        "created": "2021-11-01T06:26:26Z",
+        "registered": "2021-11-01T06:29:33Z",
+        "published": null,
+        "updated": "2026-08-28T15:36:33Z"
+      },
+      "relationships": {
+        "client": {
+          "data": {
+            "id": "crui.unisi",
+            "type": "clients"
+          }
+        }
+      }
+    },
+    {
+      "id": "10.5281/zenodo.19832591",
+      "type": "dois",
+      "attributes": {
+        "doi": "10.5281/zenodo.19832591",
+        "identifiers": [],
+        "creators": [
+          {
+            "nameType": "Personal",
+            "affiliation": [
+              "MedicOath"
+            ],
+            "familyName": "MedicOath Autonomous Discovery Engine",
+            "name": "MedicOath Autonomous Discovery Engine",
+            "nameIdentifiers": []
+          }
+        ],
+        "titles": [
+          {
+            "title": "CRISPR base editing for partial ADSL activity restoration"
+          }
+        ],
+        "publisher": "Zenodo",
+        "container": {},
+        "publicationYear": 2026,
+        "subjects": [
+          {
+            "subject": "Adenylosuccinate lyase deficiency"
+          },
+          {
+            "subject": "drug repurposing"
+          },
+          {
+            "subject": "MedicOath"
+          },
+          {
+            "subject": "novel_target"
+          }
+        ],
+        "contributors": [],
+        "dates": [
+          {
+            "date": "2026-04-28",
+            "dateType": "Issued"
+          }
+        ],
+        "language": null,
+        "types": {
+          "schemaOrg": "CreativeWork",
+          "resourceTypeGeneral": "Preprint",
+          "citeproc": "article",
+          "bibtex": "misc",
+          "ris": "GEN",
+          "resourceType": ""
+        },
+        "relatedIdentifiers": [
+          {
+            "relationType": "HasVersion",
+            "relatedIdentifier": "10.5281/zenodo.19832592",
+            "relatedIdentifierType": "DOI"
+          }
+        ],
+        "relatedItems": [],
+        "sizes": [],
+        "formats": [],
+        "version": null,
+        "rightsList": [
+          {
+            "rightsIdentifierScheme": "SPDX",
+            "rightsUri": "https://creativecommons.org/publicdomain/zero/1.0/legalcode",
+            "schemeUri": "https://spdx.org/licenses/",
+            "rights": "Creative Commons Zero v1.0 Universal",
+            "rightsIdentifier": "cc0-1.0"
+          }
+        ],
+        "descriptions": [
+          {
+            "descriptionType": "Abstract",
+            "description": "Cytosine base editors target common missense mutations in ADSL gene (such as R303C) to restore partial enzyme activity through precise C→T transitions, converting pathogenic codons back to functional amino acids"
+          },
+          {
+            "descriptionType": "Other",
+            "description": "IPFS: QmPyBq2m7XfznoTtzdq9yq1c9v4yx1hmwmw9SmRF81ba6x. TX: 0x317538eae728402c4fae9a5b53d620e0dfa9dc08cb1967a0e198e4f213a381fb. CC0."
+          }
+        ],
+        "geoLocations": [],
+        "fundingReferences": [],
+        "url": "https://zenodo.org/doi/10.5281/zenodo.19832591",
+        "contentUrl": null,
+        "metadataVersion": 1,
+        "schemaVersion": "http://datacite.org/schema/kernel-4",
+        "source": "api",
+        "isActive": true,
+        "state": "findable",
+        "reason": null,
+        "viewCount": 0,
+        "downloadCount": 0,
+        "referenceCount": 0,
+        "citationCount": 0,
+        "partCount": 0,
+        "partOfCount": 0,
+        "versionCount": 2,
+        "versionOfCount": 1,
+        "created": "2026-04-27T22:06:32Z",
+        "registered": "2026-04-27T22:06:32Z",
+        "published": null,
+        "updated": "2026-08-27T21:18:21Z"
+      },
+      "relationships": {
+        "client": {
+          "data": {
+            "id": "cern.zenodo",
+            "type": "clients"
+          }
+        }
+      }
+    },
+    {
+      "id": "10.5281/zenodo.19832592",
+      "type": "dois",
+      "attributes": {
+        "doi": "10.5281/zenodo.19832592",
+        "identifiers": [
+          {
+            "identifier": "oai:zenodo.org:19832592",
+            "identifierType": "oai"
+          }
+        ],
+        "creators": [
+          {
+            "nameType": "Personal",
+            "affiliation": [
+              "MedicOath"
+            ],
+            "familyName": "MedicOath Autonomous Discovery Engine",
+            "name": "MedicOath Autonomous Discovery Engine",
+            "nameIdentifiers": []
+          }
+        ],
+        "titles": [
+          {
+            "title": "CRISPR base editing for partial ADSL activity restoration"
+          }
+        ],
+        "publisher": "Zenodo",
+        "container": {},
+        "publicationYear": 2026,
+        "subjects": [
+          {
+            "subject": "Adenylosuccinate lyase deficiency"
+          },
+          {
+            "subject": "drug repurposing"
+          },
+          {
+            "subject": "MedicOath"
+          },
+          {
+            "subject": "novel_target"
+          }
+        ],
+        "contributors": [],
+        "dates": [
+          {
+            "date": "2026-04-28",
+            "dateType": "Issued"
+          }
+        ],
+        "language": null,
+        "types": {
+          "schemaOrg": "CreativeWork",
+          "resourceTypeGeneral": "Preprint",
+          "citeproc": "article",
+          "bibtex": "misc",
+          "ris": "GEN",
+          "resourceType": ""
+        },
+        "relatedIdentifiers": [
+          {
+            "relationType": "IsVersionOf",
+            "relatedIdentifier": "10.5281/zenodo.19832591",
+            "relatedIdentifierType": "DOI"
+          }
+        ],
+        "relatedItems": [],
+        "sizes": [],
+        "formats": [],
+        "version": null,
+        "rightsList": [
+          {
+            "rightsIdentifierScheme": "SPDX",
+            "rightsUri": "https://creativecommons.org/publicdomain/zero/1.0/legalcode",
+            "schemeUri": "https://spdx.org/licenses/",
+            "rights": "Creative Commons Zero v1.0 Universal",
+            "rightsIdentifier": "cc0-1.0"
+          }
+        ],
+        "descriptions": [
+          {
+            "descriptionType": "Abstract",
+            "description": "Cytosine base editors target common missense mutations in ADSL gene (such as R303C) to restore partial enzyme activity through precise C→T transitions, converting pathogenic codons back to functional amino acids"
+          },
+          {
+            "descriptionType": "Other",
+            "description": "IPFS: QmPyBq2m7XfznoTtzdq9yq1c9v4yx1hmwmw9SmRF81ba6x. TX: 0x317538eae728402c4fae9a5b53d620e0dfa9dc08cb1967a0e198e4f213a381fb. CC0."
+          }
+        ],
+        "geoLocations": [],
+        "fundingReferences": [],
+        "url": "https://zenodo.org/doi/10.5281/zenodo.19832592",
+        "contentUrl": null,
+        "metadataVersion": 0,
+        "schemaVersion": "http://datacite.org/schema/kernel-4",
+        "source": "api",
+        "isActive": true,
+        "state": "findable",
+        "reason": null,
+        "viewCount": 0,
+        "downloadCount": 0,
+        "referenceCount": 0,
+        "citationCount": 0,
+        "partCount": 0,
+        "partOfCount": 0,
+        "versionCount": 0,
+        "versionOfCount": 1,
+        "created": "2026-04-27T22:06:33Z",
+        "registered": "2026-04-27T22:06:33Z",
+        "published": null,
+        "updated": "2026-08-27T21:18:20Z"
+      },
+      "relationships": {
+        "client": {
+          "data": {
+            "id": "cern.zenodo",
+            "type": "clients"
+          }
+        }
+      }
+    }
+  ],
+  "meta": {
+    "total": 2412,
+    "totalPages": 804,
+    "page": 1
+  },
+  "links": {
+    "self": "https://api.datacite.org/dois?page%5Bsize%5D=3&page%5Bnumber%5D=1&query=titles.title:*crispr+gene+editing*",
+    "next": "https://api.datacite.org/dois?page%5Bnumber%5D=2&page%5Bsize%5D=3&query=titles.title%3A%2Acrispr+gene+editing%2A"
+  }
+}
