@@ -1,6 +1,7 @@
 import type { Paper, ProviderCapabilities, ProviderId, Query } from '@open-access-explorer/shared';
 import * as arxiv from '../providers/arxiv';
 import * as europepmc from '../providers/europepmc';
+import * as ncbi from '../providers/ncbi';
 
 /**
  * Every provider in the new shape, and how to drive it.
@@ -54,6 +55,29 @@ export const PROVIDERS: ProviderEntry[] = [
         offset,
         timeoutMs,
         openAccessOnly,
+        ...(signal ? { signal } : {}),
+        ...(userAgent ? { userAgent } : {}),
+        ...(now ? { now } : {})
+      });
+      return {
+        papers: result.papers,
+        ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
+        skipped: result.skipped
+      };
+    }
+  },
+  {
+    id: 'ncbi',
+    capabilities: ncbi.capabilities,
+    translate: (query, options) => ncbi.translate(query, options),
+    normalizerVersion: 1,
+    async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
+      const result = await ncbi.search(query, {
+        pageSize: depth,
+        offset,
+        timeoutMs,
+        openAccessOnly,
+        ...(process.env.NCBI_API_KEY ? { apiKey: process.env.NCBI_API_KEY } : {}),
         ...(signal ? { signal } : {}),
         ...(userAgent ? { userAgent } : {}),
         ...(now ? { now } : {})

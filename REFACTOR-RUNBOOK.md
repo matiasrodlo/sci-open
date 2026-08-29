@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **7 / 13** | **4,564** | **2 / 11** | **391** | **1** |
+| **7 / 13** | **4,564** | **3 / 11** | **452** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -281,7 +281,13 @@ Mechanical, independent, one at a time. Each provider lands with its own fixture
    > **That error document is shaped like a paper.** One entry, with a title (`Error`), an author (`arXiv api core`) and a summary. Nothing about it stops a normaliser accepting it, and at HTTP 200 the old connector would have returned it as a search result. The normaliser now recognises it and reports a provider error instead.
    >
    > **Two fields nobody was reading.** `arxiv:doi` carries the published version's DOI and `arxiv:journal_ref` the venue — 3 and 2 of 16 live entries. The old connector read neither, so an arXiv record fell back to a title-and-year identity key, and a preprint's submission year rarely matches its publication year: the same paper survived the merge as two results. `doiLookup` is now declared `false`, so a DOI lookup is skipped with the missing capability named rather than answered with a silent empty set.
-3. **NCBI.** Extract the DOI from `ArticleIdList` — the loop already walks past it, so PubMed records currently cannot deduplicate against other providers. Map MeSH headings into `topics`. Use the real publication date. Consider `explicitArray: false` in xml2js to remove ~15 defensive `?.[0] ||` ladders.
+3. **NCBI — done.** Extract the DOI from `ArticleIdList` — the loop walked past it, so PubMed records could not deduplicate against other providers. Map MeSH headings into `topics`. Use the real publication date. Consider `explicitArray: false` in xml2js to remove ~15 defensive `?.[0] ||` ladders.
+
+   > **The DOI fix on its own changed nothing, and the reason is a second defect.** With DOIs extracted, Europe PMC and PubMed still shared **zero** of 192 and 200 DOIs on the same query, and nothing merged. `esearch` orders by PMID descending unless told otherwise — newest first, not most relevant. The same query returns `42662940, 42662918, 42662409` by default and `38786024, 27699445, 27059283` under `sort=relevance`, on an identical count of 13,508. PubMed was contributing its most *recent* matches while every other provider contributed its most relevant, and `SourceRef.rank` feeds reciprocal rank fusion — so this was not a worse relevance ordering, it was not a relevance ordering at all. With both fixed: 7 shared DOIs and 7 merged papers where there had been none.
+   >
+   > **MeSH alone would not have fixed topics.** PubMed assigns MeSH only once an article is indexed, and none of the three recorded articles carry any — while all three carry a `KeywordList`. Taking both means recent records get topics too; MeSH alone would have left them empty on exactly the records that were already failing. 25 of 25 live records now carry topics, against 0 before.
+   >
+   > **`explicitArray: false` was considered and declined.** The parity test needs the old normaliser and the new one to run against the same parsed fixture, and a repeated element is still an array under that option, so the unwrapping helper is needed either way. Three helpers collapse all ~15 ladders instead — including the one that called `String()` on whatever it found and then guarded against the literal `'[object Object]'` reaching a result title. A collective author, rendered blank by the old connector, is now named.
 4. **DOAJ.** Parenthesise the field terms and join year bounds with `AND` — any year filter currently makes DOAJ answer HTTP 400 and drop out silently. Stop treating `type: 'fulltext'` links as PDFs. Declare `yearFilter` honestly in capabilities.
 5. **CORE.** Accept `limit` and `offset` (it hardcodes 100). Reorder PDF resolution so the reader URL becomes `landingPage` and the last resort, not the advertised PDF for every record.
 6. **PLOS.** Straightforward. Add the `plos` branch the paper-detail endpoint is missing — PLOS was a quarter of a typical result set and every "Details" click on it 404s.

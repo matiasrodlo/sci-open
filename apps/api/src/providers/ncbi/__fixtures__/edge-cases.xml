@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Hand-built, unlike the recorded ncbi-efetch.xml. Each article isolates a
+  shape the recorded set happens not to contain — most importantly MeSH
+  headings, which PubMed assigns only once an article has been indexed and
+  which none of the three recorded articles carry. The MeshHeadingList
+  structure is copied from a live efetch of PMID 29602366.
+-->
+<PubmedArticleSet>
+
+  <!-- Indexed: MeSH headings, and a DOI in the ArticleIdList. -->
+  <PubmedArticle>
+    <MedlineCitation Status="MEDLINE" Owner="NLM">
+      <PMID Version="1">29602366</PMID>
+      <Article PubModel="Print">
+        <Journal>
+          <JournalIssue CitedMedium="Print"><PubDate><Year>2018</Year></PubDate></JournalIssue>
+          <Title>Current opinion in insect science</Title>
+        </Journal>
+        <ArticleTitle>An indexed article carrying MeSH headings</ArticleTitle>
+        <Abstract><AbstractText>Body text.</AbstractText></Abstract>
+        <AuthorList CompleteYN="Y">
+          <Author ValidYN="Y"><LastName>Shim</LastName><ForeName>Hyunjin</ForeName><Initials>H</Initials></Author>
+        </AuthorList>
+        <Language>eng</Language>
+      </Article>
+      <MeshHeadingList>
+        <MeshHeading><DescriptorName UI="D000818" MajorTopicYN="N">Animals</DescriptorName></MeshHeading>
+        <MeshHeading><DescriptorName UI="D001000" MajorTopicYN="N">Ants</DescriptorName><QualifierName UI="Q000235" MajorTopicYN="Y">genetics</QualifierName></MeshHeading>
+        <MeshHeading><DescriptorName UI="D049750" MajorTopicYN="Y">Genome, Insect</DescriptorName></MeshHeading>
+      </MeshHeadingList>
+    </MedlineCitation>
+    <PubmedData>
+      <ArticleIdList>
+        <ArticleId IdType="pubmed">29602366</ArticleId>
+        <ArticleId IdType="pmc">PMC5999999</ArticleId>
+        <ArticleId IdType="doi">10.1016/j.cois.2017.12.001</ArticleId>
+      </ArticleIdList>
+    </PubmedData>
+  </PubmedArticle>
+
+  <!-- DOI only in ELocationID, and no PMC copy. -->
+  <PubmedArticle>
+    <MedlineCitation Status="MEDLINE" Owner="NLM">
+      <PMID Version="1">11111111</PMID>
+      <Article PubModel="Print">
+        <Journal>
+          <JournalIssue><PubDate><Year>2005</Year></PubDate></JournalIssue>
+          <Title>A journal</Title>
+        </Journal>
+        <ArticleTitle>A record whose only DOI is an ELocationID</ArticleTitle>
+        <ELocationID EIdType="pii" ValidYN="Y">S1234</ELocationID>
+        <ELocationID EIdType="doi" ValidYN="Y">10.9999/elocation.only</ELocationID>
+        <AuthorList><Author><CollectiveName>A Working Group</CollectiveName></Author></AuthorList>
+        <Language>eng</Language>
+      </Article>
+    </MedlineCitation>
+    <PubmedData>
+      <ArticleIdList><ArticleId IdType="pubmed">11111111</ArticleId></ArticleIdList>
+    </PubmedData>
+  </PubmedArticle>
+
+  <!-- No Year element at all: PubDate carries a MedlineDate string. -->
+  <PubmedArticle>
+    <MedlineCitation Status="MEDLINE" Owner="NLM">
+      <PMID Version="1">22222222</PMID>
+      <Article PubModel="Print">
+        <Journal>
+          <JournalIssue><PubDate><MedlineDate>1998-1999</MedlineDate></PubDate></JournalIssue>
+          <Title>An older journal</Title>
+        </Journal>
+        <ArticleTitle>A record dated with a MedlineDate range</ArticleTitle>
+        <Abstract>
+          <AbstractText Label="BACKGROUND">First part.</AbstractText>
+          <AbstractText Label="RESULTS">Second part.</AbstractText>
+        </Abstract>
+        <AuthorList><Author><LastName>Turing</LastName><Initials>A</Initials></Author></AuthorList>
+        <Language>fre</Language>
+      </Article>
+    </MedlineCitation>
+    <PubmedData>
+      <ArticleIdList><ArticleId IdType="pubmed">22222222</ArticleId></ArticleIdList>
+    </PubmedData>
+  </PubmedArticle>
+
+  <!-- Unreadable: must cost exactly one record. -->
+  <PubmedArticle>
+    <MedlineCitation Status="MEDLINE" Owner="NLM">
+      <PMID Version="1">33333333</PMID>
+      <Article PubModel="Print">
+        <Journal><Title>A journal</Title></Journal>
+      </Article>
+    </MedlineCitation>
+    <PubmedData>
+      <ArticleIdList><ArticleId IdType="pubmed">33333333</ArticleId></ArticleIdList>
+    </PubmedData>
+  </PubmedArticle>
+
+</PubmedArticleSet>
