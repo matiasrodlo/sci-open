@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import { getPooledClient } from '../http-client-factory';
+import { extractContactEmail } from '../contact-email';
 import { getServiceConfig as getHttpServiceConfig } from '../http-pool-config';
 
 export interface OpenAlexWork {
@@ -59,10 +60,15 @@ export interface OpenAlexResponse {
 export class OpenAlexClient {
   private baseUrl = 'https://api.openalex.org';
   private userAgent: string;
+  private contactEmail?: string;
   private httpClient: AxiosInstance;
 
   constructor(userAgent: string) {
     this.userAgent = userAgent;
+    // OpenAlex routes callers who identify themselves into a faster pool with
+    // a higher rate limit. It reads either the User-Agent or a `mailto`
+    // parameter; sending both is what the API documents as the polite path.
+    this.contactEmail = extractContactEmail(userAgent);
     // Initialize pooled HTTP client with OpenAlex-specific configuration
     this.httpClient = getPooledClient(this.baseUrl, getHttpServiceConfig('openalex'));
   }
@@ -93,6 +99,10 @@ export class OpenAlexClient {
       select: 'id,doi,title,authorships,publication_year,primary_location,concepts,abstract_inverted_index,open_access,cited_by_count,type,language'
     };
 
+    if (this.contactEmail) {
+      searchParams.mailto = this.contactEmail;
+    }
+
     if (filter) {
       searchParams.filter = filter;
     }
@@ -110,6 +120,7 @@ export class OpenAlexClient {
 
   async getWork(workId: string): Promise<OpenAlexWork> {
     const response = await this.httpClient.get(`/works/${workId}`, {
+      params: this.contactEmail ? { mailto: this.contactEmail } : undefined,
       headers: {
         'User-Agent': this.userAgent,
         'Accept': 'application/json'

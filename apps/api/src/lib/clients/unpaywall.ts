@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import { getPooledClient } from '../http-client-factory';
+import { extractContactEmail } from '../contact-email';
 import { getServiceConfig } from '../http-pool-config';
 
 export interface UnpaywallResponse {
@@ -47,10 +48,20 @@ export interface UnpaywallResponse {
 export class UnpaywallClient {
   private baseUrl = 'https://api.unpaywall.org/v2';
   private userAgent: string;
+  private contactEmail?: string;
   private httpClient: AxiosInstance;
 
   constructor(userAgent: string) {
     this.userAgent = userAgent;
+    // Unpaywall requires an address on every request and returns 422 without
+    // one, so a missing or placeholder UNPAYWALL_EMAIL is worth saying out
+    // loud at construction rather than as a run of failed lookups.
+    this.contactEmail = extractContactEmail(userAgent);
+    if (!this.contactEmail) {
+      console.warn(
+        'Unpaywall: no contact address in the User-Agent. Set UNPAYWALL_EMAIL to a real mailbox; requests will be rejected without it.'
+      );
+    }
     // Initialize pooled HTTP client with Unpaywall-specific configuration
     this.httpClient = getPooledClient(this.baseUrl, getServiceConfig('unpaywall'));
   }
@@ -62,9 +73,7 @@ export class UnpaywallClient {
       
       const response = await this.httpClient.get(`/${normalizedDOI}`, {
         params: {
-          email: this.userAgent.includes('mailto:') ? 
-            this.userAgent.split('mailto:')[1].split(' ')[0] : 
-            'your-email@example.com'
+          email: this.contactEmail
         },
         headers: {
           'User-Agent': this.userAgent,
