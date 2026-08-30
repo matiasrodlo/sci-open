@@ -8,7 +8,7 @@ import { normalize, totalHits } from '../normalize';
 import { capabilities } from '../capabilities';
 
 const read = (p: string) => JSON.parse(fs.readFileSync(path.resolve(__dirname, p), 'utf8'));
-const RECORDED = read('../../../sources/__fixtures__/datacite.json');
+const RECORDED = read('../../../__fixtures__/datacite.json');
 const EDGE = read('../__fixtures__/edge-cases.json');
 
 const AT = '2026-08-29T00:00:00.000Z';

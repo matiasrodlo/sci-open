@@ -4,7 +4,7 @@ import path from 'path';
 import { parseStringPromise } from 'xml2js';
 import type { OARecord } from '@open-access-explorer/shared';
 
-const DIR = path.resolve(__dirname, '../__fixtures__');
+const DIR = path.resolve(__dirname, '../../__fixtures__');
 
 export function readJson<T = any>(name: string): T {
   return JSON.parse(fs.readFileSync(path.join(DIR, name), 'utf8'));

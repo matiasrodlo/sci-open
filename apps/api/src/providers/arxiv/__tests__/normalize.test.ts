@@ -14,7 +14,7 @@ let EDGE: any;
 let ERROR_DOC: any;
 
 beforeAll(async () => {
-  RECORDED = await read('../../../sources/__fixtures__/arxiv.xml');
+  RECORDED = await read('../../../__fixtures__/arxiv.xml');
   EDGE = await read('../__fixtures__/edge-cases.xml');
   ERROR_DOC = await read('../__fixtures__/error-document.xml');
 });

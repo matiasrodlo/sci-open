@@ -25,7 +25,7 @@ let oldRecords: OARecord[];
 let newRecords: OARecord[];
 
 beforeAll(async () => {
-  raw = (await read('../../../sources/__fixtures__/ncbi-efetch.xml')).PubmedArticleSet.PubmedArticle;
+  raw = (await read('../../../__fixtures__/ncbi-efetch.xml')).PubmedArticleSet.PubmedArticle;
   oldRecords = raw.map(a => oldConnector.normalizeArticle(a)).filter(Boolean);
   newRecords = normalize(raw, { retrievedAt: AT }).papers.map(toOARecord);
 });

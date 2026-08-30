@@ -7,7 +7,7 @@ import { normalize } from '../normalize';
 import { PLOSConnector } from '../../../sources/plos';
 
 const read = (p: string) => JSON.parse(fs.readFileSync(path.resolve(__dirname, p), 'utf8'));
-const RECORDED = read('../../../sources/__fixtures__/plos.json');
+const RECORDED = read('../../../__fixtures__/plos.json');
 const AT = '2026-08-29T00:00:00.000Z';
 
 const oldConnector = new PLOSConnector() as any;

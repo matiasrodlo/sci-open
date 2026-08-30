@@ -27,7 +27,7 @@ let oldRecords: OARecord[];
 let newRecords: OARecord[];
 
 beforeAll(async () => {
-  RECORDED = await read('../../../sources/__fixtures__/arxiv.xml');
+  RECORDED = await read('../../../__fixtures__/arxiv.xml');
   EDGE = await read('../__fixtures__/edge-cases.xml');
   oldRecords = RECORDED.feed.entry.map((e: any) => oldConnector.normalizeEntry(e));
   newRecords = normalize(RECORDED, { retrievedAt: AT }).papers.map(toOARecord);

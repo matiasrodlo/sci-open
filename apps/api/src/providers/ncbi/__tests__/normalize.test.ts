@@ -13,7 +13,7 @@ let recorded: any[];
 let edge: any[];
 
 beforeAll(async () => {
-  recorded = (await read('../../../sources/__fixtures__/ncbi-efetch.xml')).PubmedArticleSet.PubmedArticle;
+  recorded = (await read('../../../__fixtures__/ncbi-efetch.xml')).PubmedArticleSet.PubmedArticle;
   edge = (await read('../__fixtures__/edge-cases.xml')).PubmedArticleSet.PubmedArticle;
 });
 

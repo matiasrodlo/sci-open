@@ -7,7 +7,7 @@ import { capabilities } from '../capabilities';
 import { translate } from '../index';
 
 const RECORDED = JSON.parse(
-  fs.readFileSync(path.resolve(__dirname, '../../../sources/__fixtures__/biorxiv.json'), 'utf8')
+  fs.readFileSync(path.resolve(__dirname, '../../../__fixtures__/biorxiv.json'), 'utf8')
 );
 
 const AT = '2026-08-29T00:00:00.000Z';

@@ -1,5 +1,5 @@
 /**
- * Records one live response per provider into `src/sources/__fixtures__/`.
+ * Records one live response per provider into `src/__fixtures__/`.
  *
  * Run it deliberately, not on every test run — the whole point of committing
  * the output is that the normaliser suites never touch the network. Re-record
@@ -16,7 +16,7 @@ import fs from 'fs';
 import path from 'path';
 
 const QUERY = 'crispr gene editing';
-const OUT = path.resolve(__dirname, '../src/sources/__fixtures__');
+const OUT = path.resolve(__dirname, '../src/__fixtures__');
 const UA = `OpenAccessExplorer/1.0 (mailto:${process.env.UNPAYWALL_EMAIL || 'fixtures@example.com'})`;
 
 function write(name: string, data: unknown) {

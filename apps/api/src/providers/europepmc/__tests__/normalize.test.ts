@@ -5,7 +5,7 @@ import { normalize } from '../normalize';
 import { EuropePMCConnector } from '../../../sources/europepmc';
 
 const RECORDED = JSON.parse(
-  fs.readFileSync(path.resolve(__dirname, '../../../sources/__fixtures__/europepmc.json'), 'utf8')
+  fs.readFileSync(path.resolve(__dirname, '../../../__fixtures__/europepmc.json'), 'utf8')
 );
 const EDGE = JSON.parse(
   fs.readFileSync(path.resolve(__dirname, '../__fixtures__/edge-cases.json'), 'utf8')

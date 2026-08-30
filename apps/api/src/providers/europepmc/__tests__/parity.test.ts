@@ -17,7 +17,7 @@ import { EuropePMCConnector } from '../../../sources/europepmc';
  */
 
 const RECORDED = JSON.parse(
-  fs.readFileSync(path.resolve(__dirname, '../../../sources/__fixtures__/europepmc.json'), 'utf8')
+  fs.readFileSync(path.resolve(__dirname, '../../../__fixtures__/europepmc.json'), 'utf8')
 );
 const RAW = RECORDED.resultList.result as any[];
 

@@ -4,7 +4,7 @@ import path from 'path';
 import { normalize, totalHits } from '../normalize';
 
 const read = (p: string) => JSON.parse(fs.readFileSync(path.resolve(__dirname, p), 'utf8'));
-const RECORDED = read('../../../sources/__fixtures__/openaire.json');
+const RECORDED = read('../../../__fixtures__/openaire.json');
 const EDGE = read('../__fixtures__/edge-cases.json');
 
 const AT = '2026-08-29T00:00:00.000Z';
