@@ -23,11 +23,52 @@ services:
       - NODE_ENV=production
       - PORT=4000
       - REDIS_URL=redis://redis:6379
+      # Both are read at runtime. UNPAYWALL_EMAIL is not optional — Unpaywall
+      # answers 422 without a contact address, and OpenAlex routes callers who
+      # identify themselves into a faster pool.
+      - UNPAYWALL_EMAIL=${UNPAYWALL_EMAIL:-}
+      - CORE_API_KEY=${CORE_API_KEY:-}
+      - NCBI_API_KEY=${NCBI_API_KEY:-}
+      - SEARCH_PATH=${SEARCH_PATH:-pipeline}
+    restart: unless-stopped
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+    # The image declares its own HEALTHCHECK against /health; this is what lets
+    # `web` wait for it rather than racing it.
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
     # No bind mount: the service runs the image's compiled output. Mounting the
     # host tree over /app would shadow apps/api/dist, which is gitignored build
     # output and absent in a fresh clone.
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      # Where the API is, read per request rather than baked at build time.
+      # Deliberately not NEXT_PUBLIC_*: that prefix is what makes Next
+      # substitute a value into the bundle at compile time.
+      - API_ORIGIN=${API_ORIGIN:-http://api:4000}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
 
 volumes:
   redis_data:
