@@ -1,6 +1,10 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
+  // Was unset, so no `dark:` variant was generated at all and the complete
+  // `.dark` token set in globals.css was unreachable. Keyed to the OS
+  // preference to match how the tokens are applied there.
+  darkMode: 'media',
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
