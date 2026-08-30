@@ -49,3 +49,28 @@ export async function search(query: Query, options: SearchOptions): Promise<Prov
     latency
   };
 }
+
+export type LookupOptions = Omit<FetchOptions, 'pageSize' | 'offset'> & { now?: () => Date };
+
+/**
+ * One paper by its OpenAIRE `objIdentifier`.
+ *
+ * Verified live 2026-08-30 on `doi_dedup___::e102f905c7609789b70634cf0ecde7cd`:
+ * `total` is 1 and the record's own objIdentifier is the one asked for. The
+ * match is checked here regardless, because the parameter's query expansion
+ * also matches on `resultdupid` — a deduplicated sibling would come back under
+ * a different id, and that is a different record.
+ */
+export async function lookup(nativeId: string, options: LookupOptions): Promise<Paper | null> {
+  const { now = () => new Date(), ...fetchOptions } = options;
+
+  const started = Date.now();
+  const payload = await fetchPage(
+    { openairePublicationID: nativeId, format: 'json' },
+    { ...fetchOptions, pageSize: 1, offset: 0 }
+  );
+  const latency = Date.now() - started;
+
+  const { papers } = normalize(payload, { retrievedAt: now().toISOString(), latency });
+  return papers.find(paper => paper.sources[0]?.nativeId === nativeId) ?? null;
+}

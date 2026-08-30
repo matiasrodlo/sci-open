@@ -23,6 +23,17 @@ export type OpenAireParams = {
    * `keywords`, so every OpenAIRE DOI lookup has been answering 409.
    */
   doi?: string;
+  /**
+   * Exact match on `dri:objIdentifier`, for the paper endpoint rather than for
+   * a search — `toParams` never produces it.
+   *
+   * It is the only parameter OpenAIRE offers for the id it hands out.
+   * `objIdentifier` is rejected outright: HTTP 400, *"Parameter objIdentifier
+   * is not supported"*. The old paper endpoint sent the id as `keywords`,
+   * which matched nothing, so every "details" click on an OpenAIRE result
+   * answered 404 — a third of a measured result set.
+   */
+  openairePublicationID?: string;
   format: 'json';
   OA?: 'true';
   fromDateAccepted?: string;

@@ -1,14 +1,17 @@
 import type { Paper, Query } from '@open-access-explorer/shared';
 import { capabilities } from './capabilities';
 import { translate, toParams, type TranslateOptions } from './translate';
-import { fetchPage, OpenAlexUnavailableError, type FetchOptions } from './fetch';
+import {
+  fetchPage, fetchWork, OpenAlexUnavailableError,
+  type FetchOptions, type WorkFetchOptions
+} from './fetch';
 import { normalize, totalHits, reconstructAbstract, type SkippedRecord } from './normalize';
 
 export {
-  capabilities, translate, toParams, fetchPage, normalize, totalHits,
+  capabilities, translate, toParams, fetchPage, fetchWork, normalize, totalHits,
   reconstructAbstract, OpenAlexUnavailableError
 };
-export type { TranslateOptions, FetchOptions, SkippedRecord };
+export type { TranslateOptions, FetchOptions, WorkFetchOptions, SkippedRecord };
 
 export type SearchOptions = TranslateOptions &
   Omit<FetchOptions, 'pageSize' | 'offset'> & {
@@ -90,4 +93,24 @@ export async function search(query: Query, options: SearchOptions): Promise<Prov
     skipped,
     latency
   };
+}
+
+export type LookupOptions = WorkFetchOptions & { now?: () => Date };
+
+/**
+ * One paper by its OpenAlex id.
+ *
+ * OpenAlex merges duplicate works and serves the survivor under either id, so
+ * the record that comes back may carry a different id than the one asked for.
+ * That is an answer, not a mismatch, and it is returned as it stands.
+ */
+export async function lookup(nativeId: string, options: LookupOptions): Promise<Paper | null> {
+  const { now = () => new Date(), ...fetchOptions } = options;
+
+  const started = Date.now();
+  const payload = await fetchWork(nativeId, fetchOptions);
+  const latency = Date.now() - started;
+
+  const { papers } = normalize(payload, { retrievedAt: now().toISOString(), latency });
+  return papers[0] ?? null;
 }

@@ -12,6 +12,7 @@ import { sortPapers } from './sort';
 import { enrichPage } from './enrich';
 
 export * from './parse-query';
+export * from './lookup';
 export { PROVIDERS, plan, fanOut, isComplete, ProviderCache, mergePapers, rank, applyPolicy, generateFacets, sortPapers, enrichPage };
 
 /**

@@ -31,6 +31,15 @@ export type ProviderSearchArgs = {
   now?: () => Date;
 };
 
+export type ProviderLookupArgs = {
+  /** The provider's own id for the record, as `SourceRef.nativeId` holds it. */
+  nativeId: string;
+  timeoutMs: number;
+  signal?: AbortSignal;
+  userAgent?: string;
+  now?: () => Date;
+};
+
 export type ProviderSearchOutcome = {
   papers: Paper[];
   totalHits?: number;
@@ -48,6 +57,16 @@ export type ProviderEntry = {
    * from the previous version are not reused.
    */
   normalizerVersion: number;
+  /**
+   * Fetches one record by the provider's own id, where its API offers a way
+   * to ask for one.
+   *
+   * Absent means "ask the search endpoint for it", which `lookupPaper` does —
+   * and for the six providers without an entry here that is not a fallback but
+   * the right request: three of them mint DOIs as their native ids, so the id
+   * *is* a DOI lookup, and the other three index theirs as searchable text.
+   */
+  lookup?(args: ProviderLookupArgs): Promise<Paper | null>;
 };
 
 export const PROVIDERS: ProviderEntry[] = [
@@ -101,6 +120,15 @@ export const PROVIDERS: ProviderEntry[] = [
     capabilities: doaj.capabilities,
     translate: (query, options) => doaj.translate(query, options),
     normalizerVersion: 1,
+    async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
+      return doaj.lookup(nativeId, {
+        timeoutMs,
+        ...(process.env.DOAJ_API_KEY ? { apiKey: process.env.DOAJ_API_KEY } : {}),
+        ...(signal ? { signal } : {}),
+        ...(userAgent ? { userAgent } : {}),
+        ...(now ? { now } : {})
+      });
+    },
     async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
       const result = await doaj.search(query, {
         pageSize: depth,
@@ -146,6 +174,14 @@ export const PROVIDERS: ProviderEntry[] = [
     capabilities: openaire.capabilities,
     translate: (query, options) => openaire.translate(query, options),
     normalizerVersion: 1,
+    async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
+      return openaire.lookup(nativeId, {
+        timeoutMs,
+        ...(signal ? { signal } : {}),
+        ...(userAgent ? { userAgent } : {}),
+        ...(now ? { now } : {})
+      });
+    },
     async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
       const result = await openaire.search(query, {
         pageSize: depth,
@@ -207,6 +243,14 @@ export const PROVIDERS: ProviderEntry[] = [
     capabilities: openalex.capabilities,
     translate: (query, options) => openalex.translate(query, options),
     normalizerVersion: 1,
+    async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
+      return openalex.lookup(nativeId, {
+        timeoutMs,
+        ...(signal ? { signal } : {}),
+        ...(userAgent ? { userAgent } : {}),
+        ...(now ? { now } : {})
+      });
+    },
     async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
       const result = await openalex.search(query, {
         pageSize: depth,
@@ -229,6 +273,15 @@ export const PROVIDERS: ProviderEntry[] = [
     capabilities: core.capabilities,
     translate: (query, options) => core.translate(query, options),
     normalizerVersion: 1,
+    async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
+      return core.lookup(nativeId, {
+        timeoutMs,
+        ...(process.env.CORE_API_KEY ? { apiKey: process.env.CORE_API_KEY } : {}),
+        ...(signal ? { signal } : {}),
+        ...(userAgent ? { userAgent } : {}),
+        ...(now ? { now } : {})
+      });
+    },
     async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
       const result = await core.search(query, {
         pageSize: depth,
