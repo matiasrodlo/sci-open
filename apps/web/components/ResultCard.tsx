@@ -56,10 +56,14 @@ export function ResultCard({ record }: ResultCardProps) {
         return;
       }
       
-      // Otherwise, try to resolve it via the API
-      const response = await getPaper(record.id);
-      if (response.pdf.url) {
-        window.open(response.pdf.url, '_blank');
+      // Otherwise, try to resolve it via the API. The endpoint returns the
+      // record itself — this read `response.pdf.url`, which the typed fetcher
+      // promised and the endpoint has never sent, so every record without a
+      // `bestPdfUrl` threw a TypeError here instead of reporting no PDF.
+      const resolved = await getPaper(record.id);
+      const url = resolved.bestPdfUrl;
+      if (url) {
+        window.open(url, '_blank');
       } else {
         setDownloadError('PDF not available');
       }
@@ -107,7 +111,7 @@ export function ResultCard({ record }: ResultCardProps) {
           )}
           {record.citationCount !== undefined && record.citationCount > 0 && (
             <div className="flex items-center gap-1">
-              <Quote className="h-3 w-3" />
+              <Quote className="h-3 w-3" aria-hidden="true" />
               <span>{record.citationCount.toLocaleString()}</span>
             </div>
           )}
@@ -144,18 +148,19 @@ export function ResultCard({ record }: ResultCardProps) {
         
         {/* Error Message */}
         {downloadError && (
-          <p className="text-xs text-destructive">{downloadError}</p>
+          <p className="text-xs text-destructive" role="alert">{downloadError}</p>
         )}
         
         {/* Actions */}
-        <div className="flex items-center gap-3 pt-2">
+        <div className="flex items-center gap-3 pt-2" role="group" aria-label={`Actions for ${record.title}`}>
           <Link href={`/paper/${encodeURIComponent(record.id)}`} onClick={handlePaperClick}>
             <Button
               variant="ghost"
               size="sm"
               className="h-8 text-xs hover:bg-muted"
+              aria-label={`Details for ${record.title}`}
             >
-              <Eye className="h-3 w-3 mr-1.5" />
+              <Eye className="h-3 w-3 mr-1.5" aria-hidden="true" />
               Details
             </Button>
           </Link>
@@ -167,8 +172,9 @@ export function ResultCard({ record }: ResultCardProps) {
               onClick={handleDownload}
               disabled={isDownloading}
               className="h-8 text-xs hover:bg-muted"
+              aria-label={`Download PDF of ${record.title}`}
             >
-              <Download className="h-3 w-3 mr-1.5" />
+              <Download className="h-3 w-3 mr-1.5" aria-hidden="true" />
               {isDownloading ? 'Downloading...' : 'PDF'}
             </Button>
           )}
@@ -179,8 +185,9 @@ export function ResultCard({ record }: ResultCardProps) {
               size="sm"
               onClick={() => window.open(record.landingPage, '_blank')}
               className="h-8 text-xs hover:bg-muted"
+              aria-label={`Open the publisher page for ${record.title} in a new tab`}
             >
-              <ExternalLink className="h-3 w-3 mr-1.5" />
+              <ExternalLink className="h-3 w-3 mr-1.5" aria-hidden="true" />
               Source
             </Button>
           )}
@@ -191,9 +198,10 @@ export function ResultCard({ record }: ResultCardProps) {
               size="sm"
               onClick={handleCopyDOI}
               className="h-8 text-xs hover:bg-muted font-mono"
+              aria-label={`Copy the DOI of ${record.title}`}
               title={doiCopied ? 'DOI copied to clipboard!' : 'Click to copy DOI'}
             >
-              {doiCopied ? 'Copied!' : 'DOI'}
+              <span aria-live="polite">{doiCopied ? 'Copied!' : 'DOI'}</span>
             </Button>
           )}
         </div>

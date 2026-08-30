@@ -88,13 +88,12 @@ export type SearchResponse = {
   complete?: boolean;
 };
 
-export type PaperResponse = {
-  record: OARecord;
-  pdf: {
-    url?: string;
-    status: "ok" | "not_found" | "error";
-  };
-};
+/**
+ * Removed in phase 11. `/api/paper/:id` returns an `OARecord` and never
+ * returned this shape — no `record` wrapper and no `pdf` object — so the type
+ * described an endpoint that does not exist. The one caller bypassed the
+ * typed fetcher entirely, which is how the two stayed out of step.
+ */
 
 export type SourceSearchParams = {
   doi?: string;
