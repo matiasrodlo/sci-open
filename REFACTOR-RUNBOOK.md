@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **12 / 13** | **4,564** | **10 / 10 · 4 authorities** | **913** | **0 — default flipped** |
+| **12 / 13** | **4,564** | **10 / 10 · 4 authorities** | **920** | **0 — default flipped** |
 
 > **Two rules for the whole runbook**
 >
@@ -98,10 +98,10 @@ There were zero tests, no CI, and no lint config — the documented `pnpm lint` 
 
 ### Done when
 
-- [ ] All phase-1 tests still pass, unchanged.
-- [ ] `pnpm build` green; both typechecks green.
-- [ ] A manual search returns the same results as before the deletions.
-- [ ] Source count is down roughly a quarter; `docker-compose up` starts one service.
+- [x] All phase-1 tests still pass, unchanged. The old connector suites are still green: 25 tests across 8 files in `src/sources/__tests__`.
+- [x] `pnpm build` green; both typechecks green. Enforced on every commit by CI since phase 01.
+- [x] ~~A manual search returns the same results as before the deletions.~~ **Superseded.** True when phase 02 ran, and deliberately false now — arXiv's OR-to-AND fix, DataCite skipped on evidence, and ranking that actually ranks all changed what a search returns, each on purpose and each measured.
+- [x] ~~`docker-compose up` starts one service.~~ **Superseded by phase 12**, which added the `web` service that was missing entirely; compose starts three. The source-count half held at the time.
 
 > **Risk**
 >
@@ -126,10 +126,10 @@ Four fixes that are not superseded by the new architecture, and that between the
 
 ### Done when
 
-- [ ] A cached search returns identical abstracts to a fresh one.
-- [ ] Four concurrent identical requests produce one upstream fan-out.
-- [ ] A search response is under ~30 KB rather than ~170 KB.
-- [ ] One search produces tens of structured log lines, not thousands of unstructured ones.
+- [x] A cached search returns identical abstracts to a fresh one. Reconstruction is deterministic and tested (`abstract.test.ts`), and phase 10 made the cache store serialised values and parse on read — so a cached reader gets a fresh object by construction and cannot diverge from a fresh one at all.
+- [x] Four concurrent identical requests produce one upstream fan-out. Asserted at three layers: `single-flight.test.ts`, `provider-cache.test.ts` ("collapses concurrent misses onto one call") and `search.test.ts` ("collapses concurrent identical searches onto one fan-out").
+- [x] A search response is under ~30 KB rather than ~170 KB. The size is a recorded measurement, not re-checkable offline; the mechanism behind it is pinned — `facet.test.ts` asserts open-ended facets cap at 25, which is what removed the 145.5 KB of facets that dwarfed 29.7 KB of hits.
+- [x] One search produces tens of structured log lines, not thousands of unstructured ones. **This had no test at all until the phase 10 walk.** The count is a property of the call sites and cannot be asserted here; the two properties that made it achievable now are. `logger.test.ts` pins that every line goes through Fastify's pino instance rather than `console` — which is what puts it under the configured level — and that detail becomes structured fields rather than being stringified into the message.
 
 ## 04 · Define the new contracts — *Done*
 
@@ -147,9 +147,9 @@ The types are the architecture. Nothing else moves until `Query`, `Paper`, `Prov
 
 ### Done when
 
-- [ ] The new types compile and are exported from `packages/shared`.
-- [ ] Both apps still build against the existing `OARecord` — nothing has migrated yet.
-- [ ] Round-trip tests pass: `toOARecord(fromOARecord(x))` preserves every field the old shape carries.
+- [x] The new types compile and are exported from `packages/shared`. Six modules re-exported from the index; typecheck green across all four workspace projects.
+- [x] Both apps still build against the existing `OARecord`. Still true, and now by choice rather than by sequencing — phase 11 kept the adapter as the external contract, which is the branch phase 10 task 2 offers.
+- [x] Round-trip tests pass: `toOARecord(fromOARecord(x))` preserves every field the old shape carries. `adapters.test.ts`, including the absent-versus-empty distinctions for `oaStatus` and `topics` that `compat` exists to keep.
 
 > **Blocking decisions**
 >
@@ -186,10 +186,10 @@ Prove the provider shape on one API before committing to it eleven times. Europe
 
 ### Done when
 
-- [ ] `translate` and `normalize` have unit tests and touch no network.
-- [ ] The parity test passes against the phase-1 fixture.
-- [ ] A malformed record in the fixture costs exactly one record.
-- [ ] The old Europe PMC connector is still in place and still used — nothing has switched yet.
+- [x] `translate` and `normalize` have unit tests and touch no network. 57 tests across four Europe PMC suites, all offline.
+- [x] The parity test passes against the phase-1 fixture. 18 tests against the recorded response — which the phase 10 walk moved to `src/__fixtures__/` so the coming deletion cannot take it.
+- [x] A malformed record in the fixture costs exactly one record. Asserted for Europe PMC, and since copied into nine of the ten providers.
+- [x] ~~The old Europe PMC connector is still in place and still used.~~ **Superseded by phase 10.** Still in place; no longer *used*, because the default is now `orchestrator`. Keeping it reachable behind `SEARCH_PATH=pipeline` is what makes the rollback real.
 
 ## 06 · The orchestrator — *Done*
 
@@ -213,14 +213,14 @@ The largest phase, and the one that earns the refactor. A fan-out of one provide
 
 ### Done when
 
-- [ ] The new path returns results for a fixed query set, with a `ProviderReport` per provider.
-- [ ] Page 2 and a sort change are served from provider cache — milliseconds, not a re-fetch.
-- [ ] Concurrent identical searches produce one upstream fan-out.
-- [ ] Results are no longer contiguous provider blocks. Verify by run-length encoding the source sequence of a full result set — the current output is 13 blocks.
+- [x] The new path returns results for a fixed query set, with a `ProviderReport` per provider. `search.test.ts` — "returns a page, a total, facets and a report per provider" — and a skipped provider still reports why.
+- [x] Page 2 and a sort change are served from provider cache — milliseconds, not a re-fetch. `provider-cache.test.ts` — "is what makes page and sort changes free" — plus "serves a second search from the provider cache" end to end.
+- [x] Concurrent identical searches produce one upstream fan-out. Same three layers as phase 03's box.
+- [x] Results are no longer contiguous provider blocks. Run-length encoded exactly as asked, in `search.test.ts`. `rank.test.ts` goes further — "never fills the first page from a single provider" — which phase 06 noted would only mean something once more providers were migrated; it now runs against six.
 - [x] A forced provider failure appears as `status: 'error'` and sets `complete: false`. Measured during phase 01: Europe PMC returned `retrieved: 0` with no error on one run and 600 on the next, and nothing in the response distinguishes a timeout from an empty result. That is what this status field is for.
 
   > **The unforced case needed a fix the fan-out could not make.** A thrown error was always reported; a provider that answers HTTP 200 with something that is not a result page was not, because nothing threw. Observed live on 2026-08-29, during phase 08: Europe PMC served `{"version":"6.9"}` and nothing else — no `hitCount`, no `resultList` — for every query including `cancer`, and the provider read it as an empty corpus. `retrieved: 0`, `status: 'ok'`, `complete: true`: precisely the phase 01 symptom, reproduced. The same shape as the OpenAlex 429, which resolved as a success for the same reason. Each provider now checks that a 200 actually carried an answer, and a genuine empty result set — which still reports `hitCount: 0` — is untouched.
-- [ ] Filtering by `oaStatus` changes the result set, and a merged-in abstract appears on the returned record.
+- [x] Filtering by `oaStatus` changes the result set, and a merged-in abstract appears on the returned record. Both asserted in `search.test.ts`.
 
 > **Risk**
 >
@@ -244,7 +244,7 @@ Put the new path in front of real traffic without moving the frontend or committ
 - [x] **`from-search-params.ts` converts on the way in**, mirroring `to-search-response.ts` on the way out. It lives beside the orchestrator rather than in the route because the comparison script needs the same conversion — a harness that reimplemented it would measure something the service does not run.
 - [x] **The frontend is untouched.** No file under `apps/web` changed, and the response is contract-identical apart from the additive `complete`. Not the same as having exercised the UI against both paths, which has not been done.
 - [x] **`scripts/compare-paths.ts` runs 22 queries through both paths in process** and diffs count, set overlap, ordering, per-provider contribution, field completeness and latency. In process rather than over HTTP: going through the route would put the response cache between the harness and the thing being measured.
-- [ ] **The new path does not yet match the old on count** — 600 against ~2,950 per query. Expected, and not resolvable until phase 08: nine providers against one. This box stays open by design.
+- [x] ~~**The new path does not yet match the old on count** — 600 against ~2,950 per query.~~ **Closed by phase 08, as designed.** It was one provider against nine, and it says so. With all ten migrated the whole-path sweep put the new path at 42,830 records against 58,029 and 70% overlap, and decomposed the remainder into three deliberate decisions and one genuine shortfall — OpenAlex read depth — since closed by internal pagination.
 
 ### What the comparison found
 
