@@ -361,6 +361,22 @@ Make the new path the only path.
 
 > **Gate** — Phase 09 complete; comparison report favourable across the full query set; new path has run as default behind the flag for long enough to trust.
 
+> **The first clean whole-path comparison — 2026-08-30, all ten providers, OpenAlex answering on both sides, zero budget errors.**
+>
+> | | old | new |
+> |---|---|---|
+> | Records returned | 58,029 | 42,830 |
+> | Shared | | 29,880 — **70%** of what the new path returned |
+> | Latency, median | 13,149 ms | **8,111 ms** |
+> | `doi` / `venue` / `publisher` | 63% / 61% / 4% | **93% / 93% / 46%** |
+> | `topics` / `citationCount` | 77% / 21% | **94% / 39%** |
+>
+> **The count gap is almost entirely deliberate, and one third of it is not.** Retrieved-record differences decompose as: DataCite **9,999 → 0**, skipped on evidence; arXiv **10,524 → 3,034**, which is the OR-to-AND fix removing records that were never matches; and OpenAlex **12,000 → 4,200**, which is the one piece of genuinely lost coverage — the old path paginates `discoverWorks` to 600 while `fanOut` asks once and OpenAlex caps a page at 200. Intra-provider pagination is the single change that would close it.
+>
+> Overlap has climbed across four sweeps as providers landed — 54%, 60%, 64%, **70%** — and `citationCount` nearly doubled against the old path, which can only get it from OpenAlex where the new path also has Europe PMC.
+>
+> **The one regression: CORE quadruples DOI-lookup latency.** Measured directly, same query, same single result: 9,280 ms with CORE against 2,095 ms without, and CORE itself accounted for 9,260 ms of it. It is registered `doiLookup: true` because its repository corpus is where an otherwise-unreadable paper turns up, but whether that is worth 7 seconds on every DOI lookup has not been measured and should be before this is called settled.
+>
 > **The ranking disagreement is not a defect, and the metric that reports it is misleading.**
 >
 > The sweep's `rho` and `top20` columns ran 0.05–0.87 with one negative, and 0/20 to 12/20 — which reads as the two paths disagreeing about page one. They do, and that is the point. **The old path does not rank at all.** `sortResults` answers `'relevance'` with `return records`, so its order is the order providers were concatenated in — OpenAlex's block, then each aggregator's. Verified live: the old path's page one run-length encodes to `europepmc x20`, twenty consecutive records from one provider, which is the phase 01 symptom "page one returning a single provider's records in one block" still present.
