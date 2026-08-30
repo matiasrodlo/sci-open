@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **10 / 13** | **4,564** | **10 / 10 · 4 authorities** | **870** | **1** |
+| **11 / 13** | **4,564** | **10 / 10 · 4 authorities** | **870** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -24,7 +24,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 ## Phase map
 
-**GROUND** · `00` Stabilise the tree ✔ · `01` Safety net ✔ · `02` Delete ✔ · `03` Stop the bleeding ✔ · **BUILD** · `04` New contracts ✔ · `05` First provider ✔ · `06` Orchestrator ✔ · `07` Flag routing ✔ · `08` Migrate providers ✔ · `09` Authorities ✔ · **LAND** · `10` Cut over — *cache collapsed; cutover gated* · `11` Frontend ✔ · `12` Deploy hardening
+**GROUND** · `00` Stabilise the tree ✔ · `01` Safety net ✔ · `02` Delete ✔ · `03` Stop the bleeding ✔ · **BUILD** · `04` New contracts ✔ · `05` First provider ✔ · `06` Orchestrator ✔ · `07` Flag routing ✔ · `08` Migrate providers ✔ · `09` Authorities ✔ · **LAND** · `10` Cut over — *cache collapsed; cutover gated* · `11` Frontend ✔ · `12` Deploy hardening ✔
 
 ## 00 · Stabilise the tree — *Done*
 
@@ -558,7 +558,7 @@ Move the UI onto the richer response, and fix the interface defects that have no
 
 > **What phase 11 did not do.** The UI still consumes `OARecord`. `fieldSources`, the full `sources` list and the graded `oaStatus` route — everything phase 09 spent its effort producing — are still flattened by `toOARecord` and invisible to a reader. Surfacing them means changing the response shape, which is the half of this phase that really is gated on the cutover, and the adapter is the seam where it will happen.
 
-## 12 · Deploy hardening — *2–3 days*
+## 12 · Deploy hardening — *Done*
 
 Independent of the refactor and currently blocking any environment that is not a developer laptop. Can run in parallel with phases 4–11 if someone else picks it up.
 
@@ -566,19 +566,45 @@ Independent of the refactor and currently blocking any environment that is not a
 
 ### Tasks
 
-1. **Rebuild `apps/api/Dockerfile`** in the image of the web one, which is already good: multi-stage, production-only install, non-root `USER`, `NODE_ENV=production`, healthcheck against `/health`. Today the API image runs as root and ships devDependencies and source.
-2. **Fix the web image's API origin.** `NEXT_PUBLIC_API_BASE` is inlined at build time with no build arg, so the image is permanently pinned to localhost. Take it as an `ARG`, or move the frontend onto the relative `/api/*` rewrite so no origin needs baking in.
+1. **Rebuild `apps/api/Dockerfile`** in the image of the web one, which is already good: multi-stage, production-only install, non-root `USER`, `NODE_ENV=production`, healthcheck against `/health`. Today the API image runs as root and ships devDependencies and source. *The web one was not good either — both copied a `packages/search` manifest deleted in `1a397c5d`, so neither image built in a fresh clone.*
+2. **Fix the web image's API origin.** `NEXT_PUBLIC_API_BASE` is inlined at build time with no build arg, so the image is permanently pinned to localhost. Take it as an `ARG`, or move the frontend onto the relative `/api/*` rewrite so no origin needs baking in. *Neither remedy works: the rewrite itself bakes the destination into `routes-manifest.json`, and an `ARG` only chooses the pin. It took a route handler that resolves the origin per request.*
 3. **Add the missing `web` service to `docker-compose.yml`** — there is currently no frontend in compose at all.
 4. **Move off EOL Node 18** in both images, and add an `engines` field to the manifests.
 5. **Add request schemas and rate limiting.** Fastify JSON schemas on both POST routes with a `pageSize` cap — a single request currently returns 9.4 MB and caches it. Stop echoing `error.message` to clients. Add `@fastify/rate-limit`.
 6. **Clear the dependency backlog.** `pnpm update` resolves most of the 107 advisories; Fastify 4→5 and Next 14→15 are the two real majors and deserve their own tasks.
 
+### What happened
+
+**Neither image built.** Both Dockerfiles copied `packages/search/package.json`, and `packages/search` was deleted in `1a397c5d` — it has zero tracked files, and what survives on a developer's disk is gitignored build output. So `docker compose build` failed at that line in any fresh clone, for the API *and* for the web image this document called "already good". The last commit to touch them is titled *"fix(docker): make both images actually build and run"*.
+
+**The API image went from 1.03 GB to 311 MB, and it took three attempts** — each of which is recorded in the Dockerfile because the two that failed are the obvious ones:
+
+| approach | result |
+|---|---|
+| `--prod` install layered on the dev stage | **1.03 GB** — pnpm's store survives the reinstall; `eslint`, `tsc`, `tsserver` and `turbo` still on the PATH |
+| clean stage, `--prod --filter "…/api..."` | **836 MB** — the filter does not stop the store hydrating from the shared lockfile, so Next.js and its two SWC binaries (345 MB) ship in an image that never runs them |
+| `pnpm deploy --filter … --prod` | **320 MB**, and **311 MB** once `files: ["dist"]` stopped it copying `src`, `tsconfig.json`, `vitest.config.ts` and the Dockerfile itself |
+
+It runs as `uid=1001(fastify)`, `/app` holds `dist`, `node_modules` and `package.json` and nothing else, and `node_modules/.bin` is empty.
+
+**The web image was pinned to localhost by the rewrite, not by the `env` block.** The diagnosis in task 2 was half right. `NEXT_PUBLIC_API_BASE` was no longer reaching the client bundle at all — phase 11 had removed every browser-side use — but `rewrites()` is resolved at build time and written into `.next/routes-manifest.json`, verified as `"destination": "http://localhost:4000/api/:path*"`. A build `ARG` would only have chosen the pin rather than removed it: the same image still could not be promoted between environments. The rewrite is now a route handler at `app/api/[...path]/route.ts` that reads `API_ORIGIN` per request. Verified by repointing a running container with no rebuild — 400, then 502 against a bad origin, then 400 again.
+
+**`@fastify/rate-limit` was registered and did nothing, for a reason worth remembering.** It attaches through an **`onRoute`** hook (`index.js:126`), and an `onRoute` hook only fires for routes registered after it exists. `fastify.register()` defers loading until `ready()`, so routes declared on the root instance in module scope were already in the router. Measured before the fix: **130 requests against a limit of 3 all returned normally**, with no `x-ratelimit-*` header on any of them, while the plugin reported itself loaded with `max=3`. `@fastify/cors` and `@fastify/helmet` are registered exactly the same way and were fine — they add request-time hooks, which are resolved per request and do not care when a route was added, and their headers were present throughout. That difference is what made it invisible. The routes are now a registered plugin, which puts them behind the limiter in the boot queue.
+
+**Request schemas, and a ceiling.** `pageSize` was unbounded — one request could ask for the whole result set, measured at 9.4 MB, and the response cache would then store it at a cost the caller chose and the service paid. It is capped at 100, `sort` is an enum, years are bounded, and `pdfUrl` must at least look like http. Eleven `return { error: error.message }` sites became a generic message plus the request id; `PdfProxyError` messages survive because they are about the request and the caller can act on them.
+
+**97 of 107 advisories cleared.** `pnpm update` took axios 1.12.2 → 1.20.0 and Next 14.2.33 → 14.2.35, and two `pnpm.overrides` entries cleared postcss and glob: **60 high → 10**. Every one of the ten is behind a major this document scopes separately — Fastify's patch is `>=5.7.2` on a 4.x tree, Next's are all `>=15.x` on 14.x — and each is named in `scripts/audit-gate.mjs` with the upgrade that removes it.
+
+The CI audit job is blocking now. It could not simply be `pnpm audit --audit-level high`, which is all or nothing: it would fail today, and a gate that fails on day one gets switched off — which is exactly what `continue-on-error: true` was. pnpm's own `auditConfig.ignoreGhsas` would express the allowlist but landed in pnpm 9, and this repo pins 8.10.0. The gate script holds the list instead, where an entry has to carry a reason, and it fails on anything not on it. Verified both ways: exit 0 as it stands, exit 1 with one entry removed.
+
 ### Done when
 
-- [ ] `docker-compose up` gives a working frontend and API.
-- [ ] The API container runs as a non-root user and reports healthy.
-- [ ] The web image can be pointed at a different API without rebuilding.
-- [ ] `pnpm audit` is clean at high severity, and CI enforces it.
+- [x] `docker-compose up` gives a working frontend and API. All three services healthy; a real search through web → api → providers returned 2,386 results across six of them.
+- [x] The API container runs as a non-root user and reports healthy. `uid=1001(fastify)`, healthcheck against `/health`.
+- [x] The web image can be pointed at a different API without rebuilding. Verified by repointing a running container twice.
+- [x] `pnpm audit` is clean at high severity, and CI enforces it. Clean against a named allowlist of ten, all blocked on two majors; the gate is blocking and fails on anything else.
+
+> **The two majors are the remaining work, and one of them is more urgent than it looks.** Fastify 4 → 5 needs Node 20+ and changes the logger and plugin contracts. Next 14 → 15 needs React 19 and makes `params` and `searchParams` async in every server component, which touches the results page directly. Among the Next advisories being carried is **SSRF in rewrites** — this codebase no longer uses a rewrite, having replaced it with a route handler in this phase, which narrows the exposure but does not remove the advisory.
 
 ---
 
