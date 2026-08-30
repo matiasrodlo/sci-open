@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ExportButton } from '@/components/ExportButton';
 import { ProviderCoverage } from '@/components/ProviderCoverage';
 import { searchPapers } from '@/lib/fetcher';
+import { toList, toSingle } from '@/lib/search-params';
 import { SearchParams } from '@open-access-explorer/shared';
 
 // Force dynamic rendering
@@ -19,24 +20,20 @@ interface ResultsPageProps {
 }
 
 async function ResultsContent({ searchParams }: ResultsPageProps) {
-  const query = searchParams.q as string;
-  const sources = searchParams.sources as string;
-  const yearFrom = searchParams.yearFrom as string;
-  const yearTo = searchParams.yearTo as string;
-  const sort = searchParams.sort as string;
-  const oaStatus = searchParams.oaStatus as string;
-  const year = searchParams.year as string;
-  const venue = searchParams.venue as string;
-  const publisher = searchParams.publisher as string;
-  const topics = searchParams.topics as string;
-  const publicationType = searchParams.publicationType as string;
-  const page = searchParams.page as string;
+  // Multi-valued filters arrive as repeated parameters, so they are read with
+  // `toList` rather than split on a comma. See `lib/search-params.ts` — a
+  // venue like `Bioinformatics (Oxford, England)` cannot survive comma-joining.
+  const query = toSingle(searchParams.q);
+  const yearFrom = toSingle(searchParams.yearFrom);
+  const yearTo = toSingle(searchParams.yearTo);
+  const sort = toSingle(searchParams.sort);
+  const page = toSingle(searchParams.page);
 
   if (!query) {
     return <EmptyState type="no-query" />;
   }
 
-  const currentPage = parseInt(page as string) || 1;
+  const currentPage = parseInt(page ?? '') || 1;
   const pageSize = 20; // Fixed page size like Web of Science
 
   const searchParamsObj: SearchParams = {
@@ -45,17 +42,17 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
     pageSize: pageSize,
     sort: (sort as any) || 'relevance',
     filters: {
-      source: sources ? sources.split(',') : undefined,
+      source: toList(searchParams.sources),
       yearFrom: yearFrom ? parseInt(yearFrom) : undefined,
       yearTo: yearTo ? parseInt(yearTo) : undefined,
-      oaStatus: oaStatus ? oaStatus.split(',') : undefined,
-      venue: venue ? venue.split(',') : undefined,
-      publisher: publisher ? publisher.split(',') : undefined,
-      topics: topics ? topics.split(',') : undefined,
-      publicationType: publicationType ? publicationType.split(',') : undefined,
+      oaStatus: toList(searchParams.oaStatus),
+      venue: toList(searchParams.venue),
+      publisher: toList(searchParams.publisher),
+      topics: toList(searchParams.topics),
+      publicationType: toList(searchParams.publicationType),
       openAccessOnly: true, // Always active
       // @ts-expect-error - pass year as array for exact matching
-      year: year ? year.split(',') : undefined,
+      year: toList(searchParams.year),
     },
   };
 
@@ -65,12 +62,6 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
     if (results.hits.length === 0) {
       return <EmptyState type="no-results" />;
     }
-
-    const currentFilters = {
-      sources: sources ? sources.split(',') : ['arxiv', 'core', 'europepmc', 'ncbi', 'doaj'],
-      yearFrom: yearFrom ? parseInt(yearFrom) : undefined,
-      yearTo: yearTo ? parseInt(yearTo) : undefined,
-    };
 
             return (
               <div className="space-y-8">
@@ -94,13 +85,16 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
                 </div>
 
                 {results.providerTotals && results.providerTotals.length > 0 && (
-                  <ProviderCoverage providers={results.providerTotals} />
+                  <ProviderCoverage
+                    providers={results.providerTotals}
+                    complete={results.complete}
+                  />
                 )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                   {/* Facets */}
                   <div className="lg:col-span-1">
-                    <FacetPanel facets={results.facets} currentFilters={currentFilters} />
+                    <FacetPanel facets={results.facets} />
                   </div>
 
                   {/* Results */}
