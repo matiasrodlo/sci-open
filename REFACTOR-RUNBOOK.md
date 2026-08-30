@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **7 / 13** | **4,564** | **9 / 11** | **688** | **1** |
+| **7 / 13** | **4,564** | **10 / 11** | **690** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -315,53 +315,11 @@ Mechanical, independent, one at a time. Each provider lands with its own fixture
    >
    > **The syntax is now verified, and `translate` and `capabilities` are written.** With a fresh rate-limit window and spaced requests, every form was checked against a response: `crispr AND gene AND editing` returns **13,323** against **2,126,594** for the same words unjoined, so CORE ORs its terms exactly as arXiv did; `yearPublished>=2022 AND yearPublished<=2023` **in the query** narrows 60,460 to 15,589, while the `filters` request parameter the old connector used is **ignored silently** — bounded and unbounded both returned 60,460, so its year filter never did anything; and `doi:"10.1038/srep09811"` returns exactly 1. **Phrases cannot be expressed at all**: a bare quoted phrase answers **HTTP 500**, and `title:"gene editing"` returns 635,878, so the quotes are not honoured either. They are degraded to required words, and `capabilities` does not claim otherwise.
    >
-   > **What blocks registration is latency, not the key and not the rate limit.** Measured anonymously: 3 records in **18.9s**, 25 records in **35.6s**, 50 records failed, 100 timed out at 90s even with `exclude=fullText` — which is accepted but barely helps, since the bulk of a record is references and authors rather than text. The orchestrator allows a provider **20s**. CORE would exceed that on every request at any useful depth, so registering it would add a provider that only ever reports a timeout. `suppliesCitations` is declared **false**: the field exists and was zero on every record across two samples.
+   > **A key was obtained, and it changed nothing that mattered.** It authenticates — a wrong key answers 401 in 0.6s — but the rate limit stays at `x-ratelimit-limit: 10` and the latency does not improve. CORE is simply slow, and erratically so: ten samples for three records ran 8.6s, 11.8s, 13.7s, 18.9s, 25.0s, 32.0s, 34.6s, 38.2s, 42.7s and one HTTP 500, with 25 records timing out at 120s. Roughly **four in ten** keyword searches land inside the orchestrator's 20s per-provider budget.
    >
-   > Whether a key removes the latency is untested and plausible — anonymous tiers are commonly throttled, and the same tier is capped at 10 requests per roughly five minutes. **Re-measure with a key before adding the registry row**, which is the only step left.
+   > **So CORE is registered as `keywordSearch: false, doiLookup: true`** — the shape DataCite and bioRxiv already have, and decided the same way, on measurement. A provider that misses the budget six times in ten does not merely contribute less; it marks most searches `complete: false`, spending the signal that exists to flag real failures. A DOI lookup, by contrast, was inside the budget every time measured — 5.9s, 12.9s, 15.9s, 15.9s, median 14.4s — and it is what CORE is actually for: it aggregates repository deposits, so its value is finding a readable copy of a paper already identified. Verified in the fan-out: a DOI lookup returns one record in 5.4s carrying the publisher's own PDF, where the old connector would have advertised a `core.ac.uk/reader/` page.
    >
-   > **Two of the three listed fixes are confirmed, and there is a third.** The reader URL was priority 1 in `bestPdfUrl` for every record with an id — all of them — so the two real PDF sources beneath it were unreachable code; the recorded page shows CORE serving a real `downloadUrl` PDF on two records and a repository PDF on the third. `limit`/`offset` are hardcoded to 100/0. And **CORE ORs its terms**: `crispr` returns 60,460 where `crispr gene editing` returns **2,126,594** — more words, more results, the same defect arXiv had.
-   >
-   > **To finish it:** register at `core.ac.uk/services/api`, put the key in `CORE_API_KEY`, then verify the year filter and the AND syntax and write `translate`, `capabilities`, `fetch` and the registry entry. The normaliser and fixture are done.
-6. **PLOS — done.** Straightforward. Add the `plos` branch the paper-detail endpoint is missing — PLOS was a quarter of a typical result set and every "Details" click on it 404s.
-
-   > **Straightforward held for the query and not for the identifier.** `everything:` already ANDs its terms — 5,940 hits whether the AND is spelled or not — so there was no disjunction defect. But PLOS has **no `doi` field**, and asking for one returns the corpus rather than an error: `doi:"10.1371/journal.pgen.1002441"` matched **64,432** documents where `id:"..."` matches the one. A PLOS id *is* its DOI. So every PLOS DOI lookup answered with an arbitrary page of the corpus — and the detail branch added here would have inherited it, since the route calls the old connector. Fixed in both.
-   >
-   > **`topics` was the article type.** The connector never requested `subject` and put `article_type` in `topics`, so every PLOS record carried the single topic "Research Article" — identical across the corpus and useless as a facet. `subject` holds hierarchical paths like `/Biology and life sciences/Genetics/Genomics/Repeated sequences/CRISPRs`; the leaf is taken, since keeping the path would give every level its own bucket. 25 of 25 live records now carry real topics.
-   >
-   > **One thing this document implied that is not true.** The connector builds every PDF URL under `/plosone/` although PLOS has seven journals, and only 1 of 8 live results was PLOS ONE — which looks like a broken download for most records. Checked rather than assumed: PLOS routes by DOI and ignores the slug, and `/plosone/` returns `200 application/pdf` for a PLOS Genetics and a PLOS Biology DOI alike. Left as it is.
-   >
-   > Smaller: the year filter invented both ends of an open range — a missing lower bound became the year 2000 and a missing upper bound the current year — and abstracts kept the leading newline Solr wraps them in.
-7. **OpenAIRE — done.** Extract the DOI from `pid[]`, reading `@classid` and `$` rather than the xml2js `$.classid` and `_` — the same fix already applied to `bestaccessright`, in the place it was missed. Then replace the `throw` in the normaliser with per-record isolation.
-
-   > **The DOI was one of five fields read from the wrong key.** The connector reached for the xml2js spelling of a JSON payload throughout, and the recorded fixture shows what that produced: `id` was **`openaire:The-potential-and-innovative-applications-of-CRISP`** — a 50-character slug of the title, because `dri:objIdentifier` is one key with a prefix in its name and the connector read `header.dri.objIdentifier`, found nothing, and fell through to a title-derived fallback. `venue` was `"Elsevier BV"`, the publisher, because the connector assigned the publisher to both. `language` was `'en'` for every record because the code is at `@classid`. `topics` was `[]` despite a populated `subject`. So the identifier everything keys on was unstable, and the DOI was only the most consequential of the five.
-   >
-   > **OpenAIRE reports the open-access route, and nothing was reading it.** `openaccesscolor` holds `gold`, `hybrid` or `bronze` — Unpaywall's own vocabulary — and `isgreen` covers the rest. Live, a single page returns all four. It is the only provider so far that answers `oaStatus` with data rather than leaving it for enrichment.
-   >
-   > **Every OpenAIRE DOI lookup was answering HTTP 409.** Found by running one: the connector assigned the DOI to `keywords`, and as free text the slash is an operator to OpenAIRE's query parser — `{"status":"error","code":"500","message":"Fail to execute search","exception":"Syntax errors. expected boolean, got '/'"}`. There is a dedicated `doi` parameter, which the new provider uses; the old connector quotes the value, which also works. Neither path had ever resolved a DOI.
-   >
-   > **A stray entry in `description` cost OpenAIRE a whole page.** Found by the phase-08 comparison sweep, which logged `OpenAIRE search error: abstract.replace is not a function` on `alzheimer amyloid beta`. One record carries `[{"$": 75}, {"$": "Alzheimer's disease is…"}]` — 75 is presumably a page count, and the abstract is the *second* entry. The old connector read `description[0]`, got a number, and `75.replace` threw to the search-level catch: **100 records became 0, reported as an empty result rather than an error**. The new provider did not throw but reported an abstract of `"75"`. Both now skip a value that is only digits. `title` had the same shape without the same luck — 77 of 100 records carry a `main title` and a `subtitle`, and `title[0]` was the main title on all 100 by OpenAIRE's ordering alone — so it is selected by `@classid` rather than by position.
-   >
-   > **`&apos;` was missing from the entity decode list**, so abstracts reached the reader as "Alzheimer&apos;s disease". `&amp;` now decodes last, so an escaped entity is not decoded twice.
-   >
-   > **`translate` returns request parameters, not a query.** OpenAIRE has no query language: the date bounds are parameters. Since the orchestrator keys the provider cache on whatever `translate` returns, a keywords-only string would have let a 2022–2023 search be served from an unbounded one. It returns a canonical serialisation of the whole parameter set instead.
-8. **DataCite — done, and the answer is `keywordSearch: false`.** It contributed 600 records of which zero survived filtering. Either fix what it emits, or stop paying for it.
-
-   > **Decided on three measurements, all live.** Of 100 records, **1** carried `application/pdf` in `formats`, **0** carried an `IsPublishedIn` relation, and **no** registered URL ended in `.pdf` — DataCite registers DOIs, it does not host papers, so under a retrievability filter its records will always drop out. That is what the corpus is, not a defect to fix. Through the new provider, 87 records returned and **1** survived the policy filter.
-   >
-   > **The third measurement is the one that decided it, and it refuted the obvious counter-argument.** A provider that finds nothing readable can still earn its request by supplying DOIs for works *other* providers found, adding provenance to records that survive on someone else's full text — which is what the merge step is for. DataCite does not: of its 87 DOIs, **0** appeared in any of the six other providers' results. Not a small overlap, none. Its corpus is institutional-repository items, theses and datasets, disjoint from the literature providers' by construction.
-   >
-   > `doiLookup` stays **true**, and that is the case it is actually good for — a DataCite DOI resolves here and nowhere else in the fan-out, for the same reason. A keyword search is now skipped with the missing capability named, rather than silently contributing 600 records to a filter.
-   >
-   > The provider is still built and tested, so the decision is reversible and the records are described honestly if it is: 11 of 100 live records are datasets and are skipped by type; the rest get `stage` from `resourceTypeGeneral`, a landing page rather than a fabricated PDF, and no `'DataCite Repository'` venue.
-9. **bioRxiv — done, `keywordSearch: false`, `doiLookup: true` as recommended.** No keyword index — it scanned a 30-day window and grepped client-side, spending ten HTTP requests to match nothing.
-
-   > **The numbers behind the recommendation.** The recorded window reports **5,940 records** and the scan was capped at 5 pages of 30 per server: 150 of 5,940, across two servers, for ten requests — and blind to anything posted more than 30 days ago, in a corpus spanning years. A ceiling of 2.5% of one month. That is a property of the API, not an implementation to improve.
-   >
-   > **The DOI lookup was broken too, and the 404 hid it.** `encodeURIComponent` turns `10.1101/2025.10.27.684732` into `10.1101%2F2025…`, which the API answers with **404**. Since one of the two servers legitimately 404s on every lookup, that failure was indistinguishable from "not found" and read as an empty result. Verified live both ways: the raw slash returns 3 records, the escaped one returns 404.
-   >
-   > **A lookup returns every version of a preprint** — three for the recorded record — which is one work, not three. Merge would collapse them by DOI, but a provider reporting a work three times has already misreported what it retrieved. The highest version is kept.
-   >
-   > Smaller: the API writes the string `"NA"` where a value is absent, so `updatedAt: result.published || result.date` set `updatedAt` to the literal `"NA"` on every unpublished preprint — all of them in the recorded window.
+   > Nothing else suffers from the decision either way — the fan-out is parallel and aborts at the budget, so a slow provider costs its neighbours nothing.
 
 ### Done when (per provider)
 

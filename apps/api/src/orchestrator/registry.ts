@@ -1,6 +1,7 @@
 import type { Paper, ProviderCapabilities, ProviderId, Query } from '@open-access-explorer/shared';
 import * as arxiv from '../providers/arxiv';
 import * as biorxiv from '../providers/biorxiv';
+import * as core from '../providers/core';
 import * as datacite from '../providers/datacite';
 import * as doaj from '../providers/doaj';
 import * as europepmc from '../providers/europepmc';
@@ -212,6 +213,29 @@ export const PROVIDERS: ProviderEntry[] = [
         offset,
         timeoutMs,
         openAccessOnly,
+        ...(signal ? { signal } : {}),
+        ...(userAgent ? { userAgent } : {}),
+        ...(now ? { now } : {})
+      });
+      return {
+        papers: result.papers,
+        ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
+        skipped: result.skipped
+      };
+    }
+  },
+  {
+    id: 'core',
+    capabilities: core.capabilities,
+    translate: (query, options) => core.translate(query, options),
+    normalizerVersion: 1,
+    async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
+      const result = await core.search(query, {
+        pageSize: depth,
+        offset,
+        timeoutMs,
+        openAccessOnly,
+        ...(process.env.CORE_API_KEY ? { apiKey: process.env.CORE_API_KEY } : {}),
         ...(signal ? { signal } : {}),
         ...(userAgent ? { userAgent } : {}),
         ...(now ? { now } : {})

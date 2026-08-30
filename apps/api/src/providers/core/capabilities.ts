@@ -1,24 +1,35 @@
 import type { ProviderCapabilities } from '@open-access-explorer/shared';
 
 /**
- * What the CORE v3 API can do, measured anonymously.
+ * What the CORE v3 API can do, and what it is fast enough to be asked.
  *
- * CORE is **not registered in the orchestrator**, and the reason is latency
- * rather than any of these capabilities. Measured on the anonymous tier: 3
- * records took 18.9s, 25 records took 35.6s, 50 records failed, and 100
- * records timed out at 90s even with `exclude=fullText`. The orchestrator
- * allows a provider 20s. CORE would exceed that on every request at any useful
- * depth, so registering it would add a provider that only ever reports a
- * timeout.
- *
- * Whether an API key removes that is untested and plausible — anonymous tiers
- * are commonly throttled, and the same tier is capped at 10 requests per
- * roughly five minutes. Re-measure with a key before registering.
+ * An API key was obtained and changed nothing that mattered: it authenticates
+ * (a wrong key answers 401 in 0.6s), but the rate limit stays at
+ * `x-ratelimit-limit: 10` and the latency does not improve. CORE is simply
+ * slow, and erratically so — ten samples for three records ran 8.6s, 11.8s,
+ * 13.7s, 18.9s, 25.0s, 32.0s, 34.6s, 38.2s, 42.7s and one HTTP 500, with 25
+ * records timing out at 120s. Roughly four in ten keyword searches land inside
+ * the orchestrator's 20s per-provider budget.
  */
 export const capabilities: ProviderCapabilities = {
-  keywordSearch: true,
+  /**
+   * Off, on latency rather than on quality.
+   *
+   * A provider that misses the budget six times in ten does not simply
+   * contribute less — it marks most searches `complete: false`, which is the
+   * signal that something went wrong. Spending that signal on a provider known
+   * to be slow makes it useless for the cases it exists to flag. Nothing else
+   * suffers: the fan-out is parallel and aborts at the budget, so a slow
+   * provider costs its neighbours nothing.
+   */
+  keywordSearch: false,
 
-  // `doi:"10.1038/srep09811"` returns exactly 1.
+  /**
+   * On, and this is what CORE is for. A DOI lookup returns one record and was
+   * measured inside the budget every time — 5.9s, 12.9s, 15.9s, 15.9s, median
+   * 14.4s. CORE aggregates repository deposits, so its value is finding a
+   * readable copy of a paper already identified, which is exactly this case.
+   */
   doiLookup: true,
 
   fields: [
@@ -38,9 +49,9 @@ export const capabilities: ProviderCapabilities = {
   // connector used, which CORE ignores.
   yearFilter: true,
 
-  // The largest page verified to come back at all. 50 failed and 100 timed
-  // out; this is a latency ceiling rather than a documented cap, so it is
-  // worth re-measuring with a key.
+  // The largest page verified to come back at all, and a latency ceiling
+  // rather than a documented cap — 50 failed and 100 timed out, with a key and
+  // without. A DOI lookup needs far less than this.
   maxPageSize: 25,
 
   // `totalHits`.
