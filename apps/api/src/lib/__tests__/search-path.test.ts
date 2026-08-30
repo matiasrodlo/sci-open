@@ -23,9 +23,16 @@ describe('resolveSearchPath', () => {
     }
   });
 
-  // The old path stays the default until the comparison says otherwise. When
-  // that flips, this test is the one to change deliberately.
-  it('defaults to the old pipeline', () => {
-    expect(DEFAULT_SEARCH_PATH).toBe('pipeline');
+  // Flipped in phase 10, on the evidence of the whole-path comparison. This
+  // assertion is here so the default cannot move again by accident — it is the
+  // one line that decides what every search runs.
+  it('defaults to the orchestrator', () => {
+    expect(DEFAULT_SEARCH_PATH).toBe('orchestrator');
+  });
+
+  // The old path has not gone anywhere. Deleting it is the rest of phase 10,
+  // and until then a rollback is this value in the environment, not a deploy.
+  it('still selects the old pipeline when asked for it', () => {
+    expect(resolveSearchPath('pipeline')).toBe('pipeline');
   });
 });
