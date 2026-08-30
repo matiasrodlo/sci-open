@@ -3,6 +3,7 @@ import dns from 'dns';
 import net from 'net';
 import { PassThrough, Readable } from 'stream';
 import { promisify } from 'util';
+import { preferredPdfUrl } from './pdf-url';
 
 const dnsLookup = promisify(dns.lookup);
 
@@ -11,7 +12,15 @@ const dnsLookup = promisify(dns.lookup);
 export const MAX_PDF_BYTES = 50 * 1024 * 1024;
 
 const DOWNLOAD_TIMEOUT_MS = 30000;
-const MAX_REDIRECTS = 5;
+
+/**
+ * Publisher PDFs are routinely four or five hops away — a DOI resolver, a
+ * platform redirect, a session cookie bounce, then the file — and five was
+ * enough to run out partway and report a failure that a longer chain would
+ * have completed. Every hop is still checked against the same SSRF rules, so
+ * the ceiling costs nothing but time.
+ */
+const MAX_REDIRECTS = 10;
 
 export class PdfProxyError extends Error {
   constructor(message: string, public readonly statusCode: number) {
@@ -95,7 +104,9 @@ export function assertRoutableHostSync(hostname: string): void {
 export async function assertPublicHttpUrl(rawUrl: string): Promise<URL> {
   let url: URL;
   try {
-    url = new URL(rawUrl);
+    // Substituted before validation, never after, so a rewritten host is
+    // resolved and checked exactly as the one the caller sent would have been.
+    url = new URL(preferredPdfUrl(rawUrl));
   } catch {
     throw new PdfProxyError('pdfUrl is not a valid URL', 400);
   }
