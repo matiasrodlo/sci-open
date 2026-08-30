@@ -1,125 +1,54 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Network, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
-import { OARecord } from '@open-access-explorer/shared';
 
 interface RelatedPapersProps {
   topics?: string[];
-  currentPaperId: string;
 }
 
-export function RelatedPapers({ topics, currentPaperId }: RelatedPapersProps) {
-  const [relatedPapers, setRelatedPapers] = useState<OARecord[]>([]);
-  const [loading, setLoading] = useState(true);
+/**
+ * The topics already on the record, as links into a search.
+ *
+ * This component used to run a second full search to render four links:
+ * it POSTed `/api/search` with the record's first three topics joined by
+ * ` OR `, measured at 25.5 seconds and 2,361 fetched records, every time
+ * anyone opened a paper. The four links it produced were the top of a
+ * relevance ranking for a query nobody typed.
+ *
+ * The topics are already in hand, so no request is needed to say what a paper
+ * is about. Each one links to the search it stands for, which is both honest
+ * about what the link does and something the user can act on — the previous
+ * version's links went to individual papers chosen by a query it never showed.
+ *
+ * Opening a paper now triggers no search at all.
+ */
+export function RelatedPapers({ topics }: RelatedPapersProps) {
+  const shown = (topics ?? []).filter(topic => topic && topic.trim()).slice(0, 12);
 
-  useEffect(() => {
-    async function fetchRelatedPapers() {
-      if (!topics || topics.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        // Create a more comprehensive search query using multiple topics
-        const searchQuery = topics.length > 1 
-          ? topics.slice(0, 3).join(' OR ') 
-          : topics[0];
-        
-        const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000';
-        const response = await fetch(`${apiBase}/api/search`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            q: searchQuery,
-            page: 1,
-            pageSize: 8, // Get more results to have better filtering
-            sort: 'relevance'
-          }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          // Filter out the current paper and ensure we have valid results
-          const filtered = data.hits
-            .filter((p: OARecord) => p.id !== currentPaperId && p.title && p.title.trim() !== '')
-            .slice(0, 4);
-          setRelatedPapers(filtered);
-        } else {
-          console.warn('Failed to fetch related papers:', response.status, response.statusText);
-        }
-      } catch (error) {
-        console.error('Error fetching related papers:', error);
-        // Don't show error to user, just silently fail
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchRelatedPapers();
-  }, [topics, currentPaperId]);
-
-  if (loading) {
-    return (
-      <div className="border-t pt-6 mt-6">
-        <h2 className="text-lg font-semibold mb-4">Related Papers</h2>
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="animate-pulse space-y-2">
-              <div className="h-4 bg-muted rounded w-3/4"></div>
-              <div className="h-3 bg-muted rounded w-1/2"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (relatedPapers.length === 0) {
-    return (
-      <div className="border-t pt-6 mt-6">
-        <h2 className="text-lg font-semibold mb-4">Related Papers</h2>
-        <p className="text-sm text-muted-foreground">
-          No related papers found for this topic.
-        </p>
-      </div>
-    );
+  if (shown.length === 0) {
+    return null;
   }
 
   return (
-    <div className="border-t pt-6 mt-6">
-      <h2 className="text-lg font-semibold mb-4">Related Papers</h2>
-      <div className="space-y-4">
-        {relatedPapers.map((paper) => (
-          <Link 
-            key={paper.id}
-            href={`/paper/${encodeURIComponent(paper.id)}`}
-            className="block group"
-          >
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium leading-tight group-hover:text-primary transition-colors line-clamp-2">
-                {paper.title}
-              </h4>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>
-                  {paper.authors && paper.authors.length > 0 ? (
-                    <>
-                      {paper.authors.slice(0, 2).join('; ')}
-                      {paper.authors.length > 2 && ' et al.'}
-                    </>
-                  ) : (
-                    'Unknown authors'
-                  )}
-                </span>
-                {paper.year && <span className="font-medium">({paper.year})</span>}
-              </div>
-            </div>
-          </Link>
+    <section className="border-t pt-6 mt-6" aria-labelledby="related-topics-heading">
+      <h2 id="related-topics-heading" className="text-lg font-semibold mb-1">
+        Related topics
+      </h2>
+      <p className="text-sm text-muted-foreground mb-4">
+        Search for other open-access papers on these subjects.
+      </p>
+      <ul className="flex flex-wrap gap-2">
+        {shown.map(topic => (
+          <li key={topic}>
+            <Link
+              href={`/results?q=${encodeURIComponent(topic)}`}
+              className="inline-block rounded-full border px-3 py-1 text-sm text-muted-foreground transition-colors hover:border-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {topic}
+            </Link>
+          </li>
         ))}
-      </div>
-    </div>
+      </ul>
+    </section>
   );
 }
-

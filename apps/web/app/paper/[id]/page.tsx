@@ -10,6 +10,7 @@ import { PaperCitations } from '@/components/paper/PaperCitations';
 import { RelatedPapers } from '@/components/paper/RelatedPapers';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { getCachedPaper } from '@/lib/paper-cache';
+import { getPaper } from '@/lib/fetcher';
 import { OARecord } from '@open-access-explorer/shared';
 
 function PaperContent() {
@@ -31,28 +32,18 @@ function PaperContent() {
       return;
     }
 
-    // If not in cache, try to fetch from API
-    async function fetchPaper() {
-      try {
-        const response = await fetch(`http://localhost:4000/api/paper/${encodeURIComponent(id)}`, {
-          cache: 'no-store',
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setPaper(data);
-        } else {
-          setError(true);
-        }
-      } catch (err) {
+    // If not in cache, ask the API — through the fetcher, which is the only
+    // place that knows where the API is.
+    let cancelled = false;
+    getPaper(id)
+      .then(data => { if (!cancelled) setPaper(data); })
+      .catch(err => {
         console.error('Error fetching paper:', err);
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    }
+        if (!cancelled) setError(true);
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
 
-    fetchPaper();
+    return () => { cancelled = true; };
   }, [encodedId]);
 
   if (loading) {
@@ -89,11 +80,8 @@ function PaperContent() {
             />
           )}
 
-          {/* Related Papers */}
-          <RelatedPapers 
-            topics={paper.topics}
-            currentPaperId={paper.id}
-          />
+          {/* Related topics */}
+          <RelatedPapers topics={paper.topics} />
         </div>
 
         {/* Sidebar (1 column) */}
