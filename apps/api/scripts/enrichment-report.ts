@@ -32,7 +32,6 @@ import axios from 'axios';
 import type { Paper } from '@open-access-explorer/shared';
 import { search, parseQuery, ProviderCache } from '../src/orchestrator';
 import { AUTHORITIES } from '../src/authorities';
-import { EnhancedSearchPipeline } from '../src/lib/enhanced-search-pipeline';
 
 const QUERIES = [
   'crispr gene editing',
@@ -104,8 +103,6 @@ async function main() {
 
   let bare = 0, enriched = 0;
   let bareDownloads = 0, bareTested = 0, richDownloads = 0, richTested = 0;
-  let oldDownloads = 0, oldTested = 0;
-  const pipeline = new EnhancedSearchPipeline({ userAgent: USER_AGENT });
   const bareCoverage: Record<string, number> = {};
   const richCoverage: Record<string, number> = {};
   const provenance = new Map<string, number>();
@@ -142,18 +139,12 @@ async function main() {
       // Same papers in the same order; only the advertised copy differs, and
       // for most papers it does not differ at all — hence one fetch per
       // distinct URL rather than one per paper per page.
-      // The criterion names the phase-0 baseline, which is the old pipeline's
-      // page — not the new path with enrichment switched off. Both are scored.
-      let oldPage: string[] = [];
-      try {
-        const legacy = await pipeline.search({ q, pageSize });
-        oldPage = legacy.hits.flatMap(h => (h.bestPdfUrl ? [h.bestPdfUrl] : []));
-      } catch (error) {
-        console.log(`  old path failed: ${error instanceof Error ? error.message : String(error)}`);
-      }
-
+      //
+      // Phase 09 scored a third column here, the old pipeline's page, because
+      // the criterion named it as the baseline. Phase 13 deleted that path, so
+      // the comparison this report can still make is the one it was for:
+      // what enrichment adds to a page the orchestrator already returned.
       const urls = [...new Set([
-        ...oldPage,
         ...before.papers.flatMap(p => (p.fullText ? [p.fullText.url] : [])),
         ...after.papers.flatMap(p => (p.fullText ? [p.fullText.url] : []))
       ])];
@@ -168,10 +159,7 @@ async function main() {
       bareDownloads += score(before.papers);
       richTested += held(after.papers);
       richDownloads += score(after.papers);
-      const oldOk = oldPage.filter(u => verdicts.get(u)).length;
-      oldTested += oldPage.length;
-      oldDownloads += oldOk;
-      console.log(`  downloadable  old path ${oldOk}/${oldPage.length}   new, unenriched ${score(before.papers)}/${held(before.papers)}   new, enriched ${score(after.papers)}/${held(after.papers)}   (${urls.length} distinct URLs)`);
+      console.log(`  downloadable  unenriched ${score(before.papers)}/${held(before.papers)}   enriched ${score(after.papers)}/${held(after.papers)}   (${urls.length} distinct URLs)`);
     }
   }
 
@@ -192,9 +180,8 @@ async function main() {
   if (download) {
     const pct = (n: number, d: number) => (d ? `${Math.round((n / d) * 100)}%` : 'n/a');
     console.log('\nDOWNLOAD SUCCESS — advertised copies that served a PDF');
-    console.log(`  old pipeline        ${oldDownloads}/${oldTested}  ${pct(oldDownloads, oldTested)}`);
-    console.log(`  new, unenriched     ${bareDownloads}/${bareTested}  ${pct(bareDownloads, bareTested)}`);
-    console.log(`  new, enriched       ${richDownloads}/${richTested}  ${pct(richDownloads, richTested)}`);
+    console.log(`  unenriched     ${bareDownloads}/${bareTested}  ${pct(bareDownloads, bareTested)}`);
+    console.log(`  enriched       ${richDownloads}/${richTested}  ${pct(richDownloads, richTested)}`);
   }
 }
 

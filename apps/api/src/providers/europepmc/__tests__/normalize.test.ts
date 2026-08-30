@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { normalize } from '../normalize';
-import { EuropePMCConnector } from '../../../sources/europepmc';
 
 const RECORDED = JSON.parse(
   fs.readFileSync(path.resolve(__dirname, '../../../__fixtures__/europepmc.json'), 'utf8')
@@ -89,13 +88,6 @@ describe('normalize — the defects this provider fixes', () => {
 
     expect(skipped.map(s => s.nativeId)).not.toContain('SINGLE1');
     expect(single?.landingPage).toBe('https://europepmc.org/articles/PMC0000001');
-  });
-
-  it('the old connector throws on that same record', () => {
-    // Pins why the fix is needed. Delete this when the old connector goes.
-    const raw = EDGE.resultList.result.find((r: any) => r.id === 'SINGLE1');
-    const old = new EuropePMCConnector() as any;
-    expect(() => old.normalizeResult(raw)).toThrow(TypeError);
   });
 
   it('costs exactly one record per bad record', () => {

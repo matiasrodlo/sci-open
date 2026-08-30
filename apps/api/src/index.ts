@@ -12,18 +12,16 @@ import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
-import { SearchParams, SearchResponse, OARecord } from '@open-access-explorer/shared';
-import { EnhancedSearchPipeline } from './lib/enhanced-search-pipeline';
+import { SearchParams, toOARecord } from '@open-access-explorer/shared';
 import { searchCacheManager, paperCacheManager, cacheManager } from './lib/cache';
 import { httpPerformanceMonitor } from './lib/http-performance-monitor';
 import { assertPublicHttpUrl, fetchPdfStream, PdfProxyError } from './lib/pdf-proxy';
 import { adminOnly, getAdminKey } from './lib/admin-auth';
 import { SingleFlight } from './lib/single-flight';
 import { log, useLogger } from './lib/logger';
-import { resolveSearchPath } from './lib/search-path';
 import { searchBodySchema, paperParamsSchema, downloadPdfBodySchema } from './lib/schemas';
 import { clientError } from './lib/client-error';
-import { ProviderCache } from './orchestrator';
+import { ProviderCache, lookupPaper } from './orchestrator';
 import { runOrchestrator } from './orchestrator/from-search-params';
 
 const fastify = Fastify({
@@ -66,30 +64,14 @@ fastify.register(rateLimit, {
   })
 });
 
-// Initialize search pipeline
+// Who we say we are to every provider. OpenAlex and Unpaywall both route a
+// caller who identifies themselves into a faster pool, and read the address
+// out of this string.
 const userAgent = `OpenAccessExplorer/1.0 (mailto:${process.env.UNPAYWALL_EMAIL || 'your-email@example.com'})`;
-
-// Initialize the search pipeline
-const searchPipeline = new EnhancedSearchPipeline({
-  userAgent,
-  // Ceiling on how deep a single request reads into each source
-  maxResults: parseInt(process.env.SEARCH_MAX_FETCH_DEPTH || '600'),
-  enableEnrichment: true,
-  enablePdfResolution: true,
-  enableCitations: false
-});
 
 // Collapses concurrent identical searches onto one fan-out. A miss costs tens
 // of seconds across every provider, which is a wide window for duplicates.
 const searchFlights = new SingleFlight();
-
-// Which implementation serves `/api/search`. Read once, at boot: a value that
-// could change mid-process would let one response cache hold bodies from two
-// different code paths, and the cache key has no room to tell them apart.
-// Flipping it means a restart, which empties that cache — it is an in-memory
-// NodeCache — so a response recorded by one path is never served by the other.
-const searchPath = resolveSearchPath();
-log.info(`Search path: ${searchPath}`);
 
 // Lives for the process, not the request. Caching what each provider returned
 // only pays across requests — it is what makes a page-2 click reuse the
@@ -129,12 +111,6 @@ async function routes(fastify: FastifyInstance) {
     try {
       const params = request.body;
 
-      // Set before the cache checks so every reply carries it, including the two
-      // that return early. A cached body is attributable to this path too: the
-      // flag is fixed at boot and the cache does not outlive the process, so
-      // nothing in it was produced by the other one.
-      reply.header('X-Search-Path', searchPath);
-
       // Check advanced cache first
       const cached = await searchCacheManager.getCachedSearchResults(params.q || '', params);
       if (cached) {
@@ -172,12 +148,7 @@ async function routes(fastify: FastifyInstance) {
       const { value: searchResult, coalesced } = await searchFlights.run(
         searchCacheManager.keyFor(params.q || '', params),
         async () => {
-          // Inside the flight deliberately: both paths get the same coalescing
-          // and the same cache write, so the flag changes what runs and nothing
-          // about how the request is served around it.
-          const result = searchPath === 'orchestrator'
-            ? await runOrchestrator(params, { cache: providerCache, userAgent })
-            : await searchPipeline.search(params);
+          const result = await runOrchestrator(params, { cache: providerCache, userAgent });
 
           await searchCacheManager.cacheSearchResults(params.q || '', params, result);
           if (result.facets) {
@@ -197,9 +168,8 @@ async function routes(fastify: FastifyInstance) {
         totalResults: searchResult.total,
         query: params.q,
         responseTime,
-        coalesced,
-        searchPath
-      }, 'Search pipeline completed');
+        coalesced
+      }, 'Search completed');
     
       return searchResult;
 
@@ -258,102 +228,13 @@ async function routes(fastify: FastifyInstance) {
     
       fastify.log.info({ id }, 'No cache hit, fetching paper details');
 
-      // Parse the ID to extract source and sourceId
-      // ID format: source:sourceId or just sourceId
-      let source: string | undefined;
-      let sourceId: string = id;
-    
-      if (id.includes(':')) {
-        const parts = id.split(':');
-        source = parts[0];
-        sourceId = parts.slice(1).join(':');
-      }
-
-      // Try to fetch from the appropriate source
-      let paper: OARecord | null = null;
-
-      if (source === 'arxiv' || (!source && sourceId.match(/^\d{4}\.\d{4,5}(v\d+)?$/))) {
-        const { ArxivConnector } = await import('./sources/arxiv');
-        const arxivConnector = new ArxivConnector();
-        const { records: results } = await arxivConnector.search({ titleOrKeywords: sourceId });
-        paper = results[0] || null;
-      } else if (source === 'core') {
-        const { CoreConnector } = await import('./sources/core');
-        const coreConnector = new CoreConnector(
-          process.env.CORE_BASE || 'https://api.core.ac.uk/v3',
-          process.env.CORE_API_KEY || ''
-        );
-        const { records: results } = await coreConnector.search({ titleOrKeywords: `id:${sourceId}` });
-        paper = results[0] || null;
-      } else if (source === 'europepmc') {
-        const { EuropePMCConnector } = await import('./sources/europepmc');
-        const pmcConnector = new EuropePMCConnector();
-        const { records: results } = await pmcConnector.search({ titleOrKeywords: sourceId });
-        paper = results[0] || null;
-      } else if (source === 'ncbi') {
-        const { NCBIConnector } = await import('./sources/ncbi');
-        const ncbiConnector = new NCBIConnector();
-        const { records: results } = await ncbiConnector.search({ titleOrKeywords: sourceId });
-        paper = results[0] || null;
-      } else if (source === 'openaire') {
-        const { OpenAIREConnector } = await import('./sources/openaire');
-        const openaireConnector = new OpenAIREConnector();
-        const { records: results } = await openaireConnector.search({ titleOrKeywords: sourceId });
-        paper = results[0] || null;
-      } else if (source === 'biorxiv' || source === 'medrxiv') {
-        const { BiorxivConnector } = await import('./sources/biorxiv');
-        const biorxivConnector = new BiorxivConnector();
-        const { records: results } = await biorxivConnector.search({ titleOrKeywords: sourceId });
-        paper = results[0] || null;
-      } else if (source === 'doaj') {
-        const { DOAJConnector } = await import('./sources/doaj');
-        const doajConnector = new DOAJConnector();
-        const { records: results } = await doajConnector.search({ titleOrKeywords: sourceId });
-        paper = results[0] || null;
-      } else if (source === 'plos') {
-        const { PLOSConnector } = await import('./sources/plos');
-        const plosConnector = new PLOSConnector();
-        // A PLOS id *is* its DOI, so this is a DOI lookup. Sending it as
-        // keywords would tokenise the identifier and match the wrong article or
-        // none — and with no branch here at all, every "Details" click on a PLOS
-        // result answered 404, on roughly a quarter of a typical result set.
-        const { records: results } = await plosConnector.search({ doi: sourceId });
-        paper = results[0] || null;
-      } else if (source === 'openalex') {
-        // Handle OpenAlex works directly via API
-        try {
-          const { OpenAlexClient } = await import('./lib/clients/openalex');
-          const openalexClient = new OpenAlexClient(userAgent);
-          const work = await openalexClient.getWork(sourceId);
-        
-          // Convert OpenAlex work to OARecord format
-          paper = {
-            id: work.id,
-            title: work.title,
-            authors: work.authorships?.map(a => a.author.display_name) || [],
-            abstract: work.abstract_inverted_index ? 
-              Object.entries(work.abstract_inverted_index)
-                .sort(([,a], [,b]) => a[0] - b[0])
-                .map(([word]) => word)
-                .join(' ') : undefined,
-            doi: work.doi,
-            year: work.publication_year,
-            venue: work.primary_location?.source?.display_name,
-            topics: work.concepts?.map(c => c.display_name) || [],
-            citationCount: work.cited_by_count,
-            oaStatus: work.open_access?.is_oa ? 'published' : undefined,
-            bestPdfUrl: work.open_access?.oa_url,
-            landingPage: work.id,
-            source: 'openalex',
-            sourceId,
-            language: work.language || 'en',
-            createdAt: work.created_date || new Date().toISOString()
-          };
-        } catch (error) {
-          log.error('OpenAlex fetch error:', error);
-          paper = null;
-        }
-      }
+      // One question, asked of the provider that owns the id. Which request
+      // that becomes — a by-id endpoint, a DOI lookup, or a search of the
+      // provider's own index — is the registry's business rather than the
+      // route's, which is why a hundred lines of per-connector branching
+      // could go.
+      const found = await lookupPaper(id, { userAgent });
+      const paper = found ? toOARecord(found) : null;
 
       // If no paper found, return 404
       if (!paper) {
@@ -442,72 +323,6 @@ async function routes(fastify: FastifyInstance) {
       return { 
         message: 'Cache cleared',
         timestamp: new Date().toISOString()
-      };
-    } catch (error: any) {
-      reply.code(500);
-      return clientError(error, request.id);
-    }
-  });
-
-  // Debug endpoint for testing sources
-  fastify.get('/debug/sources', adminOnly, async (request, reply) => {
-    try {
-      const testParams = { titleOrKeywords: 'ai' };
-    
-      // Test the search pipeline
-      const result = await searchPipeline.search({
-        q: 'ai',
-        page: 1,
-        pageSize: 5
-      });
-    
-      return {
-        status: 'ok',
-        sources: Object.keys(result.facets.source || {}),
-        totalResults: result.total,
-        sampleResults: result.hits.slice(0, 3).map(hit => ({
-          id: hit.id,
-          title: hit.title,
-          source: hit.source,
-          doi: hit.doi
-        }))
-      };
-    } catch (error: any) {
-      reply.code(500);
-      return clientError(error, request.id);
-    }
-  });
-
-  // Debug endpoint for testing aggregators
-  fastify.get('/debug/aggregators', adminOnly, async (request, reply) => {
-    try {
-      const { AggregatorManager } = await import('./lib/aggregators');
-      const aggregatorManager = new AggregatorManager();
-    
-      // Test aggregator search
-      const aggregatorResults = await aggregatorManager.searchAggregators({
-        q: 'machine learning',
-        page: 1,
-        pageSize: 3
-      });
-    
-      // Get aggregator stats
-      const stats = aggregatorManager.getAggregatorStats();
-    
-      return {
-        status: 'ok',
-        aggregators: stats,
-        results: aggregatorResults.map(result => ({
-          source: result.source,
-          recordCount: result.records.length,
-          latency: result.latency,
-          error: result.error,
-          sampleRecord: result.records[0] ? {
-            id: result.records[0].id,
-            title: result.records[0].title,
-            doi: result.records[0].doi
-          } : null
-        }))
       };
     } catch (error: any) {
       reply.code(500);
