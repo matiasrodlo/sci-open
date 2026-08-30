@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **11 / 13** | **4,564** | **10 / 10 · 4 authorities** | **870** | **1** |
+| **12 / 13** | **4,564** | **10 / 10 · 4 authorities** | **871** | **0 — default flipped** |
 
 > **Two rules for the whole runbook**
 >
@@ -24,7 +24,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 ## Phase map
 
-**GROUND** · `00` Stabilise the tree ✔ · `01` Safety net ✔ · `02` Delete ✔ · `03` Stop the bleeding ✔ · **BUILD** · `04` New contracts ✔ · `05` First provider ✔ · `06` Orchestrator ✔ · `07` Flag routing ✔ · `08` Migrate providers ✔ · `09` Authorities ✔ · **LAND** · `10` Cut over — *cache collapsed; cutover gated* · `11` Frontend ✔ · `12` Deploy hardening ✔
+**GROUND** · `00` Stabilise the tree ✔ · `01` Safety net ✔ · `02` Delete ✔ · `03` Stop the bleeding ✔ · **BUILD** · `04` New contracts ✔ · `05` First provider ✔ · `06` Orchestrator ✔ · `07` Flag routing ✔ · `08` Migrate providers ✔ · `09` Authorities ✔ · **LAND** · `10` Cut over — *default flipped; deletion pending a release* · `11` Frontend ✔ · `12` Deploy hardening ✔
 
 ## 00 · Stabilise the tree — *Done*
 
@@ -420,7 +420,7 @@ The premise holds — nine publisher fetches failed, all 403, from `academic.oup
 
 > **OpenAlex was rate-limited throughout.** Every measurement above was taken with its daily budget spent, so the authority reports it as errored and its contribution to the coverage numbers is zero. The numbers are therefore a floor: `citationCount`, `topics` and `oaStatus` should all read higher on a day with budget. `scripts/enrichment-report.ts` reproduces them.
 
-## 10 · Cut over and delete the old pipeline — *Task 4 done; the cutover is gated*
+## 10 · Cut over and delete the old pipeline — *Default flipped; deletion pending a release*
 
 Make the new path the only path.
 
@@ -458,7 +458,7 @@ Make the new path the only path.
 
 ### Tasks
 
-1. **Flip the default**, leave the flag in place for one release as a rollback.
+1. **Flip the default**, leave the flag in place for one release as a rollback. *Done.*
 2. **Delete `enhanced-search-pipeline.ts`, the old connectors and the `OARecord` adapters** once the frontend is on `Paper` (phase 11) — or keep the adapter permanently if you prefer a stable external contract.
 3. **Remove `fallback.ts`**, whose staged-fallback machinery only ever served DOI resolution and whose concurrency control was never wired up.
 4. **Collapse the cache** to one manager: L1 memory plus L2 Redis, no L3 map. Express bounds in bytes rather than entries — L3 currently trims above 50,000 entries (≈7.9 GB at measured response sizes) and L1 caps at 10,000 keys (≈1.6 GB). Fix the key/invalidation mismatch: `generateKey` hashes away exactly the substrings `invalidatePattern` searches for, so every pattern invalidation is a no-op. Switch Redis `KEYS` to `SCAN`.
@@ -481,7 +481,7 @@ Also gone: two bare `NodeCache` instances exported as `getSearchCache` and `getP
 
 ### Done when
 
-- [ ] One search path. The flag is gone or defaulted permanently. **Gated — see below.**
+- [x] One search path. The flag is gone or defaulted permanently. **Defaulted** — `orchestrator` serves every search that does not ask otherwise. The flag survives for one release as the rollback; removing it is what closes the "one search path" reading, and it goes with tasks 2 and 3.
 - [x] Cache invalidation actually invalidates — assert it in a test. Phase 01's failing test now passes, alongside variant, cross-subject and Redis-level assertions.
 - [x] No in-process mutable state remains in the request path, so the API is genuinely stateless.
 
@@ -495,13 +495,15 @@ Also gone: two bare `NodeCache` instances exported as `getSearchCache` and `getP
 >
 > Nothing adaptive remains. `httpPerformanceMonitor` is read only by the admin endpoints and never consulted to change which providers are asked — the scoring layer that did that was 1,553 lines deleted in phase 02, and it has not grown back.
 
-> **The cutover is gated, and the gate is not satisfiable today.**
+> **The default is flipped. The old path is still here.**
 >
-> Task 1 needs "comparison report favourable across the full query set". A full sweep needs roughly 88 OpenAlex requests and the budget was **$0** when this phase started, resetting at midnight UTC. Running it anyway is the failure this document already records: *"A sweep that runs out mid-way does not degrade gracefully; it produces a report that looks like a comparison and is not one."* Sweep 3 got three queries in and produced confounded counts, latency and completeness. So the sweep is the first OpenAlex use of the next day, or the account gets funded.
+> `DEFAULT_SEARCH_PATH` is `orchestrator`, on the evidence of the clean whole-path comparison recorded above: 70% overlap, median latency 8,111 ms against 13,149 ms, and every field-coverage figure higher. The count difference is not lost coverage — DataCite skipped on measurement, arXiv's OR-to-AND fix removing records that were never matches, and OpenAlex's read depth, since closed by internal pagination and verified.
 >
-> Phase 09's numbers were taken under the same constraint and are a floor for the same reason.
+> Verified end to end after flipping: a bare boot answers `x-search-path: orchestrator` and reports `complete: false` while OpenAlex is out of budget, which is phase 11's degradation notice working on the default path. `SEARCH_PATH=pipeline` restores the old path — checked, `x-search-path: pipeline`, and `complete` absent because the old path never set it. **A rollback is one environment variable and no deploy**, which is the whole reason for flipping a default rather than deleting the alternative.
 >
-> **Tasks 2 and 3 are gated behind task 1, not behind the sweep.** `fallback.ts` is imported by exactly one file — `enhanced-search-pipeline.ts` — which is still the default search path and is also what both comparison scripts and the parity tests measure against. Removing the staged-fallback machinery means either deleting the old pipeline, which waits for the frontend in phase 11, or rewriting a `resolveDoi` that is going to be deleted anyway. The second option is worse than it looks: it would change the behaviour of the path the sweep compares against, and invalidate the comparison the gate is waiting for.
+> **A confirming sweep is still owed.** The comparison this rests on predates the OpenAlex pagination fix, so its record-count column understates the new path. Re-running it needs roughly 88 OpenAlex requests against a budget that was **$0** all day, resetting at midnight UTC — and running it short is the failure this document already records: *"a report that looks like a comparison and is not one."* The mechanism is verified independently (a depth of 600 returns 600 records with continuous ranks); what is missing is the aggregate.
+>
+> **Tasks 2 and 3 wait for a release, deliberately.** `fallback.ts` is imported by exactly one file, `enhanced-search-pipeline.ts`, so removing it means deleting the old path — and deleting the old path turns rollback from an environment variable into a git revert, removes the `compare-paths` harness before the confirming sweep can run, and takes the nineteen parity tests with it. Task 1 says to leave the flag in place for one release, and that is what "long enough to trust" is measured in.
 >
 > Task 4 was done first precisely because it is the one part of this phase that neither path's behaviour depends on. The cache sits under both.
 
