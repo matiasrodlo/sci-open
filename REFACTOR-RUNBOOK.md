@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **9 / 13** | **4,564** | **10 / 10 · 4 authorities** | **795** | **1** |
+| **10 / 13** | **4,564** | **10 / 10 · 4 authorities** | **870** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -24,7 +24,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 ## Phase map
 
-**GROUND** · `00` Stabilise the tree ✔ · `01` Safety net ✔ · `02` Delete ✔ · `03` Stop the bleeding ✔ · **BUILD** · `04` New contracts ✔ · `05` First provider ✔ · `06` Orchestrator ✔ · `07` Flag routing ✔ · `08` Migrate providers ✔ · `09` Authorities ✔ · **LAND** · `10` Cut over — *cache collapsed; cutover gated* · `11` Frontend · `12` Deploy hardening
+**GROUND** · `00` Stabilise the tree ✔ · `01` Safety net ✔ · `02` Delete ✔ · `03` Stop the bleeding ✔ · **BUILD** · `04` New contracts ✔ · `05` First provider ✔ · `06` Orchestrator ✔ · `07` Flag routing ✔ · `08` Migrate providers ✔ · `09` Authorities ✔ · **LAND** · `10` Cut over — *cache collapsed; cutover gated* · `11` Frontend ✔ · `12` Deploy hardening
 
 ## 00 · Stabilise the tree — *Done*
 
@@ -505,7 +505,7 @@ Also gone: two bare `NodeCache` instances exported as `getSearchCache` and `getP
 >
 > Task 4 was done first precisely because it is the one part of this phase that neither path's behaviour depends on. The cache sits under both.
 
-## 11 · Frontend — *1 week*
+## 11 · Frontend — *Done*
 
 Move the UI onto the richer response, and fix the interface defects that have nothing to do with the backend.
 
@@ -519,18 +519,44 @@ Move the UI onto the richer response, and fix the interface defects that have no
 4. **Surface provenance and degradation.** Extend `ProviderCoverage` — already one of the best-judged components in the app — with provider status, and show a notice when `complete: false`.
 5. **Kill the hidden search.** `RelatedPapers` costs 25.5 seconds and 2,361 fetched records to render four links. Serve related papers from the topics already on the record, or drop the section.
 6. **Fix the export dialog.** "All records" and the numeric range both silently export the current page under a label promising up to 1,000.
-7. **Decide on Advanced Search.** With the `Query` AST from phase 4 it can finally work. If you would rather not, remove the tab *and* the help popover — its own worked example currently makes arXiv answer HTTP 400.
-8. **Decide on citations.** None of the ten formats conforms to the style it names — no author reformatting, DOIs emitted as URLs, APA and Chicago double-prefixing them. Drive them from a real CSL implementation, or cut back to BibTeX and RIS and make those two correct.
+7. **Decide on Advanced Search.** With the `Query` AST from phase 4 it can finally work. If you would rather not, remove the tab *and* the help popover — its own worked example currently makes arXiv answer HTTP 400. *Removed. The AST handles phrases, bare terms and DOIs; fielded search needs grammar work in `Query` and in every provider's `translate`, which is its own phase and not a frontend task.*
+8. **Decide on citations.** None of the ten formats conforms to the style it names — no author reformatting, DOIs emitted as URLs, APA and Chicago double-prefixing them. Drive them from a real CSL implementation, or cut back to BibTeX and RIS and make those two correct. *Cut back. ~800 lines deleted; a reader who wants APA imports the RIS into Zotero and gets it right.*
 9. **Add ARIA.** Zero `aria-*` and zero `role=` across 52 `onClick` handlers. Radix covers `components/ui/`; the hand-rolled controls — the sort menu especially — are uncovered.
 10. **Resolve dark mode.** A complete `.dark` token set exists and is unreachable — `darkMode` is unset in the Tailwind config and nothing applies the class. Wire it or delete the tokens.
 
+> **The gate is circular, and only one half of it binds.** Phase 11 waits on "Phase 10 complete", and phase 10 task 2 waits on "once the frontend is on `Paper` (phase 11)". The way out is the alternative phase 10 already offers: keep the `OARecord` adapter as a stable external contract. The response shape *is* stable — `toSearchResponse` makes both search paths emit the same `SearchResponse`, byte for byte — so every task below is independent of which path is default. What is genuinely blocked is only the headline "move the UI onto the richer response": `fieldSources`, `sources` and the graded `oaStatus` are still flattened away by the adapter, and exposing them is a response-shape change that belongs with the cutover. All five acceptance criteria were reachable without it.
+
+### What happened
+
+**Every API call goes through `lib/fetcher.ts`, and the origin is decided once.** The paper page built its own `http://localhost:4000`, which worked in development and could not have worked anywhere else, and `RelatedPapers` built another. The fetcher now resolves the two sides differently: in the browser the path stays relative so the `/api/:path*` rewrite in `next.config.js` is what points at the API — the rewrite's whole purpose, bypassed by every caller that hardcoded an origin — and on the server, where there is nothing to be relative to, the configured base is used. That split is exactly why a component must not do it: a component cannot know which side it will run on.
+
+**`PaperResponse` was deleted rather than corrected, and it was hiding a crash.** It declared `{ record, pdf: { url?, status } }`; `/api/paper/:id` returns an `OARecord` and never returned anything else. `ResultCard` believed the type and read `response.pdf.url`, so every record without a `bestPdfUrl` threw a `TypeError` where it meant to say "PDF not available". The one component that worked was the one that bypassed the typed fetcher.
+
+**Facets are repeated parameters now.** `?venue=A&venue=B`, not `?venue=A,B`. The old encoding lost any value containing a comma, and there are always some: measured, 25 in a single result set. Verified live on `RNA, Guide, CRISPR-Cas Systems` — the URL carries one percent-encoded value, and the search narrows from 1,828 to **120**, which is exactly the count the facet promised. `page` is dropped on every filter change, because narrowing a 4,000-result set while standing on page 40 asks for a page the narrowed set does not have.
+
+**Five near-identical facet blocks became one `<FacetGroup>`** — five places for the same encoding bug to live, each re-deriving its selection by splitting a comma-joined parameter. `FacetPanel` also lost a `currentFilters` prop whose only reader was a `toggleSource` handler no JSX ever rendered.
+
+**A degraded search says so.** `ProviderCoverage` keeps the three outcomes apart, because `ProviderReport` exists to distinguish them: a provider that *failed* makes the total a lower bound and gets a notice; one that was *skipped* declined to guess and is listed separately. Reporting a skip as a failure is the bug phase 08 fixed in the comparison sweep. Verified live — with OpenAlex out of budget the page reads *"This search is incomplete. OpenAlex did not answer, so the count above is a lower bound"*, above *"Not searched for this query: DataCite, bioRxiv, CORE — no keyword index for it."*
+
+**Opening a paper triggers no search.** `RelatedPapers` ran a second full search to render four links — the record's first three topics joined by ` OR `, 25.5 seconds and 2,361 fetched records, every time anyone opened a paper — and the links it produced were the top of a ranking for a query nobody typed. The topics are already on the record, so it renders them as links to the searches they stand for. Verified in the API log: opening a paper produces no request at all.
+
+**Ten citation formats became two, both correct.** None of the ten conformed to the style it named. Cut to BibTeX and RIS — machine formats with checkable specs, and what reference managers ingest; a reader who wants APA gets it correctly from Zotero after importing one. DOIs are bare in the `doi`/`DO` fields rather than URLs, which is what made APA and Chicago emit `https://doi.org/https://doi.org/10.x`. Phase 01's second `it.fails` — a backslash escaping to `\textbackslash\{\}` because the escape chain re-escaped its own replacement — passes now: one regex pass cannot revisit its own output.
+
+**The export dialog exports what it says.** "All records" was labelled `min(1000, totalResults)` and returned the current page; the numeric range sliced the same twenty by indices described as running to 1,000. It now offers the page and a range within it, and says so. Going beyond it is not a display fix — the export would have to re-request the search at a larger page size, and the orchestrator enriches whatever page it returns, so 1,000 records is some 3,000 authority lookups on a button press. That needs a way to ask for a page without enrichment, which is a backend change.
+
+**Advanced Search was removed, tab and popover together.** It built fielded queries over eight fields and three operators, and nothing on the backend has ever understood one — `parseQuery` knows phrases, bare terms and DOIs, so `title:` reached the providers as a literal term. Making it real needs field support in the `Query` AST and in every provider's `translate`, several of which cannot express a field search at all. The popover documented the same syntax and would have outlived what it described.
+
+**Dark mode is reachable.** A complete `.dark` token set shipped in every stylesheet from the start, and `darkMode` was unset in the Tailwind config so no `dark:` variant was ever generated and nothing applied the class. Wired to `prefers-color-scheme` rather than to a toggle — a toggle needs a control, persistence and a hydration story for the first paint, and the OS preference is what a reader who wants dark mode has already set. Verified: body renders `rgb(2, 8, 23)` on `rgb(248, 250, 252)`.
+
 ### Done when
 
-- [ ] No component constructs an API origin.
-- [ ] Every facet value in a result set is clickable and narrows correctly.
-- [ ] A degraded search visibly says so.
-- [ ] Opening a paper does not trigger a search.
-- [ ] Keyboard navigation works through the sort menu and result actions.
+- [x] No component constructs an API origin. Only `lib/fetcher.ts` and `next.config.js` know it.
+- [x] Every facet value in a result set is clickable and narrows correctly. Verified on a value with two commas: 1,828 → 120, matching the facet's own count.
+- [x] A degraded search visibly says so. Verified live against a spent OpenAlex budget.
+- [x] Opening a paper does not trigger a search. Verified in the API log — no request at all.
+- [x] Keyboard navigation works through the sort menu and result actions. The hand-rolled menu reports `aria-haspopup`, `aria-expanded` and `menuitemradio`/`aria-checked`; opening moves focus to the first item, Escape closes it and returns focus to the trigger. Every result action names the paper it acts on, so a screen reader no longer hears "PDF" twenty times.
+
+> **What phase 11 did not do.** The UI still consumes `OARecord`. `fieldSources`, the full `sources` list and the graded `oaStatus` route — everything phase 09 spent its effort producing — are still flattened by `toOARecord` and invisible to a reader. Surfacing them means changing the response shape, which is the half of this phase that really is gated on the cutover, and the adapter is the seam where it will happen.
 
 ## 12 · Deploy hardening — *2–3 days*
 
