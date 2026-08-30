@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **12 / 13** | **4,564** | **10 / 10 · 4 authorities** | **871** | **0 — default flipped** |
+| **12 / 13** | **4,564** | **10 / 10 · 4 authorities** | **913** | **0 — default flipped** |
 
 > **Two rules for the whole runbook**
 >
@@ -321,12 +321,18 @@ Mechanical, independent, one at a time. Each provider lands with its own fixture
    >
    > Nothing else suffers from the decision either way — the fan-out is parallel and aborts at the budget, so a slow provider costs its neighbours nothing.
 
-### Done when (per provider)
+### Done when (per provider) — *walked 2026-08-30, before phase 10 deletes anything on their authority*
 
-- [ ] Fixtures committed; `translate` and `normalize` unit-tested offline.
-- [ ] Parity test against the old connector passes, or the difference is a documented fix.
-- [ ] The comparison script shows no regression in that provider's contribution.
-- [ ] Capabilities declared truthfully — especially `yearFilter` and `maxPageSize`.
+- [x] Fixtures committed; `translate` and `normalize` unit-tested offline. All ten carry committed fixtures, and 429 provider tests run without touching the network — the only two files that mention `axios` or `fetch` mock it. Seven providers split `translate` / `normalize` into separate suites; bioRxiv and DataCite cover both in one file, which is a layout difference rather than a coverage gap.
+- [x] Parity test against the old connector passes, or the difference is a documented fix. Seven have a `parity.test.ts`: arXiv, DOAJ, Europe PMC, PubMed, OpenAIRE, OpenAlex, PLOS. The three without — bioRxiv, CORE, DataCite — are the three declared `keywordSearch: false`, where a keyword parity test has nothing to compare; each documents its differences from the old connector inline instead, against the recorded fixture.
+- [ ] The comparison script shows no regression in that provider's contribution. **The one box still open.** The recorded sweep covers it, but predates OpenAlex's internal pagination; the confirming re-run is armed for the next budget reset.
+- [x] Capabilities declared truthfully — especially `yearFilter` and `maxPageSize`. Now *asserted* rather than only argued — see below.
+
+> **Two things walking these boxes found, both fixed.**
+>
+> **The recorded fixtures were inside the directory phase 10 is scheduled to delete.** Fourteen test files across eight migrated providers read their recorded responses from `src/sources/__fixtures__/` — the phase 01 directory that sits in the old connector tree. Deleting `src/sources/` would have taken them along and broken the `normalize` suites of arXiv, bioRxiv, DataCite, DOAJ, Europe PMC, PubMed, OpenAIRE and PLOS. Not the parity tests, which are meant to go with the connectors they compare against, but the tests that pin what the *new* normalisers read. They live at `src/__fixtures__/` now, belonging to neither path, which is what makes the deletion safe to do without reading fourteen import paths first.
+>
+> **No provider asserted its own capabilities.** Every value is argued for in prose with the measurement that produced it, and not one was pinned by a test — `yearFilter` could have been flipped to `false` and the suite would still have passed. That is not a documentation problem: `plan()` reads `keywordSearch` and `doiLookup` to decide who is asked at all, and `maxPageSize` decides how deep a read actually goes, so a wrong value silently changes results rather than failing. `providers/__tests__/capabilities.test.ts` pins all six flags for all ten, fails when a provider joins the registry without a row, and asserts the read-depth table this document records — 600 from Europe PMC, PLOS, arXiv and DataCite, 500 from PubMed, 200 from OpenAlex before its internal pagination, 100 from DOAJ and OpenAIRE, 30 from bioRxiv, 25 from CORE.
 
 > **Risk**
 >
