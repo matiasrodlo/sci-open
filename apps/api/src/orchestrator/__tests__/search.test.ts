@@ -314,3 +314,52 @@ describe('orchestrator search — authorities and enrichment', () => {
   });
 });
 
+/**
+ * The API is stateless in the sense that matters: one request cannot change
+ * what another gets back.
+ *
+ * Two in-process caches survive phase 10 by design — the provider cache here
+ * and the cache manager's L1 — so "no in-process mutable state in the request
+ * path" cannot mean "no state at all". It means no state whose mutation
+ * changes an answer. The cache manager holds serialised values and parses on
+ * read, so it hands out a fresh object by construction. The provider cache
+ * holds live `Paper` objects and hands out the same ones to every caller,
+ * which is cheap and safe only while nothing downstream writes to them.
+ *
+ * Enrichment is the one step that writes to a paper, and it copies first. That
+ * is an invariant of the whole pipeline rather than a property of one
+ * function, so it is asserted here, through the cache, rather than trusted.
+ */
+describe('orchestrator search — statelessness', () => {
+  it('does not let one request alter what the next one gets from the cache', async () => {
+    const cached = paper({
+      id: 'europepmc:1',
+      doi: '10.1/a',
+      topics: ['crispr'],
+      sources: [ref('europepmc', { nativeId: '1', rank: 0 })]
+    });
+
+    const providers = [stub('europepmc', [cached])];
+    const cache = new ProviderCache();
+
+    const enricher = {
+      id: 'crossref' as any,
+      capabilities: { fields: ['publisher', 'topics', 'abstract'] as any, authoritative: [] as any[] },
+      pass: 0 as const,
+      lookup: async () => ({ publisher: 'Springer', topics: ['genetics'], abstract: 'On CRISPR.' })
+    };
+
+    const first = await searchWith(QUERY, { providers, cache, authorities: [enricher] });
+    expect(first.papers[0]).toMatchObject({ publisher: 'Springer', topics: ['crispr', 'genetics'] });
+
+    // Served from the provider cache this time — the stub is never called
+    // again — so anything the first request wrote through would show up here.
+    const second = await searchWith(QUERY, { providers, cache, authorities: [] });
+
+    expect(second.papers[0].publisher).toBeUndefined();
+    expect(second.papers[0].topics).toEqual(['crispr']);
+    expect(second.papers[0].abstract).toBeUndefined();
+    expect(second.papers[0].fieldSources).toEqual({});
+  });
+});
+
