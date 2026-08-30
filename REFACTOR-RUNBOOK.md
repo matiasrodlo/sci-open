@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **7 / 13** | **4,564** | **10 / 11** | **700** | **1** |
+| **9 / 13** | **4,564** | **10 / 10 · 4 authorities** | **772** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -24,7 +24,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 ## Phase map
 
-**GROUND** · `00` Stabilise the tree ✔ · `01` Safety net ✔ · `02` Delete ✔ · `03` Stop the bleeding ✔ · **BUILD** · `04` New contracts ✔ · `05` First provider ✔ · `06` Orchestrator ✔ · `07` Flag routing ✔ · `08` Migrate providers · `09` Authorities · **LAND** · `10` Cut over · `11` Frontend · `12` Deploy hardening
+**GROUND** · `00` Stabilise the tree ✔ · `01` Safety net ✔ · `02` Delete ✔ · `03` Stop the bleeding ✔ · **BUILD** · `04` New contracts ✔ · `05` First provider ✔ · `06` Orchestrator ✔ · `07` Flag routing ✔ · `08` Migrate providers ✔ · `09` Authorities ✔ · **LAND** · `10` Cut over · `11` Frontend · `12` Deploy hardening
 
 ## 00 · Stabilise the tree — *Done*
 
@@ -259,7 +259,7 @@ Put the new path in front of real traffic without moving the frontend or committ
 >
 > **OpenAlex now meters requests, and one 429 takes the whole service down.** See phase 08. Twenty-two queries exhausted the daily budget mid-sweep, and every keyword search after that returned HTTP 500. The old path's numbers for the last five queries are therefore missing rather than low, and are excluded from the comparison above.
 
-## 08 · Migrate the remaining providers — *1–2 days each*
+## 08 · Migrate the remaining providers — *Done*
 
 Mechanical, independent, one at a time. Each provider lands with its own fixtures, its own tests, and the specific defect fixes it owns.
 
@@ -332,9 +332,9 @@ Mechanical, independent, one at a time. Each provider lands with its own fixture
 >
 > Upstream rate limits are a real constraint even though the 429 this document once attributed to OpenAlex never reproduced — phase 01 recorded nine providers' fixtures without hitting one. Recording fixtures and running comparison sweeps both generate real traffic against services that owe you nothing. Record once, cache aggressively, and keep the contact address correct from phase 00.
 
-## 09 · Authorities and enrichment — *3–4 days*
+## 09 · Authorities and enrichment — *Done*
 
-Restore the cross-source enrichment the previous rewrite lost. This is the second provider role — `lookup(doi) → Partial<Paper>`, consulted about works you have already found.
+Restore the cross-source enrichment the previous rewrite lost. This is the second provider role — `lookup(doi) → AuthorityFacts`, consulted about works you have already found. (`Partial<Paper>` in the original sketch; the type is keyed on `ProvenancedField` instead, so an authority cannot contribute a field `fieldSources` has no way to attribute.)
 
 > **Gate** — Phase 08 complete; all search providers migrated.
 
@@ -345,15 +345,80 @@ Restore the cross-source enrichment the previous rewrite lost. This is the secon
 3. **Record field provenance during enrichment.** This is where `fieldSources` earns its place — an abstract from Europe PMC, a PDF URL from Unpaywall, a citation count from OpenAlex, all on one merged paper.
 4. **Fix OpenAlex DOI lookup.** Use `filter=doi:…`, not `search=doi:…` — the current call full-text-searches for the literal string and can return a different paper, which is then merged in as a peer of the correct one.
 5. **Fix Crossref OA inference.** Take open-access status from Unpaywall's `is_oa` and graded `oa_status`, not from the presence of any license entry. `extractLicense` currently returns `'Custom License'` for anything that is not one of six recognised CC URLs, so all-rights-reserved works get marked `published`.
-6. **Prefer repository PDFs over publisher PDFs.** Invert `getBestPdfUrl` and `preferPublisherPdf`. Publisher endpoints are the ones behind bot protection — measured, 3 of the top 5 results returned 403 or a redirect loop. Raise the proxy's redirect limit while you are in there.
-7. **Backfill citation counts** so the citations sort has data. No connector supplies one today; OpenCitations and Crossref both expose them.
+6. **Prefer repository PDFs over publisher PDFs.** Invert `getBestPdfUrl` and `preferPublisherPdf`. Publisher endpoints are the ones behind bot protection — measured, 3 of the top 5 results returned 403 or a redirect loop. Raise the proxy's redirect limit while you are in there. *Right conclusion, wrong mechanism: inverting on host type alone takes the page from 11/20 to 6/20. It reaches 19/20 only once the PMC download gate is rewritten — see below. Redirect limit raised 5 → 10.*
+7. **Backfill citation counts** so the citations sort has data. No connector supplies one today; OpenCitations and Crossref both expose them. *"No connector supplies one" is stale — phase 08 measured the new path at 39%, from OpenAlex and Europe PMC. Crossref is what closes the rest of the gap; OpenCitations contributes 2–4 counts per hundred results.*
+
+> **The eleventh provider was an authority all along.** The count said 10 / 11 migrated, and the missing one was OpenCitations — `keywordSearch: false` in the old registry, with a note saying it resolves citations for a known DOI. It has no search role to migrate, so phase 08's gate was already met and it lands here instead, as task 7.
+
+### What happened
+
+Four authorities — Crossref, OpenAlex, Unpaywall and OpenCitations — behind a second interface, `lookup(doi) -> AuthorityFacts`, consulted after pagination. `AuthorityFacts` is keyed on `ProvenancedField`, so every field an authority can contribute is by construction a field `fieldSources` can attribute.
+
+`AuthorityCapabilities` splits `fields` from `authoritative`, and that split is the design. Filling a gap is safe; replacing a value several providers agreed on is not, and is only justified where the authority is definitionally right. Unpaywall is the only one that overwrites anything.
+
+Measured over five queries and 100 results, authorities on against off, same fan-out from a shared cache:
+
+| | before | after |
+|---|---|---|
+| `citationCount` | 45% | **89%** |
+| `publisher` | 64% | **90%** |
+| `oaStatus` | 64% | **90%** |
+| `venue` | 86% | 90% |
+
+Page one carries 9–19 papers out of 20 with two or more attributed fields.
+
+### What the measurements overturned
+
+**Preferring repository PDFs is right, and every reason given for it was wrong.** The instruction was to invert `getBestPdfUrl` because "publisher endpoints are the ones behind bot protection". Measured over twenty works offering both:
+
+| choice | served a PDF |
+|---|---|
+| publisher location | 11 / 20 |
+| repository location, as Unpaywall gives it | **6 / 20** |
+| repository location, rewritten | **19 / 20** |
+
+The premise holds — nine publisher fetches failed, all 403, from `academic.oup.com`, `onlinelibrary.wiley.com`, `mdpi.com`, `neurology.org`, `amjcaserep.com` and `content.iospress.com`, and all nine answer 403 to a full Chrome User-Agent too. But repository copies were *worse* until one host was handled: thirteen of the twenty repository URLs are `pmc.ncbi.nlm.nih.gov/articles/PMC…/pdf/…`, which answers **HTTP 200 `text/html`** with a "Preparing to download …" cookie gate, to every User-Agent tried, with no redirect to follow. Europe PMC mirrors PMC and serves the same articles ungated: rewriting those URLs returned a real PDF **8 / 8**, then **13 / 13**. `lib/pdf-url.ts` holds that rewrite, and the proxy applies it before validation so the substituted host is resolved and SSRF-checked like any other.
+
+**"A PDF beats a landing page" is a coin flip, and was removed.** It was the other half of the `fullText` substitution rule and it sounds unarguable. Measured: 17 substitutions for **1 fixed and 1 regressed**, moving the page's download rate from 72% to 67%. The pairs it chose say why — `doaj.org` → `sciencedirect.com`, `doi.org` → `onlinelibrary.wiley.com`, `pubmed.ncbi.nlm.nih.gov` → `mdpi.com`. It was trading resolver URLs, which redirect and mostly work, for direct publisher URLs, which are the ones that 403. `kind` is not reliable enough to bet on either way: the `doaj.org` URLs are marked `html` and served real PDFs. An incumbent copy is now kept unless it is demonstrably not a copy at all.
+
+**Crossref's OA inference was worse than described, and so was its PDF link.** `extractLicense` returns `'Custom License'` for anything outside six recognised CC URLs, and anything truthy became `oaStatus: 'published'`. Measured on `10.1002/adma.201907006`: Crossref carries exactly one license, `onlinelibrary.wiley.com/termsAndConditions#vor` — Wiley's all-rights-reserved terms — and Unpaywall answers `is_oa: false, oa_status: "closed"`. The confusion is licence for route: three of four works sampled carry a `content-version: tdm` licence, which grants text-mining rights to a machine and says nothing about readers. Crossref no longer claims `oaStatus` at all. Separately, `extractPdfLink` accepted any link whose `intended-application` was `text-mining` regardless of content type, so for `10.1016/j.cell.2014.05.010`, whose only such links are `text/plain` and `text/xml`, it wrote a plain-text URL into `bestPdfUrl`.
+
+**OpenAlex's DOI lookup is also ten times cheaper.** `filter=doi:` versus `search=doi:` was a correctness fix — the old form full-text-searches for the literal string and can return a different paper. OpenAlex prices them differently and reports it in `meta.cost_usd`: the filter cost **$0.0001**, and the `search` form is billed at **$0.001**, measured back to back when the second was refused for want of the budget the first had left.
+
+**OpenCitations' configured endpoint is dead, and its zero is not a count.** `OPENCITATIONS_BASE` is `opencitations.net/index/coci/api/v1`, which answers **301**, as does `opencitations.net/index/api/v2`; the live host is `api.opencitations.net/index/v2`. And a DOI it has never seen answers HTTP 200 with `[{"count": "0"}]` — the same body an uncited paper produces. A hard zero would put a value we cannot stand behind into the field the citations sort orders on, so nothing is claimed instead.
+
+**Unpaywall no longer returns the author shape the old client read.** `UnpaywallResponse` declared `z_authors: { given, family, ORCID }` and the converter built `` `${author.given} ${author.family}` `` from it. All three recorded responses carry `raw_author_name` and no `given` or `family`, so that template produced the literal string `"undefined undefined"`, once per author, as a name. It ships no abstracts, topics or citation counts either, all three of which the old interface declared.
 
 ### Done when
 
-- [ ] A returned page carries `fieldSources` naming a different provider for at least two fields on at least one paper.
-- [ ] A DOI query returns one paper, not the right one plus a topically similar wrong one.
-- [ ] Download success rate on a page of results measurably improves against the phase-0 baseline.
-- [ ] Sorting by citations reorders results.
+- [x] A returned page carries `fieldSources` naming a different provider for at least two fields on at least one paper. **9–19 of 20 per page**, across five queries.
+- [x] A DOI query returns one paper, not the right one plus a topically similar wrong one. `filter=doi:` returns `meta.count: 1`; three providers answering about one DOI collapse to a single paper, asserted in `search.test.ts`.
+- [ ] Download success rate on a page of results measurably improves against the phase-0 baseline. **Not met, and the metric is confounded — see below.**
+- [x] Sorting by citations reorders results. It had data before (45%) and has more now (89%); the ordering property is asserted directly.
+
+> **The download criterion cannot be read against that baseline, for the same reason the ranking comparison could not.**
+>
+> Measured over five queries, 100 results, each distinct URL fetched once and requests to one host serialised — a first attempt probed both pages concurrently and measured the enriched page as worse, which was the harness sending publishers two requests at once and being 403'd for it:
+>
+> | page | served a PDF |
+> |---|---|
+> | old pipeline | 73% |
+> | new path, enrichment off | 69% |
+> | new path, enrichment on | 69% |
+>
+> **The old path wins because its page one is `europepmc x20`** — measured again here, on all five queries, the same single-provider block phase 01 recorded. Europe PMC's URLs are `europepmc.org/articles/PMC…?pdf=render`, which essentially always work, so scoring 73% is a property of returning one provider's records rather than of resolving copies well. The new path's page one carries four to six providers, and its download rate decomposes by who supplied the paper: **europepmc 42/45, arXiv 13/13, PLOS 9/9, OpenAIRE 21/26, PubMed 3/4, DOAJ 1/3.** A higher number against that baseline would mean the new path had stopped diversifying, exactly as a high `rho` would have meant it had stopped ranking.
+>
+> What is measurable: **enrichment is download-neutral** (69% either way) once the rule that failed was removed, and the PMC rewrite is a real gain that lands inside Unpaywall's URLs, where it is what stops preferring repositories from being a 6/20 regression.
+>
+> **What would actually move the number is a change to `Paper`.** Every remaining failure is a publisher 403 with a working alternative sitting in Unpaywall's `oa_locations`, and `fullText` holds one URL, so there is nothing for the proxy to fall back to. A ranked list of candidate copies, tried in order, is the fix; it is a shared-model change and belongs with the frontend move in phase 11.
+
+> **Two costs this phase accepted rather than solved.**
+>
+> **Enriching the page cannot rescue a paper the page never contained.** `applyPolicy` runs before pagination and drops papers with no retrievable copy, so a paper whose only known PDF is one Unpaywall would have found is gone before an authority is asked. Enriching the whole set would fix it and is the 2,388-requests-per-authority cost this step exists to avoid.
+>
+> **A citations sort orders on what the providers supplied, not on what enrichment added.** Sorting runs before pagination and enrichment after it, so a count backfilled by Crossref or OpenCitations arrives too late to affect the order. `citationCount` is fill-only for exactly this reason: papers that had no count sort to the bottom and stay there, so no page except the last can show an order its own numbers contradict.
+
+> **OpenAlex was rate-limited throughout.** Every measurement above was taken with its daily budget spent, so the authority reports it as errored and its contribution to the coverage numbers is zero. The numbers are therefore a floor: `citationCount`, `topics` and `oaStatus` should all read higher on a day with budget. `scripts/enrichment-report.ts` reproduces them.
 
 ## 10 · Cut over and delete the old pipeline — *1 day*
 
