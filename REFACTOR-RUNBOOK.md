@@ -1,12 +1,15 @@
-# Thirteen phases, in order
+# Fourteen phases, in order
 
 *Execution runbook · sci-open gateway refactor*
 
 Each phase has a gate that must be true before it starts, a concrete task list, and acceptance criteria you can check. Every phase is safe to stop after — the system works at the end of each one.
 
-| Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
+| Phases Done | Old Path | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **12 / 13** | **4,564** | **10 / 10 · 4 authorities** | **920** | **0 — default flipped** |
+| **14 / 14** | **gone — 4,637 lines** | **10 / 10 · 4 authorities** | **727** | **0 — flag removed** |
+
+*The test count fell from 920 as the old path went: 228 of them existed to
+compare the new code against it, and could not outlive it. Phase 13 says which.*
 
 > **Two rules for the whole runbook**
 >
@@ -24,7 +27,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 ## Phase map
 
-**GROUND** · `00` Stabilise the tree ✔ · `01` Safety net ✔ · `02` Delete ✔ · `03` Stop the bleeding ✔ · **BUILD** · `04` New contracts ✔ · `05` First provider ✔ · `06` Orchestrator ✔ · `07` Flag routing ✔ · `08` Migrate providers ✔ · `09` Authorities ✔ · **LAND** · `10` Cut over — *default flipped; deletion pending a release* · `11` Frontend ✔ · `12` Deploy hardening ✔
+**GROUND** · `00` Stabilise the tree ✔ · `01` Safety net ✔ · `02` Delete ✔ · `03` Stop the bleeding ✔ · **BUILD** · `04` New contracts ✔ · `05` First provider ✔ · `06` Orchestrator ✔ · `07` Flag routing ✔ · `08` Migrate providers ✔ · `09` Authorities ✔ · **LAND** · `10` Cut over ✔ · `11` Frontend ✔ · `12` Deploy hardening ✔ · `13` Delete the old path ✔
 
 ## 00 · Stabilise the tree — *Done*
 
@@ -465,8 +468,8 @@ Make the new path the only path.
 ### Tasks
 
 1. **Flip the default**, leave the flag in place for one release as a rollback. *Done.*
-2. **Delete `enhanced-search-pipeline.ts`, the old connectors and the `OARecord` adapters** once the frontend is on `Paper` (phase 11) — or keep the adapter permanently if you prefer a stable external contract.
-3. **Remove `fallback.ts`**, whose staged-fallback machinery only ever served DOI resolution and whose concurrency control was never wired up.
+2. **Delete `enhanced-search-pipeline.ts`, the old connectors and the `OARecord` adapters** once the frontend is on `Paper` (phase 11) — or keep the adapter permanently if you prefer a stable external contract. *Done in phase 13, taking the second option: the frontend still consumes `OARecord`, so the adapter is the contract rather than a way station.*
+3. **Remove `fallback.ts`**, whose staged-fallback machinery only ever served DOI resolution and whose concurrency control was never wired up. *Done in phase 13.*
 4. **Collapse the cache** to one manager: L1 memory plus L2 Redis, no L3 map. Express bounds in bytes rather than entries — L3 currently trims above 50,000 entries (≈7.9 GB at measured response sizes) and L1 caps at 10,000 keys (≈1.6 GB). Fix the key/invalidation mismatch: `generateKey` hashes away exactly the substrings `invalidatePattern` searches for, so every pattern invalidation is a no-op. Switch Redis `KEYS` to `SCAN`.
 
 ### What happened — task 4, the cache
@@ -487,7 +490,7 @@ Also gone: two bare `NodeCache` instances exported as `getSearchCache` and `getP
 
 ### Done when
 
-- [x] One search path. The flag is gone or defaulted permanently. **Defaulted** — `orchestrator` serves every search that does not ask otherwise. The flag survives for one release as the rollback; removing it is what closes the "one search path" reading, and it goes with tasks 2 and 3.
+- [x] One search path. The flag is gone or defaulted permanently. **Both, in the end** — defaulted here, and removed in phase 13 along with tasks 2 and 3, which is what closes the strict reading.
 - [x] Cache invalidation actually invalidates — assert it in a test. Phase 01's failing test now passes, alongside variant, cross-subject and Redis-level assertions.
 - [x] No in-process mutable state remains in the request path, so the API is genuinely stateless.
 
@@ -513,7 +516,7 @@ Also gone: two bare `NodeCache` instances exported as `getSearchCache` and `getP
 >
 > If it is ever wanted, `scripts/compare-paths.ts` still runs and needs roughly 88 OpenAlex requests as the day's first use. Running it short is the failure this document already records: *"a report that looks like a comparison and is not one."* That harness disappears with phase 10's deletion.
 >
-> **Tasks 2 and 3 wait for a release, deliberately.** `fallback.ts` is imported by exactly one file, `enhanced-search-pipeline.ts`, so removing it means deleting the old path — and deleting the old path turns rollback from an environment variable into a git revert, removes the `compare-paths` harness before the confirming sweep can run, and takes the nineteen parity tests with it. Task 1 says to leave the flag in place for one release, and that is what "long enough to trust" is measured in.
+> **Tasks 2 and 3 wait for a release, deliberately.** `fallback.ts` is imported by exactly one file, `enhanced-search-pipeline.ts`, so removing it means deleting the old path — and deleting the old path turns rollback from an environment variable into a git revert, removes the `compare-paths` harness before the confirming sweep can run, and takes the nineteen parity tests with it. Task 1 says to leave the flag in place for one release, and that is what "long enough to trust" is measured in. **That release has passed: phase 13 spent all three, knowingly.**
 >
 > Task 4 was done first precisely because it is the one part of this phase that neither path's behaviour depends on. The cache sits under both.
 
@@ -568,7 +571,7 @@ Move the UI onto the richer response, and fix the interface defects that have no
 - [x] Opening a paper does not trigger a search. Verified in the API log — no request at all.
 - [x] Keyboard navigation works through the sort menu and result actions. The hand-rolled menu reports `aria-haspopup`, `aria-expanded` and `menuitemradio`/`aria-checked`; opening moves focus to the first item, Escape closes it and returns focus to the trigger. Every result action names the paper it acts on, so a screen reader no longer hears "PDF" twenty times.
 
-> **What phase 11 did not do.** The UI still consumes `OARecord`. `fieldSources`, the full `sources` list and the graded `oaStatus` route — everything phase 09 spent its effort producing — are still flattened by `toOARecord` and invisible to a reader. Surfacing them means changing the response shape, which is the half of this phase that really is gated on the cutover, and the adapter is the seam where it will happen.
+> **What phase 11 did not do.** The UI still consumes `OARecord`. `fieldSources`, the full `sources` list and the graded `oaStatus` route — everything phase 09 spent its effort producing — are still flattened by `toOARecord` and invisible to a reader. Surfacing them means changing the response shape, which is the half of this phase that really is gated on the cutover, and the adapter is the seam where it will happen. **Still true after phase 13**, which kept the adapter deliberately — the shape change is its own work, not a consequence of deleting the old path.
 
 ## 12 · Deploy hardening — *Done*
 
@@ -618,16 +621,156 @@ The CI audit job is blocking now. It could not simply be `pnpm audit --audit-lev
 
 > **The two majors are the remaining work, and one of them is more urgent than it looks.** Fastify 4 → 5 needs Node 20+ and changes the logger and plugin contracts. Next 14 → 15 needs React 19 and makes `params` and `searchParams` async in every server component, which touches the results page directly. Among the Next advisories being carried is **SSRF in rewrites** — this codebase no longer uses a rewrite, having replaced it with a route handler in this phase, which narrows the exposure but does not remove the advisory.
 
+## 13 · Delete the old path — *Done*
+
+The half of phase 10 that waited on a release. Task 1 flipped the default and
+left the flag as a rollback; tasks 2 and 3 delete the alternative, and with it
+the rollback, the comparison harness and the parity tests.
+
+> **Gate** — Phase 10 complete; the orchestrator has served as the default for
+> a release.
+
+### Tasks
+
+1. **Delete `enhanced-search-pipeline.ts`, the old connectors and the clients** — phase 10 task 2. Keep the `OARecord` adapters: the alternative that task offered, and the one that applies, because the frontend still consumes `OARecord`.
+2. **Remove `fallback.ts`** — phase 10 task 3.
+3. **Remove the flag.** `SEARCH_PATH`, `resolveSearchPath`, the `X-Search-Path` header. One path is not one path while a variable still selects between two.
+4. **Rewrite `/api/paper/:id`**, which turned out to be the only thing holding the old connectors up.
+
+### What happened
+
+**The paper endpoint was the blocker, and it was in worse shape than the code
+it depended on.** Nothing else imported the connectors — `fallback.ts` had one
+importer and the pipeline had two scripts — but the route reached into nine of
+them by dynamic import, one `else if` per provider, ninety lines of it, each
+branch keyword-searching a native id and returning `results[0]`.
+
+Measured before deleting anything, one id per provider taken from a live result
+set:
+
+| | before | after |
+|---|---|---|
+| arXiv · Europe PMC · PubMed · PLOS | exact | exact |
+| **OpenAIRE** | **404** — a third of a measured result set | exact |
+| **DOAJ** | **404** | exact |
+| **bioRxiv** | **404** | exact |
+| **OpenAlex** | right paper, **id `https://openalex.org/W…`** | exact |
+| **DataCite** | **404 by construction** — the route had no branch for it | exact |
+| CORE | not measured with a real id | exact |
+
+The OpenAlex row is the one worth pausing on: the record came back, so the
+endpoint looked like it worked, and the `id` it returned was the OpenAlex URL
+rather than `openalex:W…` — the record did not round-trip to the id it was
+fetched by. That is the kind of defect a 404 does not have, because a 404 is
+visible.
+
+**One question, asked of the provider that owns the id.** `orchestrator/lookup.ts`
+replaces the branching: split `source:nativeId`, find that provider in the
+registry, ask it for that record. Which request that becomes is a fact about
+the provider's API rather than a preference, and it is declared in the registry
+as an optional `lookup`:
+
+| provider | how it is asked | why |
+|---|---|---|
+| OpenAlex | `GET /works/{id}` | see below |
+| DOAJ | `GET /api/articles/{id}` | the search index does not resolve its own 32-hex ids |
+| OpenAIRE | `openairePublicationID` | `objIdentifier` is rejected outright — HTTP 400, *"Parameter objIdentifier is not supported"* |
+| CORE | `q=id:{id}` | `/v3/works/{id}` answers **HTTP 500**, measured on CORE id `8657725`, where the query returns exactly that record |
+| bioRxiv · DataCite · PLOS | the provider's search | their native ids **are** DOIs, so `parseQuery` makes the lookup a DOI lookup |
+| arXiv · PubMed · Europe PMC | the provider's search | they index their own ids as searchable text |
+
+**OpenAlex's entity endpoint is not billed like its search.** `/works/{id}` was
+chosen over `filter=ids.openalex:…` for that reason, and it was measured rather
+than assumed: on 2026-08-30, against a daily budget already at zero,
+`/works?filter=…` answered *"Insufficient budget. This request costs $0.0001
+but you only have $0 remaining"* and `/works/W2741809807` returned the record.
+A details click that stops working because someone ran a comparison sweep that
+morning is not a details click.
+
+**The route now requires the record to be the record that was asked for.** The
+old one returned `results[0]` from a keyword search, so a near miss opened
+somebody else's paper. A provider that answers with a different id now produces
+a 404, and a provider that could not be asked produces a 500 — because a slow
+provider is not a missing paper, and the two should not look the same. CORE
+makes that distinction earn its keep: four consecutive lookups of one record
+took 2.3 s, 3.8 s, 11.4 s and 17.2 s, so it can exceed the lookup budget, and
+when it does the answer is an error rather than "not found".
+
+> **The 40 seconds was Redis, and the first measurement said otherwise.**
+>
+> The before-and-after probe timed every lookup at 31 to 48 seconds, and the
+> obvious reading — the old connectors fetching a full page to return one
+> record — was wrong. The API log says what it actually was: **Redis was not
+> running**, `ioredis` retries four times at two-second intervals, and a paper
+> request makes four cache operations. Eight seconds each, ~40 seconds a
+> request, on both sides of the comparison and unrelated to either.
+>
+> Isolated from the cache, one lookup per provider against the live APIs:
+> **165 ms** arXiv, 365 ms PLOS, 476 ms bioRxiv, 732 ms OpenAlex, 759 ms DOAJ,
+> 935 ms PubMed, 1.1 s Europe PMC, 1.2 s DataCite, 2.8 s OpenAIRE, and CORE's
+> spread above.
+>
+> Recorded because the correction is the point. Two numbers that differed by
+> two orders of magnitude were about to be attributed to the thing this phase
+> was changing, on nothing but plausibility — the same error the four
+> corrections at the top of this document are all instances of.
+
+**What the deletion took with it, deliberately.** 4,637 lines of source across
+19 files, and **228 tests** across 21 more: the nineteen parity tests that
+compared each new normaliser against the connector it replaced, the pipeline
+and `RecordMerger` suites, and the abstract-reconstruction tests — whose
+subject survives in `providers/openalex/normalize.ts` with its own coverage.
+`scripts/compare-paths.ts` went too, as phase 10 said it would. They exist to
+compare against a path that is gone; keeping them would mean keeping it.
+
+Also gone: `/debug/sources` and `/debug/aggregators`, both of which existed to
+exercise the old path. What they reported, a real search now reports better —
+`providerTotals` carries per-provider status, counts and skip reasons on every
+response.
+
+**The documentation described the deleted system, so it was rewritten rather
+than patched.** `architecture.md` still had the Smart Source Selector that
+phase 02 deleted, the three-tier cache phase 10 collapsed, and "Adaptive
+Learning"; `api.md` documented `GET /api/paper/:id` as returning
+`{ record, pdf }`, which it has never returned and which is the fiction that
+crashed the frontend until phase 11. All four architecture diagrams were
+rewritten and the committed SVGs regenerated — they had been stale since phase
+02 and the document said so in a note that is now unnecessary.
+
+### Done when
+
+- [x] **One search path, with nothing selecting between two.** `SEARCH_PATH`, `resolveSearchPath` and the `X-Search-Path` header are gone, from the code, `docker-compose.yml` and `env.example`.
+- [x] **Nothing imports the old path, because there is no old path.** `enhanced-search-pipeline.ts`, `fallback.ts`, `aggregators.ts`, the old `merge.ts`, `lib/clients/` and `src/sources/` are all deleted.
+- [x] **`/api/paper/:id` resolves every provider.** Verified live against a running API: ten of ten exact, plus a bare arXiv id resolving to its prefixed record and an unknown provider 404ing without a request.
+- [x] **The whole thing still works.** Build, typecheck and lint green; 727 tests pass; a live search returns 1,828 results across five providers, with `complete: false` and the degradation notice intact while OpenAlex is out of budget.
+- [x] **The documentation no longer describes deleted code.**
+
+> **Rollback is a revert now, and that was the trade.** Phase 10 flipped the
+> default and kept the flag precisely so that a bad flip cost one environment
+> variable. Spending that is what this phase is; the release the gate asked for
+> is what paid for it.
+>
+> **The `OARecord` adapter stays, and is now permanent by decision rather than
+> pending.** Phase 10 task 2 offered exactly this alternative — *"or keep the
+> adapter permanently if you prefer a stable external contract"* — and the
+> frontend still consumes `OARecord`, so it is the one that applies.
+> `fieldSources`, the full `sources` list and the graded `oaStatus` are still
+> flattened on the way out. Surfacing them is a response-shape change, which is
+> its own work and not this one.
+
 ---
 
 *Runbook for the provider / orchestrator / provenance refactor, originally written against commit `56817406` plus the uncommitted working tree. Phases 00 and 01 have since been executed, and this document was revised against what they found: four claims corrected, three new defects added, and every surviving measurement reproduced live — 145.5 KB of facets behind 29.7 KB of hits, a 3,079-bucket topics facet, 4,428 log lines and 31.9 seconds for one search, page one returning a single provider's records in one block.*
 
-*Phases 00 through 07 have landed. Phase 08 is next — migrating the remaining
-nine providers into the shape Europe PMC proved, each with the specific defect
-fix listed against it. Line counts quoted in phases 02 and 03 were exact when
-those phases ran; the tree has moved since.*
+*All fourteen phases have landed. The old path is gone, so every measurement
+in this document that compares the two is now history rather than something
+that can be re-run — `scripts/compare-paths.ts` went with it, as phase 10 said
+it would. Line counts quoted in phases 02 and 03 were exact when those phases
+ran; the tree has moved since.*
 
-*The acceptance checkboxes under phases 02 through 06 were not ticked as those
-phases landed, and have not been retro-audited item by item. The headings
-record what was committed; the boxes are still worth walking before phase 10
-deletes the old path on their authority.*
+*What is left is named rather than scheduled: the two majors at the end of
+phase 12 (Fastify 4→5, Next 14→15, and the advisories they carry), fielded
+search — grammar in the `Query` AST and in every provider's `translate`, which
+phase 11 declined as not a frontend task — and the response-shape change that
+would let the UI read `fieldSources`, `sources` and the graded `oaStatus`
+instead of the adapter's flattening.*

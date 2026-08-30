@@ -14,37 +14,26 @@ NEXT_PUBLIC_API_BASE=http://localhost:4000
 PORT=4000
 NODE_ENV=development
 LOG_LEVEL=debug
-SEARCH_PATH=pipeline
 ```
-
-`SEARCH_PATH` chooses which implementation serves `POST /api/search`:
-`pipeline` (the default) or `orchestrator`. Anything else, including an unset
-value, falls back to `pipeline` rather than failing to start — a typo should
-not take the search endpoint down.
-
-It is read once at boot, so changing it takes a restart. That is deliberate:
-the response cache is in-memory and holds no record of which path produced an
-entry, and a restart empties it, so a body written by one path can never be
-served by the other. Every reply carries `X-Search-Path` saying which one
-answered.
-
-The default does not flip until `scripts/compare-paths.ts` says the new path
-is better rather than merely different, and the flag stays in place for a
-release after it does, so a rollback is a config change rather than a deploy.
 
 `LOG_LEVEL` takes any pino level — `trace`, `debug`, `info`, `warn`, `error`,
 `fatal` — and defaults to `info` under `NODE_ENV=production`, `debug`
 otherwise. Everything the service logs goes through Fastify's logger, so this
-one setting governs connector and pipeline output as well as request logging.
+one setting governs provider and orchestrator output as well as request
+logging.
 
 ### Cache
 
 ```env
 REDIS_URL=redis://localhost:6379
-CACHE_L1_TTL=300          # 5 minutes
-CACHE_L2_TTL=3600         # 1 hour
-CACHE_L3_TTL=86400        # 24 hours
+CACHE_MAX_BYTES=268435456 # 256 MB, the L1 budget
 ```
+
+Two levels: L1 in memory and L2 in Redis. `CACHE_MAX_BYTES` bounds L1 in
+bytes rather than in entries, because the things counted are pages of search
+results — the old 10,000-key cap was roughly 1.6 GB at measured response sizes,
+and nothing about the number said so. TTLs are per-namespace and live in
+`cache-manager.ts`.
 
 ### Data Sources
 

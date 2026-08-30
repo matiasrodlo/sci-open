@@ -2,7 +2,8 @@
 
 ## Overview
 
-Open Access Explorer follows a modular monorepo architecture with clear separation between frontend, backend, and shared packages.
+Open Access Explorer is a monorepo: a Next.js frontend, a Fastify API, and a
+shared package holding the types both speak.
 
 ## System Architecture
 
@@ -11,80 +12,89 @@ Open Access Explorer follows a modular monorepo architecture with clear separati
 │   Next.js   │  Frontend (Port 3000)
 │   Frontend  │
 └──────┬──────┘
-       │ HTTP
+       │ HTTP, through app/api/[...path] so the origin is a runtime value
        ▼
 ┌─────────────┐
 │   Fastify   │  API Server (Port 4000)
 │     API     │
 └──────┬──────┘
        │
-       ├──► Enhanced Search Pipeline
-       │    ├── Smart Source Selector
-       │    ├── Query Analyzer
-       │    └── Record Merger
+       ├──► Orchestrator
+       │    plan → fan out → merge → rank → filter → facet → paginate → enrich
        │
-       ├──► Data Sources
-       │    ├── arXiv
-       │    ├── CORE
-       │    ├── Europe PMC
-       │    ├── NCBI
-       │    └── Others...
+       ├──► Providers — sources of results
+       │    arXiv · bioRxiv · CORE · DataCite · DOAJ
+       │    Europe PMC · PubMed · OpenAIRE · OpenAlex · PLOS
        │
-       ├──► Enrichment Services
-       │    ├── OpenAlex
-       │    ├── Crossref
-       │    └── Unpaywall
+       ├──► Authorities — consulted about records, never a source of them
+       │    Crossref · OpenAlex · OpenCitations · Unpaywall
        │
-       └──► Cache Layer
-            ├── Redis (L2)
-            └── NodeCache (L1)
+       └──► Cache
+            ├── L1 memory, bounded in bytes
+            └── L2 Redis
 ```
 
 ## Core Components
 
-### Search Pipeline
+### Orchestrator
 
-The `EnhancedSearchPipeline` orchestrates search across multiple sources:
+`apps/api/src/orchestrator/` runs every search, in this order:
 
-1. **Query Analysis** - Normalizes and analyzes search queries
-2. **Smart Source Selection** - Chooses optimal sources based on query patterns
-3. **Parallel Aggregation** - Searches selected sources concurrently
-4. **Record Merging** - Deduplicates and merges results
-5. **Enrichment** - Enhances records with metadata from OpenAlex/Crossref
-6. **Faceting** - Generates filter facets from results
+1. **Plan** — which providers can serve this query, from their declared
+   capabilities. A provider that cannot is skipped with a reason, not guessed
+   at.
+2. **Fan out** — one request per planned provider, in parallel, each with the
+   orchestrator's timeout rather than its own.
+3. **Merge** — deduplicate by DOI, then by an identity key, keeping every
+   provider that saw the paper in `sources`.
+4. **Rank** — rank fusion over each provider's own ordering, so no single
+   provider owns the page.
+5. **Filter** — the user's facet selections, plus the open-access policy.
+6. **Facet** — computed over the filtered set, so a bucket count is exactly how
+   far selecting it narrows the page.
+7. **Paginate**, then **enrich** the page — and only the page, because the
+   authorities are per-DOI lookups.
 
-### Caching Strategy
+The order is load-bearing: ranking after pagination ranks a page, ranking
+before dedupe ranks duplicates, and faceting before filtering describes a set
+the caller never sees.
 
-Three-tier caching system:
+### Providers
 
-- **L1 (NodeCache)**: In-memory, fast, short TTL (5 min)
-- **L2 (Redis)**: Persistent, medium TTL (1 hour)
-- **L3 (Long-term)**: Extended TTL (24 hours)
+Each provider is a directory under `apps/api/src/providers/` with four parts,
+so that the only impure one is isolated:
 
-Cache warming pre-populates frequently accessed queries.
+| File | Role |
+| --- | --- |
+| `capabilities.ts` | What this API can do — checkable against its documentation |
+| `translate.ts` | `Query` → the provider's native query. Pure. |
+| `fetch.ts` | The one piece of I/O |
+| `normalize.ts` | Payload → `Paper[]`, plus what it had to skip and why |
 
-### Source Connectors
+`orchestrator/registry.ts` is the list of them and how to drive each one.
 
-Each data source implements the `SourceConnector` interface:
+### Authorities
 
-```typescript
-interface SourceConnector {
-  search(params: {
-    doi?: string;
-    titleOrKeywords?: string;
-    yearFrom?: number;
-    yearTo?: number;
-  }): Promise<OARecord[]>;
-}
-```
+`apps/api/src/authorities/` holds the services consulted *about* a record —
+Crossref, OpenAlex, OpenCitations and Unpaywall. They are kept apart from
+providers because an authority never adds a paper: it fills fields on papers
+that were already going to be returned, and every field it supplies is recorded
+in `fieldSources`. An authority failing does not make a search incomplete; a
+provider failing does.
 
-### Smart Source Selection
+### Caching
 
-Adaptive algorithm that:
-- Analyzes query characteristics
-- Monitors source performance
-- Selects optimal sources per query
-- Learns from historical patterns
+Two levels, both keyed as `namespace:hash(subject):hash(variant)` so every
+page, sort and filter of one query sits under a prefix the query itself
+derives:
+
+- **L1, in memory** — bounded in *bytes* (`CACHE_MAX_BYTES`, 256 MB by
+  default), least-recently-used, spending expired entries before live ones. It
+  stores serialised values and parses on read, so a caller cannot mutate what
+  the next reader gets.
+- **L2, Redis** — walked with `SCAN`, never `KEYS`.
+
+`invalidate(namespace, subject)` returns how many entries it removed.
 
 ## Data Flow
 
@@ -92,38 +102,41 @@ Adaptive algorithm that:
 
 ```
 1. Client → API: POST /api/search
-2. API checks cache (L1 → L2 → L3)
-3. If miss: Query Analyzer processes query
-4. Smart Source Selector chooses sources
-5. Parallel search across selected sources
-6. Record Merger deduplicates results
-7. Enrichment services enhance metadata
-8. Results cached and returned
+2. Cache lookup: exact key, then a similar one
+3. On a miss, one fan-out per key however many callers are waiting (single-flight)
+4. Orchestrator: plan → fan out → merge → rank → filter → facet → paginate → enrich
+5. Paper[] → SearchResponse, and the result is cached
 ```
+
+The response carries a `providers` report — what each one was asked, what it
+returned, and whether it failed, timed out or was skipped — and `complete`,
+which is false when a provider failed, making `total` a lower bound.
 
 ### Paper Details
 
 ```
 1. Client → API: GET /api/paper/:id
-2. Parse ID (source:sourceId or DOI)
-3. Check cache
-4. Fetch from appropriate source
-5. Resolve PDF URL
-6. Cache and return
+2. Check cache, by id and then by DOI
+3. lookupPaper: split `source:nativeId`, ask that provider for that record
+4. Cache and return
 ```
 
-## Performance Optimizations
+Step 3 is one question with two answers, decided by the provider's API rather
+than by preference: a by-id endpoint where there is one (OpenAlex, DOAJ,
+OpenAIRE, CORE), and otherwise the provider's search — which for bioRxiv,
+DataCite and PLOS is a DOI lookup, because their native ids *are* DOIs.
 
-- **HTTP Connection Pooling** - Reuses connections to external APIs
-- **Request Batching** - Groups similar requests
-- **Timeout Management** - Prevents slow sources from blocking
-- **Fallback Chains** - Graceful degradation on failures
-- **Adaptive Learning** - Improves source selection over time
+## Performance
+
+- **HTTP connection pooling** for the providers that get asked most.
+- **Single-flight** — concurrent identical searches share one fan-out.
+- **Provider cache** — what each provider returned, so a page-2 click reuses
+  the fan-out rather than repeating it.
+- **Per-provider timeouts**, owned by the orchestrator, so one slow provider
+  degrades the result rather than the request.
 
 ## Scalability
 
-- **Horizontal Scaling**: Stateless API servers
-- **Cache Distribution**: Redis cluster support
-- **Search Backend**: Typesense/Meilisearch for large-scale indexing
-- **Load Balancing**: Ready for multiple API instances
-
+- **Horizontal scaling**: no in-process state whose mutation changes an answer.
+- **Cache distribution**: Redis.
+- **Load balancing**: ready for multiple API instances.

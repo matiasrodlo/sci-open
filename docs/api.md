@@ -77,27 +77,41 @@ Search for papers across multiple sources.
 Get detailed information about a specific paper.
 
 **Parameters:**
-- `id`: Paper identifier (format: `source:sourceId` or DOI)
+- `id`: the identifier a search result carries, `source:nativeId` — the same
+  string as `OARecord.id`. A bare arXiv identifier is also accepted.
 
-**Response:**
+The id names the one provider that owns the record, and it is the only one
+asked. Which request that becomes depends on that provider's API: OpenAlex,
+DOAJ, OpenAIRE and CORE have a by-id endpoint; the rest are asked through their
+search, which for bioRxiv, DataCite and PLOS is a DOI lookup because their
+native ids *are* DOIs. A record that comes back under a different id is not the
+one that was asked for, and the answer is 404 rather than that record.
+
+**Response:** an `OARecord`, and nothing wrapping it.
+
 ```json
 {
-  "record": {
-    "id": "arxiv:2301.12345",
-    "title": "Paper Title",
-    "authors": ["Author One"],
-    "year": 2023,
-    "doi": "10.1234/example",
-    "abstract": "...",
-    "source": "arxiv",
-    "sourceId": "2301.12345"
-  },
-  "pdf": {
-    "url": "https://arxiv.org/pdf/2301.12345.pdf",
-    "status": "ok"
-  }
+  "id": "arxiv:2301.12345",
+  "title": "Paper Title",
+  "authors": ["Author One"],
+  "year": 2023,
+  "doi": "10.1234/example",
+  "abstract": "...",
+  "source": "arxiv",
+  "sourceId": "2301.12345",
+  "bestPdfUrl": "https://arxiv.org/pdf/2301.12345.pdf",
+  "landingPage": "https://doi.org/10.1234/example"
 }
 ```
+
+`bestPdfUrl` is absent when no copy is known — there is no `pdf` object and no
+status field. This response has never had one; the shape documented here until
+phase 13 described a `{ record, pdf }` wrapper the endpoint never returned, and
+a frontend that believed it crashed on every record without a PDF.
+
+**404** when the provider has no such record. **500** when the provider could
+not be asked — a slow provider is not a missing paper, and the two are not
+reported the same way.
 
 ---
 

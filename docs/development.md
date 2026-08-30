@@ -62,13 +62,11 @@ apps/
 │
 └── api/                   # Fastify API
     ├── src/
-    │   ├── index.ts       # Main server
-    │   ├── sources/       # Provider connectors
-    │   └── lib/          # Core libraries
-    │       ├── enhanced-search-pipeline.ts
-    │       ├── aggregators.ts
-    │       ├── cache.ts
-    │       └── ...
+    │   ├── index.ts       # Routes and boot
+    │   ├── orchestrator/  # plan, fan out, merge, rank, facet, enrich, lookup
+    │   ├── providers/     # One directory per source of results
+    │   ├── authorities/   # Services consulted about a record
+    │   └── lib/           # Cache, HTTP pooling, PDF proxy, schemas
     └── scripts/           # Developer tools, not shipped in the image
 
 packages/
@@ -77,35 +75,47 @@ packages/
 
 ## Adding a Data Source
 
-1. **Create Connector**
+A provider is a directory under `apps/api/src/providers/`, split so that only
+one of its four parts does I/O.
 
-Create `apps/api/src/sources/newsource.ts`:
+1. **`capabilities.ts`** — what this API can actually do. Strictly descriptive:
+   every entry should be checkable against the provider's own documentation, so
+   that when the orchestrator skips it the reason names a missing capability.
 
 ```typescript
-import { SourceConnector, OARecord } from '@open-access-explorer/shared';
+import type { ProviderCapabilities } from '@open-access-explorer/shared';
 
-export class NewSourceConnector implements SourceConnector {
-  constructor(private baseUrl: string) {}
-
-  async search(params: {
-    doi?: string;
-    titleOrKeywords?: string;
-    yearFrom?: number;
-    yearTo?: number;
-  }): Promise<OARecord[]> {
-    // Implement search logic
-    return [];
-  }
-}
+export const capabilities: ProviderCapabilities = {
+  keywordSearch: true,
+  doiLookup: true,
+  fields: ['title', 'authors', 'year', 'venue'],
+  yearFilter: true,
+  maxPageSize: 100,
+  reportsTotal: true,
+  suppliesCitations: false
+};
 ```
 
-2. **Add to Aggregator**
+2. **`translate.ts`** — `Query` to the provider's native query, and nothing
+   else. Pure, so it can be tested without the network. This is where a phrase
+   stays a phrase and a year bound becomes whatever the provider understands.
 
-Update `apps/api/src/lib/aggregators.ts` to include the new source.
+3. **`fetch.ts`** — the one impure part. It owns no timeout and swallows no
+   error: both belong to the orchestrator, which is what makes a failure
+   reportable rather than invisible.
 
-3. **Update Types**
+4. **`normalize.ts`** — payload to `Paper[]`, plus a `skipped` entry for every
+   record it could not read and why. One bad record costs one record.
 
-Add source identifier to `packages/shared/src/types.ts` if needed.
+Then add an entry to `apps/api/src/orchestrator/registry.ts`, and the source
+identifier to `packages/shared/src/types.ts`. Give it a `lookup` in the
+registry only if the API has a way to ask for one record by its own id;
+without one, `lookupPaper` asks the search endpoint, which is the right
+request when the provider's native ids are DOIs or are themselves indexed.
+
+Record one live response into `apps/api/src/__fixtures__/` — see
+`scripts/record-fixtures.ts` — and write the `normalize` and `translate` suites
+against it, so the tests stay offline.
 
 ## Testing
 

@@ -47,7 +47,7 @@ Comprehensive documentation is available in the [`/docs`](./docs) directory:
 **Frontend:** Next.js 14, TypeScript, Tailwind CSS, shadcn/ui  
 **Backend:** Fastify, TypeScript, Node.js  
 **Search:** Typesense, Meilisearch, Algolia  
-**Cache:** Redis, NodeCache  
+**Cache:** Redis (L2), in-process LRU bounded in bytes (L1)  
 **Data Sources:** arXiv, CORE, Europe PMC, NCBI, OpenAIRE, and more
 
 ## Project Structure
@@ -58,8 +58,7 @@ sci-open/
 │   ├── web/          # Next.js frontend
 │   └── api/          # Fastify API server
 ├── packages/
-│   ├── shared/       # Shared types
-│   └── search/       # Search adapters
+│   └── shared/       # Shared types
 └── docs/             # Documentation
 ```
 
