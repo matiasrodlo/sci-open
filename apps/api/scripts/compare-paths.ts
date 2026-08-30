@@ -17,8 +17,8 @@
  * itself — and would need two servers with different flags to compare at all.
  *
  * Read the report knowing the two paths no longer differ mainly in breadth.
- * Phase 08 migrated eight providers, and two of them — DataCite and bioRxiv —
- * are deliberately `keywordSearch: false`, so the new path asks six where the
+ * Phase 08 migrated nine providers, and two of them — DataCite and bioRxiv —
+ * are deliberately `keywordSearch: false`, so the new path asks seven where the
  * old asks nine. A count difference is as likely to be a provider declining to
  * guess as it is coverage lost, which is why skips are reported separately
  * from errors below.
@@ -359,7 +359,7 @@ function report(rows: Row[]): void {
 
   // --- Whole-path -----------------------------------------------------------
   line();
-  line('WHOLE PATH — old (9 providers) vs new (8 migrated, 6 answering a keyword query)');
+  line('WHOLE PATH — old (9 providers) vs new (9 migrated, 7 answering a keyword query)');
   line('-'.repeat(96));
   line(
     'query'.padEnd(29) + 'old'.padStart(8) + 'new'.padStart(8) + 'shared'.padStart(8) +
@@ -389,7 +389,7 @@ function report(rows: Row[]): void {
   line('  `old` and `new` are the reported totals, which are what each path holds');
   line('  after filtering, not what the corpus contains. Both read 600 deep per');
   line('  provider, so both are floors. The old path asks nine; the new asks the');
-  line('  six of its eight that declare a keyword index.');
+  line('  seven of its nine that declare a keyword index.');
 
   line();
   line(`EUROPE PMC — old connector vs new provider, called directly, depth ${CONNECTOR_DEPTH}`);

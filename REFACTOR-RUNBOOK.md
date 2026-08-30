@@ -393,6 +393,12 @@ Make the new path the only path.
 
 > **Gate** — Phase 09 complete; comparison report favourable across the full query set; new path has run as default behind the flag for long enough to trust.
 
+> **Two things to settle before that comparison means anything.**
+>
+> **A full sweep costs more OpenAlex budget than a day holds, now that both paths use it.** The old path spends 3 requests per query and the new path 1, so 22 queries need ~88. Sweep 2 completed 21 queries on ~63 requests with a fresh budget; sweep 3, run after a day of migration probing, got **3 queries in** before `429 Insufficient budget` and produced confounded counts, latency and completeness — the old path looked *faster* only because OpenAlex was failing instantly instead of fetching three pages. Run the sweep as the first OpenAlex use of the day, or fund the account. A sweep that runs out mid-way does not degrade gracefully; it produces a report that looks like a comparison and is not one.
+>
+> **The new path reads a third as deep into OpenAlex as the old one.** `fanOut` calls each provider once and every provider caps the request at its own `maxPageSize`, so a `depth` of 600 yields 600 from Europe PMC, PLOS, arXiv and DataCite, 500 from PubMed, **200 from OpenAlex**, 100 from DOAJ and OpenAIRE, and 30 from bioRxiv. The old path paginates `discoverWorks` to reach 600 from OpenAlex. Nothing here misreports — `ProviderReport.retrieved` says exactly what came back — but part of the remaining count gap is this rather than coverage, and intra-provider pagination is unbuilt work rather than a defect to argue about.
+
 ### Tasks
 
 1. **Flip the default**, leave the flag in place for one release as a rollback.
