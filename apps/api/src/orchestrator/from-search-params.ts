@@ -4,6 +4,7 @@ import { parseQuery } from './parse-query';
 import type { UserFilters } from './policy';
 import type { ProviderCache } from './provider-cache';
 import type { ProviderEntry } from './registry';
+import type { AuthorityEntry } from '../authorities';
 import { toSearchResponse } from './to-search-response';
 
 /**
@@ -52,6 +53,8 @@ export type RunOptions = {
   userAgent?: string;
   /** Defaults to the whole registry. A subset is how this is driven offline. */
   providers?: readonly ProviderEntry[];
+  /** Likewise for the authorities. An empty list turns enrichment off. */
+  authorities?: readonly AuthorityEntry[];
 };
 
 /**
@@ -100,7 +103,8 @@ export async function runOrchestrator(
     policy: { requireOpenAccess: openAccessOnly },
     ...(options.cache ? { cache: options.cache } : {}),
     ...(options.userAgent ? { userAgent: options.userAgent } : {}),
-    ...(options.providers ? { providers: options.providers } : {})
+    ...(options.providers ? { providers: options.providers } : {}),
+    ...(options.authorities ? { authorities: options.authorities } : {})
   });
 
   return toSearchResponse(result, {

@@ -1,7 +1,18 @@
 import { describe, it, expect, vi } from 'vitest';
-import { search, ProviderCache, parseQuery } from '../index';
+import { search as searchWith, ProviderCache, parseQuery } from '../index';
+import type { SearchOptions } from '../index';
 import type { ProviderEntry } from '../registry';
 import { paper, ref } from './helpers';
+
+/**
+ * Every test here drives the pipeline offline, so the authorities are turned
+ * off rather than left to their default. Enrichment is real I/O against
+ * services that owe us nothing, and none of these tests are about it — they
+ * are about plan, merge, rank, filter and pagination, all of which run before
+ * it and none of which it can change. `enrich.test.ts` covers the step itself.
+ */
+const search = (query: Parameters<typeof searchWith>[0], options: SearchOptions = {}) =>
+  searchWith(query, { authorities: [], ...options });
 
 function stub(id: any, papers: any[], over: Partial<ProviderEntry> = {}): ProviderEntry {
   return {
@@ -179,3 +190,127 @@ describe('orchestrator search', () => {
     expect(result.complete).toBe(true);
   });
 });
+
+/**
+ * Phase 09's four acceptance criteria, asserted against the pipeline rather
+ * than against the enricher on its own. Three of them are properties of the
+ * whole path — where enrichment runs, what a DOI query returns, and whether a
+ * sort has anything to order on — and could each pass in a unit test while
+ * failing here.
+ */
+describe('orchestrator search — authorities and enrichment', () => {
+  const authority = (id: any, facts: any, over: any = {}) => ({
+    id,
+    capabilities: { fields: Object.keys(facts ?? {}), authoritative: [] as any[] },
+    pass: 0 as const,
+    lookup: async () => facts,
+    ...over
+  });
+
+  it('asks about the page and not the set', async () => {
+    // The reason enrichment is last. A measured result set of 2,388 records
+    // would be 2,388 requests per authority; a page of twenty is twenty.
+    const lookups = vi.fn(async () => ({ publisher: 'Springer' }));
+    const result = await searchWith(QUERY, {
+      providers: [stub('europepmc', page('europepmc', 200))],
+      pageSize: 20,
+      authorities: [authority('crossref', null, { lookup: lookups })]
+    });
+
+    expect(result.total).toBe(200);
+    expect(lookups).toHaveBeenCalledTimes(20);
+    expect(result.authorities[0]).toMatchObject({ authority: 'crossref', asked: 20 });
+  });
+
+  it('carries fieldSources naming another provider for two fields on a paper', async () => {
+    const result = await searchWith(QUERY, {
+      providers: [stub('europepmc', page('europepmc', 3))],
+      authorities: [
+        authority('crossref', { publisher: 'Springer', abstract: 'On CRISPR.' }),
+        authority('unpaywall', {
+          fullText: { url: 'https://repo.example.org/a.pdf', kind: 'pdf', verified: false }
+        }, { capabilities: { fields: ['fullText'], authoritative: ['fullText'] } })
+      ]
+    });
+
+    const attributed = result.papers.filter(p => Object.keys(p.fieldSources).length >= 2);
+    expect(attributed.length).toBeGreaterThan(0);
+    expect(attributed[0].fieldSources).toMatchObject({ publisher: 'crossref', abstract: 'crossref' });
+    // And the provider that found the paper is not the one that described it.
+    expect(attributed[0].sources[0].provider).toBe('europepmc');
+  });
+
+  it('answers a DOI query with one paper', async () => {
+    // The old path's OpenAlex lookup was `search=doi:…`, a full-text search for
+    // the literal string, so it could return a topically similar paper that
+    // then merged in beside the right one as its peer. `filter=doi:…` matches
+    // exactly one — asserted against the response in the provider's tests; what
+    // this asserts is that three providers answering about the same DOI
+    // collapse to a single paper rather than three.
+    const doi = '10.1038/srep09811';
+    const found = (id: any) => [paper({
+      id: `${id}:1`,
+      doi,
+      title: 'Rapid generation of endogenously driven transcriptional reporters',
+      sources: [ref(id, { nativeId: '1', rank: 0 })]
+    })];
+
+    const result = await searchWith(parseQuery(doi), {
+      providers: [stub('openalex', found('openalex')), stub('crossref', found('crossref')), stub('core', found('core'))],
+      authorities: []
+    });
+
+    expect(result.total).toBe(1);
+    expect(result.papers[0].sources.map(s => s.provider).sort()).toEqual(['core', 'crossref', 'openalex']);
+  });
+
+  it('reorders results when sorted by citations', async () => {
+    const cited = (id: string, count: number | undefined, i: number) => paper({
+      id, doi: `10.1/${id}`, title: `Study ${i}`,
+      ...(count !== undefined ? { citationCount: count } : {}),
+      sources: [ref('europepmc', { nativeId: id, rank: i })]
+    });
+
+    const providers = [stub('europepmc', [
+      cited('a', 5, 0), cited('b', 900, 1), cited('c', undefined, 2), cited('d', 40, 3)
+    ])];
+
+    const relevance = await searchWith(QUERY, { providers, authorities: [] });
+    const citations = await searchWith(QUERY, { providers, sort: 'citations', authorities: [] });
+
+    expect(citations.papers.map(p => p.id)).toEqual(['b', 'd', 'a', 'c']);
+    expect(citations.papers.map(p => p.id)).not.toEqual(relevance.papers.map(p => p.id));
+  });
+
+  it('backfills a citation count the providers did not supply', async () => {
+    const uncited = paper({ id: 'a', doi: '10.1/a', sources: [ref('europepmc')] });
+
+    const result = await searchWith(QUERY, {
+      providers: [stub('europepmc', [uncited])],
+      authorities: [authority('opencitations', { citationCount: 43 }, {
+        capabilities: { fields: ['citationCount'], authoritative: [] },
+        pass: 1,
+        wants: (p: any) => p.citationCount === undefined
+      })]
+    });
+
+    expect(result.papers[0].citationCount).toBe(43);
+    expect(result.papers[0].fieldSources.citationCount).toBe('opencitations');
+  });
+
+  it('returns the page unchanged when every authority fails', async () => {
+    const result = await searchWith(QUERY, {
+      providers: [stub('europepmc', page('europepmc', 5))],
+      authorities: [authority('crossref', null, {
+        capabilities: { fields: ['publisher'], authoritative: [] },
+        lookup: async () => { throw new Error('Crossref 503'); }
+      })]
+    });
+
+    expect(result.papers).toHaveLength(5);
+    expect(result.authorities[0].status).toBe('error');
+    // The result set is whole without enrichment; only the detail is missing.
+    expect(result.complete).toBe(true);
+  });
+});
+

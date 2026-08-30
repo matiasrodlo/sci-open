@@ -1,4 +1,5 @@
-import type { Paper, ProviderReport, Query, SearchSort } from '@open-access-explorer/shared';
+import type { AuthorityReport, Paper, ProviderReport, Query, SearchSort } from '@open-access-explorer/shared';
+import type { AuthorityEntry } from '../authorities';
 import { PROVIDERS, type ProviderEntry } from './registry';
 import { plan } from './plan';
 import { fanOut, isComplete } from './fanout';
@@ -8,17 +9,23 @@ import { rank } from './rank';
 import { applyPolicy, type PolicyOptions, type UserFilters } from './policy';
 import { generateFacets, type Facets } from './facet';
 import { sortPapers } from './sort';
+import { enrichPage } from './enrich';
 
 export * from './parse-query';
-export { PROVIDERS, plan, fanOut, isComplete, ProviderCache, mergePapers, rank, applyPolicy, generateFacets, sortPapers };
+export { PROVIDERS, plan, fanOut, isComplete, ProviderCache, mergePapers, rank, applyPolicy, generateFacets, sortPapers, enrichPage };
 
 /**
- * plan -> fan out -> merge/dedupe -> rank -> filter -> facet -> paginate
+ * plan -> fan out -> merge/dedupe -> rank -> filter -> facet -> paginate -> enrich
  *
  * The order is load-bearing, not stylistic. Ranking after pagination ranks a
  * page; ranking before dedupe ranks duplicates; faceting before filtering
- * describes a set the caller never sees. Each step here is a pure function
- * except the fan-out, which is the only I/O.
+ * describes a set the caller never sees.
+ *
+ * Enrichment is last for the same kind of reason, and it is the one step whose
+ * position is about cost rather than correctness: the authorities are per-DOI
+ * lookups, so pointing them at the set costs one request per record and
+ * pointing them at the page costs twenty in total. Everything before it is a
+ * pure function except the fan-out; enrichment is the second piece of I/O.
  */
 
 export type SearchOptions = {
@@ -32,6 +39,10 @@ export type SearchOptions = {
   /** Replaces the ranked order. `relevance` keeps it. */
   sort?: SearchSort;
   policy?: PolicyOptions;
+  /** Authorities consulted about the returned page. Empty disables enrichment. */
+  authorities?: readonly AuthorityEntry[];
+  /** Wall clock for the whole enrichment step. */
+  enrichBudgetMs?: number;
   /** Passed to providers that support it. Default true, matching prior behaviour. */
   openAccessOnly?: boolean;
   cache?: ProviderCache;
@@ -49,8 +60,19 @@ export type OrchestratorResult = {
   facets: Facets;
   reports: ProviderReport[];
   /**
+   * What each authority was asked and what it was worth. Kept apart from
+   * `reports` because an authority is not a source of results — it never adds
+   * a paper, so it has no `retrieved` to report and nothing to contribute to
+   * the source facet.
+   */
+  authorities: AuthorityReport[];
+  /**
    * False when a provider failed or timed out, which makes `total` a lower
    * bound rather than an answer.
+   *
+   * An authority failing does not make a search incomplete. The result set is
+   * whole without enrichment; what an authority adds is detail on records that
+   * were already going to be returned.
    */
   complete: boolean;
   duration: number;
@@ -72,6 +94,8 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
     filters = {},
     sort = 'relevance',
     policy = {},
+    authorities,
+    enrichBudgetMs,
     openAccessOnly = true,
     cache,
     providers = PROVIDERS,
@@ -101,13 +125,23 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
 
   const start = Math.max(page - 1, 0) * pageSize;
 
+  // Enrichment sees the page and only the page. It cannot change which papers
+  // are on it, so `total`, `facets` and the page boundary above all still
+  // describe the set they were computed over.
+  const { papers, reports: authorityReports } = await enrichPage(sorted.slice(start, start + pageSize), {
+    ...(authorities ? { authorities } : {}),
+    ...(enrichBudgetMs !== undefined ? { budgetMs: enrichBudgetMs } : {}),
+    ...(userAgent ? { userAgent } : {})
+  });
+
   return {
-    papers: sorted.slice(start, start + pageSize),
+    papers,
     total: sorted.length,
     page,
     pageSize,
     facets,
     reports,
+    authorities: authorityReports,
     complete: isComplete(reports),
     duration: Date.now() - startedAt
   };

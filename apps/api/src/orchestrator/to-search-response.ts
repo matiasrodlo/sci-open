@@ -13,6 +13,13 @@ import type { OrchestratorResult } from './index';
  *
  * `complete` is the one addition. It is optional, the old path never sets it,
  * and a consumer that does not know about it is unaffected.
+ *
+ * `result.authorities` is deliberately not folded into `providerTotals`. An
+ * authority never returns a paper, so it has no `retrieved` to report, and
+ * listing it beside the search providers would put a row in the response that
+ * the source facet and `filters.source` both disagree with. It surfaces in
+ * phase 11 alongside `fieldSources`, which has the same problem for the same
+ * reason.
  */
 export function toSearchResponse(
   result: OrchestratorResult,

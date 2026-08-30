@@ -45,8 +45,9 @@ const pageOf = (n: number) =>
       sources: [ref('europepmc', { nativeId: String(i), rank: i })]
     }));
 
+// Offline: the authorities are real I/O and nothing here is about them.
 const run = (params: SearchParams, providers: ProviderEntry[]) =>
-  runOrchestrator(params, { providers });
+  runOrchestrator(params, { providers, authorities: [] });
 
 describe('toUserFilters', () => {
   it('carries every filter the orchestrator can act on', () => {
