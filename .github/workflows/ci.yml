@@ -47,10 +47,11 @@ jobs:
   audit:
     name: dependency audit
     runs-on: ubuntu-latest
-    # Reports without blocking. There are 60 high-severity advisories on the
-    # current dependency tree, most of which `pnpm update` resolves — that is
-    # phase 12's task, and this gate becomes blocking when it lands.
-    continue-on-error: true
+    # Blocking, as of phase 12. It was `continue-on-error` while the tree
+    # carried 107 advisories; `pnpm update` plus two `pnpm.overrides` entries
+    # cleared 97 of them, and the ten that remain are each blocked on a major
+    # upgrade and named in scripts/audit-gate.mjs. The gate fails on anything
+    # not on that list, which is the only version of it worth running.
     steps:
       - uses: actions/checkout@v4
 
@@ -66,5 +67,9 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # `pnpm audit --audit-level high` is all-or-nothing, and pnpm's own
+      # `auditConfig.ignoreGhsas` needs pnpm 9 while this repo pins 8.10.0.
+      # The gate script holds the accepted list instead, where each entry has
+      # to carry a reason and the upgrade that removes it.
       - name: Audit
-        run: pnpm audit --audit-level high
+        run: node scripts/audit-gate.mjs
