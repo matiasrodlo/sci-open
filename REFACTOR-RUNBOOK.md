@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **7 / 13** | **4,564** | **9 / 11** | **664** | **1** |
+| **7 / 13** | **4,564** | **9 / 11** | **677** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -311,7 +311,13 @@ Mechanical, independent, one at a time. Each provider lands with its own fixture
    > **The PDF fix is real in `Paper` and lost on the way out.** Not one link in the recorded page is a PDF and one is explicitly `text/html`, so `fullText.kind` is now `html` — but `toOARecord` maps `fullText.url` to `bestPdfUrl` whatever the kind, so the legacy shape still cannot express the distinction. The format is correct in the new model and flattened by the adapter, the same cost it already documents for `sources` and `fieldSources`. It resolves when the frontend moves onto `Paper` in phase 11.
 5. **CORE — blocked, not done.** Accept `limit` and `offset` (it hardcodes 100). Reorder PDF resolution so the reader URL becomes `landingPage` and the last resort, not the advertised PDF for every record.
 
-   > **`CORE_API_KEY` is the literal placeholder `your_core_api_key_here`.** The connector already skips itself when it sees that, so CORE contributes nothing today and there is no way to record a fixture or check a single claim against a response. The `Done when` list requires both. Left for whoever has a key; the two fixes above are still the right ones as far as reading the code can establish, which is exactly the standard this phase has been declining to accept.
+   > **Corrected: CORE does not require an API key.** Anonymous requests to `api.core.ac.uk/v3` answer **HTTP 200** — it is the placeholder `your_core_api_key_here` that produces **401**, because a wrong key is worse than no key, exactly as with DataCite. So "CORE is missing because it needs an API key" was wrong: what a key buys is rate limit, not access. A fixture is recorded and committed, and the normaliser is written and tested against it.
+   >
+   > **What blocks it now is the anonymous rate limit, not the key.** Measured: `x-ratelimit-limit: 10` on a window of roughly five minutes, per IP, and it burns down erratically — 10 to 9 to 0 across three requests. That is unusable for a fan-out where every search costs one request, and too tight to verify the remaining capabilities against responses, which is the standard every other provider in this phase was held to. `translate` and `capabilities` are therefore **not written**: the year filter and the AND syntax are unverified, and guessing them is precisely what this phase kept finding had gone wrong elsewhere.
+   >
+   > **Two of the three listed fixes are confirmed, and there is a third.** The reader URL was priority 1 in `bestPdfUrl` for every record with an id — all of them — so the two real PDF sources beneath it were unreachable code; the recorded page shows CORE serving a real `downloadUrl` PDF on two records and a repository PDF on the third. `limit`/`offset` are hardcoded to 100/0. And **CORE ORs its terms**: `crispr` returns 60,460 where `crispr gene editing` returns **2,126,594** — more words, more results, the same defect arXiv had.
+   >
+   > **To finish it:** register at `core.ac.uk/services/api`, put the key in `CORE_API_KEY`, then verify the year filter and the AND syntax and write `translate`, `capabilities`, `fetch` and the registry entry. The normaliser and fixture are done.
 6. **PLOS — done.** Straightforward. Add the `plos` branch the paper-detail endpoint is missing — PLOS was a quarter of a typical result set and every "Details" click on it 404s.
 
    > **Straightforward held for the query and not for the identifier.** `everything:` already ANDs its terms — 5,940 hits whether the AND is spelled or not — so there was no disjunction defect. But PLOS has **no `doi` field**, and asking for one returns the corpus rather than an error: `doi:"10.1371/journal.pgen.1002441"` matched **64,432** documents where `id:"..."` matches the one. A PLOS id *is* its DOI. So every PLOS DOI lookup answered with an arbitrary page of the corpus — and the detail branch added here would have inherited it, since the route calls the old connector. Fixed in both.
