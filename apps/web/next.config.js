@@ -9,19 +9,17 @@ const nextConfig = {
     // packages are included in the standalone bundle
     outputFileTracingRoot: path.join(__dirname, '../../'),
   },
-  env: {
-    NEXT_PUBLIC_API_BASE: process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000',
-    NEXT_PUBLIC_SEARCH_BACKEND: process.env.NEXT_PUBLIC_SEARCH_BACKEND || 'typesense',
-  },
-  async rewrites() {
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000';
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${apiBase}/api/:path*`,
-      },
-    ];
-  },
+
+  // There was an `env` block here inlining NEXT_PUBLIC_API_BASE, and a
+  // `rewrites()` entry pointing /api/:path* at it. Both baked the API origin
+  // into the build: `env` through a compile-time substitution, and rewrites
+  // through .next/routes-manifest.json, which the build writes with the
+  // destination already resolved. Between them the image was pinned to
+  // whatever host built it.
+  //
+  // The rewrite is now a route handler at app/api/[...path]/route.ts, which
+  // reads API_ORIGIN per request, and NEXT_PUBLIC_SEARCH_BACKEND is gone
+  // because nothing ever read it.
 };
 
 module.exports = nextConfig;

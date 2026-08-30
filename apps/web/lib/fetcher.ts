@@ -5,11 +5,15 @@ import { OARecord, SearchParams, SearchResponse } from '@open-access-explorer/sh
  * Every call to the API goes through here.
  *
  * The origin is decided in one place, and it is decided differently on the two
- * sides of the render. In the browser the path stays relative, so the
- * `/api/:path*` rewrite in `next.config.js` is what points at the API — which
- * is the rewrite's whole purpose, and it was being bypassed by every caller
- * that built its own `http://localhost:4000`. On the server there is no origin
- * to be relative to, so the configured base is used.
+ * sides of the render. In the browser the path stays relative, so the route
+ * handler at `app/api/[...path]/route.ts` is what points at the API — and it
+ * resolves `API_ORIGIN` per request, so the same build runs anywhere. On the
+ * server there is no origin to be relative to, so the variable is read here.
+ *
+ * `API_ORIGIN` deliberately has no `NEXT_PUBLIC_` prefix. That prefix is what
+ * makes Next substitute a value into the bundle at compile time, which is
+ * exactly the baking this phase removed; without it the variable is read from
+ * the process at runtime.
  *
  * That split is why components must not construct URLs themselves: a component
  * cannot know which side it will run on, and the one that hardcoded the
@@ -17,10 +21,10 @@ import { OARecord, SearchParams, SearchResponse } from '@open-access-explorer/sh
  * else.
  */
 
-const SERVER_API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000';
+const SERVER_API_ORIGIN = process.env.API_ORIGIN || 'http://localhost:4000';
 
 function apiUrl(path: string): string {
-  return typeof window === 'undefined' ? `${SERVER_API_BASE}${path}` : path;
+  return typeof window === 'undefined' ? `${SERVER_API_ORIGIN}${path}` : path;
 }
 
 export async function searchPapers(params: SearchParams): Promise<SearchResponse> {
