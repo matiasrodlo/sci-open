@@ -1,6 +1,6 @@
-FROM node:18-alpine AS base
+FROM node:22-alpine AS base
 RUN apk add --no-cache libc6-compat
-RUN npm install -g pnpm
+RUN npm install -g pnpm@8.10.0
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -9,8 +9,11 @@ WORKDIR /app
 # Manifests first, so the install layer is reused until dependencies change.
 # pnpm-workspace.yaml is required for the workspace: protocol to resolve.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# `packages/search` is deliberately absent. It was deleted in 1a397c5d and has
+# no tracked files left; what remains on a developer's disk is gitignored build
+# output. Both Dockerfiles still copied its manifest, so `docker compose build`
+# failed at that line in any fresh clone — see the phase 12 notes.
 COPY packages/shared/package.json ./packages/shared/
-COPY packages/search/package.json ./packages/search/
 COPY apps/web/package.json ./apps/web/
 
 RUN pnpm install --frozen-lockfile
