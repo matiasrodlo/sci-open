@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **7 / 13** | **4,564** | **8 / 11** | **612** | **1** |
+| **7 / 13** | **4,564** | **8 / 11** | **617** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -269,6 +269,8 @@ Mechanical, independent, one at a time. Each provider lands with its own fixture
 
 1. **OpenAlex — the urgent half done, the migration blocked.** The 429 handling landed first because it was taking the service down; the move into the provider layout needs a recorded fixture, and the daily budget was still spent at 17:20 UTC (`retryAfter` ~8h at first contact, resets midnight UTC). Add `host_venue` and `created_date` to the `select` list — or read `primary_location.source.publisher`, which is already selected. Today publisher is always empty for the largest provider and every record is stamped with the request time. **Handle 429 explicitly — this is now urgent rather than tidy.**
 
+   > **Its year filter is also broken, and was previously invisible.** `buildOpenAlexFilter` emits `publication_year:>=2022,publication_year:<=2024`, which OpenAlex rejects: **HTTP 400**, `"Value for param publication_year must be a number."` So every year-bounded search loses OpenAlex on the old path. This only became *visible* once the 429 fix made a non-2xx throw — before it, `validateStatus: status < 500` resolved the 400 as a success and it became the same `undefined` crash. Surfaced by the second comparison sweep, the first one run with a working budget.
+   >
    > **OpenAlex meters requests now.** Measured 2026-08-29, during the phase 07 comparison sweep: once the daily budget is spent it answers `HTTP 429` with `{"error":"Rate limit exceeded","message":"Insufficient budget ... Resets at midnight UTC", retryAfter, creditsRemaining, ...}` and no `results` key. Twenty-two queries were enough to exhaust it.
    >
    > The service does not survive that. `http-client-factory.ts:98` sets `validateStatus: status < 500`, so the 429 resolves as a success; `discoverWorks` flattens the missing `results` into `undefined`; and `searchByKeywords` then throws `Cannot read properties of undefined (reading 'doi')` — **every keyword search returns 500 while the quota is spent**, even though the other eight providers answered normally. The last five keyword queries of the sweep failed this way.

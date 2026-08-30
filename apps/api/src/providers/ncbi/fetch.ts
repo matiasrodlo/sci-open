@@ -2,6 +2,7 @@ import type { AxiosInstance } from 'axios';
 import { parseStringPromise } from 'xml2js';
 import { getPooledClient } from '../../lib/http-client-factory';
 import { getServiceConfig } from '../../lib/http-pool-config';
+import { usableApiKey } from '../../lib/api-key';
 
 /**
  * The only I/O in this provider, and it is two calls: esearch returns the
@@ -44,13 +45,6 @@ export type NcbiPayload = {
   articles: unknown[];
 };
 
-/** A placeholder in the sample env file is not a key. */
-function usableKey(apiKey?: string): string | undefined {
-  const trimmed = apiKey?.trim();
-  if (!trimmed || trimmed === 'your_ncbi_api_key_here') return undefined;
-  return trimmed;
-}
-
 export async function fetchPage(nativeQuery: string, options: FetchOptions): Promise<NcbiPayload> {
   const {
     baseUrl = DEFAULT_BASE_URL,
@@ -63,7 +57,7 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
   } = options;
 
   const client: AxiosInstance = getPooledClient(baseUrl, getServiceConfig('ncbi'));
-  const key = usableKey(apiKey);
+  const key = usableApiKey(apiKey);
   const headers = userAgent ? { 'User-Agent': userAgent } : undefined;
 
   const search = await client.get('/esearch.fcgi', {

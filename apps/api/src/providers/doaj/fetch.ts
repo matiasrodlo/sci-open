@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { usableApiKey } from '../../lib/api-key';
 
 /**
  * The only I/O in this provider.
@@ -43,6 +44,10 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
     userAgent
   } = options;
 
+  // DOAJ happens to ignore an unrecognised bearer token where DataCite answers
+  // 401, but sending a placeholder as a credential is wrong either way.
+  const key = usableApiKey(apiKey);
+
   const response = await axios.get<DoajPayload>(
     `${baseUrl}/search/articles/${encodeURIComponent(nativeQuery)}`,
     {
@@ -61,7 +66,7 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
       headers: {
         Accept: 'application/json',
         ...(userAgent ? { 'User-Agent': userAgent } : {}),
-        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {})
+        ...(key ? { Authorization: `Bearer ${key}` } : {})
       },
       ...(signal ? { signal } : {})
     }

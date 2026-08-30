@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import type { Query } from '@open-access-explorer/shared';
@@ -135,5 +135,31 @@ describe('normalize — the recorded fixture', () => {
   it('gives no record a PDF, because none of them has one', () => {
     // 0 of 3 recorded records carry a PDF format, matching 1 of 100 live.
     expect(run(RECORDED).papers.every(p => p.fullText === undefined)).toBe(true);
+  });
+});
+
+describe('fetchPage — an unconfigured key is not a key', () => {
+  it('sends no Authorization header for a placeholder', async () => {
+    // DataCite answers `Bearer your_datacite_api_key_here` with 401 where no
+    // header answers 200, so passing the sample env file's value through
+    // breaks the provider rather than degrading it to anonymous access. The
+    // sweep caught this as `no data array (HTTP 401)`.
+    const { fetchPage } = await import('../fetch');
+    const factory = await import('../../../lib/http-client-factory');
+
+    let headers: any;
+    const spy = vi.spyOn(factory, 'getPooledClient').mockReturnValue({
+      get: async (_url: string, config: any) => {
+        headers = config.headers;
+        return { status: 200, data: { data: [], meta: { total: 0 } } };
+      }
+    } as any);
+
+    await fetchPage('crispr', {
+      pageSize: 1, offset: 0, timeoutMs: 1000, apiKey: 'your_datacite_api_key_here'
+    });
+    spy.mockRestore();
+
+    expect(headers.Authorization).toBeUndefined();
   });
 });

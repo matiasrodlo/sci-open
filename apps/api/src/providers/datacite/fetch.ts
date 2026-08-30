@@ -1,6 +1,7 @@
 import type { AxiosInstance } from 'axios';
 import { getPooledClient } from '../../lib/http-client-factory';
 import { getServiceConfig } from '../../lib/http-pool-config';
+import { usableApiKey } from '../../lib/api-key';
 
 /** The only I/O in this provider. */
 
@@ -40,6 +41,9 @@ export async function fetchPage(
   } = options;
 
   const client: AxiosInstance = getPooledClient(baseUrl, getServiceConfig('datacite'));
+  // Unconfigured is anonymous. Sending the sample file's placeholder as a
+  // bearer token makes DataCite answer 401 where no header answers 200.
+  const key = usableApiKey(apiKey);
 
   const response = await client.get<DataCitePayload>('', {
     params: {
@@ -52,7 +56,7 @@ export async function fetchPage(
     headers: {
       'Content-Type': 'application/json',
       ...(userAgent ? { 'User-Agent': userAgent } : {}),
-      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {})
+      ...(key ? { Authorization: `Bearer ${key}` } : {})
     },
     ...(signal ? { signal } : {})
   });
