@@ -1,0 +1,329 @@
+{
+  "status": "ok",
+  "message-type": "work",
+  "message-version": "1.0.0",
+  "message": {
+    "indexed": {
+      "date-parts": [
+        [
+          2026,
+          8,
+          17
+        ]
+      ],
+      "date-time": "2026-08-17T14:21:49Z",
+      "timestamp": 1786976509409,
+      "version": "build-2736575974"
+    },
+    "reference-count": 250,
+    "publisher": "Wiley",
+    "issue": "35",
+    "license": [
+      {
+        "start": {
+          "date-parts": [
+            [
+              2020,
+              4,
+              3
+            ]
+          ],
+          "date-time": "2020-04-03T00:00:00Z",
+          "timestamp": 1585872000000
+        },
+        "content-version": "vor",
+        "delay-in-days": 0,
+        "URL": "http://onlinelibrary.wiley.com/termsAndConditions#vor"
+      }
+    ],
+    "funder": [
+      {
+        "DOI": "10.13039/501100003725",
+        "name": "National Research Foundation of Korea",
+        "doi-asserted-by": "publisher",
+        "id": [
+          {
+            "id": "10.13039/501100003725",
+            "id-type": "DOI",
+            "asserted-by": "publisher"
+          }
+        ]
+      }
+    ],
+    "content-domain": {
+      "domain": [
+        "advanced.onlinelibrary.wiley.com"
+      ],
+      "crossmark-restriction": true
+    },
+    "short-container-title": [
+      "Advanced Materials"
+    ],
+    "published-print": {
+      "date-parts": [
+        [
+          2020,
+          9
+        ]
+      ]
+    },
+    "abstract": "<jats:title>Abstract</jats:title>\n                  <jats:p>Rational design of 2D materials is crucial for the realization of their profound implications in energy and environmental fields. The past decade has witnessed significant developments in 2D material research, yet a number of critical challenges remain for real\u2010world applications. Nanoscale assembly, precise control over the orientational and positional ordering, and complex interfaces among 2D layers are essential for the continued progress of 2D materials, especially for energy storage and conversion and environmental remediation. Herein, recent progress, the status, future prospects, and challenges associated with nanoscopic assembly of 2D materials are highlighted, specifically targeting energy and environmental applications. Geometric dimensional diversity of 2D material assembly is focused on, based on novel assembly mechanisms, including 1D fibers from the colloidal liquid crystalline phase, 2D films by interfacial tension (Marangoni effect), and 3D nanoarchitecture assembly by electrochemical processes. Relevant critical advantages of 2D material assembly are highlighted for application fields, including secondary batteries, supercapacitors, catalysts, gas sensors, desalination, and water decontamination.</jats:p>",
+    "DOI": "10.1002/adma.201907006",
+    "type": "journal-article",
+    "created": {
+      "date-parts": [
+        [
+          2020,
+          4,
+          3
+        ]
+      ],
+      "date-time": "2020-04-03T11:58:13Z",
+      "timestamp": 1585915093000
+    },
+    "update-policy": "https://doi.org/10.1002/crossmark_policy",
+    "source": "Crossref",
+    "is-referenced-by-count": 175,
+    "title": [
+      "Nanoscale Assembly of 2D Materials for Energy and Environmental Applications"
+    ],
+    "prefix": "10.1002",
+    "volume": "32",
+    "author": [
+      {
+        "given": "Gyoung Hwa",
+        "family": "Jeong",
+        "sequence": "first",
+        "affiliation": [
+          {
+            "name": "National Creative Research Initiative Center for Multi\u2010Dimensional Directed Nanoscale Assembly Department of Materials Science and Engineering KAIST  291 Daehak\u2010ro, Yuseong\u2010gu Daejeon 34141 Republic of Korea"
+          }
+        ],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      },
+      {
+        "given": "Suchithra Padmajan",
+        "family": "Sasikala",
+        "sequence": "additional",
+        "affiliation": [
+          {
+            "name": "National Creative Research Initiative Center for Multi\u2010Dimensional Directed Nanoscale Assembly Department of Materials Science and Engineering KAIST  291 Daehak\u2010ro, Yuseong\u2010gu Daejeon 34141 Republic of Korea"
+          }
+        ],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      },
+      {
+        "given": "Taeyeong",
+        "family": "Yun",
+        "sequence": "additional",
+        "affiliation": [
+          {
+            "name": "National Creative Research Initiative Center for Multi\u2010Dimensional Directed Nanoscale Assembly Department of Materials Science and Engineering KAIST  291 Daehak\u2010ro, Yuseong\u2010gu Daejeon 34141 Republic of Korea"
+          }
+        ],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      },
+      {
+        "given": "Gil Yong",
+        "family": "Lee",
+        "sequence": "additional",
+        "affiliation": [
+          {
+            "name": "National Creative Research Initiative Center for Multi\u2010Dimensional Directed Nanoscale Assembly Department of Materials Science and Engineering KAIST  291 Daehak\u2010ro, Yuseong\u2010gu Daejeon 34141 Republic of Korea"
+          }
+        ],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      },
+      {
+        "given": "Won Jun",
+        "family": "Lee",
+        "sequence": "additional",
+        "affiliation": [
+          {
+            "name": "Department of Fiber System Engineering Dankook University  Yongin\u2010si Gyeonggi\u2010do 16890 Republic of Korea"
+          }
+        ],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      },
+      {
+        "ORCID": "https://orcid.org/0000-0003-1513-6042",
+        "authenticated-orcid": false,
+        "given": "Sang Ouk",
+        "family": "Kim",
+        "sequence": "additional",
+        "affiliation": [
+          {
+            "name": "National Creative Research Initiative Center for Multi\u2010Dimensional Directed Nanoscale Assembly Department of Materials Science and Engineering KAIST  291 Daehak\u2010ro, Yuseong\u2010gu Daejeon 34141 Republic of Korea"
+          }
+        ],
+        "role": [
+          {
+            "vocabulary": "crossref",
+            "role": "author"
+          }
+        ]
+      }
+    ],
+    "member": "311",
+    "published-online": {
+      "date-parts": [
+        [
+          2020,
+          4,
+          3
+        ]
+      ]
+    },
+    "container-title": [
+      "Advanced Materials"
+    ],
+    "original-title": [],
+    "language": "en",
+    "link": [
+      {
+        "URL": "https://api.wiley.com/onlinelibrary/tdm/v1/articles/10.1002%2Fadma.201907006",
+        "content-type": "application/pdf",
+        "content-version": "vor",
+        "intended-application": "text-mining"
+      },
+      {
+        "URL": "https://onlinelibrary.wiley.com/doi/pdf/10.1002/adma.201907006",
+        "content-type": "application/pdf",
+        "content-version": "vor",
+        "intended-application": "text-mining"
+      },
+      {
+        "URL": "https://onlinelibrary.wiley.com/doi/full-xml/10.1002/adma.201907006",
+        "content-type": "application/xml",
+        "content-version": "vor",
+        "intended-application": "text-mining"
+      },
+      {
+        "URL": "https://advanced.onlinelibrary.wiley.com/doi/pdf/10.1002/adma.201907006",
+        "content-type": "unspecified",
+        "content-version": "vor",
+        "intended-application": "similarity-checking"
+      }
+    ],
+    "deposited": {
+      "date-parts": [
+        [
+          2025,
+          10,
+          6
+        ]
+      ],
+      "date-time": "2025-10-06T18:56:29Z",
+      "timestamp": 1759776989000
+    },
+    "score": 1,
+    "resource": {
+      "primary": {
+        "URL": "https://advanced.onlinelibrary.wiley.com/doi/10.1002/adma.201907006"
+      }
+    },
+    "subtitle": [],
+    "short-title": [],
+    "issued": {
+      "date-parts": [
+        [
+          2020,
+          4,
+          3
+        ]
+      ]
+    },
+    "references-count": 250,
+    "journal-issue": {
+      "issue": "35",
+      "published-print": {
+        "date-parts": [
+          [
+            2020,
+            9
+          ]
+        ]
+      }
+    },
+    "alternative-id": [
+      "10.1002/adma.201907006"
+    ],
+    "URL": "https://doi.org/10.1002/adma.201907006",
+    "archive": [
+      "Portico"
+    ],
+    "relation": {},
+    "ISSN": [
+      "0935-9648",
+      "1521-4095"
+    ],
+    "issn-type": [
+      {
+        "value": "0935-9648",
+        "type": "print"
+      },
+      {
+        "value": "1521-4095",
+        "type": "electronic"
+      }
+    ],
+    "subject": [],
+    "published": {
+      "date-parts": [
+        [
+          2020,
+          4,
+          3
+        ]
+      ]
+    },
+    "assertion": [
+      {
+        "value": "2019-10-25",
+        "order": 0,
+        "name": "received",
+        "label": "Received",
+        "group": {
+          "name": "publication_history",
+          "label": "Publication History"
+        }
+      },
+      {
+        "value": "2020-04-03",
+        "order": 3,
+        "name": "published",
+        "label": "Published",
+        "group": {
+          "name": "publication_history",
+          "label": "Publication History"
+        }
+      }
+    ],
+    "article-number": "1907006"
+  }
+}

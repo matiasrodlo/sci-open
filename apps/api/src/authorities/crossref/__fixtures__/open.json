@@ -1,0 +1,303 @@
+{
+  "status": "ok",
+  "message-type": "work",
+  "message-version": "1.0.0",
+  "message": {
+    "indexed": {
+      "date-parts": [
+        [
+          2026,
+          4,
+          10
+        ]
+      ],
+      "date-time": "2026-04-10T08:22:03Z",
+      "timestamp": 1775809323267,
+      "version": "3.50.1"
+    },
+    "reference-count": 37,
+    "publisher": "Springer Science and Business Media LLC",
+    "issue": "1",
+    "license": [
+      {
+        "start": {
+          "date-parts": [
+            [
+              2015,
+              4,
+              29
+            ]
+          ],
+          "date-time": "2015-04-29T00:00:00Z",
+          "timestamp": 1430265600000
+        },
+        "content-version": "tdm",
+        "delay-in-days": 0,
+        "URL": "https://creativecommons.org/licenses/by/4.0"
+      },
+      {
+        "start": {
+          "date-parts": [
+            [
+              2015,
+              4,
+              29
+            ]
+          ],
+          "date-time": "2015-04-29T00:00:00Z",
+          "timestamp": 1430265600000
+        },
+        "content-version": "vor",
+        "delay-in-days": 0,
+        "URL": "https://creativecommons.org/licenses/by/4.0"
+      }
+    ],
+    "content-domain": {
+      "domain": [
+        "link.springer.com"
+      ],
+      "crossmark-restriction": false
+    },
+    "short-container-title": [
+      "Sci Rep"
+    ],
+    "abstract": "<jats:title>Abstract</jats:title><jats:p>CRISPR/Cas9 technologies have been employed for genome editing to achieve gene knockouts and knock-ins in somatic cells. Similarly, certain endogenous genes have been tagged with fluorescent proteins. Often, the detection of tagged proteins requires high expression and sophisticated tools such as confocal microscopy and flow cytometry. Therefore, a simple, sensitive and robust transcriptional reporter system driven by endogenous promoter for studies into transcriptional regulation is desirable. We report a CRISPR/Cas9-based methodology for rapidly integrating a <jats:italic>firefly</jats:italic> luciferase gene in somatic cells under the control of endogenous promoter, using the TGF\u03b2-responsive gene PAI-1. Our strategy employed a polycistronic cassette containing a non-fused GFP protein to ensure the detection of transgene delivery and rapid isolation of positive clones. We demonstrate that <jats:italic>firefly</jats:italic> luciferase cDNA can be efficiently delivered downstream of the promoter of the TGF\u03b2-responsive gene PAI-1. Using chemical and genetic regulators of TGF\u03b2 signalling, we show that it mimics the transcriptional regulation of endogenous PAI-1 expression. Our unique approach has the potential to expedite studies on transcription of any gene in the context of its native chromatin landscape in somatic cells, allowing for robust high-throughput chemical and genetic screens.</jats:p>",
+    "DOI": "10.1038/srep09811",
+    "type": "journal-article",
+    "created": {
+      "date-parts": [
+        [
+          2015,
+          4,
+          29
+        ]
+      ],
+      "date-time": "2015-04-29T16:30:14Z",
+      "timestamp": 1430325014000
+    },
+    "update-policy": "https://doi.org/10.1007/springer_crossmark_policy",
+    "source": "Crossref",
+    "is-referenced-by-count": 42,
+    "title": [
+      "Rapid generation of endogenously driven transcriptional reporters in cells through CRISPR/Cas9"
+    ],
+    "prefix": "10.1038",
+    "volume": "5",
+    "author": [
+      {
+        "given": "Alejandro",
+        "family": "Rojas-Fernandez",
+        "sequence": "first",
+        "affiliation": [],
+        "role": [
+          {
+            "role": "author",
+            "vocabulary": "crossref"
+          }
+        ]
+      },
+      {
+        "given": "Lina",
+        "family": "Herhaus",
+        "sequence": "additional",
+        "affiliation": [],
+        "role": [
+          {
+            "role": "author",
+            "vocabulary": "crossref"
+          }
+        ]
+      },
+      {
+        "given": "Thomas",
+        "family": "Macartney",
+        "sequence": "additional",
+        "affiliation": [],
+        "role": [
+          {
+            "role": "author",
+            "vocabulary": "crossref"
+          }
+        ]
+      },
+      {
+        "given": "Christophe",
+        "family": "Lachaud",
+        "sequence": "additional",
+        "affiliation": [],
+        "role": [
+          {
+            "role": "author",
+            "vocabulary": "crossref"
+          }
+        ]
+      },
+      {
+        "given": "Ronald T.",
+        "family": "Hay",
+        "sequence": "additional",
+        "affiliation": [],
+        "role": [
+          {
+            "role": "author",
+            "vocabulary": "crossref"
+          }
+        ]
+      },
+      {
+        "given": "Gopal P.",
+        "family": "Sapkota",
+        "sequence": "additional",
+        "affiliation": [],
+        "role": [
+          {
+            "role": "author",
+            "vocabulary": "crossref"
+          }
+        ]
+      }
+    ],
+    "member": "297",
+    "published-online": {
+      "date-parts": [
+        [
+          2015,
+          4,
+          29
+        ]
+      ]
+    },
+    "container-title": [
+      "Scientific Reports"
+    ],
+    "original-title": [],
+    "language": "en",
+    "link": [
+      {
+        "URL": "https://www.nature.com/articles/srep09811",
+        "content-type": "text/html",
+        "content-version": "vor",
+        "intended-application": "text-mining"
+      },
+      {
+        "URL": "https://www.nature.com/articles/srep09811.pdf",
+        "content-type": "application/pdf",
+        "content-version": "vor",
+        "intended-application": "text-mining"
+      },
+      {
+        "URL": "https://www.nature.com/articles/srep09811.pdf",
+        "content-type": "application/pdf",
+        "content-version": "vor",
+        "intended-application": "similarity-checking"
+      }
+    ],
+    "deposited": {
+      "date-parts": [
+        [
+          2023,
+          1,
+          5
+        ]
+      ],
+      "date-time": "2023-01-05T13:32:48Z",
+      "timestamp": 1672925568000
+    },
+    "score": 1,
+    "resource": {
+      "primary": {
+        "URL": "https://www.nature.com/articles/srep09811"
+      }
+    },
+    "subtitle": [],
+    "short-title": [],
+    "issued": {
+      "date-parts": [
+        [
+          2015,
+          4,
+          29
+        ]
+      ]
+    },
+    "references-count": 37,
+    "journal-issue": {
+      "issue": "1",
+      "published-online": {
+        "date-parts": [
+          [
+            2015,
+            9,
+            22
+          ]
+        ]
+      }
+    },
+    "alternative-id": [
+      "BFsrep09811"
+    ],
+    "URL": "https://doi.org/10.1038/srep09811",
+    "relation": {},
+    "ISSN": [
+      "2045-2322"
+    ],
+    "issn-type": [
+      {
+        "value": "2045-2322",
+        "type": "electronic"
+      }
+    ],
+    "subject": [],
+    "published": {
+      "date-parts": [
+        [
+          2015,
+          4,
+          29
+        ]
+      ]
+    },
+    "assertion": [
+      {
+        "value": "8 January 2015",
+        "order": 1,
+        "name": "received",
+        "label": "Received",
+        "group": {
+          "name": "ArticleHistory",
+          "label": "Article History"
+        }
+      },
+      {
+        "value": "17 March 2015",
+        "order": 2,
+        "name": "accepted",
+        "label": "Accepted",
+        "group": {
+          "name": "ArticleHistory",
+          "label": "Article History"
+        }
+      },
+      {
+        "value": "29 April 2015",
+        "order": 3,
+        "name": "first_online",
+        "label": "First Online",
+        "group": {
+          "name": "ArticleHistory",
+          "label": "Article History"
+        }
+      },
+      {
+        "value": "The authors declare no competing financial interests.",
+        "order": 1,
+        "name": "Ethics",
+        "group": {
+          "name": "EthicsHeading",
+          "label": "Competing interests"
+        }
+      }
+    ],
+    "article-number": "9811"
+  }
+}
