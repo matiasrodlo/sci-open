@@ -1,0 +1,66 @@
+{
+  "_comment": "Hand-built, unlike recorded.json. Shapes the recorded page does not contain: a preprint, a record with no DOI, an inverted index with a repeated word, and a record that cannot be read.",
+  "meta": { "count": 5 },
+  "results": [
+    {
+      "_case": "a repeated word must be emitted at every position it occupies",
+      "id": "https://openalex.org/W1",
+      "doi": "https://doi.org/10.1000/repeat",
+      "title": "A record whose abstract repeats a word",
+      "type": "article",
+      "publication_year": 2022,
+      "cited_by_count": 3,
+      "language": "en",
+      "authorships": [{ "author": { "display_name": "Ada Lovelace" } }],
+      "primary_location": { "source": { "display_name": "A Journal", "publisher": null, "host_organization_name": "A Publisher" } },
+      "open_access": { "is_oa": true, "oa_status": "gold", "oa_url": "https://example.org/a.pdf" },
+      "best_oa_location": { "pdf_url": null },
+      "abstract_inverted_index": { "the": [0, 2, 4], "cat": [1], "sat": [3], "mat": [5] },
+      "topics": [{ "display_name": "Genomics" }],
+      "keywords": [{ "display_name": "genomics" }]
+    },
+    {
+      "_case": "a preprint, and an oa_url that is not a PDF",
+      "id": "https://openalex.org/W2",
+      "doi": "https://doi.org/10.1000/preprint",
+      "title": "A preprint",
+      "type": "preprint",
+      "publication_year": 2023,
+      "cited_by_count": 0,
+      "authorships": [],
+      "primary_location": { "source": { "display_name": "bioRxiv" } },
+      "open_access": { "is_oa": true, "oa_status": "green", "oa_url": "https://example.org/landing" },
+      "abstract_inverted_index": null,
+      "topics": [],
+      "keywords": []
+    },
+    {
+      "_case": "no DOI: the landing page falls back to the OpenAlex record",
+      "id": "https://openalex.org/W3",
+      "doi": null,
+      "title": "A record with no doi",
+      "type": "article",
+      "publication_year": 2019,
+      "authorships": [],
+      "primary_location": { "source": {} },
+      "open_access": { "is_oa": false, "oa_status": "closed", "oa_url": null }
+    },
+    {
+      "_case": "an unrecognised type, and an oa_status this model has no route for",
+      "id": "https://openalex.org/W4",
+      "display_name": "A record titled only by display_name",
+      "type": "dataset",
+      "publication_year": 2020,
+      "authorships": [],
+      "primary_location": { "source": {} },
+      "open_access": { "is_oa": true, "oa_status": "diamond", "oa_url": null }
+    },
+    {
+      "_case": "unreadable: must cost exactly one record",
+      "id": "https://openalex.org/W5",
+      "type": "article",
+      "publication_year": 2018,
+      "authorships": []
+    }
+  ]
+}

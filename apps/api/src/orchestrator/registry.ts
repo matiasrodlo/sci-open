@@ -6,6 +6,7 @@ import * as doaj from '../providers/doaj';
 import * as europepmc from '../providers/europepmc';
 import * as ncbi from '../providers/ncbi';
 import * as openaire from '../providers/openaire';
+import * as openalex from '../providers/openalex';
 import * as plos from '../providers/plos';
 
 /**
@@ -198,6 +199,28 @@ export const PROVIDERS: ProviderEntry[] = [
         ...(now ? { now } : {})
       });
       return { papers: result.papers, skipped: result.skipped };
+    }
+  },
+  {
+    id: 'openalex',
+    capabilities: openalex.capabilities,
+    translate: (query, options) => openalex.translate(query, options),
+    normalizerVersion: 1,
+    async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
+      const result = await openalex.search(query, {
+        pageSize: depth,
+        offset,
+        timeoutMs,
+        openAccessOnly,
+        ...(signal ? { signal } : {}),
+        ...(userAgent ? { userAgent } : {}),
+        ...(now ? { now } : {})
+      });
+      return {
+        papers: result.papers,
+        ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
+        skipped: result.skipped
+      };
     }
   },
   {

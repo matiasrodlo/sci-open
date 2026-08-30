@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **7 / 13** | **4,564** | **8 / 11** | **617** | **1** |
+| **7 / 13** | **4,564** | **9 / 11** | **664** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -267,8 +267,16 @@ Mechanical, independent, one at a time. Each provider lands with its own fixture
 
 ### Order and the fix each one carries
 
-1. **OpenAlex — the urgent half done, the migration blocked.** The 429 handling landed first because it was taking the service down; the move into the provider layout needs a recorded fixture, and the daily budget was still spent at 17:20 UTC (`retryAfter` ~8h at first contact, resets midnight UTC). Add `host_venue` and `created_date` to the `select` list — or read `primary_location.source.publisher`, which is already selected. Today publisher is always empty for the largest provider and every record is stamped with the request time. **Handle 429 explicitly — this is now urgent rather than tidy.**
+1. **OpenAlex — done.** The 429 handling landed first because it was taking the service down; the migration waited for the daily budget to reset so a fixture could be recorded. The instruction below is *wrong in both halves*, which is worth keeping visible: add `host_venue` and `created_date` to the `select` list — or read `primary_location.source.publisher`, which is already selected. Today publisher is always empty for the largest provider and every record is stamped with the request time. **Handle 429 explicitly — this is now urgent rather than tidy.**
 
+   > **`host_venue` does not exist, and neither does the substitute.** `select=host_venue` is answered with **HTTP 400** — `"host_venue is not a valid select field"` — so the publisher the old path read from `host_venue.publisher` was never going to arrive whatever the select list said. The suggested alternative, `primary_location.source.publisher`, is not a field either: the source object carries no such key. The publisher is `host_organization_name`, populated on every record measured. `created_date` is a real field but the wrong one — it is when OpenAlex minted the record (2025 for a 2016 paper), not a publication date, so it is not requested at all.
+   >
+   > **`open_access.oa_status` is Unpaywall's vocabulary, reported directly** — a single live page returns `gold`, `green`, `hybrid` and `bronze`. The old path discarded it and wrote `oaStatus: 'published'` on every record: a *stage* wearing the route's name, which is precisely the conflation `Paper` splits into `stage` and `oaStatus`.
+   >
+   > **`topics` supersedes `concepts`** — 3 precise topics against 11 broad concepts on the same record. `keywords` is deliberately not folded in as well: that would put the count back to 14 and give up what the change was for.
+   >
+   > Smaller: the DOI was stored as a URL where every other provider stores `10.x/y`; the landing page was the OpenAlex record even when a DOI existed; and every `oa_url` was written to `bestPdfUrl` although one of the three recorded records points at a PMC article page rather than a file.
+   >
    > **Its year filter is also broken, and was previously invisible.** `buildOpenAlexFilter` emits `publication_year:>=2022,publication_year:<=2024`, which OpenAlex rejects: **HTTP 400**, `"Value for param publication_year must be a number."` So every year-bounded search loses OpenAlex on the old path. This only became *visible* once the 429 fix made a non-2xx throw — before it, `validateStatus: status < 500` resolved the 400 as a success and it became the same `undefined` crash. Surfaced by the second comparison sweep, the first one run with a working budget.
    >
    > **OpenAlex meters requests now.** Measured 2026-08-29, during the phase 07 comparison sweep: once the daily budget is spent it answers `HTTP 429` with `{"error":"Rate limit exceeded","message":"Insufficient budget ... Resets at midnight UTC", retryAfter, creditsRemaining, ...}` and no `results` key. Twenty-two queries were enough to exhaust it.
