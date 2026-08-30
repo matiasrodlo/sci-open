@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **9 / 13** | **4,564** | **10 / 10 · 4 authorities** | **772** | **1** |
+| **9 / 13** | **4,564** | **10 / 10 · 4 authorities** | **795** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -24,7 +24,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 ## Phase map
 
-**GROUND** · `00` Stabilise the tree ✔ · `01` Safety net ✔ · `02` Delete ✔ · `03` Stop the bleeding ✔ · **BUILD** · `04` New contracts ✔ · `05` First provider ✔ · `06` Orchestrator ✔ · `07` Flag routing ✔ · `08` Migrate providers ✔ · `09` Authorities ✔ · **LAND** · `10` Cut over · `11` Frontend · `12` Deploy hardening
+**GROUND** · `00` Stabilise the tree ✔ · `01` Safety net ✔ · `02` Delete ✔ · `03` Stop the bleeding ✔ · **BUILD** · `04` New contracts ✔ · `05` First provider ✔ · `06` Orchestrator ✔ · `07` Flag routing ✔ · `08` Migrate providers ✔ · `09` Authorities ✔ · **LAND** · `10` Cut over — *cache collapsed; cutover gated* · `11` Frontend · `12` Deploy hardening
 
 ## 00 · Stabilise the tree — *Done*
 
@@ -420,7 +420,7 @@ The premise holds — nine publisher fetches failed, all 403, from `academic.oup
 
 > **OpenAlex was rate-limited throughout.** Every measurement above was taken with its daily budget spent, so the authority reports it as errored and its contribution to the coverage numbers is zero. The numbers are therefore a floor: `citationCount`, `topics` and `oaStatus` should all read higher on a day with budget. `scripts/enrichment-report.ts` reproduces them.
 
-## 10 · Cut over and delete the old pipeline — *1 day*
+## 10 · Cut over and delete the old pipeline — *Task 4 done; the cutover is gated*
 
 Make the new path the only path.
 
@@ -463,11 +463,47 @@ Make the new path the only path.
 3. **Remove `fallback.ts`**, whose staged-fallback machinery only ever served DOI resolution and whose concurrency control was never wired up.
 4. **Collapse the cache** to one manager: L1 memory plus L2 Redis, no L3 map. Express bounds in bytes rather than entries — L3 currently trims above 50,000 entries (≈7.9 GB at measured response sizes) and L1 caps at 10,000 keys (≈1.6 GB). Fix the key/invalidation mismatch: `generateKey` hashes away exactly the substrings `invalidatePattern` searches for, so every pattern invalidation is a no-op. Switch Redis `KEYS` to `SCAN`.
 
+### What happened — task 4, the cache
+
+Three levels became two, and the third turned out to be doing harm rather than nothing.
+
+**L3 was silently defeating the TTLs of the other two.** It was a plain `Map` with no expiry; `set` wrote to all three levels and `get`, on missing L1 and L2, found the value in L3 and wrote it *back* into both. So once an entry reached L3 its TTLs stopped meaning anything and it was served indefinitely — **a search result cached once was never refetched.** The `l3` TTL in every strategy config, up to 24 hours, was declared and applied to nothing. Demonstrated against the old code before removal: after flushing both live levels, `get` still returned the value and repopulated L1 and L2 with it. This is not in the task list above because nobody had noticed it; the entry count was the visible symptom of a bug whose real cost was staleness.
+
+**Bounds are in bytes.** `MemoryCache` replaces `node-cache`, holds a byte budget of 256 MB by default (`CACHE_MAX_BYTES`), and evicts least-recently-used, spending expired entries before live ones. A count is not a bound when the things counted are pages of search results: 10,000 keys and 50,000 keys were roughly 1.6 GB and 7.9 GB at the ~158 KB per page phase 01 measured, and nothing about either number said so.
+
+**Invalidation addresses a subject.** The key is now `namespace:hash(subject)` plus `:hash(variant)`, so every page, sort and filter combination for one query sits under one prefix that the query itself derives. `invalidatePattern` is replaced by `invalidate(namespace, subject)`, which returns how many entries went — the old one was invisible precisely because it always removed nothing and said nothing. **Phase 01's `it.fails` test, marked "flips to passing when phase 10 collapses the cache", flips.**
+
+**`invalidatePaperCache(paperId)` could not have worked even with the match fixed.** `cachePaperDetails` writes the same record three times — under its id, its DOI and its normalised title — and the old signature addressed only id-keyed entries. A reader arriving by DOI would have been served the stale record. It takes the record now, so the remaining gap is visible in the type.
+
+**Redis is walked with `SCAN`.** The old code called `KEYS *pattern*` under a comment claiming it used SCAN. `KEYS` blocks the server for the length of the keyspace — a stall proportional to how well the cache is working.
+
+Also gone: two bare `NodeCache` instances exported as `getSearchCache` and `getPaperCache` beside a `generateCacheKey` helper, all three described as "legacy ... for backward compatibility", all three imported by the route and never called by it. They cached nothing and were compatible with nothing. `node-cache` is no longer a dependency.
+
 ### Done when
 
-- [ ] One search path. The flag is gone or defaulted permanently.
-- [ ] Cache invalidation actually invalidates — assert it in a test.
-- [ ] No in-process mutable state remains in the request path, so the API is genuinely stateless.
+- [ ] One search path. The flag is gone or defaulted permanently. **Gated — see below.**
+- [x] Cache invalidation actually invalidates — assert it in a test. Phase 01's failing test now passes, alongside variant, cross-subject and Redis-level assertions.
+- [x] No in-process mutable state remains in the request path, so the API is genuinely stateless.
+
+> **What "stateless" had to mean, given two caches survive on purpose.**
+>
+> It cannot mean "no state" — the runbook keeps an in-memory L1, and the orchestrator keeps a provider cache. It means no state whose mutation changes an answer.
+>
+> The cache manager now stores serialised values and parses on read, so it hands out a fresh object by construction. The old L1 ran `useClones: false` and returned the stored reference to every caller; anything that sorted or mutated a cached response in place would have changed what the next reader saw. Serialising also makes the byte accounting exact rather than estimated, since the bytes counted are the bytes held.
+>
+> The provider cache still holds live `Paper` objects and hands the same ones to every caller, which is cheap and safe only while nothing downstream writes to them. Enrichment is the one step that writes to a paper and it copies first — an invariant of the pipeline rather than a property of one function, so it is asserted end to end through the cache rather than trusted: a search that enriches, then the same search served from the provider cache, and the second one gets the unenriched record back.
+>
+> Nothing adaptive remains. `httpPerformanceMonitor` is read only by the admin endpoints and never consulted to change which providers are asked — the scoring layer that did that was 1,553 lines deleted in phase 02, and it has not grown back.
+
+> **The cutover is gated, and the gate is not satisfiable today.**
+>
+> Task 1 needs "comparison report favourable across the full query set". A full sweep needs roughly 88 OpenAlex requests and the budget was **$0** when this phase started, resetting at midnight UTC. Running it anyway is the failure this document already records: *"A sweep that runs out mid-way does not degrade gracefully; it produces a report that looks like a comparison and is not one."* Sweep 3 got three queries in and produced confounded counts, latency and completeness. So the sweep is the first OpenAlex use of the next day, or the account gets funded.
+>
+> Phase 09's numbers were taken under the same constraint and are a floor for the same reason.
+>
+> **Tasks 2 and 3 are gated behind task 1, not behind the sweep.** `fallback.ts` is imported by exactly one file — `enhanced-search-pipeline.ts` — which is still the default search path and is also what both comparison scripts and the parity tests measure against. Removing the staged-fallback machinery means either deleting the old pipeline, which waits for the frontend in phase 11, or rewriting a `resolveDoi` that is going to be deleted anyway. The second option is worse than it looks: it would change the behaviour of the path the sweep compares against, and invalidate the comparison the gate is waiting for.
+>
+> Task 4 was done first precisely because it is the one part of this phase that neither path's behaviour depends on. The cache sits under both.
 
 ## 11 · Frontend — *1 week*
 
