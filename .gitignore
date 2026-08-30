@@ -8,11 +8,12 @@ dist/
 .turbo/
 
 # Environment variables
+# Every .env variant, not an enumerated few. A file named `.env.production` or
+# `.env.backup-20260830` is as committable as `.env` was ignorable, and the
+# enumeration below missed both.
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
 
 # Logs
 *.log
