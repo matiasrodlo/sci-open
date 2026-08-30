@@ -390,6 +390,14 @@ function report(rows: Row[]): void {
   line('  after filtering, not what the corpus contains. Both read 600 deep per');
   line('  provider, so both are floors. The old path asks nine; the new asks the');
   line('  seven of its nine that declare a keyword index.');
+  line();
+  line('  `rho` and `top20` measure AGREEMENT, not quality, and on this pair that');
+  line('  is not the same as better. The old path does not rank: `sortResults`');
+  line("  answers 'relevance' with `return records`, so its order is the order the");
+  line('  providers were concatenated in — page one is one provider\'s block,');
+  line('  verified as 20 consecutive Europe PMC records. A high rho here would');
+  line('  mean the new path had stopped ranking too. Read these two columns as a');
+  line('  description of how far the new order has moved, never as a score.');
 
   line();
   line(`EUROPE PMC — old connector vs new provider, called directly, depth ${CONNECTOR_DEPTH}`);

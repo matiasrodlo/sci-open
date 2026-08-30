@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **7 / 13** | **4,564** | **9 / 11** | **677** | **1** |
+| **7 / 13** | **4,564** | **9 / 11** | **678** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -399,6 +399,14 @@ Make the new path the only path.
 
 > **Gate** — Phase 09 complete; comparison report favourable across the full query set; new path has run as default behind the flag for long enough to trust.
 
+> **The ranking disagreement is not a defect, and the metric that reports it is misleading.**
+>
+> The sweep's `rho` and `top20` columns ran 0.05–0.87 with one negative, and 0/20 to 12/20 — which reads as the two paths disagreeing about page one. They do, and that is the point. **The old path does not rank at all.** `sortResults` answers `'relevance'` with `return records`, so its order is the order providers were concatenated in — OpenAlex's block, then each aggregator's. Verified live: the old path's page one run-length encodes to `europepmc x20`, twenty consecutive records from one provider, which is the phase 01 symptom "page one returning a single provider's records in one block" still present.
+>
+> So a high `rho` against it would mean the new path had stopped ranking too. Measured against the new path instead: page one carries six providers, every result on topic, the three multi-provider papers first, and `overlap` spreads across the set (79 papers at 1.00, 47 at 0.75, 69 at 0.50, 44 at 0.25, 16 at 0.00) rather than saturating. Score ties are small — 200 distinct scores over 255 papers, largest tie group 4 — and broken by quality then id.
+>
+> The sweep now prints that interpretation next to the columns, and `rank.test.ts` asserts the property directly: no provider may own more than half of page one. Phase 06 wrote that test against two providers and noted it would only mean something once more were migrated; it now runs against six.
+>
 > **Two things to settle before that comparison means anything.**
 >
 > **A full sweep costs more OpenAlex budget than a day holds, now that both paths use it.** The old path spends 3 requests per query and the new path 1, so 22 queries need ~88. Sweep 2 completed 21 queries on ~63 requests with a fresh budget; sweep 3, run after a day of migration probing, got **3 queries in** before `429 Insufficient budget` and produced confounded counts, latency and completeness — the old path looked *faster* only because OpenAlex was failing instantly instead of fetching three pages. Run the sweep as the first OpenAlex use of the day, or fund the account. A sweep that runs out mid-way does not degrade gracefully; it produces a report that looks like a comparison and is not one.

@@ -61,22 +61,58 @@ describe('rank', () => {
     expect(ordered[0].paper.id).toBe('relevant');
   });
 
+  /**
+   * Phase 06 wrote this against two providers and noted it would only mean
+   * something once more were migrated. Nine are, so it now runs against the
+   * six that answer a keyword query.
+   *
+   * It is also the one property that separates the two paths. The old path
+   * does not rank at all — `sortResults` answers `'relevance'` with
+   * `return records`, so its order is the order providers were concatenated
+   * in. Measured live: its page one was twenty consecutive Europe PMC
+   * records. That is what this asserts cannot happen here.
+   */
   it('interleaves providers rather than returning them in blocks', () => {
-    // The measured failure: the old output was 13 contiguous per-provider
-    // blocks because ordering was "group by source, OpenAlex first".
-    const papers = [
-      ...Array.from({ length: 5 }, (_, i) =>
-        paper({ id: `e${i}`, title: `Paper E${i}`, sources: [ref('europepmc', { rank: i })] })),
-      ...Array.from({ length: 5 }, (_, i) =>
-        paper({ id: `n${i}`, title: `Paper N${i}`, sources: [ref('ncbi', { rank: i })] }))
-    ];
+    const providers = ['europepmc', 'ncbi', 'plos', 'doaj', 'openaire', 'arxiv'] as const;
+    const papers = providers.flatMap(provider =>
+      Array.from({ length: 10 }, (_, i) =>
+        paper({
+          id: `${provider}-${i}`,
+          title: `Paper about crispr ${provider} ${i}`,
+          sources: [ref(provider, { rank: i })]
+        }))
+    );
 
-    const sequence = rank(papers, { query: query({ terms: ['paper'] }) })
+    const sequence = rank(papers, { query: query({ terms: ['crispr'] }) })
       .map(s => s.paper.sources[0].provider);
 
-    // Run-length encode: contiguous blocks would give 2 runs for 2 providers.
+    // Contiguous blocks would give exactly one run per provider.
     const runs = sequence.filter((p, i) => i === 0 || p !== sequence[i - 1]).length;
-    expect(runs).toBeGreaterThan(2);
+    expect(runs).toBeGreaterThan(providers.length * 2);
+  });
+
+  it('never fills the first page from a single provider', () => {
+    // The failure this exists to prevent, stated directly: the old path's
+    // page one run-length encodes to `europepmc x20`.
+    const providers = ['europepmc', 'ncbi', 'plos', 'doaj', 'openaire', 'arxiv'] as const;
+    const papers = providers.flatMap(provider =>
+      Array.from({ length: 30 }, (_, i) =>
+        paper({
+          id: `${provider}-${i}`,
+          title: `Paper about crispr ${provider} ${i}`,
+          sources: [ref(provider, { rank: i })]
+        }))
+    );
+
+    const firstPage = rank(papers, { query: query({ terms: ['crispr'] }) })
+      .slice(0, 20)
+      .map(s => s.paper.sources[0].provider);
+
+    expect(new Set(firstPage).size).toBeGreaterThan(1);
+    // No provider may own more than half of it.
+    for (const provider of providers) {
+      expect(firstPage.filter(p => p === provider).length).toBeLessThanOrEqual(10);
+    }
   });
 
   it('breaks a tie on quality, not arbitrarily', () => {
