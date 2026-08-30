@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **7 / 13** | **4,564** | **9 / 11** | **678** | **1** |
+| **7 / 13** | **4,564** | **9 / 11** | **688** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -313,7 +313,11 @@ Mechanical, independent, one at a time. Each provider lands with its own fixture
 
    > **Corrected: CORE does not require an API key.** Anonymous requests to `api.core.ac.uk/v3` answer **HTTP 200** — it is the placeholder `your_core_api_key_here` that produces **401**, because a wrong key is worse than no key, exactly as with DataCite. So "CORE is missing because it needs an API key" was wrong: what a key buys is rate limit, not access. A fixture is recorded and committed, and the normaliser is written and tested against it.
    >
-   > **What blocks it now is the anonymous rate limit, not the key.** Measured: `x-ratelimit-limit: 10` on a window of roughly five minutes, per IP, and it burns down erratically — 10 to 9 to 0 across three requests. That is unusable for a fan-out where every search costs one request, and too tight to verify the remaining capabilities against responses, which is the standard every other provider in this phase was held to. `translate` and `capabilities` are therefore **not written**: the year filter and the AND syntax are unverified, and guessing them is precisely what this phase kept finding had gone wrong elsewhere.
+   > **The syntax is now verified, and `translate` and `capabilities` are written.** With a fresh rate-limit window and spaced requests, every form was checked against a response: `crispr AND gene AND editing` returns **13,323** against **2,126,594** for the same words unjoined, so CORE ORs its terms exactly as arXiv did; `yearPublished>=2022 AND yearPublished<=2023` **in the query** narrows 60,460 to 15,589, while the `filters` request parameter the old connector used is **ignored silently** — bounded and unbounded both returned 60,460, so its year filter never did anything; and `doi:"10.1038/srep09811"` returns exactly 1. **Phrases cannot be expressed at all**: a bare quoted phrase answers **HTTP 500**, and `title:"gene editing"` returns 635,878, so the quotes are not honoured either. They are degraded to required words, and `capabilities` does not claim otherwise.
+   >
+   > **What blocks registration is latency, not the key and not the rate limit.** Measured anonymously: 3 records in **18.9s**, 25 records in **35.6s**, 50 records failed, 100 timed out at 90s even with `exclude=fullText` — which is accepted but barely helps, since the bulk of a record is references and authors rather than text. The orchestrator allows a provider **20s**. CORE would exceed that on every request at any useful depth, so registering it would add a provider that only ever reports a timeout. `suppliesCitations` is declared **false**: the field exists and was zero on every record across two samples.
+   >
+   > Whether a key removes the latency is untested and plausible — anonymous tiers are commonly throttled, and the same tier is capped at 10 requests per roughly five minutes. **Re-measure with a key before adding the registry row**, which is the only step left.
    >
    > **Two of the three listed fixes are confirmed, and there is a third.** The reader URL was priority 1 in `bestPdfUrl` for every record with an id — all of them — so the two real PDF sources beneath it were unreachable code; the recorded page shows CORE serving a real `downloadUrl` PDF on two records and a repository PDF on the third. `limit`/`offset` are hardcoded to 100/0. And **CORE ORs its terms**: `crispr` returns 60,460 where `crispr gene editing` returns **2,126,594** — more words, more results, the same defect arXiv had.
    >
