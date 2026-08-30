@@ -6,7 +6,7 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Lines To Remove | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **7 / 13** | **4,564** | **10 / 11** | **690** | **1** |
+| **7 / 13** | **4,564** | **10 / 11** | **700** | **1** |
 
 > **Two rules for the whole runbook**
 >
@@ -371,7 +371,7 @@ Make the new path the only path.
 > | `doi` / `venue` / `publisher` | 63% / 61% / 4% | **93% / 93% / 46%** |
 > | `topics` / `citationCount` | 77% / 21% | **94% / 39%** |
 >
-> **The count gap is almost entirely deliberate, and one third of it is not.** Retrieved-record differences decompose as: DataCite **9,999 → 0**, skipped on evidence; arXiv **10,524 → 3,034**, which is the OR-to-AND fix removing records that were never matches; and OpenAlex **12,000 → 4,200**, which is the one piece of genuinely lost coverage — the old path paginates `discoverWorks` to 600 while `fanOut` asks once and OpenAlex caps a page at 200. Intra-provider pagination is the single change that would close it.
+> **The count gap is almost entirely deliberate, and one third of it is not.** Retrieved-record differences decompose as: DataCite **9,999 → 0**, skipped on evidence; arXiv **10,524 → 3,034**, which is the OR-to-AND fix removing records that were never matches; and OpenAlex **12,000 → 4,200**, which was the one piece of genuinely lost coverage — the old path paginates `discoverWorks` to 600 while `fanOut` asks once and OpenAlex caps a page at 200. **Since closed:** OpenAlex paginates internally now, so a re-run should show that third of the gap gone.
 >
 > Overlap has climbed across four sweeps as providers landed — 54%, 60%, 64%, **70%** — and `citationCount` nearly doubled against the old path, which can only get it from OpenAlex where the new path also has Europe PMC.
 >
@@ -389,7 +389,7 @@ Make the new path the only path.
 >
 > **A full sweep costs more OpenAlex budget than a day holds, now that both paths use it.** The old path spends 3 requests per query and the new path 1, so 22 queries need ~88. Sweep 2 completed 21 queries on ~63 requests with a fresh budget; sweep 3, run after a day of migration probing, got **3 queries in** before `429 Insufficient budget` and produced confounded counts, latency and completeness — the old path looked *faster* only because OpenAlex was failing instantly instead of fetching three pages. Run the sweep as the first OpenAlex use of the day, or fund the account. A sweep that runs out mid-way does not degrade gracefully; it produces a report that looks like a comparison and is not one.
 >
-> **The new path reads a third as deep into OpenAlex as the old one.** `fanOut` calls each provider once and every provider caps the request at its own `maxPageSize`, so a `depth` of 600 yields 600 from Europe PMC, PLOS, arXiv and DataCite, 500 from PubMed, **200 from OpenAlex**, 100 from DOAJ and OpenAIRE, and 30 from bioRxiv. The old path paginates `discoverWorks` to reach 600 from OpenAlex. Nothing here misreports — `ProviderReport.retrieved` says exactly what came back — but part of the remaining count gap is this rather than coverage, and intra-provider pagination is unbuilt work rather than a defect to argue about.
+> **Read depth — fixed for OpenAlex, still open for the rest.** `fanOut` calls each provider once and every provider caps the request at its own `maxPageSize`, so a `depth` of 600 yields 600 from Europe PMC, PLOS, arXiv and DataCite, 500 from PubMed, 100 from DOAJ and OpenAIRE, and 30 from bioRxiv. OpenAlex capped at **200** against the old path's paginated 600, which the sweep measured as 12,000 records to 4,200 — the only part of the count gap that was lost coverage rather than a decision. **OpenAlex now paginates internally**: verified, a depth of 600 returns 600 records with continuous ranks, and no slower, because the pages go out together. The remaining caps are smaller in absolute terms and not yet measured as a shortfall.
 
 ### Tasks
 

@@ -35,7 +35,12 @@ const client = new OpenAlexClient('test/1.0 (mailto:test@example.com)');
 
 const resolved = (status: number, data: unknown) => ({ status, statusText: '', data });
 
-beforeEach(() => get.mockReset());
+// Braces deliberately. `mockReset()` returns the mock, and an arrow with an
+// expression body hands that back to Vitest, which treats a returned function
+// as a teardown callback and calls it with no arguments after each test.
+beforeEach(() => {
+  get.mockReset();
+});
 
 describe('searchWorks — a rate-limited response is not a result page', () => {
   it('throws rather than returning a body with no results', async () => {
