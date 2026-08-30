@@ -1,16 +1,26 @@
 import { OARecord } from '@open-access-explorer/shared';
 
-export type CitationFormat = 
-  | 'bibtex'
-  | 'endnote'
-  | 'ris'
-  | 'wos'
-  | 'apa'
-  | 'mla'
-  | 'chicago'
-  | 'harvard'
-  | 'vancouver'
-  | 'plain';
+/**
+ * Two export formats, both correct.
+ *
+ * There were ten — BibTeX, EndNote, RIS, Web of Science, APA, MLA, Chicago,
+ * Harvard, Vancouver and plain text — across 1,027 lines, and not one of them
+ * conformed to the style it named. No author reformatting, so "Lovelace, Ada"
+ * and "Ada Lovelace" came out however the provider happened to store them;
+ * DOIs emitted as `https://doi.org/...` URLs where the field wants a bare
+ * `10.x/y`; and APA and Chicago prefixed `https://doi.org/` onto a value that
+ * already carried it. A reader who pasted the APA output into a manuscript got
+ * something that was not APA.
+ *
+ * Ten wrong formats is worse than two right ones, and BibTeX and RIS are the
+ * two worth keeping: they are machine formats with checkable specifications,
+ * they are what reference managers actually ingest, and a reader who wants APA
+ * gets it from Zotero — correctly — after importing one of these. The
+ * human-readable styles are the ones that need a real CSL implementation to be
+ * worth offering, and that is a dependency this app does not carry.
+ */
+
+export type CitationFormat = 'bibtex' | 'ris';
 
 export interface CitationOptions {
   format: CitationFormat;
@@ -18,1010 +28,260 @@ export interface CitationOptions {
   includeKeywords?: boolean;
   includeDOI?: boolean;
   includeURL?: boolean;
+  /** Authors beyond this are abbreviated rather than dropped silently. */
   maxAuthors?: number;
 }
 
-/**
- * Enhanced citation data with additional metadata
- */
-export interface EnhancedCitationData {
-  // Basic fields
+const DEFAULTS = {
+  includeAbstract: true,
+  includeKeywords: true,
+  includeDOI: true,
+  includeURL: true,
+  maxAuthors: 20
+};
+
+/** The record, reduced to what a citation actually needs. */
+type CitationData = {
   title: string;
   authors: string[];
   year?: number;
   venue?: string;
+  publisher?: string;
   abstract?: string;
+  /** Bare, always: `10.1234/example`, never a URL. */
   doi?: string;
   url?: string;
-  keywords?: string[];
-  
-  // Enhanced fields for WoS-level citations
-  publisher?: string;
-  volume?: string;
-  issue?: string;
-  pages?: string;
-  startPage?: string;
-  endPage?: string;
-  articleNumber?: string;
+  keywords: string[];
   language?: string;
-  documentType?: string;
-  source?: string;
-  sourceId?: string;
-  oaStatus?: string;
-  citationCount?: number;
-  
-  // Additional metadata
-  issn?: string;
-  isbn?: string;
-  pmid?: string;
-  pmcid?: string;
-  arxivId?: string;
-  researchAreas?: string[];
-  fundingInfo?: string[];
-  affiliations?: string[];
+  isPreprint: boolean;
+};
+
+/**
+ * A DOI as the `doi` field of both formats defines it: the bare identifier.
+ *
+ * Records arrive with it spelled several ways depending on the provider —
+ * OpenAlex stores a URL, others store `doi:10.x`, most store it bare. Emitting
+ * a URL into a `doi` field is what made APA and Chicago produce
+ * `https://doi.org/https://doi.org/10.x`.
+ */
+export function bareDoi(doi: string): string {
+  return doi
+    .trim()
+    .replace(/^doi:\s*/i, '')
+    .replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, '');
+}
+
+function toCitationData(record: OARecord): CitationData {
+  const doi = record.doi ? bareDoi(record.doi) : undefined;
+
+  return {
+    title: (record.title || '').trim(),
+    authors: (record.authors || []).filter(a => a && a.trim()).map(a => a.trim()),
+    ...(record.year !== undefined ? { year: record.year } : {}),
+    ...(record.venue ? { venue: record.venue } : {}),
+    ...(record.publisher ? { publisher: record.publisher } : {}),
+    ...(record.abstract ? { abstract: record.abstract } : {}),
+    ...(doi ? { doi } : {}),
+    // The DOI is the durable link, so it is preferred over whatever landing
+    // page a provider recorded.
+    url: doi ? `https://doi.org/${doi}` : record.landingPage || record.bestPdfUrl,
+    keywords: record.topics || [],
+    ...(record.language ? { language: record.language } : {}),
+    isPreprint: record.oaStatus === 'preprint'
+  };
+}
+
+/** Authors, capped, with the convention each format uses for the remainder. */
+function cappedAuthors(authors: string[], max: number): { shown: string[]; truncated: boolean } {
+  if (authors.length <= max) return { shown: authors, truncated: false };
+  return { shown: authors.slice(0, max), truncated: true };
+}
+
+/* ------------------------------------------------------------------ BibTeX */
+
+/**
+ * The characters BibTeX cannot take literally, and what each becomes.
+ *
+ * Applied in **one pass**, which is the whole point. The previous version
+ * chained ten `.replace` calls with the backslash rule first: `\` became
+ * `\textbackslash{}`, and the very next two rules then escaped the braces that
+ * replacement had just introduced, so a single backslash came out as
+ * `\textbackslash\{\}` — not valid LaTeX for a backslash. `^` and `~` expand
+ * to braces too and escaped correctly only by accident, because their rules
+ * happened to run after the brace rules rather than before.
+ *
+ * A single regex pass cannot revisit its own output, so the ordering question
+ * does not arise. Recorded as a failing test in phase 01; it passes now.
+ */
+const BIBTEX_ESCAPES: Record<string, string> = {
+  '\\': '\\textbackslash{}',
+  '{': '\\{',
+  '}': '\\}',
+  '&': '\\&',
+  '%': '\\%',
+  $: '\\$',
+  '#': '\\#',
+  _: '\\_',
+  '^': '\\textasciicircum{}',
+  '~': '\\textasciitilde{}'
+};
+
+export function escapeBibTeX(value: string): string {
+  return value.replace(/[\\{}&%$#_^~]/g, char => BIBTEX_ESCAPES[char] ?? char);
 }
 
 /**
- * Convert OARecord to enhanced citation data
+ * A cite key that is safe to use as one: ASCII, no whitespace, no separators.
+ *
+ * BibTeX keys are referenced by hand in a document, so they are built from
+ * author, year and title rather than from an opaque id.
  */
-export function enhanceCitationData(record: OARecord): EnhancedCitationData {
-  // Extract additional metadata from various sources
-  const enhanced: EnhancedCitationData = {
-    title: record.title,
-    authors: record.authors,
-    year: record.year,
-    venue: record.venue,
-    abstract: record.abstract,
-    doi: record.doi,
-    url: record.landingPage || record.bestPdfUrl,
-    keywords: record.topics,
-    language: record.language,
-    source: record.source,
-    sourceId: record.sourceId,
-    oaStatus: record.oaStatus,
-    citationCount: record.citationCount,
+export function citeKey(data: CitationData): string {
+  const surname = (data.authors[0] || '')
+    .split(',')[0]
+    .split(/\s+/)
+    .pop() ?? '';
+
+  const ascii = (value: string) => value.normalize('NFD').replace(/[^a-zA-Z0-9]/g, '');
+
+  const word = data.title
+    .split(/\s+/)
+    .find(w => ascii(w).length > 3) ?? '';
+
+  const key = [ascii(surname).toLowerCase(), data.year ?? '', ascii(word).toLowerCase()]
+    .filter(part => part !== '' && part !== undefined)
+    .join('');
+
+  return key || 'citation';
+}
+
+function bibtexEntryType(data: CitationData): string {
+  if (data.isPreprint) return 'misc';
+  return data.venue ? 'article' : 'misc';
+}
+
+function generateBibTeXEntry(data: CitationData, options: Required<CitationOptions>): string {
+  const fields: Array<[string, string]> = [];
+  const add = (name: string, value: string | undefined) => {
+    if (value && value.trim()) fields.push([name, escapeBibTeX(value.trim())]);
   };
 
-  // Extract additional metadata from DOI or other sources
-  if (record.doi) {
-    // Try to extract volume, issue, pages from DOI or venue
-    const venueInfo = extractVenueInfo(record.venue || '');
-    enhanced.publisher = venueInfo.publisher;
-    enhanced.volume = venueInfo.volume;
-    enhanced.issue = venueInfo.issue;
-    enhanced.pages = venueInfo.pages;
-    enhanced.startPage = venueInfo.startPage;
-    enhanced.endPage = venueInfo.endPage;
+  const { shown, truncated } = cappedAuthors(data.authors, options.maxAuthors);
+  if (shown.length > 0) {
+    // ` and ` is the separator; `others` is BibTeX's own "et al.".
+    add('author', [...shown, ...(truncated ? ['others'] : [])].join(' and '));
   }
 
-  // Determine document type
-  enhanced.documentType = determineDocumentType(record);
+  add('title', data.title);
+  if (data.year !== undefined) fields.push(['year', String(data.year)]);
+  add(data.venue && !data.isPreprint ? 'journal' : 'howpublished', data.venue);
+  add('publisher', data.publisher);
+  add('language', data.language);
+  if (options.includeDOI) add('doi', data.doi);
+  if (options.includeURL) add('url', data.url);
+  if (options.includeAbstract) add('abstract', data.abstract);
+  if (options.includeKeywords && data.keywords.length > 0) add('keywords', data.keywords.join(', '));
 
-  // Extract research areas from topics
-  if (record.topics) {
-    enhanced.researchAreas = record.topics.slice(0, 5); // Top 5 topics
-  }
-
-  return enhanced;
+  const body = fields.map(([name, value]) => `  ${name} = {${value}}`).join(',\n');
+  return `@${bibtexEntryType(data)}{${citeKey(data)},\n${body}\n}`;
 }
 
+/* --------------------------------------------------------------------- RIS */
+
 /**
- * Generate citation in specified format
+ * RIS is line-oriented: a six-character tag, then the value. The spec uses
+ * CRLF, every tag is exactly `XX  - `, and `ER  - ` closes the record.
+ * A newline inside a value would start a line the parser cannot read, so
+ * abstracts are flattened.
  */
+function risLine(tag: string, value: string): string {
+  return `${tag.padEnd(2)}  - ${value.replace(/\s*\r?\n\s*/g, ' ').trim()}`;
+}
+
+function generateRISEntry(data: CitationData, options: Required<CitationOptions>): string {
+  const lines: string[] = [];
+
+  lines.push(risLine('TY', data.isPreprint ? 'GEN' : data.venue ? 'JOUR' : 'GEN'));
+
+  const { shown } = cappedAuthors(data.authors, options.maxAuthors);
+  // One AU line per author; RIS has no "et al." convention, so extras are
+  // simply not claimed.
+  for (const author of shown) lines.push(risLine('AU', author));
+
+  if (data.title) lines.push(risLine('TI', data.title));
+  if (data.year !== undefined) {
+    lines.push(risLine('PY', String(data.year)));
+    lines.push(risLine('DA', `${data.year}///`));
+  }
+  if (data.venue) lines.push(risLine('T2', data.venue));
+  if (data.publisher) lines.push(risLine('PB', data.publisher));
+  if (data.language) lines.push(risLine('LA', data.language));
+  if (options.includeDOI && data.doi) lines.push(risLine('DO', data.doi));
+  if (options.includeURL && data.url) lines.push(risLine('UR', data.url));
+  if (options.includeAbstract && data.abstract) lines.push(risLine('AB', data.abstract));
+  if (options.includeKeywords) for (const keyword of data.keywords) lines.push(risLine('KW', keyword));
+
+  lines.push('ER  - ');
+  return lines.join('\r\n');
+}
+
+/* ------------------------------------------------------------------- entry */
+
 export function generateCitation(record: OARecord, options: CitationOptions): string {
-  const enhanced = enhanceCitationData(record);
-  
-  switch (options.format) {
-    case 'bibtex':
-      return generateBibTeX(enhanced, options);
-    case 'endnote':
-      return generateEndNote(enhanced, options);
-    case 'ris':
-      return generateRIS(enhanced, options);
-    case 'wos':
-      return generateWoS(enhanced, options);
-    case 'apa':
-      return generateAPA(enhanced, options);
-    case 'mla':
-      return generateMLA(enhanced, options);
-    case 'chicago':
-      return generateChicago(enhanced, options);
-    case 'harvard':
-      return generateHarvard(enhanced, options);
-    case 'vancouver':
-      return generateVancouver(enhanced, options);
-    case 'plain':
-      return generatePlainText(enhanced, options);
-    default:
-      return generatePlainText(enhanced, options);
-  }
+  const resolved: Required<CitationOptions> = { ...DEFAULTS, ...options };
+  const data = toCitationData(record);
+
+  return resolved.format === 'ris'
+    ? generateRISEntry(data, resolved)
+    : generateBibTeXEntry(data, resolved);
 }
 
 /**
- * Generate BibTeX citation (enhanced version)
- */
-function generateBibTeX(data: EnhancedCitationData, options: CitationOptions): string {
-  const entryType = determineBibTeXEntryType(data);
-  const citationKey = generateBibTeXKey(data);
-  
-  const fields: string[] = [];
-  
-  // Required fields
-  if (data.title) {
-    fields.push(`  title = {${escapeBibTeX(data.title)}}`);
-  }
-  
-  if (data.authors && data.authors.length > 0) {
-    const authors = options.maxAuthors && data.authors.length > options.maxAuthors
-      ? data.authors.slice(0, options.maxAuthors).join(' and ') + ' and others'
-      : data.authors.join(' and ');
-    fields.push(`  author = {${authors}}`);
-  }
-  
-  if (data.year) {
-    fields.push(`  year = {${data.year}}`);
-  }
-  
-  // Venue/Journal
-  if (data.venue) {
-    if (entryType === 'article') {
-      fields.push(`  journal = {${escapeBibTeX(data.venue)}}`);
-    } else if (entryType === 'inproceedings') {
-      fields.push(`  booktitle = {${escapeBibTeX(data.venue)}}`);
-    }
-  }
-  
-  // Publisher
-  if (data.publisher) {
-    fields.push(`  publisher = {${escapeBibTeX(data.publisher)}}`);
-  }
-  
-  // Volume and issue
-  if (data.volume) {
-    fields.push(`  volume = {${data.volume}}`);
-  }
-  
-  if (data.issue) {
-    fields.push(`  number = {${data.issue}}`);
-  }
-  
-  // Pages
-  if (data.pages) {
-    fields.push(`  pages = {${data.pages}}`);
-  } else if (data.startPage && data.endPage) {
-    fields.push(`  pages = {${data.startPage}--${data.endPage}}`);
-  }
-  
-  // DOI
-  if (data.doi && options.includeDOI !== false) {
-    fields.push(`  doi = {${data.doi}}`);
-  }
-  
-  // URL
-  if (data.url && options.includeURL !== false) {
-    fields.push(`  url = {${data.url}}`);
-  }
-  
-  // Abstract
-  if (data.abstract && options.includeAbstract) {
-    const abstract = data.abstract.length > 500 
-      ? data.abstract.slice(0, 500) + '...'
-      : data.abstract;
-    fields.push(`  abstract = {${escapeBibTeX(abstract)}}`);
-  }
-  
-  // Keywords
-  if (data.keywords && data.keywords.length > 0 && options.includeKeywords) {
-    fields.push(`  keywords = {${data.keywords.join(', ')}}`);
-  }
-  
-  // Additional metadata
-  if (data.issn) {
-    fields.push(`  issn = {${data.issn}}`);
-  }
-  
-  if (data.isbn) {
-    fields.push(`  isbn = {${data.isbn}}`);
-  }
-  
-  // Note about source and OA status
-  const noteParts = [];
-  if (data.source) {
-    noteParts.push(`Retrieved from ${data.source.toUpperCase()}`);
-  }
-  if (data.oaStatus) {
-    noteParts.push(`OA Status: ${data.oaStatus}`);
-  }
-  if (data.citationCount) {
-    noteParts.push(`Citations: ${data.citationCount}`);
-  }
-  
-  if (noteParts.length > 0) {
-    fields.push(`  note = {${noteParts.join(', ')}}`);
-  }
-  
-  return `@${entryType}{${citationKey},\n${fields.join(',\n')}\n}`;
-}
-
-/**
- * Generate EndNote format
- */
-function generateEndNote(data: EnhancedCitationData, options: CitationOptions): string {
-  const lines: string[] = [];
-  
-  lines.push(`%0 ${determineEndNoteType(data)}`);
-  
-  if (data.title) {
-    lines.push(`%T ${data.title}`);
-  }
-  
-  if (data.authors && data.authors.length > 0) {
-    data.authors.forEach(author => {
-      lines.push(`%A ${author}`);
-    });
-  }
-  
-  if (data.year) {
-    lines.push(`%D ${data.year}`);
-  }
-  
-  if (data.venue) {
-    lines.push(`%J ${data.venue}`);
-  }
-  
-  if (data.publisher) {
-    lines.push(`%I ${data.publisher}`);
-  }
-  
-  if (data.volume) {
-    lines.push(`%V ${data.volume}`);
-  }
-  
-  if (data.issue) {
-    lines.push(`%N ${data.issue}`);
-  }
-  
-  if (data.pages) {
-    lines.push(`%P ${data.pages}`);
-  }
-  
-  if (data.doi && options.includeDOI !== false) {
-    lines.push(`%R ${data.doi}`);
-  }
-  
-  if (data.url && options.includeURL !== false) {
-    lines.push(`%U ${data.url}`);
-  }
-  
-  if (data.abstract && options.includeAbstract) {
-    lines.push(`%X ${data.abstract}`);
-  }
-  
-  if (data.keywords && data.keywords.length > 0 && options.includeKeywords) {
-    data.keywords.forEach(keyword => {
-      lines.push(`%K ${keyword}`);
-    });
-  }
-  
-  if (data.issn) {
-    lines.push(`%@ ${data.issn}`);
-  }
-  
-  if (data.language) {
-    lines.push(`%G ${data.language}`);
-  }
-  
-  lines.push(''); // Empty line at end
-  
-  return lines.join('\n');
-}
-
-/**
- * Generate RIS format
- */
-function generateRIS(data: EnhancedCitationData, options: CitationOptions): string {
-  const lines: string[] = [];
-  
-  lines.push(`TY  - ${determineRISType(data)}`);
-  
-  if (data.title) {
-    lines.push(`TI  - ${data.title}`);
-  }
-  
-  if (data.authors && data.authors.length > 0) {
-    data.authors.forEach(author => {
-      lines.push(`AU  - ${author}`);
-    });
-  }
-  
-  if (data.year) {
-    lines.push(`PY  - ${data.year}`);
-  }
-  
-  if (data.venue) {
-    lines.push(`T2  - ${data.venue}`);
-  }
-  
-  if (data.publisher) {
-    lines.push(`PB  - ${data.publisher}`);
-  }
-  
-  if (data.volume) {
-    lines.push(`VL  - ${data.volume}`);
-  }
-  
-  if (data.issue) {
-    lines.push(`IS  - ${data.issue}`);
-  }
-  
-  if (data.pages) {
-    lines.push(`SP  - ${data.pages}`);
-  }
-  
-  if (data.doi && options.includeDOI !== false) {
-    lines.push(`DO  - ${data.doi}`);
-  }
-  
-  if (data.url && options.includeURL !== false) {
-    lines.push(`UR  - ${data.url}`);
-  }
-  
-  if (data.abstract && options.includeAbstract) {
-    lines.push(`AB  - ${data.abstract}`);
-  }
-  
-  if (data.keywords && data.keywords.length > 0 && options.includeKeywords) {
-    data.keywords.forEach(keyword => {
-      lines.push(`KW  - ${keyword}`);
-    });
-  }
-  
-  if (data.issn) {
-    lines.push(`SN  - ${data.issn}`);
-  }
-  
-  if (data.language) {
-    lines.push(`LA  - ${data.language}`);
-  }
-  
-  lines.push('ER  - '); // End of record
-  
-  return lines.join('\n');
-}
-
-/**
- * Generate Web of Science format
- */
-function generateWoS(data: EnhancedCitationData, options: CitationOptions): string {
-  const lines: string[] = [];
-  
-  // WoS format is similar to EndNote but with specific field mappings
-  lines.push(`PT ${determineWoSType(data)}`);
-  
-  if (data.title) {
-    lines.push(`TI ${data.title}`);
-  }
-  
-  if (data.authors && data.authors.length > 0) {
-    data.authors.forEach(author => {
-      lines.push(`AU ${author}`);
-    });
-  }
-  
-  if (data.year) {
-    lines.push(`PY ${data.year}`);
-  }
-  
-  if (data.venue) {
-    lines.push(`SO ${data.venue}`);
-  }
-  
-  if (data.publisher) {
-    lines.push(`PU ${data.publisher}`);
-  }
-  
-  if (data.volume) {
-    lines.push(`VL ${data.volume}`);
-  }
-  
-  if (data.issue) {
-    lines.push(`IS ${data.issue}`);
-  }
-  
-  if (data.pages) {
-    lines.push(`BP ${data.pages}`);
-  }
-  
-  if (data.doi && options.includeDOI !== false) {
-    lines.push(`DI ${data.doi}`);
-  }
-  
-  if (data.url && options.includeURL !== false) {
-    lines.push(`UR ${data.url}`);
-  }
-  
-  if (data.abstract && options.includeAbstract) {
-    lines.push(`AB ${data.abstract}`);
-  }
-  
-  if (data.keywords && data.keywords.length > 0 && options.includeKeywords) {
-    data.keywords.forEach(keyword => {
-      lines.push(`DE ${keyword}`);
-    });
-  }
-  
-  if (data.issn) {
-    lines.push(`SN ${data.issn}`);
-  }
-  
-  if (data.language) {
-    lines.push(`LA ${data.language}`);
-  }
-  
-  if (data.citationCount) {
-    lines.push(`TC ${data.citationCount}`);
-  }
-  
-  lines.push('ER'); // End of record
-  
-  return lines.join('\n');
-}
-
-/**
- * Generate APA style citation
- */
-function generateAPA(data: EnhancedCitationData, options: CitationOptions): string {
-  const parts: string[] = [];
-  
-  // Authors
-  if (data.authors && data.authors.length > 0) {
-    const maxAuthors = options.maxAuthors || 20;
-    let authorStr = '';
-    
-    if (data.authors.length === 1) {
-      authorStr = data.authors[0];
-    } else if (data.authors.length <= maxAuthors) {
-      const lastAuthor = data.authors[data.authors.length - 1];
-      const otherAuthors = data.authors.slice(0, -1);
-      authorStr = otherAuthors.join(', ') + ', & ' + lastAuthor;
-    } else {
-      const firstAuthors = data.authors.slice(0, maxAuthors - 1);
-      authorStr = firstAuthors.join(', ') + ', ... ' + data.authors[data.authors.length - 1];
-    }
-    
-    parts.push(authorStr);
-  }
-  
-  // Year
-  if (data.year) {
-    parts.push(`(${data.year})`);
-  }
-  
-  // Title
-  if (data.title) {
-    parts.push(data.title + '.');
-  }
-  
-  // Venue
-  if (data.venue) {
-    let venueStr = data.venue;
-    if (data.volume) {
-      venueStr += `, ${data.volume}`;
-    }
-    if (data.issue) {
-      venueStr += `(${data.issue})`;
-    }
-    if (data.pages) {
-      venueStr += `, ${data.pages}`;
-    }
-    parts.push(venueStr + '.');
-  }
-  
-  // Publisher
-  if (data.publisher) {
-    parts.push(data.publisher + '.');
-  }
-  
-  // DOI
-  if (data.doi && options.includeDOI !== false) {
-    parts.push(`https://doi.org/${data.doi}`);
-  }
-  
-  return parts.join(' ');
-}
-
-/**
- * Generate MLA style citation
- */
-function generateMLA(data: EnhancedCitationData, options: CitationOptions): string {
-  const parts: string[] = [];
-  
-  // Authors
-  if (data.authors && data.authors.length > 0) {
-    const maxAuthors = options.maxAuthors || 3;
-    let authorStr = '';
-    
-    if (data.authors.length === 1) {
-      authorStr = data.authors[0];
-    } else if (data.authors.length <= maxAuthors) {
-      authorStr = data.authors.join(', ');
-    } else {
-      authorStr = data.authors.slice(0, maxAuthors - 1).join(', ') + ', et al.';
-    }
-    
-    parts.push(authorStr + '.');
-  }
-  
-  // Title
-  if (data.title) {
-    parts.push(`"${data.title}."`);
-  }
-  
-  // Venue
-  if (data.venue) {
-    let venueStr = data.venue;
-    if (data.volume) {
-      venueStr += `, vol. ${data.volume}`;
-    }
-    if (data.issue) {
-      venueStr += `, no. ${data.issue}`;
-    }
-    if (data.year) {
-      venueStr += `, ${data.year}`;
-    }
-    if (data.pages) {
-      venueStr += `, pp. ${data.pages}`;
-    }
-    parts.push(venueStr + '.');
-  }
-  
-  // DOI
-  if (data.doi && options.includeDOI !== false) {
-    parts.push(`DOI: ${data.doi}.`);
-  }
-  
-  return parts.join(' ');
-}
-
-/**
- * Generate Chicago style citation
- */
-function generateChicago(data: EnhancedCitationData, options: CitationOptions): string {
-  const parts: string[] = [];
-  
-  // Authors
-  if (data.authors && data.authors.length > 0) {
-    const maxAuthors = options.maxAuthors || 10;
-    let authorStr = '';
-    
-    if (data.authors.length === 1) {
-      authorStr = data.authors[0];
-    } else if (data.authors.length <= maxAuthors) {
-      const lastAuthor = data.authors[data.authors.length - 1];
-      const otherAuthors = data.authors.slice(0, -1);
-      authorStr = otherAuthors.join(', ') + ', and ' + lastAuthor;
-    } else {
-      const firstAuthors = data.authors.slice(0, maxAuthors - 1);
-      authorStr = firstAuthors.join(', ') + ', et al.';
-    }
-    
-    parts.push(authorStr + '.');
-  }
-  
-  // Title
-  if (data.title) {
-    parts.push(`"${data.title}."`);
-  }
-  
-  // Venue
-  if (data.venue) {
-    let venueStr = data.venue;
-    if (data.volume) {
-      venueStr += ` ${data.volume}`;
-    }
-    if (data.issue) {
-      venueStr += `, no. ${data.issue}`;
-    }
-    if (data.year) {
-      venueStr += ` (${data.year})`;
-    }
-    if (data.pages) {
-      venueStr += `: ${data.pages}`;
-    }
-    parts.push(venueStr + '.');
-  }
-  
-  // DOI
-  if (data.doi && options.includeDOI !== false) {
-    parts.push(`https://doi.org/${data.doi}.`);
-  }
-  
-  return parts.join(' ');
-}
-
-/**
- * Generate Harvard style citation
- */
-function generateHarvard(data: EnhancedCitationData, options: CitationOptions): string {
-  const parts: string[] = [];
-  
-  // Authors
-  if (data.authors && data.authors.length > 0) {
-    const maxAuthors = options.maxAuthors || 3;
-    let authorStr = '';
-    
-    if (data.authors.length === 1) {
-      authorStr = data.authors[0];
-    } else if (data.authors.length <= maxAuthors) {
-      authorStr = data.authors.join(', ');
-    } else {
-      authorStr = data.authors.slice(0, maxAuthors - 1).join(', ') + ' et al.';
-    }
-    
-    parts.push(authorStr);
-  }
-  
-  // Year
-  if (data.year) {
-    parts.push(`(${data.year})`);
-  }
-  
-  // Title
-  if (data.title) {
-    parts.push(data.title + '.');
-  }
-  
-  // Venue
-  if (data.venue) {
-    let venueStr = data.venue;
-    if (data.volume) {
-      venueStr += `, ${data.volume}`;
-    }
-    if (data.issue) {
-      venueStr += `(${data.issue})`;
-    }
-    if (data.pages) {
-      venueStr += `, pp. ${data.pages}`;
-    }
-    parts.push(venueStr + '.');
-  }
-  
-  // DOI
-  if (data.doi && options.includeDOI !== false) {
-    parts.push(`DOI: ${data.doi}.`);
-  }
-  
-  return parts.join(' ');
-}
-
-/**
- * Generate Vancouver style citation
- */
-function generateVancouver(data: EnhancedCitationData, options: CitationOptions): string {
-  const parts: string[] = [];
-  
-  // Authors
-  if (data.authors && data.authors.length > 0) {
-    const maxAuthors = options.maxAuthors || 6;
-    let authorStr = '';
-    
-    if (data.authors.length === 1) {
-      authorStr = data.authors[0];
-    } else if (data.authors.length <= maxAuthors) {
-      authorStr = data.authors.join(', ');
-    } else {
-      authorStr = data.authors.slice(0, maxAuthors - 1).join(', ') + ' et al.';
-    }
-    
-    parts.push(authorStr + '.');
-  }
-  
-  // Title
-  if (data.title) {
-    parts.push(data.title + '.');
-  }
-  
-  // Venue
-  if (data.venue) {
-    let venueStr = data.venue;
-    if (data.year) {
-      venueStr += `. ${data.year}`;
-    }
-    if (data.volume) {
-      venueStr += `;${data.volume}`;
-    }
-    if (data.issue) {
-      venueStr += `(${data.issue})`;
-    }
-    if (data.pages) {
-      venueStr += `:${data.pages}`;
-    }
-    parts.push(venueStr + '.');
-  }
-  
-  // DOI
-  if (data.doi && options.includeDOI !== false) {
-    parts.push(`DOI: ${data.doi}.`);
-  }
-  
-  return parts.join(' ');
-}
-
-/**
- * Generate plain text citation
- */
-function generatePlainText(data: EnhancedCitationData, options: CitationOptions): string {
-  const parts: string[] = [];
-  
-  // Authors
-  if (data.authors && data.authors.length > 0) {
-    const maxAuthors = options.maxAuthors || 3;
-    let authorStr = '';
-    
-    if (data.authors.length === 1) {
-      authorStr = data.authors[0];
-    } else if (data.authors.length <= maxAuthors) {
-      authorStr = data.authors.join(', ');
-    } else {
-      authorStr = data.authors.slice(0, maxAuthors - 1).join(', ') + ' et al.';
-    }
-    
-    parts.push(authorStr);
-  }
-  
-  // Year
-  if (data.year) {
-    parts.push(`(${data.year})`);
-  }
-  
-  // Title
-  if (data.title) {
-    parts.push(data.title);
-  }
-  
-  // Venue
-  if (data.venue) {
-    parts.push(data.venue);
-  }
-  
-  // DOI
-  if (data.doi && options.includeDOI !== false) {
-    parts.push(`DOI: ${data.doi}`);
-  }
-  
-  return parts.join('. ');
-}
-
-// Helper functions
-
-function determineBibTeXEntryType(data: EnhancedCitationData): string {
-  if (data.oaStatus === 'preprint' || data.source === 'arxiv' || data.source === 'biorxiv' || data.source === 'medrxiv') {
-    return 'misc';
-  }
-  
-  if (data.venue) {
-    const venueLower = data.venue.toLowerCase();
-    if (venueLower.includes('conference') || venueLower.includes('proceedings') || 
-        venueLower.includes('workshop') || venueLower.includes('symposium')) {
-      return 'inproceedings';
-    }
-  }
-  
-  return 'article';
-}
-
-function determineEndNoteType(data: EnhancedCitationData): string {
-  if (data.oaStatus === 'preprint' || data.source === 'arxiv' || data.source === 'biorxiv' || data.source === 'medrxiv') {
-    return 'Generic';
-  }
-  
-  if (data.venue) {
-    const venueLower = data.venue.toLowerCase();
-    if (venueLower.includes('conference') || venueLower.includes('proceedings') || 
-        venueLower.includes('workshop') || venueLower.includes('symposium')) {
-      return 'Conference Proceedings';
-    }
-  }
-  
-  return 'Journal Article';
-}
-
-function determineRISType(data: EnhancedCitationData): string {
-  if (data.oaStatus === 'preprint' || data.source === 'arxiv' || data.source === 'biorxiv' || data.source === 'medrxiv') {
-    return 'GEN';
-  }
-  
-  if (data.venue) {
-    const venueLower = data.venue.toLowerCase();
-    if (venueLower.includes('conference') || venueLower.includes('proceedings') || 
-        venueLower.includes('workshop') || venueLower.includes('symposium')) {
-      return 'CONF';
-    }
-  }
-  
-  return 'JOUR';
-}
-
-function determineWoSType(data: EnhancedCitationData): string {
-  if (data.oaStatus === 'preprint' || data.source === 'arxiv' || data.source === 'biorxiv' || data.source === 'medrxiv') {
-    return 'Generic';
-  }
-  
-  if (data.venue) {
-    const venueLower = data.venue.toLowerCase();
-    if (venueLower.includes('conference') || venueLower.includes('proceedings') || 
-        venueLower.includes('workshop') || venueLower.includes('symposium')) {
-      return 'Conference Proceedings';
-    }
-  }
-  
-  return 'Journal Article';
-}
-
-function determineDocumentType(data: OARecord): string {
-  if (data.oaStatus === 'preprint') {
-    return 'Preprint';
-  }
-  
-  if (data.source === 'arxiv' || data.source === 'biorxiv' || data.source === 'medrxiv') {
-    return 'Preprint';
-  }
-  
-  if (data.venue) {
-    const venueLower = data.venue.toLowerCase();
-    if (venueLower.includes('conference') || venueLower.includes('proceedings') || 
-        venueLower.includes('workshop') || venueLower.includes('symposium')) {
-      return 'Conference Paper';
-    }
-  }
-  
-  return 'Journal Article';
-}
-
-function generateBibTeXKey(data: EnhancedCitationData): string {
-  let key = '';
-  
-  // First author's last name
-  if (data.authors && data.authors.length > 0) {
-    const firstAuthor = data.authors[0];
-    const lastName = firstAuthor.split(' ').pop() || firstAuthor;
-    key += lastName.replace(/[^a-zA-Z]/g, '');
-  } else {
-    key += 'Unknown';
-  }
-  
-  // Year
-  if (data.year) {
-    key += data.year;
-  }
-  
-  // First word of title
-  if (data.title) {
-    const firstWord = data.title.split(' ')[0].replace(/[^a-zA-Z]/g, '');
-    if (firstWord) {
-      key += firstWord;
-    }
-  }
-  
-  return key;
-}
-
-function extractVenueInfo(venue: string): {
-  publisher?: string;
-  volume?: string;
-  issue?: string;
-  pages?: string;
-  startPage?: string;
-  endPage?: string;
-} {
-  const info: any = {};
-  
-  // Try to extract volume, issue, pages from venue string
-  // This is a simplified extraction - in practice, you might want more sophisticated parsing
-  
-  // Volume pattern: "Journal Name, Vol. 123" or "Journal Name 123"
-  const volumeMatch = venue.match(/(?:vol\.?\s*|volume\s*)(\d+)/i);
-  if (volumeMatch) {
-    info.volume = volumeMatch[1];
-  }
-  
-  // Issue pattern: "No. 4" or "Issue 4"
-  const issueMatch = venue.match(/(?:no\.?\s*|issue\s*|number\s*)(\d+)/i);
-  if (issueMatch) {
-    info.issue = issueMatch[1];
-  }
-  
-  // Pages pattern: "pp. 123-456" or "123-456"
-  const pagesMatch = venue.match(/(?:pp\.?\s*)?(\d+)\s*[-–]\s*(\d+)/i);
-  if (pagesMatch) {
-    info.startPage = pagesMatch[1];
-    info.endPage = pagesMatch[2];
-    info.pages = `${pagesMatch[1]}-${pagesMatch[2]}`;
-  }
-  
-  return info;
-}
-
-function escapeBibTeX(text: string): string {
-  return text
-    .replace(/\\/g, '\\textbackslash{}')
-    .replace(/\{/g, '\\{')
-    .replace(/\}/g, '\\}')
-    .replace(/\$/g, '\\$')
-    .replace(/&/g, '\\&')
-    .replace(/%/g, '\\%')
-    .replace(/#/g, '\\#')
-    .replace(/\^/g, '\\textasciicircum{}')
-    .replace(/_/g, '\\_')
-    .replace(/~/g, '\\textasciitilde{}');
-}
-
-/**
- * Generate citations for multiple records
+ * A batch, with cite keys made unique.
+ *
+ * Two papers by the same author in the same year produce the same key, and a
+ * `.bib` file with a repeated key silently loses one of the entries.
  */
 export function generateCitationsBatch(records: OARecord[], options: CitationOptions): string {
-  return records.map(record => generateCitation(record, options)).join('\n\n');
+  const separator = options.format === 'ris' ? '\r\n\r\n' : '\n\n';
+  const entries = records.map(record => generateCitation(record, options));
+
+  if (options.format !== 'bibtex') return entries.join(separator);
+
+  const seen = new Map<string, number>();
+  return entries
+    .map(entry => {
+      const match = entry.match(/^@\w+\{([^,]+),/);
+      if (!match) return entry;
+
+      const key = match[1];
+      const count = seen.get(key) ?? 0;
+      seen.set(key, count + 1);
+      if (count === 0) return entry;
+
+      // a, b, c ... the convention a bibliography would use anyway.
+      const suffix = String.fromCharCode('a'.charCodeAt(0) + count - 1);
+      return entry.replace(`{${key},`, `{${key}${suffix},`);
+    })
+    .join(separator);
 }
 
-/**
- * Download citation file
- */
-export function downloadCitation(citation: string, filename: string, format: CitationFormat): void {
-  const blob = new Blob([citation], { 
-    type: getMimeType(format) 
-  });
-  
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  window.URL.revokeObjectURL(url);
-  document.body.removeChild(a);
-}
-
-function getMimeType(format: CitationFormat): string {
-  switch (format) {
-    case 'bibtex':
-      return 'application/x-bibtex';
-    case 'endnote':
-    case 'ris':
-    case 'wos':
-      return 'application/x-research-info-systems';
-    case 'apa':
-    case 'mla':
-    case 'chicago':
-    case 'harvard':
-    case 'vancouver':
-    case 'plain':
-      return 'text/plain';
-    default:
-      return 'text/plain';
-  }
-}
-
-/**
- * Get file extension for format
- */
 export function getFileExtension(format: CitationFormat): string {
-  switch (format) {
-    case 'bibtex':
-      return 'bib';
-    case 'endnote':
-      return 'enw';
-    case 'ris':
-      return 'ris';
-    case 'wos':
-      return 'wos';
-    case 'apa':
-    case 'mla':
-    case 'chicago':
-    case 'harvard':
-    case 'vancouver':
-    case 'plain':
-      return 'txt';
-    default:
-      return 'txt';
-  }
+  return format === 'ris' ? 'ris' : 'bib';
+}
+
+export function getMimeType(format: CitationFormat): string {
+  return format === 'ris' ? 'application/x-research-info-systems' : 'application/x-bibtex';
+}
+
+export function downloadCitation(citation: string, filename: string, format: CitationFormat): void {
+  const blob = new Blob([citation], { type: `${getMimeType(format)};charset=utf-8` });
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(anchor);
 }

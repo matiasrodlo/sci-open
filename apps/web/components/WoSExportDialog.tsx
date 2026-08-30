@@ -1,16 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, FileText, Copy, Check, X } from 'lucide-react';
+import { Download, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { OARecord } from '@open-access-explorer/shared';
-import { 
-  generateCitationsBatch, 
-  downloadCitation, 
+import {
+  generateCitationsBatch,
+  downloadCitation,
   getFileExtension,
   CitationFormat,
-  CitationOptions 
+  CitationOptions
 } from '@/lib/citations';
 
 interface WoSExportDialogProps {
@@ -21,105 +21,71 @@ interface WoSExportDialogProps {
   pageSize: number;
 }
 
-type ExportScope = 'all' | 'page' | 'range';
-type RecordContent = 'basic' | 'full';
+/**
+ * Exports the records on this page.
+ *
+ * It used to offer three scopes and honour one. "All records" was labelled
+ * with `Math.min(1000, totalResults)` and returned `results` — the current
+ * page, twenty records — and the numeric range sliced the same twenty by
+ * indices the label described as running to 1,000. A reader asking for records
+ * 500 to 600 of a 4,000-result search got an empty file and no explanation.
+ *
+ * The page is what the client holds, so the page is what is offered, and the
+ * labels say so. Exporting beyond it is not a display fix: the export would
+ * have to re-request the search at a larger page size, and the orchestrator
+ * enriches whatever page it returns — 1,000 records would be some 3,000
+ * authority lookups on a button press. Doing it properly needs a way to ask
+ * for a page without enrichment, which is a backend change and not this one.
+ */
 
-interface ExportSettings {
-  scope: ExportScope;
-  startRecord: number;
-  endRecord: number;
-  content: RecordContent;
-  format: CitationFormat;
-  includeAbstract: boolean;
-  includeKeywords: boolean;
-  includeDOI: boolean;
-  includeURL: boolean;
-  includeReferences: boolean;
-}
+const FORMATS: Array<{ value: CitationFormat; label: string; description: string }> = [
+  { value: 'bibtex', label: 'BibTeX', description: 'LaTeX and most reference managers' },
+  { value: 'ris', label: 'RIS', description: 'EndNote, Zotero, Mendeley' }
+];
 
-export function WoSExportDialog({ results, query, totalResults, currentPage, pageSize }: WoSExportDialogProps) {
+export function WoSExportDialog({ results, query, currentPage }: WoSExportDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [settings, setSettings] = useState<ExportSettings>({
-    scope: 'page',
-    startRecord: 1,
-    endRecord: Math.min(1000, results.length),
-    content: 'full',
-    format: 'bibtex',
-    includeAbstract: true,
-    includeKeywords: true,
+  const [format, setFormat] = useState<CitationFormat>('bibtex');
+  const [useRange, setUseRange] = useState(false);
+  const [start, setStart] = useState(1);
+  const [end, setEnd] = useState(results.length);
+  const [includeAbstract, setIncludeAbstract] = useState(true);
+  const [includeKeywords, setIncludeKeywords] = useState(true);
+
+  const clamp = (value: number) => Math.min(Math.max(value, 1), results.length);
+
+  const selected = useRange
+    ? results.slice(clamp(start) - 1, clamp(Math.max(end, start)))
+    : results;
+
+  const options = (): CitationOptions => ({
+    format,
+    includeAbstract,
+    includeKeywords,
     includeDOI: true,
     includeURL: true,
-    includeReferences: false,
+    maxAuthors: 20
   });
 
-  const getRecordsToExport = (): OARecord[] => {
-    switch (settings.scope) {
-      case 'all':
-        return results;
-      case 'page':
-        return results;
-      case 'range': {
-        const start = Math.max(0, settings.startRecord - 1);
-        const end = Math.min(results.length, settings.endRecord);
-        return results.slice(start, end);
-      }
-      default:
-        return results;
-    }
-  };
-
-  const getRecordCount = (): number => {
-    return getRecordsToExport().length;
-  };
-
-  const getMaxRecords = (): number => {
-    switch (settings.scope) {
-      case 'all':
-        return Math.min(1000, totalResults);
-      case 'page':
-        return results.length;
-      case 'range':
-        return Math.min(1000, totalResults);
-      default:
-        return results.length;
-    }
+  const filename = () => {
+    const base = query
+      .replace(/[^a-zA-Z0-9\s]/g, '')
+      .replace(/\s+/g, '_')
+      .toLowerCase()
+      .slice(0, 30) || 'export';
+    const scope = useRange ? `records_${clamp(start)}_to_${clamp(Math.max(end, start))}` : `page_${currentPage}`;
+    return `${base}_${scope}_${selected.length}_records.${getFileExtension(format)}`;
   };
 
   const handleExport = () => {
-    const recordsToExport = getRecordsToExport();
-    
-    const options: CitationOptions = {
-      format: settings.format,
-      includeAbstract: settings.content === 'full' && settings.includeAbstract,
-      includeKeywords: settings.content === 'full' && settings.includeKeywords,
-      includeDOI: settings.includeDOI,
-      includeURL: settings.includeURL,
-      maxAuthors: 20,
-    };
-    
-    const citations = generateCitationsBatch(recordsToExport, options);
-    const filename = generateFilename();
-    downloadCitation(citations, filename, settings.format);
+    downloadCitation(generateCitationsBatch(selected, options()), filename(), format);
     setIsOpen(false);
   };
 
-  const handleCopyToClipboard = async () => {
-    const recordsToExport = getRecordsToExport();
-    
-    const options: CitationOptions = {
-      format: settings.format,
-      includeAbstract: settings.content === 'full' && settings.includeAbstract,
-      includeKeywords: settings.content === 'full' && settings.includeKeywords,
-      includeDOI: settings.includeDOI,
-      includeURL: settings.includeURL,
-      maxAuthors: 20,
-    };
-    
-    const citations = generateCitationsBatch(recordsToExport, options);
-    
+  const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(citations);
+      await navigator.clipboard.writeText(generateCitationsBatch(selected, options()));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
@@ -127,279 +93,135 @@ export function WoSExportDialog({ results, query, totalResults, currentPage, pag
     }
   };
 
-  const generateFilename = (): string => {
-    // Create a clean base name from the query
-    const baseName = query
-      .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special characters
-      .replace(/\s+/g, '_') // Replace spaces with underscores
-      .toLowerCase()
-      .slice(0, 30) || 'export'; // Limit length
-    
-    const format = getFileExtension(settings.format);
-    const formatName = formatOptions.find(f => f.value === settings.format)?.label.toLowerCase().replace(/\s+/g, '_') || 'export';
-    
-    // Generate descriptive filename based on user preferences
-    let filename = '';
-    
-    if (settings.scope === 'all') {
-      filename = `${baseName}_all_records_${formatName}`;
-    } else if (settings.scope === 'page') {
-      filename = `${baseName}_page_${currentPage}_${formatName}`;
-    } else if (settings.scope === 'range') {
-      filename = `${baseName}_records_${settings.startRecord}_to_${settings.endRecord}_${formatName}`;
-    } else {
-      filename = `${baseName}_${formatName}`;
-    }
-    
-    // Add content type indicator if not full record
-    if (settings.content === 'basic') {
-      filename += '_basic';
-    }
-    
-    // Add record count for clarity
-    const count = getRecordCount();
-    if (count > 1) {
-      filename += `_${count}_records`;
-    }
-    
-    return `${filename}.${format}`;
-  };
-
-  const updateSettings = (updates: Partial<ExportSettings>) => {
-    setSettings(prev => ({ ...prev, ...updates }));
-  };
-
-  const formatOptions = [
-    { value: 'bibtex' as CitationFormat, label: 'BibTeX', description: 'LaTeX bibliography format' },
-    { value: 'endnote' as CitationFormat, label: 'EndNote', description: 'EndNote reference format' },
-    { value: 'ris' as CitationFormat, label: 'RIS', description: 'Research Information Systems' },
-    { value: 'wos' as CitationFormat, label: 'Web of Science', description: 'WoS export format' },
-    { value: 'apa' as CitationFormat, label: 'APA Style', description: 'American Psychological Association' },
-    { value: 'mla' as CitationFormat, label: 'MLA Style', description: 'Modern Language Association' },
-    { value: 'chicago' as CitationFormat, label: 'Chicago Style', description: 'Chicago Manual of Style' },
-    { value: 'harvard' as CitationFormat, label: 'Harvard Style', description: 'Harvard referencing' },
-    { value: 'vancouver' as CitationFormat, label: 'Vancouver Style', description: 'Medical journal format' },
-    { value: 'plain' as CitationFormat, label: 'Plain Text', description: 'Simple text format' },
-  ];
-
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
-          <Download className="h-3.5 w-3.5" />
+          <Download className="h-3.5 w-3.5" aria-hidden="true" />
           Export
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-96" align="end">
+      <PopoverContent className="w-96" align="end" aria-label="Export citations">
         <div className="space-y-4">
-          <div className="flex items-center justify-end">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsOpen(false)}
-              className="h-6 w-6 p-0"
-            >
-              <X className="h-3 w-3" />
-            </Button>
-          </div>
-          
-          {/* Record Options */}
-          <div className="space-y-3">
-            <h5 className="text-sm font-medium">Record Options</h5>
-            
-            {/* Export Scope */}
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="scope-page"
-                  name="scope"
-                  checked={settings.scope === 'page'}
-                  onChange={() => updateSettings({ scope: 'page' })}
-                  className="rounded"
-                />
-                <label htmlFor="scope-page" className="text-sm">
-                  All records on page ({results.length} records)
-                </label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="scope-all"
-                  name="scope"
-                  checked={settings.scope === 'all'}
-                  onChange={() => updateSettings({ scope: 'all' })}
-                  className="rounded"
-                />
-                <label htmlFor="scope-all" className="text-sm">
-                  All records ({Math.min(1000, totalResults)} records)
-                </label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="scope-range"
-                  name="scope"
-                  checked={settings.scope === 'range'}
-                  onChange={() => updateSettings({ scope: 'range' })}
-                  className="rounded"
-                />
-                <label htmlFor="scope-range" className="text-sm">
-                  Records from:
-                </label>
-              </div>
-              
-              {settings.scope === 'range' && (
-                <div className="ml-6 flex items-center space-x-2">
-                  <input
-                    type="number"
-                    min="1"
-                    max={totalResults}
-                    value={settings.startRecord}
-                    onChange={(e) => updateSettings({ startRecord: parseInt(e.target.value) || 1 })}
-                    className="w-16 px-2 py-1 text-xs border rounded"
-                  />
-                  <span className="text-sm">to</span>
-                  <input
-                    type="number"
-                    min={settings.startRecord}
-                    max={Math.min(1000, totalResults)}
-                    value={settings.endRecord}
-                    onChange={(e) => updateSettings({ endRecord: parseInt(e.target.value) || settings.startRecord })}
-                    className="w-16 px-2 py-1 text-xs border rounded"
-                  />
-                  <span className="text-xs text-muted-foreground">
-                    (No more than 1000 records at a time)
-                  </span>
-                </div>
-              )}
-            </div>
+          <div>
+            <h3 className="text-sm font-medium">Export citations</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              The {results.length} records on page {currentPage}. To export others, page to them first.
+            </p>
           </div>
 
-          {/* Record Content */}
-          <div className="space-y-3">
-            <h5 className="text-sm font-medium">Record Content:</h5>
-            
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="content-basic"
-                  name="content"
-                  checked={settings.content === 'basic'}
-                  onChange={() => updateSettings({ content: 'basic' })}
-                  className="rounded"
-                />
-                <label htmlFor="content-basic" className="text-sm">
-                  Author, Title, Source
-                </label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="content-full"
-                  name="content"
-                  checked={settings.content === 'full'}
-                  onChange={() => updateSettings({ content: 'full' })}
-                  className="rounded"
-                />
-                <label htmlFor="content-full" className="text-sm">
-                  Full Record and Cited References
-                </label>
-              </div>
-            </div>
-          </div>
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium mb-2">Records</legend>
 
-          {/* Format Selection */}
+            <div className="flex items-center space-x-2">
+              <input
+                type="radio"
+                id="scope-page"
+                name="scope"
+                checked={!useRange}
+                onChange={() => setUseRange(false)}
+              />
+              <label htmlFor="scope-page" className="text-sm">
+                All {results.length} on this page
+              </label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="radio"
+                id="scope-range"
+                name="scope"
+                checked={useRange}
+                onChange={() => setUseRange(true)}
+              />
+              <label htmlFor="scope-range" className="text-sm">
+                A range within this page
+              </label>
+            </div>
+
+            {useRange && (
+              <div className="ml-6 flex items-center space-x-2">
+                <label htmlFor="range-start" className="sr-only">First record</label>
+                <input
+                  id="range-start"
+                  type="number"
+                  min={1}
+                  max={results.length}
+                  value={start}
+                  onChange={e => setStart(parseInt(e.target.value) || 1)}
+                  className="w-16 px-2 py-1 text-xs border rounded"
+                />
+                <span className="text-sm">to</span>
+                <label htmlFor="range-end" className="sr-only">Last record</label>
+                <input
+                  id="range-end"
+                  type="number"
+                  min={1}
+                  max={results.length}
+                  value={end}
+                  onChange={e => setEnd(parseInt(e.target.value) || results.length)}
+                  className="w-16 px-2 py-1 text-xs border rounded"
+                />
+                <span className="text-xs text-muted-foreground">of {results.length}</span>
+              </div>
+            )}
+          </fieldset>
+
           <div className="space-y-2">
-            <h5 className="text-sm font-medium">Export Format:</h5>
+            <label htmlFor="export-format" className="text-sm font-medium">
+              Format
+            </label>
             <select
-              value={settings.format}
-              onChange={(e) => updateSettings({ format: e.target.value as CitationFormat })}
-              className="w-full px-3 py-2 text-sm border rounded"
+              id="export-format"
+              value={format}
+              onChange={e => setFormat(e.target.value as CitationFormat)}
+              className="w-full px-3 py-2 text-sm border rounded bg-background"
             >
-              {formatOptions.map((option) => (
+              {FORMATS.map(option => (
                 <option key={option.value} value={option.value}>
-                  {option.label} - {option.description}
+                  {option.label} — {option.description}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Additional Options for Full Records */}
-          {settings.content === 'full' && (
-            <div className="space-y-2">
-              <h5 className="text-sm font-medium">Additional Fields:</h5>
-              <div className="grid grid-cols-2 gap-2">
-                <label className="flex items-center space-x-2 text-xs">
-                  <input
-                    type="checkbox"
-                    checked={settings.includeAbstract}
-                    onChange={(e) => updateSettings({ includeAbstract: e.target.checked })}
-                    className="rounded"
-                  />
-                  <span>Abstract</span>
-                </label>
-                <label className="flex items-center space-x-2 text-xs">
-                  <input
-                    type="checkbox"
-                    checked={settings.includeKeywords}
-                    onChange={(e) => updateSettings({ includeKeywords: e.target.checked })}
-                    className="rounded"
-                  />
-                  <span>Keywords</span>
-                </label>
-                <label className="flex items-center space-x-2 text-xs">
-                  <input
-                    type="checkbox"
-                    checked={settings.includeDOI}
-                    onChange={(e) => updateSettings({ includeDOI: e.target.checked })}
-                    className="rounded"
-                  />
-                  <span>DOI</span>
-                </label>
-                <label className="flex items-center space-x-2 text-xs">
-                  <input
-                    type="checkbox"
-                    checked={settings.includeURL}
-                    onChange={(e) => updateSettings({ includeURL: e.target.checked })}
-                    className="rounded"
-                  />
-                  <span>URL</span>
-                </label>
-              </div>
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium mb-2">Include</legend>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex items-center space-x-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={includeAbstract}
+                  onChange={e => setIncludeAbstract(e.target.checked)}
+                />
+                <span>Abstract</span>
+              </label>
+              <label className="flex items-center space-x-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={includeKeywords}
+                  onChange={e => setIncludeKeywords(e.target.checked)}
+                />
+                <span>Keywords</span>
+              </label>
             </div>
-          )}
+          </fieldset>
 
-          
-          {/* Action Buttons */}
           <div className="flex gap-2">
-            <Button
-              onClick={handleExport}
-              className="flex-1 gap-2"
-              size="sm"
-            >
-              <Download className="h-3.5 w-3.5" />
-              Export
+            <Button onClick={handleExport} className="flex-1 gap-2" size="sm" disabled={selected.length === 0}>
+              <Download className="h-3.5 w-3.5" aria-hidden="true" />
+              Export {selected.length}
             </Button>
-            
-            <Button
-              variant="outline"
-              onClick={handleCopyToClipboard}
-              className="flex-1 gap-2"
-              size="sm"
-            >
+
+            <Button variant="outline" onClick={handleCopy} className="flex-1 gap-2" size="sm" disabled={selected.length === 0}>
               {copied ? (
                 <>
-                  <Check className="h-3.5 w-3.5 text-green-600" />
-                  Copied!
+                  <Check className="h-3.5 w-3.5 text-green-600" aria-hidden="true" />
+                  Copied
                 </>
               ) : (
                 <>
-                  <Copy className="h-3.5 w-3.5" />
+                  <Copy className="h-3.5 w-3.5" aria-hidden="true" />
                   Copy
                 </>
               )}
