@@ -13,14 +13,7 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { SearchParams, SearchResponse, OARecord } from '@open-access-explorer/shared';
 import { EnhancedSearchPipeline } from './lib/enhanced-search-pipeline';
-import { 
-  getSearchCache, 
-  getPaperCache, 
-  generateCacheKey,
-  searchCacheManager,
-  paperCacheManager,
-  cacheManager
-} from './lib/cache';
+import { searchCacheManager, paperCacheManager, cacheManager } from './lib/cache';
 import { httpPerformanceMonitor } from './lib/http-performance-monitor';
 import { assertPublicHttpUrl, fetchPdfStream, PdfProxyError } from './lib/pdf-proxy';
 import { adminOnly, getAdminKey } from './lib/admin-auth';

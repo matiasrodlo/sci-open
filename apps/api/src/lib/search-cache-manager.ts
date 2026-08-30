@@ -1,6 +1,5 @@
 import { CacheManager, CacheStrategy } from './cache-manager';
 import { SearchParams, SearchResponse } from '@open-access-explorer/shared';
-import { createHash } from 'crypto';
 
 export class SearchCacheManager {
   private cacheManager: CacheManager;
@@ -81,11 +80,22 @@ export class SearchCacheManager {
   }
 
   /**
-   * Invalidate search cache by query pattern
+   * Every cached page and facet set for one query.
+   *
+   * The old version hashed the raw query into a pattern and asked the cache to
+   * substring-match it against keys that had hashed something else entirely —
+   * the whole `{q, page, pageSize, sort, filters}` blob — so it could never
+   * match anything. The query is the *subject* of these entries and the page,
+   * sort and filters are variants of it, which is the distinction the key
+   * layout now carries.
    */
-  async invalidateSearchCache(query: string): Promise<void> {
-    const pattern = `search:${this.hashQuery(query)}`;
-    await this.cacheManager.invalidatePattern(pattern);
+  async invalidateSearchCache(query: string): Promise<number> {
+    const subject = this.normalizeQuery(query);
+    return (
+      (await this.cacheManager.invalidate('search', subject)) +
+      (await this.cacheManager.invalidate('facets', subject)) +
+      (await this.cacheManager.invalidate('partial', subject))
+    );
   }
 
   /**
@@ -102,45 +112,36 @@ export class SearchCacheManager {
   }
 
   private generateSearchKey(query: string, params: SearchParams): string {
-    const normalizedQuery = this.normalizeQuery(query);
-    const keyData = {
-      q: normalizedQuery,
+    // The query is the subject; everything else distinguishes entries about
+    // that same subject and travels in the variant.
+    return this.cacheManager.generateKey('search', this.normalizeQuery(query), JSON.stringify({
       page: params.page || 1,
       pageSize: params.pageSize || 20,
       sort: params.sort || 'relevance',
       filters: this.normalizeFilters(params.filters)
-    };
-    
-    return this.cacheManager.generateKey('search', JSON.stringify(keyData));
+    }));
   }
 
   /**
    * Generate cache key for partial results
    */
   private generatePartialKey(baseQuery: string, params: SearchParams, similarity: number): string {
-    const keyData = {
-      baseQuery,
+    return this.cacheManager.generateKey('partial', baseQuery, JSON.stringify({
       page: params.page || 1,
       pageSize: params.pageSize || 20,
       sort: params.sort || 'relevance',
       filters: this.normalizeFilters(params.filters),
       similarity: Math.round(similarity * 100) / 100
-    };
-    
-    return this.cacheManager.generateKey('partial', JSON.stringify(keyData));
+    }));
   }
 
   /**
    * Generate cache key for facets
    */
   private generateFacetsKey(query: string, params: SearchParams): string {
-    const normalizedQuery = this.normalizeQuery(query);
-    const keyData = {
-      q: normalizedQuery,
+    return this.cacheManager.generateKey('facets', this.normalizeQuery(query), JSON.stringify({
       filters: this.normalizeFilters(params.filters)
-    };
-    
-    return this.cacheManager.generateKey('facets', JSON.stringify(keyData));
+    }));
   }
 
   /**
@@ -185,13 +186,6 @@ export class SearchCacheManager {
     const union = new Set([...words1, ...words2]);
     
     return intersection.size / union.size;
-  }
-
-  /**
-   * Hash query for consistent key generation
-   */
-  private hashQuery(query: string): string {
-    return createHash('md5').update(query).digest('hex');
   }
 
 }

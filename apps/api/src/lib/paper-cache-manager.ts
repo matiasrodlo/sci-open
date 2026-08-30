@@ -114,19 +114,36 @@ export class PaperCacheManager {
   }
 
   /**
-   * Invalidate paper cache
+   * Every copy of one paper, and there are more of them than the old signature
+   * could reach.
+   *
+   * `cachePaperDetails` writes the same record three times — under its id,
+   * under its DOI and under its normalised title — so an id is not enough to
+   * invalidate a paper. The old `invalidatePaperCache(paperId)` addressed the
+   * id, metadata, relationships and enrichment entries and left the DOI and
+   * title copies behind; a reader arriving by DOI would still have been served
+   * the stale record. (It could not in fact remove any of them either, since
+   * every one of those invalidations was a no-op.)
+   *
+   * Taking the record rather than the id is what makes the remaining gap
+   * visible in the type: a caller holding only an id cannot reach the other
+   * two copies, and now has to say so.
    */
-  async invalidatePaperCache(paperId: string): Promise<void> {
-    const patterns = [
-      `paper:${paperId}`,
-      `metadata:${paperId}`,
-      `relationships:${paperId}`,
-      `enrichment:${paperId}`
+  async invalidatePaper(paper: { id: string; doi?: string; title?: string }): Promise<number> {
+    const subjects: Array<[string, string]> = [
+      ['paper', paper.id],
+      ['metadata', paper.id],
+      ['relationships', paper.id],
+      ['enrichment', paper.id],
+      ...(paper.doi ? ([['doi', paper.doi.toLowerCase().trim()]] as Array<[string, string]>) : []),
+      ...(paper.title ? ([['title', this.normalizeTitle(paper.title)]] as Array<[string, string]>) : [])
     ];
-    
-    for (const pattern of patterns) {
-      await this.cacheManager.invalidatePattern(pattern);
+
+    let removed = 0;
+    for (const [namespace, subject] of subjects) {
+      removed += await this.cacheManager.invalidate(namespace, subject);
     }
+    return removed;
   }
 
   /**

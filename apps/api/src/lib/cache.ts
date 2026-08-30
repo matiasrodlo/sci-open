@@ -1,46 +1,18 @@
-import NodeCache from 'node-cache';
-import { CacheManager, cacheManager } from './cache-manager';
+import { cacheManager } from './cache-manager';
 import { SearchCacheManager } from './search-cache-manager';
 import { PaperCacheManager } from './paper-cache-manager';
 
-// Legacy cache instances for backward compatibility
-const searchCache = new NodeCache({ 
-  stdTTL: 300, // 5 minutes
-  checkperiod: 60 // Check for expired keys every minute
-});
+/**
+ * The cache the request path uses, wired once.
+ *
+ * Two bare `NodeCache` instances used to sit here as well, exported through
+ * `getSearchCache` and `getPaperCache` alongside a `generateCacheKey` helper,
+ * under a comment calling them "legacy ... for backward compatibility". All
+ * three were imported by the route and never called by it, so they cached
+ * nothing and were compatible with nothing. They are gone, and with them the
+ * last use of `node-cache` — `MemoryCache` replaced it.
+ */
 
-const paperCache = new NodeCache({ 
-  stdTTL: 600, // 10 minutes
-  checkperiod: 60
-});
-
-// Initialize advanced cache managers
-const searchCacheManager = new SearchCacheManager(cacheManager);
-const paperCacheManager = new PaperCacheManager(cacheManager);
-
-// Legacy functions for backward compatibility
-export function getSearchCache() {
-  return searchCache;
-}
-
-export function getPaperCache() {
-  return paperCache;
-}
-
-export function generateCacheKey(prefix: string, params: any): string {
-  const sortedParams = Object.keys(params)
-    .sort()
-    .reduce((result, key) => {
-      result[key] = params[key];
-      return result;
-    }, {} as any);
-  
-  return `${prefix}:${JSON.stringify(sortedParams)}`;
-}
-
-// Export advanced cache managers
-export {
-  cacheManager,
-  searchCacheManager,
-  paperCacheManager
-};
+export const searchCacheManager = new SearchCacheManager(cacheManager);
+export const paperCacheManager = new PaperCacheManager(cacheManager);
+export { cacheManager };
