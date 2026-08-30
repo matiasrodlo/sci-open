@@ -1,118 +1,56 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, Plus, X, HelpCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
-interface SearchRow {
-  id: string;
-  field: string;
-  operator: string;
-  value: string;
-}
 
 interface AdvancedSearchProps {
   initialQuery?: string;
   onSearch?: (query: string, filters: any) => void;
 }
 
-const SEARCH_FIELDS = [
-  { value: 'all', label: 'All Fields' },
-  { value: 'title', label: 'Title' },
-  { value: 'abstract', label: 'Abstract' },
-  { value: 'author', label: 'Author' },
-  { value: 'keywords', label: 'Keywords/Topics' },
-  { value: 'doi', label: 'DOI' },
-  { value: 'venue', label: 'Publication Name' },
-  { value: 'year', label: 'Year Published' },
-];
-
-const OPERATORS = [
-  { value: 'AND', label: 'AND' },
-  { value: 'OR', label: 'OR' },
-  { value: 'NOT', label: 'NOT' },
-];
-
-
+/**
+ * The search box.
+ *
+ * There was an "Advanced Search" tab beside it, and phase 11 removed it rather
+ * than repairing it. It built fielded queries — `title:CRISPR AND year:2024`,
+ * eight fields and three operators over up to ten rows — and nothing on the
+ * backend has ever understood one. `parseQuery` recognises quoted phrases,
+ * bare terms and DOIs; a `title:` prefix reaches the providers as a literal
+ * term, and its own help popover's worked example makes arXiv answer HTTP 400.
+ *
+ * Making it real is not frontend work: it needs field support in the `Query`
+ * AST and in every provider's `translate`, several of which cannot express a
+ * field search at all. Leaving a control on screen that quietly does something
+ * other than what it says is worse than not offering it, so the tab, the row
+ * builder and the help popover are gone together — the popover documented the
+ * same syntax and would have outlived the thing it described.
+ *
+ * The component keeps its name because the route imports it, and keeps the
+ * `onSearch` escape hatch it already had.
+ */
 export function AdvancedSearchBar({ initialQuery = '', onSearch }: AdvancedSearchProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [mode, setMode] = useState<'basic' | 'advanced'>('basic');
-  const [basicQuery, setBasicQuery] = useState(initialQuery);
-  const [searchRows, setSearchRows] = useState<SearchRow[]>([
-    { id: '1', field: 'all', operator: 'AND', value: initialQuery }
-  ]);
+  const [query, setQuery] = useState(initialQuery);
 
   useEffect(() => {
-    setBasicQuery(initialQuery);
-    if (searchRows.length === 1) {
-      setSearchRows([{ id: '1', field: 'all', operator: 'AND', value: initialQuery }]);
-    }
+    setQuery(initialQuery);
   }, [initialQuery]);
 
-  const addRow = () => {
-    const newRow: SearchRow = {
-      id: Date.now().toString(),
-      field: 'all',
-      operator: 'AND',
-      value: ''
-    };
-    setSearchRows([...searchRows, newRow]);
-  };
-
-  const removeRow = (id: string) => {
-    if (searchRows.length > 1) {
-      setSearchRows(searchRows.filter(row => row.id !== id));
-    }
-  };
-
-  const updateRow = (id: string, updates: Partial<SearchRow>) => {
-    setSearchRows(searchRows.map(row => 
-      row.id === id ? { ...row, ...updates } : row
-    ));
-  };
-
-  const buildQuery = (): string => {
-    if (mode === 'basic') {
-      return basicQuery;
-    }
-
-    // Build advanced query
-    return searchRows
-      .filter(row => row.value.trim())
-      .map((row, index) => {
-        const value = row.value.trim();
-        const fieldPrefix = row.field !== 'all' ? `${row.field}:` : '';
-        const operator = index > 0 ? ` ${row.operator} ` : '';
-        
-        // Wrap in quotes if contains spaces
-        const wrappedValue = value.includes(' ') && !value.startsWith('"') 
-          ? `"${value}"` 
-          : value;
-        
-        return `${operator}${fieldPrefix}${wrappedValue}`;
-      })
-      .join('');
-  };
-
-
   const handleSearch = () => {
-    const query = buildQuery();
-    if (!query.trim()) return;
-
-    const params = new URLSearchParams();
-    params.set('q', query);
+    const trimmed = query.trim();
+    if (!trimmed) return;
 
     if (onSearch) {
-      onSearch(query, {});
-    } else {
-      router.push(`/results?${params.toString()}`);
+      onSearch(trimmed, {});
+      return;
     }
+
+    const params = new URLSearchParams();
+    params.set('q', trimmed);
+    router.push(`/results?${params.toString()}`);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -122,162 +60,31 @@ export function AdvancedSearchBar({ initialQuery = '', onSearch }: AdvancedSearc
     }
   };
 
-
   return (
     <div className="w-full space-y-4">
-      {/* Mode Tabs */}
-      <Tabs value={mode} onValueChange={(v) => setMode(v as 'basic' | 'advanced')} className="w-full">
-        <div className="flex items-center justify-between mb-4">
-          <TabsList className="grid w-auto grid-cols-2">
-            <TabsTrigger value="basic" className="px-6">Basic Search</TabsTrigger>
-            <TabsTrigger value="advanced" className="px-6">Advanced Search</TabsTrigger>
-          </TabsList>
+      <div className="relative">
+        <Search
+          className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground"
+          aria-hidden="true"
+        />
+        <Input
+          type="search"
+          aria-label="Search open-access papers"
+          placeholder="Search for papers, authors, topics, or DOIs..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="pl-12 h-14 text-base"
+        />
+      </div>
 
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <HelpCircle className="h-4 w-4" />
-                Search Help
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80" align="end">
-              <div className="space-y-4">
-                <h4 className="font-medium text-sm">Search Help</h4>
-                <div className="space-y-3 text-xs">
-                  <div>
-                    <div className="font-medium mb-2">Boolean Operators</div>
-                    <div className="space-y-1 text-muted-foreground">
-                      <div>AND • OR • NOT</div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="font-medium mb-2">Phrase Search</div>
-                    <div className="text-muted-foreground font-mono">"machine learning"</div>
-                  </div>
-                  <div>
-                    <div className="font-medium mb-2">Field Search</div>
-                    <div className="space-y-1 text-muted-foreground font-mono">
-                      <div>title:quantum</div>
-                      <div>author:"Einstein"</div>
-                      <div>year:2024</div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="font-medium mb-2">Examples</div>
-                    <div className="space-y-1 text-muted-foreground font-mono">
-                      <div>quantum AND computing</div>
-                      <div>"deep learning" OR "neural networks"</div>
-                      <div>title:CRISPR AND year:2024</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        <TabsContent value="basic" className="space-y-4 mt-0">
-          {/* Basic Search */}
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              placeholder="Search for papers, authors, topics, or DOIs..."
-              value={basicQuery}
-              onChange={(e) => setBasicQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="pl-12 h-14 text-base"
-            />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="advanced" className="space-y-4 mt-0">
-          {/* Advanced Search Rows */}
-          <div className="space-y-3">
-            {searchRows.map((row, index) => (
-              <div key={row.id} className="flex gap-2 items-start">
-                {/* Operator (except first row) */}
-                {index > 0 && (
-                  <Select
-                    value={row.operator}
-                    onValueChange={(value) => updateRow(row.id, { operator: value })}
-                  >
-                    <SelectTrigger className="w-24 h-11">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {OPERATORS.map(op => (
-                        <SelectItem key={op.value} value={op.value}>
-                          {op.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-
-                {/* Field */}
-                <Select
-                  value={row.field}
-                  onValueChange={(value) => updateRow(row.id, { field: value })}
-                >
-                  <SelectTrigger className={`${index === 0 ? 'w-48' : 'w-40'} h-11`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SEARCH_FIELDS.map(field => (
-                      <SelectItem key={field.value} value={field.value}>
-                        {field.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Value */}
-                <Input
-                  placeholder={`Enter ${SEARCH_FIELDS.find(f => f.value === row.field)?.label.toLowerCase() || 'search term'}...`}
-                  value={row.value}
-                  onChange={(e) => updateRow(row.id, { value: e.target.value })}
-                  onKeyDown={handleKeyDown}
-                  className="flex-1 h-11"
-                />
-
-                {/* Remove button */}
-                {searchRows.length > 1 && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeRow(row.id)}
-                    className="h-11 w-11 shrink-0"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            ))}
-
-            {/* Add Row Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={addRow}
-              className="gap-2"
-              disabled={searchRows.length >= 10}
-            >
-              <Plus className="h-4 w-4" />
-              Add Row
-            </Button>
-          </div>
-        </TabsContent>
-      </Tabs>
-
-
-      {/* Search Button */}
       <Button
         onClick={handleSearch}
         size="lg"
         className="w-full h-12 text-base font-semibold gap-2"
-        disabled={mode === 'basic' ? !basicQuery.trim() : !buildQuery().trim()}
+        disabled={!query.trim()}
       >
-        <Search className="h-5 w-5" />
+        <Search className="h-5 w-5" aria-hidden="true" />
         Search
       </Button>
     </div>
