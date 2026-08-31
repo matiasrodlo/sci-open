@@ -129,11 +129,33 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
   // Enrichment sees the page and only the page. It cannot change which papers
   // are on it, so `total`, `facets` and the page boundary above all still
   // describe the set they were computed over.
-  const { papers, reports: authorityReports } = await enrichPage(sorted.slice(start, start + pageSize), {
+  const { papers: enriched, reports: authorityReports } = await enrichPage(sorted.slice(start, start + pageSize), {
     ...(authorities ? { authorities } : {}),
     ...(enrichBudgetMs !== undefined ? { budgetMs: enrichBudgetMs } : {}),
     ...(userAgent ? { userAgent } : {})
   });
+
+  /**
+   * Order the page again, because enrichment just rewrote the keys it was
+   * ordered by.
+   *
+   * The authorities fill `title`, `authors`, `year`, `venue`, `publisher` and
+   * `citationCount` — every field a sort keys on — and they run after
+   * `sortPapers`, so the page was arranged on the values it had *before* they
+   * arrived and then displayed with the values it has after. Measured on
+   * "crispr" sorted by author: a page reading blank, blank, `С.А. Тимощук`,
+   * blank, blank. The comparator is right; that paper genuinely had no author
+   * when it was placed, and gained one a moment later.
+   *
+   * This makes the page consistent with what it shows. It deliberately does
+   * not re-slice: membership stays decided on pre-enrichment values, because
+   * fixing that would mean enriching the whole filtered set rather than a
+   * page, which is the cost this pipeline is built to avoid. So the ordering
+   * *within* a page is exact and the ordering *across* pages remains an
+   * approximation — a paper that gains a citation count on page 5 stays on
+   * page 5.
+   */
+  const papers = sortPapers(enriched, sort);
 
   return {
     papers,
