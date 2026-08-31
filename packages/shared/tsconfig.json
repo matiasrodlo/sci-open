@@ -6,6 +6,15 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
+    // Dead code fails the build rather than accumulating. Every one of these
+    // passed clean when they were turned on, after the 2026-08-30 sweep; they
+    // are here so the next unused import or unreachable branch is caught at
+    // the point it is written instead of by the audit after it.
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "allowUnreachableCode": false,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,

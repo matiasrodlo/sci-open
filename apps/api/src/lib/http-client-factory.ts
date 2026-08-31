@@ -148,7 +148,9 @@ export class HttpClientFactory {
                (error.code === 'ETIMEDOUT') ||
                ((error.response?.status ?? 0) >= 500);
       },
-      onRetry: (retryCount, error, requestConfig) => {
+      // `_error` is skipped rather than dropped: it sits between the two
+      // parameters this callback does use, so the signature needs it.
+      onRetry: (retryCount, _error, requestConfig) => {
         log.debug(`Retrying request (${retryCount}/${config.retryAttempts}): ${requestConfig.url}`);
       }
     });
