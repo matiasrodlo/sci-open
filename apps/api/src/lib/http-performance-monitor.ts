@@ -261,41 +261,6 @@ export class HttpPerformanceMonitor {
     return report.join('\n');
   }
 
-  /**
-   * Export metrics to JSON
-   */
-  exportMetrics(): {
-    timestamp: string;
-    overall: ReturnType<HttpPerformanceMonitor['getOverallPerformance']>;
-    services: Record<string, PerformanceMetrics[]>;
-    baselines: Record<string, PerformanceMetrics>;
-  } {
-    const services: Record<string, PerformanceMetrics[]> = {};
-    for (const [service, metrics] of this.metrics) {
-      services[service] = metrics;
-    }
-
-    const baselines: Record<string, PerformanceMetrics> = {};
-    for (const [service, baseline] of this.baselineMetrics) {
-      baselines[service] = baseline;
-    }
-
-    return {
-      timestamp: new Date().toISOString(),
-      overall: this.getOverallPerformance(),
-      services,
-      baselines
-    };
-  }
-
-  /**
-   * Clear all metrics
-   */
-  clearMetrics(): void {
-    this.metrics.clear();
-    this.baselineMetrics.clear();
-    log.debug('All HTTP performance metrics cleared');
-  }
 }
 
 // Export singleton instance

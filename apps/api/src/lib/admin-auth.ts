@@ -2,10 +2,11 @@ import crypto from 'crypto';
 import { FastifyReply, FastifyRequest } from 'fastify';
 
 /**
- * The cache, performance, smart-source and debug routes are operational
- * controls, not part of the public product surface. They clear caches, rewrite
- * source-selection config, and drive an arbitrary-URL load tester, so they are
- * gated behind a shared key supplied as `Authorization: Bearer <ADMIN_API_KEY>`.
+ * The cache and performance routes are operational controls, not part of the
+ * public product surface. They clear caches and expose per-service HTTP
+ * metrics, so they are gated behind a shared key supplied as
+ * `Authorization: Bearer <ADMIN_API_KEY>`. The smart-source and debug routes
+ * this once also named went with the old search path.
  *
  * `apps/web/next.config.js` proxies `/api/*` straight through to this service,
  * so anything left open here is reachable from any browser that can load the

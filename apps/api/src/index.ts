@@ -15,6 +15,7 @@ import rateLimit from '@fastify/rate-limit';
 import { SearchParams, toOARecord } from '@open-access-explorer/shared';
 import { searchCacheManager, paperCacheManager, cacheManager } from './lib/cache';
 import { httpPerformanceMonitor } from './lib/http-performance-monitor';
+import { httpClientFactory } from './lib/http-client-factory';
 import { assertPublicHttpUrl, fetchPdfStream, PdfProxyError } from './lib/pdf-proxy';
 import { adminOnly, getAdminKey } from './lib/admin-auth';
 import { SingleFlight } from './lib/single-flight';
@@ -126,21 +127,6 @@ async function routes(fastify: FastifyInstance) {
         return cached;
       }
     
-      // Check for similar cached results
-      const similarCached = await searchCacheManager.getSimilarResults(params.q || '', params);
-      if (similarCached) {
-        const responseTime = Date.now() - startTime;
-        fastify.log.info({ 
-          query: params.q, 
-          responseTime,
-          totalResults: similarCached.total 
-        }, 'Returning similar cached search results');
-        reply.header('Cache-Control', 'public, max-age=300');
-        reply.header('X-Cache-Hit', 'similar');
-        reply.header('X-Response-Time', responseTime.toString());
-        return similarCached;
-      }
-    
       fastify.log.info({ query: params.q }, 'No cache hit, performing fresh search');
 
       // Everything from here to the cache write happens once per key, however
@@ -151,9 +137,6 @@ async function routes(fastify: FastifyInstance) {
           const result = await runOrchestrator(params, { cache: providerCache, userAgent });
 
           await searchCacheManager.cacheSearchResults(params.q || '', params, result);
-          if (result.facets) {
-            await searchCacheManager.cacheFacets(params.q || '', params, result.facets);
-          }
 
           return result;
         }
@@ -411,7 +394,7 @@ const start = async () => {
 
     if (!getAdminKey()) {
       fastify.log.warn(
-        'ADMIN_API_KEY is not set: the cache, performance and debug endpoints are disabled'
+        'ADMIN_API_KEY is not set: the cache and performance endpoints are disabled'
       );
     }
 
@@ -422,6 +405,7 @@ const start = async () => {
     process.on('SIGINT', async () => {
       log.info('Shutting down gracefully');
       httpPerformanceMonitor.stopMonitoring();
+      await httpClientFactory.closeAllConnections();
       await cacheManager.close();
       await fastify.close();
       process.exit(0);
@@ -430,6 +414,7 @@ const start = async () => {
     process.on('SIGTERM', async () => {
       log.info('Shutting down gracefully');
       httpPerformanceMonitor.stopMonitoring();
+      await httpClientFactory.closeAllConnections();
       await cacheManager.close();
       await fastify.close();
       process.exit(0);

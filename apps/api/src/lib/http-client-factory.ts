@@ -272,48 +272,6 @@ export class HttpClientFactory {
   }
 
   /**
-   * Get connection reuse rate for a specific client
-   */
-  getConnectionReuseRate(baseUrl: string): number {
-    const metrics = this.metrics.get(this.normalizeUrl(baseUrl));
-    if (!metrics || metrics.totalRequests === 0) return 0;
-    return metrics.reusedConnections / metrics.totalRequests;
-  }
-
-  /**
-   * Get overall performance metrics
-   */
-  getOverallMetrics(): {
-    totalClients: number;
-    totalRequests: number;
-    averageConnectionReuse: number;
-    averageResponseTime: number;
-    averageErrorRate: number;
-  } {
-    let totalRequests = 0;
-    let totalReusedConnections = 0;
-    let totalResponseTime = 0;
-    let totalErrorRate = 0;
-    let clientCount = 0;
-
-    for (const metrics of this.metrics.values()) {
-      totalRequests += metrics.totalRequests;
-      totalReusedConnections += metrics.reusedConnections;
-      totalResponseTime += metrics.averageResponseTime * metrics.totalRequests;
-      totalErrorRate += metrics.errorRate;
-      clientCount++;
-    }
-
-    return {
-      totalClients: clientCount,
-      totalRequests,
-      averageConnectionReuse: totalRequests > 0 ? totalReusedConnections / totalRequests : 0,
-      averageResponseTime: totalRequests > 0 ? totalResponseTime / totalRequests : 0,
-      averageErrorRate: clientCount > 0 ? totalErrorRate / clientCount : 0
-    };
-  }
-
-  /**
    * Close all connections and cleanup
    */
   async closeAllConnections(): Promise<void> {

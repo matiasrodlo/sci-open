@@ -29,11 +29,3 @@ export type Query = {
   /** Set when the query is a DOI lookup rather than a keyword search. */
   doi?: string;
 };
-
-/** An empty query, for tests and for building one up. */
-export const EMPTY_QUERY: Query = { terms: [], phrases: [], join: 'AND' };
-
-/** True when there is nothing for a provider to search on. */
-export function isEmptyQuery(query: Query): boolean {
-  return !query.doi && query.terms.length === 0 && query.phrases.length === 0;
-}

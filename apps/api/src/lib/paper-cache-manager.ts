@@ -9,29 +9,25 @@ export class PaperCacheManager {
   }
 
   /**
-   * Cache paper details with multiple indexing strategies
+   * Cache one paper under both keys it can be looked up by.
+   *
+   * Two copies, because `/api/paper/:id` is reached by either — a `source:id`
+   * from a result set, or a bare DOI. Both entries are the whole record, so
+   * either route answers without a second fetch.
+   *
+   * It used to write four. A title-hash copy and a separately extracted
+   * metadata blob went out on every detail view, and the methods that read
+   * them back had no callers — so two of every four writes were paid for and
+   * never collected. They were removed with their readers.
    */
   async cachePaperDetails(paper: OARecord): Promise<void> {
-    // Cache by paper ID
     const paperKey = this.generatePaperKey(paper.id);
     await this.cacheManager.set(paperKey, paper, CacheStrategy.PAPER_DETAILS);
-    
-    // Cache by DOI for cross-referencing
+
     if (paper.doi) {
       const doiKey = this.generateDoiKey(paper.doi);
       await this.cacheManager.set(doiKey, paper, CacheStrategy.PAPER_DETAILS);
     }
-    
-    // Cache by title hash for title-based lookups
-    if (paper.title) {
-      const titleKey = this.generateTitleKey(paper.title);
-      await this.cacheManager.set(titleKey, paper, CacheStrategy.PAPER_DETAILS);
-    }
-    
-    // Cache paper metadata separately for faster access
-    const metadata = this.extractMetadata(paper);
-    const metadataKey = this.generateMetadataKey(paper.id);
-    await this.cacheManager.set(metadataKey, metadata, CacheStrategy.METADATA);
   }
 
   /**
@@ -51,101 +47,6 @@ export class PaperCacheManager {
   }
 
   /**
-   * Get cached paper by title
-   */
-  async getCachedPaperByTitle(title: string): Promise<OARecord | null> {
-    const titleKey = this.generateTitleKey(title);
-    return await this.cacheManager.get<OARecord>(titleKey, CacheStrategy.PAPER_DETAILS);
-  }
-
-  /**
-   * Get cached paper metadata
-   */
-  async getCachedPaperMetadata(paperId: string): Promise<any | null> {
-    const metadataKey = this.generateMetadataKey(paperId);
-    return await this.cacheManager.get<any>(metadataKey, CacheStrategy.METADATA);
-  }
-
-  /**
-   * Cache paper relationships (citations, references)
-   */
-  async cachePaperRelationships(
-    paperId: string, 
-    relationships: {
-      citations?: string[];
-      references?: string[];
-      related?: string[];
-    }
-  ): Promise<void> {
-    const relationshipsKey = this.generateRelationshipsKey(paperId);
-    await this.cacheManager.set(relationshipsKey, relationships, CacheStrategy.METADATA);
-  }
-
-  /**
-   * Get cached paper relationships
-   */
-  async getCachedPaperRelationships(paperId: string): Promise<any | null> {
-    const relationshipsKey = this.generateRelationshipsKey(paperId);
-    return await this.cacheManager.get<any>(relationshipsKey, CacheStrategy.METADATA);
-  }
-
-  /**
-   * Cache paper enrichment data
-   */
-  async cachePaperEnrichment(
-    paperId: string,
-    enrichmentData: {
-      crossrefData?: any;
-      unpaywallData?: any;
-      openalexData?: any;
-    }
-  ): Promise<void> {
-    const enrichmentKey = this.generateEnrichmentKey(paperId);
-    await this.cacheManager.set(enrichmentKey, enrichmentData, CacheStrategy.METADATA);
-  }
-
-  /**
-   * Get cached paper enrichment data
-   */
-  async getCachedPaperEnrichment(paperId: string): Promise<any | null> {
-    const enrichmentKey = this.generateEnrichmentKey(paperId);
-    return await this.cacheManager.get<any>(enrichmentKey, CacheStrategy.METADATA);
-  }
-
-  /**
-   * Every copy of one paper, and there are more of them than the old signature
-   * could reach.
-   *
-   * `cachePaperDetails` writes the same record three times — under its id,
-   * under its DOI and under its normalised title — so an id is not enough to
-   * invalidate a paper. The old `invalidatePaperCache(paperId)` addressed the
-   * id, metadata, relationships and enrichment entries and left the DOI and
-   * title copies behind; a reader arriving by DOI would still have been served
-   * the stale record. (It could not in fact remove any of them either, since
-   * every one of those invalidations was a no-op.)
-   *
-   * Taking the record rather than the id is what makes the remaining gap
-   * visible in the type: a caller holding only an id cannot reach the other
-   * two copies, and now has to say so.
-   */
-  async invalidatePaper(paper: { id: string; doi?: string; title?: string }): Promise<number> {
-    const subjects: Array<[string, string]> = [
-      ['paper', paper.id],
-      ['metadata', paper.id],
-      ['relationships', paper.id],
-      ['enrichment', paper.id],
-      ...(paper.doi ? ([['doi', paper.doi.toLowerCase().trim()]] as Array<[string, string]>) : []),
-      ...(paper.title ? ([['title', this.normalizeTitle(paper.title)]] as Array<[string, string]>) : [])
-    ];
-
-    let removed = 0;
-    for (const [namespace, subject] of subjects) {
-      removed += await this.cacheManager.invalidate(namespace, subject);
-    }
-    return removed;
-  }
-
-  /**
    * Generate cache key for paper
    */
   private generatePaperKey(paperId: string): string {
@@ -158,63 +59,5 @@ export class PaperCacheManager {
   private generateDoiKey(doi: string): string {
     const normalizedDoi = doi.toLowerCase().trim();
     return this.cacheManager.generateKey('doi', normalizedDoi);
-  }
-
-  /**
-   * Generate cache key for title
-   */
-  private generateTitleKey(title: string): string {
-    const normalizedTitle = this.normalizeTitle(title);
-    return this.cacheManager.generateKey('title', normalizedTitle);
-  }
-
-  /**
-   * Generate cache key for metadata
-   */
-  private generateMetadataKey(paperId: string): string {
-    return this.cacheManager.generateKey('metadata', paperId);
-  }
-
-  /**
-   * Generate cache key for relationships
-   */
-  private generateRelationshipsKey(paperId: string): string {
-    return this.cacheManager.generateKey('relationships', paperId);
-  }
-
-  /**
-   * Generate cache key for enrichment data
-   */
-  private generateEnrichmentKey(paperId: string): string {
-    return this.cacheManager.generateKey('enrichment', paperId);
-  }
-
-  /**
-   * Normalize title for consistent caching
-   */
-  private normalizeTitle(title: string): string {
-    return title
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, ' ')
-      .replace(/[^\w\s]/g, '');
-  }
-
-  /**
-   * Extract essential metadata from paper
-   */
-  private extractMetadata(paper: OARecord): any {
-    return {
-      id: paper.id,
-      doi: paper.doi,
-      title: paper.title,
-      authors: paper.authors,
-      year: paper.year,
-      venue: paper.venue,
-      source: paper.source,
-      oaStatus: paper.oaStatus,
-      citationCount: paper.citationCount,
-      createdAt: paper.createdAt
-    };
   }
 }

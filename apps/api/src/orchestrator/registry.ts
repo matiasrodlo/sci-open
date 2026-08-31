@@ -323,7 +323,3 @@ export const PROVIDERS: ProviderEntry[] = [
     }
   }
 ];
-
-export function providerById(id: ProviderId): ProviderEntry | undefined {
-  return PROVIDERS.find(p => p.id === id);
-}

@@ -33,10 +33,7 @@ import { log } from './logger';
 
 export enum CacheStrategy {
   SEARCH_RESULTS = 'search_results',
-  PAPER_DETAILS = 'paper_details',
-  API_RESPONSES = 'api_responses',
-  FACETS = 'facets',
-  METADATA = 'metadata'
+  PAPER_DETAILS = 'paper_details'
 }
 
 /** TTL in seconds per level. */
@@ -60,10 +57,7 @@ export interface CacheMetrics {
 
 const STRATEGY_CONFIGS: Record<CacheStrategy, CacheConfig> = {
   [CacheStrategy.SEARCH_RESULTS]: { l1: 300, l2: 3600 },
-  [CacheStrategy.PAPER_DETAILS]: { l1: 600, l2: 7200 },
-  [CacheStrategy.API_RESPONSES]: { l1: 60, l2: 1800 },
-  [CacheStrategy.FACETS]: { l1: 900, l2: 3600 },
-  [CacheStrategy.METADATA]: { l1: 1800, l2: 14400 }
+  [CacheStrategy.PAPER_DETAILS]: { l1: 600, l2: 7200 }
 };
 
 /**
@@ -172,6 +166,14 @@ export class CacheManager {
    * spelled. Returns how many entries went, so a caller can tell an
    * invalidation that did something from one that did not; the defect this
    * replaces was invisible precisely because it always returned nothing.
+   *
+   * No route calls this today. Its two callers — `invalidatePaper` and
+   * `invalidateSearchCache` — were themselves unreachable and went in the
+   * 2026-08-30 dead-code sweep. It is kept rather than deleted with them
+   * because the namespace/subject split in `generateKey` exists *for* it: the
+   * key layout is designed around being able to invalidate a subject across
+   * its variants, and the suite here pins the bug that design fixed. Deleting
+   * it would leave that layout with no stated reason to be that shape.
    */
   async invalidate(namespace: string, subject: string): Promise<number> {
     const prefix = this.subjectPrefix(namespace, subject);

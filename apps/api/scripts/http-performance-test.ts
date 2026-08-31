@@ -263,56 +263,20 @@ export class HttpPerformanceTester {
     return { results, summary };
   }
 
-  /**
-   * Compare performance before and after connection pooling
-   */
-  async comparePerformance(): Promise<{
-    improvement: {
-      throughputImprovement: number;
-      responseTimeImprovement: number;
-      connectionReuseImprovement: number;
-      errorRateReduction: number;
-    };
-    report: string;
-  }> {
-    console.log('Running performance comparison test...');
-    
-    // This would typically involve running tests with and without pooling
-    // For now, we'll simulate the comparison
-    const baselineMetrics = {
-      averageThroughput: 10.5, // requests per second
-      averageResponseTime: 1200, // milliseconds
-      connectionReuseRate: 0.15, // 15%
-      errorRate: 0.08 // 8%
-    };
-
-    const results = await this.runComprehensiveTests();
-    const currentMetrics = results.summary;
-
-    const improvement = {
-      throughputImprovement: ((currentMetrics.averageThroughput - baselineMetrics.averageThroughput) / baselineMetrics.averageThroughput) * 100,
-      responseTimeImprovement: ((baselineMetrics.averageResponseTime - currentMetrics.averageResponseTime) / baselineMetrics.averageResponseTime) * 100,
-      connectionReuseImprovement: ((currentMetrics.averageConnectionReuse - baselineMetrics.connectionReuseRate) / baselineMetrics.connectionReuseRate) * 100,
-      errorRateReduction: ((baselineMetrics.errorRate - currentMetrics.averageErrorRate) / baselineMetrics.errorRate) * 100
-    };
-
-    const report = [
-      '=== HTTP Connection Pooling Performance Comparison ===',
-      `Throughput Improvement: ${improvement.throughputImprovement.toFixed(2)}%`,
-      `Response Time Improvement: ${improvement.responseTimeImprovement.toFixed(2)}%`,
-      `Connection Reuse Improvement: ${improvement.connectionReuseImprovement.toFixed(2)}%`,
-      `Error Rate Reduction: ${improvement.errorRateReduction.toFixed(2)}%`,
-      '',
-      'Target Achievement:',
-      `- 50% HTTP overhead reduction: ${improvement.responseTimeImprovement >= 30 ? '✅ ACHIEVED' : '❌ NOT ACHIEVED'}`,
-      `- Significant performance improvement: ${improvement.throughputImprovement >= 20 ? '✅ ACHIEVED' : '❌ NOT ACHIEVED'}`
-    ].join('\n');
-
-    console.log(report);
-
-    return { improvement, report };
-  }
 }
 
 // Export singleton instance
 export const httpPerformanceTester = HttpPerformanceTester.getInstance();
+
+// The header documents this file as something you run. It has to actually run,
+// so this is the entry point rather than a bare module that defines a class and
+// exits. Guarded, so importing it in a test does not fire live traffic.
+if (require.main === module) {
+  httpPerformanceTester
+    .runComprehensiveTests()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
+}

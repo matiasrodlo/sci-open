@@ -87,33 +87,3 @@ export type SearchResponse = {
   complete?: boolean;
 };
 
-/**
- * Removed in phase 11. `/api/paper/:id` returns an `OARecord` and never
- * returned this shape — no `record` wrapper and no `pdf` object — so the type
- * described an endpoint that does not exist. The one caller bypassed the
- * typed fetcher entirely, which is how the two stayed out of step.
- */
-
-export type SourceSearchParams = {
-  doi?: string;
-  titleOrKeywords?: string;
-  yearFrom?: number;
-  yearTo?: number;
-  // How deep to read into the source. Connectors default to their own modest
-  // page size when these are absent, so a caller that wants more than the first
-  // page has to ask for it.
-  limit?: number;
-  offset?: number;
-};
-
-export type SourceSearchResult = {
-  records: OARecord[];
-  // What the provider reports as matching the query across its whole corpus,
-  // which is unrelated to how many records were retrieved. Undefined when the
-  // provider does not report one.
-  totalHits?: number;
-};
-
-export type SourceConnector = {
-  search(params: SourceSearchParams): Promise<SourceSearchResult>;
-};
