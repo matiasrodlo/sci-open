@@ -59,9 +59,10 @@ export const searchBodySchema = {
         topics: stringArray,
         publicationType: stringArray,
         openAccessOnly: { type: 'boolean' },
-        // Declared because the results page sends it and the pipeline reads
-        // it, even though `SearchFilters` does not name it. Left out, the
-        // schema would silently drop the year facet's filter.
+        // The year facet's exact-year ticks, as opposed to the yearFrom/yearTo
+        // bound above. Declaring it here was once only half the chain: the
+        // schema kept it, and `toUserFilters` then dropped it, so the facet
+        // re-ran the search and returned the unfiltered set.
         year: stringArray
       }
     }

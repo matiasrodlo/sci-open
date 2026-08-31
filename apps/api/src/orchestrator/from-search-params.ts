@@ -39,6 +39,7 @@ export function toUserFilters(filters: SearchFilters): UserFilters {
     ...(filters.source !== undefined ? { source: filters.source } : {}),
     ...(filters.yearFrom !== undefined ? { yearFrom: filters.yearFrom } : {}),
     ...(filters.yearTo !== undefined ? { yearTo: filters.yearTo } : {}),
+    ...(filters.year !== undefined ? { year: filters.year } : {}),
     ...(filters.oaStatus !== undefined ? { oaStatus: filters.oaStatus } : {}),
     ...(filters.venue !== undefined ? { venue: filters.venue } : {}),
     ...(filters.publisher !== undefined ? { publisher: filters.publisher } : {}),

@@ -51,7 +51,6 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
       topics: toList(searchParams.topics),
       publicationType: toList(searchParams.publicationType),
       openAccessOnly: true, // Always active
-      // @ts-expect-error - pass year as array for exact matching
       year: toList(searchParams.year),
     },
   };

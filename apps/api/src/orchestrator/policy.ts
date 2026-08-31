@@ -24,6 +24,12 @@ export type UserFilters = {
   source?: string[];
   yearFrom?: number;
   yearTo?: number;
+  /**
+   * Exact years, as sent by the year facet. Distinct from the `yearFrom`/
+   * `yearTo` bound: the facet offers a set of discrete years to tick, not a
+   * range. Both apply when both are present.
+   */
+  year?: string[];
   oaStatus?: string[];
   stage?: string[];
   venue?: string[];
@@ -77,6 +83,14 @@ export function applyPolicy(
       if (paper.year === undefined) return false;
       if (filters.yearFrom !== undefined && paper.year < filters.yearFrom) return false;
       if (filters.yearTo !== undefined && paper.year > filters.yearTo) return false;
+    }
+
+    // The year facet ticks exact years. Compared as strings because that is
+    // what the facet emits and what arrives in the query string; `p.year` is a
+    // number, so one side has to be converted either way.
+    if (filters.year?.length) {
+      if (paper.year === undefined) return false;
+      if (!filters.year.includes(String(paper.year))) return false;
     }
 
     if (!matches(filters.oaStatus, paper.oaStatus)) return false;

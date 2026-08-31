@@ -65,6 +65,31 @@ describe('applyPolicy — user filters', () => {
     expect(applyPolicy(papers, { yearFrom: 2020, yearTo: 2021 }).map(p => p.id)).toEqual(['20', '21']);
   });
 
+  // The year facet ticks exact years rather than a bound, and sends them as
+  // strings. `toUserFilters` used to drop the field between the schema that
+  // accepted it and the filter that would have applied it, so ticking a year
+  // re-ran the search and returned everything — the same defect this file's
+  // header records for `oaStatus`, one field along.
+  it('filters by exact years from the facet', () => {
+    const papers = [paper({ id: '19', year: 2019 }), paper({ id: '20', year: 2020 }), paper({ id: '21', year: 2021 })];
+    expect(applyPolicy(papers, { year: ['2019', '2021'] }).map(p => p.id)).toEqual(['19', '21']);
+  });
+
+  it('excludes an undated paper from an exact-year filter', () => {
+    expect(applyPolicy([paper({ year: undefined })], { year: ['2020'] })).toHaveLength(0);
+  });
+
+  it('applies an exact-year filter and a year bound together', () => {
+    const papers = [paper({ id: '19', year: 2019 }), paper({ id: '20', year: 2020 }), paper({ id: '21', year: 2021 })];
+    expect(
+      applyPolicy(papers, { year: ['2019', '2021'], yearFrom: 2020 }).map(p => p.id)
+    ).toEqual(['21']);
+  });
+
+  it('ignores an empty exact-year list rather than excluding everything', () => {
+    expect(applyPolicy([paper({ year: 2020 })], { year: [] })).toHaveLength(1);
+  });
+
   it('filters by stage, venue, publisher and topic', () => {
     const p = paper({ stage: 'preprint', venue: 'bioRxiv', publisher: 'CSHL', topics: ['crispr'] });
     expect(applyPolicy([p], { stage: ['preprint'] })).toHaveLength(1);

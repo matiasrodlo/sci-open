@@ -37,6 +37,8 @@ export type SearchFilters = {
   source?: string[];
   yearFrom?: number;
   yearTo?: number;
+  /** Exact years from the year facet, as opposed to the yearFrom/yearTo bound. */
+  year?: string[];
   oaStatus?: string[];
   venue?: string[];
   publisher?: string[];
