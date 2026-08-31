@@ -33,7 +33,8 @@ logging.
 
 ```env
 REDIS_URL=redis://localhost:6379
-CACHE_MAX_BYTES=268435456 # 256 MB, the L1 budget
+CACHE_MAX_BYTES=268435456       # 256 MB, the L1 budget
+CACHE_REDIS_COOLDOWN_MS=5000    # how long L2 stays shut after a failure
 ```
 
 Two levels: L1 in memory and L2 in Redis. `CACHE_MAX_BYTES` bounds L1 in
@@ -41,6 +42,16 @@ bytes rather than in entries, because the things counted are pages of search
 results — the old 10,000-key cap was roughly 1.6 GB at measured response sizes,
 and nothing about the number said so. TTLs are per-namespace and live in
 `cache-manager.ts`.
+
+`CACHE_REDIS_COOLDOWN_MS` is the circuit breaker in front of L2. An
+unreachable Redis used to be paid for once per cache operation, and a paper
+request makes five or six: measured against a port with nothing listening, two
+requests took 9.55s and 29.52s. One failure now holds L2 shut for the cooldown
+and everything behind it goes straight to memory, so the same two requests take
+0.63s and 0.36s. Any success reopens it, as does the client's `ready` event,
+and `/api/cache/metrics` reports the state as `l2Available`. Deletes and
+invalidations deliberately ignore the cooldown — skipping a read costs a miss,
+while skipping a delete leaves behind an entry a caller asked to remove.
 
 ### Data Sources
 
