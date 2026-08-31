@@ -692,9 +692,13 @@ old one returned `results[0]` from a keyword search, so a near miss opened
 somebody else's paper. A provider that answers with a different id now produces
 a 404, and a provider that could not be asked produces a 500 — because a slow
 provider is not a missing paper, and the two should not look the same. CORE
-makes that distinction earn its keep: four consecutive lookups of one record
-took 2.3 s, 3.8 s, 11.4 s and 17.2 s, so it can exceed the lookup budget, and
-when it does the answer is an error rather than "not found".
+makes that distinction earn its keep: five lookups of one record took 2.3 s,
+2.7 s, 3.8 s, 11.4 s and 17.2 s, so it can exceed the 15-second lookup budget —
+and one of the verification runs did, answering **HTTP 500** where the same id
+had returned the record a moment earlier. That is the intended behaviour and
+not a good one: **CORE details clicks fail intermittently**, and whether the
+fix is a longer budget for that provider or a retry is unmeasured. It is
+recorded here rather than guessed at.
 
 > **The 40 seconds was Redis, and the first measurement said otherwise.**
 >
@@ -709,6 +713,11 @@ when it does the answer is an error rather than "not found".
 > **165 ms** arXiv, 365 ms PLOS, 476 ms bioRxiv, 732 ms OpenAlex, 759 ms DOAJ,
 > 935 ms PubMed, 1.1 s Europe PMC, 1.2 s DataCite, 2.8 s OpenAIRE, and CORE's
 > spread above.
+>
+> **Confirmed end to end afterwards**, once a Redis was running: the same ten
+> requests through the route returned in **302 ms to 2.7 s**, against the 31–48
+> seconds measured with Redis refused — and a warm cache answers in **1–2 ms**.
+> Nothing about the lookups changed between those two runs.
 >
 > Recorded because the correction is the point. Two numbers that differed by
 > two orders of magnitude were about to be attributed to the thing this phase
@@ -742,7 +751,7 @@ rewritten and the committed SVGs regenerated — they had been stale since phase
 - [x] **One search path, with nothing selecting between two.** `SEARCH_PATH`, `resolveSearchPath` and the `X-Search-Path` header are gone, from the code, `docker-compose.yml` and `env.example`.
 - [x] **Nothing imports the old path, because there is no old path.** `enhanced-search-pipeline.ts`, `fallback.ts`, `aggregators.ts`, the old `merge.ts`, `lib/clients/` and `src/sources/` are all deleted.
 - [x] **`/api/paper/:id` resolves every provider.** Verified live against a running API: ten of ten exact, plus a bare arXiv id resolving to its prefixed record and an unknown provider 404ing without a request.
-- [x] **The whole thing still works.** Build, typecheck and lint green; 727 tests pass; a live search returns 1,828 results across five providers, with `complete: false` and the degradation notice intact while OpenAlex is out of budget.
+- [x] **The whole thing still works.** Build, typecheck and lint green; 727 tests pass. A live search on the deleted-path tree returns **2,321 results, `complete: true`**, in 11.0 s, with all seven keyword-capable providers answering — OpenAlex among them at 600 records, so phase 10's internal pagination is still doing its work — and DataCite, bioRxiv and CORE reported as skipped rather than failed. Checked in the degraded case too, against a spent OpenAlex budget: `complete: false`, 1,828 results across five providers, degradation notice intact.
 - [x] **The documentation no longer describes deleted code.**
 
 > **Rollback is a revert now, and that was the trade.** Phase 10 flipped the
