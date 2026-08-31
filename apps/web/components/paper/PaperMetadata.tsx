@@ -1,24 +1,10 @@
 import { OARecord } from '@open-access-explorer/shared';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Info, Calendar, Globe, Database, Hash, Clock } from 'lucide-react';
 
 interface PaperMetadataProps {
   paper: OARecord;
 }
 
 export function PaperMetadata({ paper }: PaperMetadataProps) {
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    try {
-      return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    } catch {
-      return dateString;
-    }
-  };
 
   return (
     <div className="space-y-6">

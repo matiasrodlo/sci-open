@@ -1,35 +1,11 @@
 import { OARecord } from '@open-access-explorer/shared';
-import { ExternalLink, Calendar, Users, BookOpen, Tag, Quote } from 'lucide-react';
+import { ExternalLink, Quote } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 
 interface PaperHeaderProps {
   paper: OARecord;
 }
-
-const getSourceColor = (source: string) => {
-  const colors: Record<string, string> = {
-    arxiv: 'bg-red-100 text-red-800 hover:bg-red-200',
-    core: 'bg-blue-100 text-blue-800 hover:bg-blue-200',
-    europepmc: 'bg-green-100 text-green-800 hover:bg-green-200',
-    ncbi: 'bg-purple-100 text-purple-800 hover:bg-purple-200',
-    openaire: 'bg-orange-100 text-orange-800 hover:bg-orange-200',
-    biorxiv: 'bg-teal-100 text-teal-800 hover:bg-teal-200',
-    medrxiv: 'bg-cyan-100 text-cyan-800 hover:bg-cyan-200',
-    doaj: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200',
-  };
-  return colors[source] || 'bg-gray-100 text-gray-800 hover:bg-gray-200';
-};
-
-const getOAStatusColor = (status?: string) => {
-  const colors: Record<string, string> = {
-    preprint: 'bg-yellow-100 text-yellow-800',
-    accepted: 'bg-blue-100 text-blue-800',
-    published: 'bg-green-100 text-green-800',
-    other: 'bg-gray-100 text-gray-800',
-  };
-  return colors[status || 'other'] || 'bg-gray-100 text-gray-800';
-};
 
 export function PaperHeader({ paper }: PaperHeaderProps) {
   return (

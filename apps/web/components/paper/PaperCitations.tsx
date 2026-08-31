@@ -1,8 +1,6 @@
 'use client';
 
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Quote, TrendingUp, ExternalLink } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ExternalLink } from 'lucide-react';
 
 interface PaperCitationsProps {
   citationCount?: number;

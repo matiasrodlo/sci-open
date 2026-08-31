@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { OARecord, SearchParams } from '@open-access-explorer/shared';
 import { ResultCard } from './ResultCard';
 import { Pagination } from './Pagination';
@@ -24,9 +23,6 @@ export function PaginatedResults({
   initialPageSize,
   searchParams 
 }: PaginatedResultsProps) {
-  const router = useRouter();
-  const urlSearchParams = useSearchParams();
-  
   const [results, setResults] = useState<OARecord[]>(initialResults);
   const [total, setTotal] = useState(initialTotal);
   const [currentPage, setCurrentPage] = useState(initialPage);

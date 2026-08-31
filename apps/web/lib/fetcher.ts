@@ -47,9 +47,3 @@ export async function getPaper(id: string): Promise<OARecord> {
   });
   return response.data;
 }
-
-export function isDOI(query: string): boolean {
-  // Simple DOI pattern matching
-  const doiPattern = /^10\.\d{4,}\/[^\s]+$/i;
-  return doiPattern.test(query.trim());
-}

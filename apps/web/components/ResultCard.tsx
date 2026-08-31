@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Download, ExternalLink, Eye, Quote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { OARecord } from '@open-access-explorer/shared';
 import { getPaper } from '@/lib/fetcher';
 import { cachePaper } from '@/lib/paper-cache';

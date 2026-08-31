@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { PaperHeader } from '@/components/paper/PaperHeader';
 import { PaperMetadata } from '@/components/paper/PaperMetadata';
@@ -55,7 +55,7 @@ function PaperContent() {
       <div className="text-center py-12">
         <h3 className="text-lg font-semibold mb-2">Paper Not Found</h3>
         <p className="text-muted-foreground">
-          The paper you're looking for could not be found.
+          The paper you&rsquo;re looking for could not be found.
         </p>
       </div>
     );

@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import { OARecord } from '@open-access-explorer/shared';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, ExternalLink, Quote, Bookmark, Share2, Check, Copy } from 'lucide-react';
+import { Download, ExternalLink, Quote, Share2, Check, Copy } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { generateBibTeX, downloadBibTeX } from '@/lib/bibtex';
 
