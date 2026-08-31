@@ -456,7 +456,18 @@ Make the new path the only path.
 >
 > Overlap has climbed across four sweeps as providers landed — 54%, 60%, 64%, **70%** — and `citationCount` nearly doubled against the old path, which can only get it from OpenAlex where the new path also has Europe PMC.
 >
-> **The one regression: CORE quadruples DOI-lookup latency.** Measured directly, same query, same single result: 9,280 ms with CORE against 2,095 ms without, and CORE itself accounted for 9,260 ms of it. It is registered `doiLookup: true` because its repository corpus is where an otherwise-unreadable paper turns up, but whether that is worth 7 seconds on every DOI lookup has not been measured and should be before this is called settled.
+> **~~The one regression: CORE quadruples DOI-lookup latency.~~ Measured, and the median regression is gone — 2026-08-30.** As recorded: 9,280 ms with CORE against 2,095 ms without, CORE accounting for 9,260 ms, and the open question of whether that was worth 7 seconds on every DOI lookup. It no longer is, because it no longer costs 7 seconds. Twelve DOIs drawn from live searches, each looked up twice through the real search path, without-CORE first so any upstream warming favours the other arm — `scripts/core-doi-cost.ts` reproduces it.
+>
+> | | without CORE | with CORE | CORE itself |
+> |---|---|---|---|
+> | median | 1,252 ms | **1,563 ms** | 1,352 ms |
+> | mean | 1,253 ms | 3,179 ms | 2,921 ms |
+> | p75 | 1,669 ms | 4,272 ms | 4,049 ms |
+> | max | 1,726 ms | 11,868 ms | 11,334 ms |
+>
+> **At the median CORE costs 310 ms, not 7 seconds.** What survives is the tail, and it is entirely CORE's: in the four lookups of twelve where it added more than two seconds, CORE's own latency accounts for nearly all of the total, while the without-CORE arm stayed near a second throughout. That is the same erratic behaviour `providers/core/capabilities.ts` records for keyword search — 0.9 s to 11.3 s here — rather than a provider that is uniformly slow. The mean is 2.5x the without-CORE arm; the median is 1.2x.
+>
+> **The coverage half is measured but not settled.** CORE supplied the only readable copy in **0 of 12** — every paper already had one without it. That is weaker evidence than it looks: the DOIs were drawn from open-access search results, which is precisely the population least likely to need a repository aggregator. Testing what CORE is actually for means sampling papers Unpaywall cannot resolve, and that is not what this run did. **So `doiLookup` stays `true`**: 310 ms at the median does not buy the right to drop a provider on a sample chosen against it.
 >
 > **The ranking disagreement is not a defect, and the metric that reports it is misleading.**
 >

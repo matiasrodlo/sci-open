@@ -25,10 +25,20 @@ export const capabilities: ProviderCapabilities = {
   keywordSearch: false,
 
   /**
-   * On, and this is what CORE is for. A DOI lookup returns one record and was
-   * measured inside the budget every time — 5.9s, 12.9s, 15.9s, 15.9s, median
-   * 14.4s. CORE aggregates repository deposits, so its value is finding a
-   * readable copy of a paper already identified, which is exactly this case.
+   * On, and this is what CORE is for. CORE aggregates repository deposits, so
+   * its value is finding a readable copy of a paper already identified, which
+   * is exactly this case.
+   *
+   * Latency was 5.9s, 12.9s, 15.9s, 15.9s, median 14.4s when first measured,
+   * and phase 10 recorded it as quadrupling DOI-lookup latency on that
+   * evidence. Re-measured 2026-08-30 over twelve DOIs through the real search
+   * path (`scripts/core-doi-cost.ts`): **median 1,352 ms**, mean 2,921 ms,
+   * max 11,334 ms. The median cost to a DOI search is 310 ms, not 7 seconds.
+   *
+   * The tail is what remains — four of twelve lookups added more than two
+   * seconds, and CORE was nearly all of each. Erratic rather than uniformly
+   * slow, which is the same character its keyword-search note describes. That
+   * is a p75 problem and not a reason to stop asking, so this stays `true`.
    */
   doiLookup: true,
 
