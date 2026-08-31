@@ -63,24 +63,40 @@ export function FacetPanel({ facets }: FacetPanelProps) {
   const selected = (param: string) => searchParams.getAll(param);
 
   /**
-   * Roll the per-source counts up into the two publication types. Sources the
-   * backend does not classify (and so cannot filter on) fall into neither
-   * bucket, which is why these two need not add up to the total.
+   * Roll the stage counts up into the two publication types.
+   *
+   * These are counted from `facets.stage` because that is what the filter runs
+   * on: the API maps `publicationType` to stages — peer-reviewed to `accepted`
+   * and `published`, pre-print to `preprint` — so counting anything else makes
+   * the number beside a box disagree with what ticking it returns.
+   *
+   * It used to roll up `facets.source` against a hardcoded three-provider map:
+   * europepmc and ncbi to peer-reviewed, arxiv to pre-print, and the other
+   * seven providers to neither. On one measured search that showed "Peer
+   * Reviewed 1,100" where the stages said 1,769 — plos, doaj and openaire are
+   * peer-reviewed journal sources and were all being dropped — and "Pre-print
+   * 0" against an actual 5, because arXiv had contributed nothing to that
+   * search while preprints had arrived through other providers. A zero next to
+   * a box that returns five results is the worse half of that.
+   *
+   * They still need not add up to the total: a paper whose stage is `unknown`
+   * is in neither bucket, and cannot be filtered to either.
    */
   const publicationTypeOptions = (): FacetOption[] => {
-    const buckets: Bucket[] = Array.isArray(facets.source) ? facets.source : [];
-    const counts = { 'peer-reviewed': 0, preprint: 0 };
+    const buckets: Bucket[] = Array.isArray(facets.stage) ? facets.stage : [];
+    const byStage: Record<string, number> = {};
 
     for (const bucket of buckets) {
-      const source = String(bucket.value);
-      const count = Number(bucket.count) || 0;
-      if (source === 'europepmc' || source === 'ncbi') counts['peer-reviewed'] += count;
-      else if (source === 'arxiv') counts.preprint += count;
+      byStage[String(bucket.value)] = Number(bucket.count) || 0;
     }
 
     return [
-      { value: 'peer-reviewed', label: 'Peer Reviewed', count: counts['peer-reviewed'] },
-      { value: 'preprint', label: 'Pre-print', count: counts.preprint }
+      {
+        value: 'peer-reviewed',
+        label: 'Peer Reviewed',
+        count: (byStage.accepted ?? 0) + (byStage.published ?? 0)
+      },
+      { value: 'preprint', label: 'Pre-print', count: byStage.preprint ?? 0 }
     ];
   };
 
