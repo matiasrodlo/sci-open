@@ -6,10 +6,13 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 
 | Phases Done | Old Path | Providers Migrated | Tests, From Zero | Flag-Gated Cutover |
 |---|---|---|---|---|
-| **14 / 14** | **gone — 4,637 lines** | **10 / 10 · 4 authorities** | **727** | **0 — flag removed** |
+| **14 / 14** | **gone — 4,637 lines** | **10 / 10 · 4 authorities** | **728** | **0 — flag removed** |
 
 *The test count fell from 920 as the old path went: 228 of them existed to
-compare the new code against it, and could not outlive it. Phase 13 says which.*
+compare the new code against it, and could not outlive it. Phase 13 says which,
+and its acceptance box records **727** — the count as that phase closed, left
+standing as the measurement it was. The 728th arrived after: the by-id match
+guard in `b95076b0` brought its own test.*
 
 > **Two rules for the whole runbook**
 >
