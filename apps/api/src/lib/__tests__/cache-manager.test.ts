@@ -13,6 +13,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 vi.mock('ioredis', () => {
   class FakeRedis {
     store = new Map<string, string>();
+    constructor(_url: string, public options: any = {}) {}
     async get(key: string) { return this.store.get(key) ?? null; }
     async setex(key: string, _ttl: number, value: string) { this.store.set(key, value); return 'OK'; }
     async del(...keys: string[]) {
@@ -177,6 +178,109 @@ describe('CacheManager levels', () => {
 
     (failing as any).l1.clear();
     expect(await failing.get(key, CacheStrategy.SEARCH_RESULTS)).toBeNull();
+  });
+});
+
+describe('CacheManager when Redis is unreachable', () => {
+  /**
+   * Measured on 2026-08-30 with no Redis running: a paper request returned in
+   * 40,074 ms against about 700 ms of provider work. The fallback was correct
+   * — every failure was treated as a miss — but each of the six cache
+   * operations the request makes paid about eight seconds to rediscover the
+   * outage the one before it had just found.
+   */
+  const noRedis = (cooldownMs: number) => {
+    const manager = new CacheManager('redis://stub', undefined, cooldownMs);
+    const calls = { reads: 0, writes: 0 };
+    (manager as any).l2.get = async () => { calls.reads += 1; throw new Error('ECONNREFUSED'); };
+    (manager as any).l2.setex = async () => { calls.writes += 1; throw new Error('ECONNREFUSED'); };
+    return { manager, calls };
+  };
+
+  it('fails a command rather than queueing it while disconnected', () => {
+    // Where the eight seconds per operation went: ioredis parked each command
+    // in its offline queue, waited out the connection retries, then retried the
+    // command three times. Nothing below can be fast while a command can still
+    // be parked there.
+    const options = (cache as any).l2.options;
+    expect(options).toMatchObject({ enableOfflineQueue: false, maxRetriesPerRequest: 1 });
+    expect(options.connectTimeout).toBeLessThanOrEqual(2000);
+    // Bounded delay, but it never gives up: a strategy that returns null ends
+    // the client, and a Redis restart would take the cache down until the API
+    // was restarted too.
+    expect(options.retryStrategy(1)).toBeLessThanOrEqual(5000);
+    expect(options.retryStrategy(1000)).toBeLessThanOrEqual(5000);
+  });
+
+  it('stops asking after the first failure and serves from memory', async () => {
+    const { manager, calls } = noRedis(10_000);
+
+    for (const subject of ['a', 'b', 'c', 'd']) {
+      const key = manager.generateKey('paper', subject);
+      expect(await manager.get(key, CacheStrategy.PAPER_DETAILS)).toBeNull();
+    }
+
+    expect(calls.reads).toBe(1);
+    expect(manager.getMetrics().l2Available).toBe(false);
+  });
+
+  it('holds the circuit open across reads and writes alike', async () => {
+    const { manager, calls } = noRedis(10_000);
+    const key = manager.generateKey('paper', 'a');
+
+    await manager.set(key, { hit: 1 }, CacheStrategy.PAPER_DETAILS);
+    await manager.set(key, { hit: 2 }, CacheStrategy.PAPER_DETAILS);
+    await manager.get(manager.generateKey('paper', 'b'), CacheStrategy.PAPER_DETAILS);
+
+    // One write discovered it; the second write and the read that followed
+    // went straight to memory.
+    expect(calls.writes).toBe(1);
+    expect(calls.reads).toBe(0);
+    // And L1 took every write regardless, which is the point of degrading.
+    expect(await manager.get(key, CacheStrategy.PAPER_DETAILS)).toEqual({ hit: 2 });
+  });
+
+  it('tries again once the cooldown has passed, and uses Redis when it answers', async () => {
+    const manager = new CacheManager('redis://stub', undefined, 20);
+    const l2 = (manager as any).l2;
+    const answer = l2.get.bind(l2);
+    let reads = 0;
+    let down = true;
+    l2.get = async (key: string) => {
+      reads += 1;
+      if (down) throw new Error('ECONNREFUSED');
+      return answer(key);
+    };
+
+    const key = manager.generateKey('paper', 'a');
+    await manager.set(key, { hit: true }, CacheStrategy.PAPER_DETAILS);
+    (manager as any).l1.clear();
+
+    expect(await manager.get(key, CacheStrategy.PAPER_DETAILS)).toBeNull();
+    expect(await manager.get(key, CacheStrategy.PAPER_DETAILS)).toBeNull();
+    expect(reads).toBe(1);
+
+    down = false;
+    await new Promise(resolve => setTimeout(resolve, 40));
+
+    expect(await manager.get(key, CacheStrategy.PAPER_DETAILS)).toEqual({ hit: true });
+    expect(manager.getMetrics().l2Available).toBe(true);
+  });
+
+  it('still asks Redis to invalidate while the circuit is open', async () => {
+    // Skipping a read costs a miss and nothing else. Skipping a delete leaves
+    // an entry the caller asked to remove, to be served later as though it were
+    // current, so the cooldown deliberately does not cover invalidation.
+    const manager = new CacheManager('redis://stub', undefined, 10_000);
+    const key = manager.generateKey('paper', 'a');
+    await manager.set(key, { hit: true }, CacheStrategy.PAPER_DETAILS);
+
+    (manager as any).l2.get = async () => { throw new Error('ECONNREFUSED'); };
+    (manager as any).l1.clear();
+    await manager.get(key, CacheStrategy.PAPER_DETAILS);
+    expect(manager.getMetrics().l2Available).toBe(false);
+
+    expect(await manager.invalidate('paper', 'a')).toBe(1);
   });
 });
 
