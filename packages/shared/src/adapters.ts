@@ -4,16 +4,15 @@ import type { LegacyOaStatus, Paper, PaperStage, SourceRef } from './paper';
 /**
  * Translation between the new `Paper` and the `OARecord` the API still speaks.
  *
- * This is what lets the orchestrator run behind a flag without the frontend
- * moving: the new path builds `Paper`s and converts on the way out, so the
- * response stays byte-compatible. Both functions disappear once the frontend
- * is on `Paper` — or stay permanently, if a stable external contract turns out
- * to be worth the translation.
+ * The orchestrator builds `Paper`s and converts on the way out, so the
+ * response shape holds steady no matter what the pipeline behind it knows.
+ * Both functions are permanent: the frontend consumes `OARecord`, and a
+ * stable external contract turned out to be worth the translation. Moving the
+ * frontend onto `Paper` is a response-shape change and its own piece of work.
  *
  * `toOARecord(fromOARecord(x))` must return `x` unchanged. That is asserted in
- * the tests, and it is the property that makes the flag safe to flip: a
- * difference here would show up as results that shift when the flag moves,
- * which is exactly the signal the phase-07 comparison script exists to trust.
+ * the tests, and it is what keeps the translation lossless: a difference here
+ * would surface as results that shift for no reason a caller can see.
  */
 
 /**

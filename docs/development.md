@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 22+
 - pnpm 8+
 - Docker (for local services)
 
@@ -33,8 +33,9 @@ REDIS_URL=redis://localhost:6379
 ### 3. Start Services
 
 ```bash
-# Start Redis, Typesense, Meilisearch
-docker-compose up -d
+# Redis is the only service the dev servers need. Compose also builds
+# api and web for a production-like run; `pnpm dev` replaces them.
+docker-compose up -d redis
 ```
 
 ### 4. Run Development Servers
@@ -120,12 +121,21 @@ against it, so the tests stay offline.
 ## Testing
 
 ```bash
-# Run linting
-pnpm lint
+# Every suite runs offline against the committed fixtures
+pnpm test
 
 # Type checking
+pnpm typecheck
+
+# Linting
+pnpm lint
+
+# Full build
 pnpm build
 ```
+
+CI runs all four on every push and pull request, plus a blocking dependency
+audit (`node scripts/audit-gate.mjs`).
 
 ## Debugging
 
@@ -141,26 +151,41 @@ NODE_ENV=production   # Info logs only
 ### Cache Inspection
 
 ```bash
-# Check Redis
+# Check Redis. Keys are `namespace:hash(subject)` plus a variant hash, over
+# the `search`, `facets` and `partial` namespaces. Prefer SCAN to KEYS, which
+# blocks the server for the length of the keyspace.
 redis-cli
-> KEYS *
-> GET cache:search:...
+> SCAN 0 MATCH 'search:*' COUNT 100
 
-# Clear cache via API
-curl -X POST http://localhost:4000/api/cache/clear
+# Clear cache via API. Administrative routes need a bearer token, and are
+# disabled outright when ADMIN_API_KEY is unset — see ./configuration.md.
+curl -X POST http://localhost:4000/api/cache/clear \
+  -H "Authorization: Bearer $ADMIN_API_KEY"
 ```
 
 ### Performance Monitoring
 
-```bash
-# Get performance stats
-curl http://localhost:4000/api/performance/monitor
+All four are admin-gated on the same bearer token as the cache routes.
 
-# Run performance test
-curl -X POST http://localhost:4000/api/performance/test \
-  -H "Content-Type: application/json" \
-  -d '{"service": "openalex", "baseUrl": "https://api.openalex.org", "endpoint": "/works"}'
+```bash
+# Across every service
+curl http://localhost:4000/api/performance/metrics \
+  -H "Authorization: Bearer $ADMIN_API_KEY"
+
+# One service, and against its baseline
+curl http://localhost:4000/api/performance/metrics/<service> \
+  -H "Authorization: Bearer $ADMIN_API_KEY"
+curl http://localhost:4000/api/performance/comparison/<service> \
+  -H "Authorization: Bearer $ADMIN_API_KEY"
+
+# Rendered report
+curl http://localhost:4000/api/performance/report \
+  -H "Authorization: Bearer $ADMIN_API_KEY"
 ```
+
+The monitor is read by these endpoints only. Nothing consults it to decide
+which providers are asked — the scoring layer that did was deleted in the
+refactor and has not grown back.
 
 ## Common Tasks
 
@@ -180,7 +205,7 @@ pnpm build
 
 - **TypeScript**: Strict mode enabled
 - **Formatting**: Prettier (if configured)
-- **Linting**: ESLint with Next.js config
+- **Linting**: ESLint — `@typescript-eslint` for the API, the Next config for the web app
 - **Imports**: Absolute paths preferred
 
 ## Troubleshooting

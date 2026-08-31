@@ -6,16 +6,16 @@ A modern search interface for discovering open-access research papers across lea
 
 ## Features
 
-- **Multi-source search** across academic repositories
-- **Smart PDF resolution** with automatic fallback chains
-- **Intelligent caching** with Redis and in-memory layers
-- **Adaptive source selection** based on query patterns
-- **Real-time faceting** by source, year, venue, and more
-- **Performance monitoring** and optimization
+- **Multi-source search** across ten academic repositories
+- **PDF resolution** that rewrites hosts advertising PDFs they do not serve
+- **Two-layer caching** — an in-process LRU bounded in bytes over Redis
+- **Capability-based source selection** — a provider is asked only what its API can answer
+- **Real-time faceting** by source, open-access status, year, venue and publisher
+- **Per-provider coverage reporting**, so a degraded search says which sources answered
 
 ## Quick Start
 
-**Prerequisites:** Node.js 18+, pnpm 8+, Docker
+**Prerequisites:** Node.js 22+, pnpm 8+, Docker
 
 ```bash
 # Install dependencies
@@ -24,8 +24,9 @@ pnpm install
 # Copy environment file
 cp docs/env.example .env
 
-# Start services (Redis, Typesense)
-docker-compose up -d
+# Start Redis. Compose also builds api and web for a production-like
+# run; the dev servers below replace them.
+docker-compose up -d redis
 
 # Start development servers
 pnpm dev
@@ -46,7 +47,7 @@ Comprehensive documentation is available in the [`/docs`](./docs) directory:
 
 **Frontend:** Next.js 14, TypeScript, Tailwind CSS, shadcn/ui  
 **Backend:** Fastify, TypeScript, Node.js  
-**Search:** Typesense, Meilisearch, Algolia  
+**Search:** in-process orchestrator — capability-based planning, fan-out, merge, rank  
 **Cache:** Redis (L2), in-process LRU bounded in bytes (L1)  
 **Data Sources:** arXiv, CORE, Europe PMC, NCBI, OpenAIRE, and more
 

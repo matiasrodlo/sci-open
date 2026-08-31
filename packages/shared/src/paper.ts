@@ -130,8 +130,8 @@ export type Paper = {
 
   /**
    * Values kept only so `toOARecord` can reproduce the old shape exactly.
-   * Nothing in the new model reads them, and this field is deleted along with
-   * the adapter once the frontend moves onto `Paper`.
+   * Nothing in the new model reads them. They live as long as the adapter
+   * does, which is as long as the API's external contract is `OARecord`.
    */
   compat?: {
     sourceMetadata?: SourceMetadata;

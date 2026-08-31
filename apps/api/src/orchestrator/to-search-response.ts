@@ -3,23 +3,23 @@ import type { ProviderTotal, SearchFilters, SearchResponse, SearchSort } from '@
 import type { OrchestratorResult } from './index';
 
 /**
- * Orchestrator result -> the response shape the API already returns.
+ * Orchestrator result -> the response shape the API returns.
  *
- * This is what lets the new path run behind a flag without the frontend
- * moving. Everything richer that the orchestrator knows — field provenance,
- * every provider that returned a paper, the access route — is flattened away
- * here, which is the cost of keeping the contract stable and the reason to
- * move the frontend onto `Paper` in phase 11.
+ * `OARecord` is the external contract, so the orchestrator builds `Paper`s
+ * and flattens on the way out. Everything richer that it knows — field
+ * provenance, every provider that returned a paper, the access route — is
+ * dropped here. That is the price of a stable contract; surfacing it is a
+ * response-shape change rather than anything this function can decide.
  *
- * `complete` is the one addition. It is optional, the old path never sets it,
- * and a consumer that does not know about it is unaffected.
+ * `complete` is the one addition. It is optional, and a consumer that does
+ * not know about it is unaffected.
  *
  * `result.authorities` is deliberately not folded into `providerTotals`. An
  * authority never returns a paper, so it has no `retrieved` to report, and
  * listing it beside the search providers would put a row in the response that
- * the source facet and `filters.source` both disagree with. It surfaces in
- * phase 11 alongside `fieldSources`, which has the same problem for the same
- * reason.
+ * the source facet and `filters.source` both disagree with. It belongs with
+ * `fieldSources` in that response-shape change, having the same problem for
+ * the same reason.
  */
 export function toSearchResponse(
   result: OrchestratorResult,

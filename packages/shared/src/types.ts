@@ -76,14 +76,13 @@ export type SearchResponse = {
   total: number;
   pageSize: number;
   providerTotals?: ProviderTotal[];
-  // Echoed back by the enhanced pipeline; absent from the basic pipeline
+  // Echoed back when the request set them, so a caller can see what applied
   filters?: SearchFilters;
   sort?: SearchSort;
   duration?: number;
   /**
    * False when a provider failed or timed out, which makes `total` a lower
-   * bound rather than an answer. Absent from the old pipeline, which has no
-   * way to tell the difference.
+   * bound rather than an answer.
    */
   complete?: boolean;
 };
