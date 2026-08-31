@@ -106,12 +106,14 @@ export async function lookupPaper(id: string, options: LookupOptions = {}): Prom
   if (!entry) return null;
 
   if (entry.lookup) {
-    return entry.lookup({
+    const paper = await entry.lookup({
       nativeId,
       timeoutMs,
       ...(userAgent ? { userAgent } : {}),
       ...(now ? { now } : {})
     });
+
+    return paper && matches(paper, provider, nativeId) ? paper : null;
   }
 
   // `parseQuery` is what turns a DOI-shaped native id into a DOI lookup, so
@@ -134,6 +136,17 @@ export async function lookupPaper(id: string, options: LookupOptions = {}): Prom
 }
 
 /**
+ * The record that was asked for, or nothing.
+ *
+ * Both branches above are checked, not just the search one. A by-id endpoint
+ * looks like it cannot answer with the wrong record, and OpenAlex's does:
+ * `works/W0000000000` is normalised to `W0` upstream and returns that record,
+ * so an unchecked lookup answered a mistyped id with a real paper about
+ * postpartum family planning in Ethiopia, under HTTP 200. Measured against the
+ * live API on 2026-08-30. DOAJ, OpenAIRE and CORE are asked the same way and
+ * get the same guard; `ProviderLookupArgs.nativeId` is the id as `SourceRef`
+ * holds it, so a record that is the requested one carries it back unchanged.
+ *
  * DOIs are case-insensitive in their suffix by convention and are compared
  * that way; everything else is compared as it stands.
  */

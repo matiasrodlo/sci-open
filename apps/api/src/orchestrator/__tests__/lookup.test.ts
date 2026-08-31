@@ -160,6 +160,16 @@ describe('lookupPaper — what counts as found', () => {
     expect(await lookupPaper('arxiv:WANTED', { providers: [arxiv] })).toBeNull();
   });
 
+  it('holds a by-id endpoint to the same answer, because one can normalise the id', async () => {
+    // OpenAlex resolves `works/W0000000000` to `W0` and returns that record.
+    // Unchecked, the endpoint answered a mistyped id with a real paper about
+    // postpartum family planning in Ethiopia, under HTTP 200.
+    const openalex = provider('openalex', [from('openalex', 'W0')], true);
+
+    expect(await lookupPaper('openalex:W0000000000', { providers: [openalex] })).toBeNull();
+    expect(openalex.lookedUp).toHaveLength(1);
+  });
+
   it('compares DOIs without regard to case', async () => {
     // DOI suffixes are case-insensitive by convention, and providers differ on
     // which case they hand back.
