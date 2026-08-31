@@ -25,7 +25,7 @@ cp docs/env.example .env
 Edit `.env` with your settings. Minimum required:
 
 ```env
-NEXT_PUBLIC_API_BASE=http://localhost:4000
+API_ORIGIN=http://localhost:4000
 PORT=4000
 REDIS_URL=redis://localhost:6379
 ```

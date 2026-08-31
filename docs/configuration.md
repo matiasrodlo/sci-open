@@ -5,8 +5,13 @@
 ### Frontend
 
 ```env
-NEXT_PUBLIC_API_BASE=http://localhost:4000
+API_ORIGIN=http://localhost:4000
 ```
+
+Where the Next server forwards `/api/*`. A route handler reads it on every
+request, so it is a deployment setting and takes effect without a rebuild. It
+replaced `NEXT_PUBLIC_API_BASE`, which was inlined at build time and therefore
+baked one origin into the bundle.
 
 ### API Server
 
@@ -14,6 +19,8 @@ NEXT_PUBLIC_API_BASE=http://localhost:4000
 PORT=4000
 NODE_ENV=development
 LOG_LEVEL=debug
+RATE_LIMIT_MAX=120
+RATE_LIMIT_WINDOW=1 minute
 ```
 
 `LOG_LEVEL` takes any pino level — `trace`, `debug`, `info`, `warn`, `error`,
@@ -38,26 +45,25 @@ and nothing about the number said so. TTLs are per-namespace and live in
 ### Data Sources
 
 ```env
-# CORE
-CORE_API_KEY=your_core_api_key
-CORE_BASE=https://api.core.ac.uk/v3
-
-# arXiv
-ARXIV_BASE=https://export.arxiv.org/api/query
-
-# Europe PMC
-EUROPE_PMC_BASE=https://www.ebi.ac.uk/europepmc/webservices/rest
-
-# NCBI
-NCBI_EUTILS_BASE=https://eutils.ncbi.nlm.nih.gov/entrez/eutils
-NCBI_API_KEY=your_ncbi_api_key
-
-# OpenAIRE
-OPENAIRE_BASE=https://api.openaire.eu/search
-
-# Unpaywall
+CORE_API_KEY=
+NCBI_API_KEY=
+DOAJ_API_KEY=
+DATACITE_API_KEY=
 UNPAYWALL_EMAIL=your-email@example.com
 ```
+
+Keys are optional, and an unset key is not the same as a placeholder one: a
+wrong credential is worse than none. DataCite answers a request carrying
+`Authorization: Bearer your_datacite_api_key_here` with `401`, where the same
+request with no header at all answers `200`. Leave them empty.
+
+**Base URLs are not configurable.** Each provider and authority takes its base
+URL as a `baseUrl` option that defaults to a module constant, and reads no
+environment variable. The `*_BASE` names once listed here — `CORE_BASE`,
+`ARXIV_BASE`, `EUROPE_PMC_BASE`, `NCBI_EUTILS_BASE`, `OPENAIRE_BASE` and the
+rest — had no effect from the moment the providers were rewritten. The option
+exists so a test can aim a fetch at a fixture server, not as a deployment knob.
+Point a provider somewhere else by changing its `DEFAULT_BASE_URL`.
 
 ### Performance
 
@@ -71,15 +77,22 @@ HTTP_POOL_RETRY_ATTEMPTS=3
 HTTP_POOL_RETRY_DELAY=1000
 HTTP_POOL_ENABLE_HTTP2=true
 
-# Service-specific pools (JSON)
+# Service-specific pools (JSON), merged over the global settings above
 OPENALEX_POOL_CONFIG={"maxConnections": 30, "maxSockets": 100}
 CROSSREF_POOL_CONFIG={"maxConnections": 25, "maxSockets": 80}
 UNPAYWALL_POOL_CONFIG={"maxConnections": 40, "maxSockets": 120}
+DATACITE_POOL_CONFIG={"maxConnections": 15, "maxSockets": 40}
+NCBI_POOL_CONFIG={"maxConnections": 25, "maxSockets": 70}
 ```
+
+Those five, and no others, because those five providers are the ones that fetch
+through the pooled client. CORE and Europe PMC call axios directly, so a
+`CORE_POOL_CONFIG` or `EUROPE_PMC_POOL_CONFIG` is parsed at startup into a map
+that nothing then queries.
 
 ### Administrative Access
 
-The cache, performance and debug endpoints are operational
+The cache and performance endpoints are operational
 controls rather than part of the public API. They are gated behind a shared key:
 
 ```bash
@@ -126,7 +139,7 @@ REDIS_URL=redis://your-redis-host:6379
 ### Frontend
 
 ```env
-NEXT_PUBLIC_API_BASE=https://api.yourdomain.com
+API_ORIGIN=https://api.yourdomain.com
 ```
 
 ### Security
