@@ -8,11 +8,15 @@ Each phase has a gate that must be true before it starts, a concrete task list, 
 |---|---|---|---|---|
 | **14 / 14** | **gone — 4,637 lines** | **10 / 10 · 4 authorities** | **728** | **0 — flag removed** |
 
-*The test count fell from 920 as the old path went: 228 of them existed to
-compare the new code against it, and could not outlive it. Phase 13 says which,
-and its acceptance box records **727** — the count as that phase closed, left
-standing as the measurement it was. The 728th arrived after: the by-id match
-guard in `b95076b0` brought its own test.*
+*The test count fell from 920 as the old path went — though not by the
+difference those two numbers imply, which is worth spelling out because the
+short version does not reconcile. **920 is the count before phase 13 began**,
+not before the deletion. Phase 13 then added 36, building the `lookupPaper`
+that had to exist before the connectors could go, and removed 229. So
+920 + 36 − 229 = **727**, which is what the phase 13 box records. The 728th
+arrived after it: the by-id match guard in `b95076b0` brought its own test.
+Measured by running the suite at each commit, after an earlier version of this
+note stated 920 − 228 and left 35 tests unaccounted for.*
 
 > **Two rules for the whole runbook**
 >
@@ -728,10 +732,14 @@ recorded here rather than guessed at.
 > corrections at the top of this document are all instances of.
 
 **What the deletion took with it, deliberately.** 4,637 lines of source across
-19 files, and **228 tests** across 21 more: the nineteen parity tests that
+19 files, and **229 tests** across 21 more: the nineteen parity tests that
 compared each new normaliser against the connector it replaced, the pipeline
 and `RecordMerger` suites, and the abstract-reconstruction tests — whose
 subject survives in `providers/openalex/normalize.ts` with its own coverage.
+228 of those sat in the twenty suites the deletion took whole; the 229th was
+stranded in one that survived, a Europe PMC case asserting that *the old
+connector* throws on a record the new normaliser reads, carrying the note
+"delete this when the old connector goes".
 `scripts/compare-paths.ts` went too, as phase 10 said it would. They exist to
 compare against a path that is gone; keeping them would mean keeping it.
 
