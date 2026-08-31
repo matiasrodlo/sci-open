@@ -42,7 +42,15 @@ export function generateFacets(papers: readonly Paper[]): Facets {
     // A paper merged from several providers counts once for each of them:
     // "how many results did this provider contribute" is the question the
     // panel asks, and every one of them did contribute it.
-    source: count(papers, p => p.sources.map(s => s.provider)).sort(byCount),
+    //
+    // Deduplicated per paper, because `sources` is keyed by provider *and*
+    // native id: a provider that returned the same work twice under two of its
+    // own ids leaves two refs on the merged paper, and counting refs rather
+    // than papers made the bucket exceed the number of results filtering by it
+    // returns. Measured on "alzheimer amyloid": Europe PMC retrieved 600
+    // records that merged into 584 papers, and the bucket read 600 against a
+    // total of 584 in the same response.
+    source: count(papers, p => [...new Set(p.sources.map(s => s.provider))]).sort(byCount),
     oaStatus: count(papers, p => p.oaStatus).sort(byCount),
     stage: count(papers, p => p.stage).sort(byCount),
     year: count(papers, p => p.year).sort((a, b) => Number(b.value) - Number(a.value)).slice(0, 25),

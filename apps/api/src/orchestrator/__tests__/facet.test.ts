@@ -27,6 +27,34 @@ describe('generateFacets', () => {
     ]);
   });
 
+  it('counts one provider once, however many of its ids landed on the paper', () => {
+    // `sources` is keyed by provider *and* native id, so a provider that
+    // returned the same work under two of its own ids leaves two refs behind.
+    // Counting refs made the bucket larger than the result set it describes:
+    // measured on "alzheimer amyloid", Europe PMC's 600 records merged into
+    // 584 papers and the bucket still read 600, in the same response whose
+    // total was 584.
+    const merged = paper({
+      sources: [
+        ref('europepmc', { nativeId: 'MED-1' }),
+        ref('europepmc', { nativeId: 'PMC-1' }),
+        ref('ncbi')
+      ]
+    });
+
+    expect(generateFacets([merged]).source).toEqual([
+      { value: 'europepmc', count: 1 },
+      { value: 'ncbi', count: 1 }
+    ]);
+  });
+
+  it('keeps every source bucket no larger than the number of papers', () => {
+    const f = generateFacets(papers);
+    for (const bucket of f.source) {
+      expect(bucket.count, `source=${bucket.value}`).toBeLessThanOrEqual(papers.length);
+    }
+  });
+
   it('counts topics per occurrence, since a paper carries several', () => {
     expect(generateFacets(papers).topics).toEqual([
       { value: 'crispr', count: 2 },
