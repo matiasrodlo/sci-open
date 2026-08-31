@@ -3,6 +3,7 @@ import type {
 } from '@open-access-explorer/shared';
 import { preferredPdfUrl, servesInterstitial } from '../lib/pdf-url';
 import { AUTHORITIES, type AuthorityEntry } from '../authorities';
+import type { AuthorityCache } from './authority-cache';
 
 /**
  * Ask the authorities about the page that is being returned.
@@ -14,11 +15,13 @@ import { AUTHORITIES, type AuthorityEntry } from '../authorities';
  * enrichment entirely rather than pay the first number; running it after
  * pagination is what makes it affordable at all.
  *
- * That has one cost worth naming, because it is not recoverable later.
- * `applyPolicy` runs before pagination and drops papers with no retrievable
- * copy, so a paper whose only PDF Unpaywall knows about was discarded before
- * enrichment could find it. Enriching the whole set would fix that and is the
- * request count this step exists to avoid. It is a real gap, not an oversight.
+ * That used to have a cost this comment called unrecoverable. `applyPolicy`
+ * runs before pagination and drops papers with no retrievable copy, so a paper
+ * whose only PDF Unpaywall knows about was discarded before enrichment could
+ * find it. `rescue.ts` closes that: the papers the gate would drop are asked
+ * about first, bounded in number, and only the authorities that could change
+ * the answer are asked. It is the same step as this one pointed at a different
+ * set, and it shares this one's lookups through `AuthorityCache`.
  *
  * Enrichment never adds, removes or reorders papers. It fills in the ones
  * already chosen, so `total`, the facets and the page boundaries all continue
@@ -34,6 +37,12 @@ export type EnrichOptions = {
   /** Lookups in flight at once. */
   concurrency?: number;
   userAgent?: string;
+  /**
+   * Per-search memo of what each authority said about each DOI. Shared with
+   * the rescue pass, which asks the same question of the same records one step
+   * earlier — see `rescue.ts`.
+   */
+  cache?: AuthorityCache;
 };
 
 export type EnrichResult = {
@@ -191,7 +200,8 @@ export async function enrichPage(
     timeoutMs = DEFAULT_TIMEOUT_MS,
     budgetMs = DEFAULT_BUDGET_MS,
     concurrency = DEFAULT_CONCURRENCY,
-    userAgent
+    userAgent,
+    cache
   } = options;
 
   // Copied rather than mutated in place: the caller's array may be the same
@@ -246,12 +256,15 @@ export async function enrichPage(
             const counters = tally.get(authority.id)!;
             counters.asked += 1;
             try {
-              const facts = await authority.lookup({
+              const lookup = () => authority.lookup({
                 doi: paper.doi!,
                 timeoutMs,
                 signal: controller.signal,
                 ...(userAgent ? { userAgent } : {})
               });
+              const facts = cache
+                ? await cache.fetch(authority.id, paper.doi!, lookup)
+                : await lookup();
               // The page may already have been returned; see `untilBudget`.
               if (!facts || controller.signal.aborted) return;
               counters.answered += 1;

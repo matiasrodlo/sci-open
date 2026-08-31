@@ -20,7 +20,8 @@ shared package holding the types both speak.
 └──────┬──────┘
        │
        ├──► Orchestrator
-       │    plan → fan out → merge → rank → filter → facet → paginate → enrich
+       │    plan → fan out → merge → rank → filter → rescue
+       │    → facet → paginate → enrich
        │
        ├──► Providers — sources of results
        │    arXiv · bioRxiv · CORE · DataCite · DOAJ
@@ -50,14 +51,24 @@ shared package holding the types both speak.
 4. **Rank** — rank fusion over each provider's own ordering, so no single
    provider owns the page.
 5. **Filter** — the user's facet selections, plus the open-access policy.
-6. **Facet** — computed over the filtered set, so a bucket count is exactly how
+6. **Rescue** — the policy gate reads `fullText`, `oaStatus` and `stage`, and
+   the authorities fill all three, so a paper failing it has been judged on
+   what the providers happened to say rather than on what is knowable. The
+   papers the gate would drop are asked about first — bounded in number, only
+   those carrying a DOI, and only the authorities authoritative on a gated
+   field. Those that come back with a copy rejoin the set at the rank they
+   already had.
+7. **Facet** — computed over the filtered set, so a bucket count is exactly how
    far selecting it narrows the page.
-7. **Paginate**, then **enrich** the page — and only the page, because the
+8. **Paginate**, then **enrich** the page — and only the page, because the
    authorities are per-DOI lookups.
 
 The order is load-bearing: ranking after pagination ranks a page, ranking
 before dedupe ranks duplicates, and faceting before filtering describes a set
-the caller never sees.
+the caller never sees. The rescue sits before faceting for the same reason
+faceting sits after filtering — counting a set the caller will not see, or
+excluding a paper without asking the question that decides it, are the same
+mistake.
 
 ### Providers
 
@@ -82,6 +93,23 @@ that were already going to be returned, and every field it supplies is recorded
 in `fieldSources`. An authority failing does not make a search incomplete; a
 provider failing does.
 
+### Rescue
+
+`apps/api/src/orchestrator/rescue.ts` is the one place enrichment is paid for
+before pagination, and it exists because the alternatives are both wrong.
+Enriching the whole filtered set is one request per record — a measured set of
+2,388 records is 2,388 requests per authority — and enriching only the page
+means the gate drops papers nobody ever asked about.
+
+The bound is `SEARCH_RESCUE_LIMIT` candidates, in rank order, independent of
+the requested page so `total` does not shift as the reader walks through the
+results. Anything past it is dropped exactly as before, and `RescueReport`
+says so. The step can only ever add papers back.
+
+Lookups are shared with the page enrichment through `AuthorityCache`, a
+per-search memo of `(authority, DOI) → facts`, so a rescued paper that lands on
+the visible page is not asked about twice.
+
 ### Caching
 
 Two levels, both keyed as `namespace:hash(subject):hash(variant)` so every
@@ -104,7 +132,8 @@ derives:
 1. Client → API: POST /api/search
 2. Cache lookup: exact key, then a similar one
 3. On a miss, one fan-out per key however many callers are waiting (single-flight)
-4. Orchestrator: plan → fan out → merge → rank → filter → facet → paginate → enrich
+4. Orchestrator: plan → fan out → merge → rank → filter → rescue → facet →
+   paginate → enrich
 5. Paper[] → SearchResponse, and the result is cached
 ```
 

@@ -6,6 +6,8 @@ import type { ProviderCache } from './provider-cache';
 import type { ProviderEntry } from './registry';
 import type { AuthorityEntry } from '../authorities';
 import { toSearchResponse } from './to-search-response';
+import { DEFAULT_RESCUE_LIMIT } from './rescue';
+import { log } from '../lib/logger';
 
 /**
  * The request shape the API already accepts -> the orchestrator.
@@ -46,6 +48,23 @@ export function toUserFilters(filters: SearchFilters): UserFilters {
     ...(filters.topics !== undefined ? { topics: filters.topics } : {}),
     ...(stage.length > 0 ? { stage } : {})
   };
+}
+
+/**
+ * How many papers the policy gate may ask about before dropping them.
+ *
+ * Read here rather than in the orchestrator because this is the boundary where
+ * a request becomes orchestrator options, and the orchestrator itself takes
+ * the number as an argument like every other budget it owns.
+ *
+ * The cost is one request per candidate to each authority that is
+ * authoritative on the gated fields — today that is Unpaywall alone, so one
+ * request per candidate. Zero turns the step off and restores the behaviour
+ * where a paper with no advertised copy is dropped without anyone being asked.
+ */
+function rescueLimit(): number {
+  const raw = Number(process.env.SEARCH_RESCUE_LIMIT);
+  return Number.isFinite(raw) && raw >= 0 ? raw : DEFAULT_RESCUE_LIMIT;
 }
 
 export type RunOptions = {
@@ -102,11 +121,22 @@ export async function runOrchestrator(
     sort: params.sort ?? 'relevance',
     openAccessOnly,
     policy: { requireOpenAccess: openAccessOnly },
+    rescueLimit: rescueLimit(),
     ...(options.cache ? { cache: options.cache } : {}),
     ...(options.userAgent ? { userAgent: options.userAgent } : {}),
     ...(options.providers ? { providers: options.providers } : {}),
     ...(options.authorities ? { authorities: options.authorities } : {})
   });
+
+  // The one step that changes which papers are in the result, and the only
+  // one whose accounting the response shape has nowhere to put. Logged so a
+  // bounded rescue — the case where `total` is still a lower bound — is
+  // visible without waiting on a contract change. Debug, because it is one
+  // line per uncached search and says nothing when there was nothing to ask.
+  if (result.rescue.candidates > 0) {
+    const { authorities: _asked, ...counts } = result.rescue;
+    log.debug('Rescue pass', { query: params.q, ...counts });
+  }
 
   return toSearchResponse(result, {
     // Echoed the way the old path echoed them, absent field included, so the

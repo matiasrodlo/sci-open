@@ -12,6 +12,7 @@ A modern search interface for discovering open-access research papers across lea
 - **Capability-based source selection** — a provider is asked only what its API can answer
 - **Real-time faceting** by source, open-access status, year, venue and publisher
 - **Per-provider coverage reporting**, so a degraded search says which sources answered
+- **Authority rescue** — a paper is not dropped for want of a copy until the services that would know one have been asked
 
 ## Quick Start
 

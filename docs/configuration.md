@@ -29,6 +29,31 @@ otherwise. Everything the service logs goes through Fastify's logger, so this
 one setting governs provider and orchestrator output as well as request
 logging.
 
+### Search
+
+```env
+SEARCH_RESCUE_LIMIT=200         # papers the gate may ask about before dropping them
+```
+
+Every search applies two gates the caller did not ask for — a paper needs a
+retrievable copy, and needs to be open — and both read fields the providers
+often do not supply. Applying them to whatever the fan-out happened to return
+therefore drops papers that were never actually judged: a work whose only PDF
+Unpaywall knows about was excluded before Unpaywall was ever consulted, because
+enrichment runs on the page and that paper never reached one.
+
+`SEARCH_RESCUE_LIMIT` is how many of those papers are asked about before the
+gate drops them, in rank order. The cost is one request per candidate to each
+authority that is *authoritative* on a gated field — today Unpaywall alone, so
+one request each. Candidates past the limit are dropped exactly as they were
+before, and the step reports that it was bounded, which is the case where
+`total` remains a lower bound.
+
+Set it to `0` to turn the step off and restore the previous result set. The
+limit is deliberately independent of which page was requested: a window that
+grew as the reader paged would change `total` underneath them, which is the
+same reason `depth` does not grow either.
+
 ### Cache
 
 ```env

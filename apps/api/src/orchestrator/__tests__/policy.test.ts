@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyPolicy, isOpen } from '../policy';
+import { applyPolicy, isOpen, partitionByPolicy } from '../policy';
 import { paper, ref } from './helpers';
 
 describe('isOpen', () => {
@@ -109,5 +109,45 @@ describe('applyPolicy — user filters', () => {
 
   it('returns everything when no filters are given', () => {
     expect(applyPolicy([paper({ id: 'a' }), paper({ id: 'b' })])).toHaveLength(2);
+  });
+});
+
+describe('partitionByPolicy — what is settled and what is still a question', () => {
+  const noCopy = (over = {}) => paper({ doi: '10.1/a', fullText: undefined, ...over });
+
+  it('separates the papers the gate drops from the ones it keeps', () => {
+    const { kept, candidates } = partitionByPolicy([paper({ id: 'has' }), noCopy({ id: 'not' })]);
+
+    expect(kept.map(p => p.id)).toEqual(['has']);
+    expect(candidates.map(p => p.id)).toEqual(['not']);
+  });
+
+  it('will not make a candidate of a paper with no DOI to ask about', () => {
+    // The authorities are keyed by DOI, so there is no question left to ask.
+    const { kept, candidates } = partitionByPolicy([noCopy({ doi: undefined })]);
+    expect(kept).toHaveLength(0);
+    expect(candidates).toHaveLength(0);
+  });
+
+  it('will not make a candidate of a paper the caller filtered out', () => {
+    // A filter reads fields the providers supplied, so enrichment cannot
+    // change the answer and the exclusion is settled.
+    const { candidates } = partitionByPolicy([noCopy({ year: 1999 })], { yearFrom: 2020 });
+    expect(candidates).toHaveLength(0);
+  });
+
+  it('has nothing to ask about when the gates are off', () => {
+    const { kept, candidates } = partitionByPolicy([noCopy()], {}, { requireFullText: false });
+    expect(kept).toHaveLength(1);
+    expect(candidates).toHaveLength(0);
+  });
+
+  it('keeps candidates in the order they arrived, which is rank order', () => {
+    const { candidates } = partitionByPolicy([
+      noCopy({ id: 'a', doi: '10.1/a' }),
+      paper({ id: 'kept' }),
+      noCopy({ id: 'b', doi: '10.1/b' })
+    ]);
+    expect(candidates.map(p => p.id)).toEqual(['a', 'b']);
   });
 });

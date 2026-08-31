@@ -6,7 +6,9 @@ import { fanOut, isComplete } from './fanout';
 import { ProviderCache } from './provider-cache';
 import { mergePapers } from './merge';
 import { rank } from './rank';
-import { applyPolicy, type PolicyOptions, type UserFilters } from './policy';
+import { applyPolicy, partitionByPolicy, type PolicyOptions, type UserFilters } from './policy';
+import { rescueCandidates, type RescueReport } from './rescue';
+import { AuthorityCache } from './authority-cache';
 import { generateFacets, type Facets } from './facet';
 import { sortPapers } from './sort';
 import { enrichPage } from './enrich';
@@ -14,9 +16,13 @@ import { enrichPage } from './enrich';
 export * from './parse-query';
 export * from './lookup';
 export { PROVIDERS, plan, fanOut, isComplete, ProviderCache, mergePapers, rank, applyPolicy, generateFacets, sortPapers, enrichPage };
+export { partitionByPolicy } from './policy';
+export { rescueCandidates, canRescue, DEFAULT_RESCUE_LIMIT } from './rescue';
+export type { RescueReport } from './rescue';
+export { AuthorityCache } from './authority-cache';
 
 /**
- * plan -> fan out -> merge/dedupe -> rank -> filter -> facet -> paginate -> enrich
+ * plan -> fan out -> merge/dedupe -> rank -> filter -> rescue -> facet -> paginate -> enrich
  *
  * The order is load-bearing, not stylistic. Ranking after pagination ranks a
  * page; ranking before dedupe ranks duplicates; faceting before filtering
@@ -25,8 +31,15 @@ export { PROVIDERS, plan, fanOut, isComplete, ProviderCache, mergePapers, rank, 
  * Enrichment is last for the same kind of reason, and it is the one step whose
  * position is about cost rather than correctness: the authorities are per-DOI
  * lookups, so pointing them at the set costs one request per record and
- * pointing them at the page costs twenty in total. Everything before it is a
- * pure function except the fan-out; enrichment is the second piece of I/O.
+ * pointing them at the page costs twenty in total.
+ *
+ * The rescue is the one place that cost is paid before pagination, and it is
+ * why it sits where it does. The policy gate reads fields the authorities
+ * supply, so applying it to what the providers happened to return drops papers
+ * that were never actually judged. Asking about those — and only those, and
+ * only up to a limit — is what keeps `total` and the facets describing the set
+ * the caller could see rather than the set the providers described. It runs
+ * before faceting for exactly the reason faceting runs after filtering.
  */
 
 export type SearchOptions = {
@@ -44,6 +57,13 @@ export type SearchOptions = {
   authorities?: readonly AuthorityEntry[];
   /** Wall clock for the whole enrichment step. */
   enrichBudgetMs?: number;
+  /**
+   * How many papers the policy would drop may be asked about before it drops
+   * them. See `rescue.ts`. Zero disables the step.
+   */
+  rescueLimit?: number;
+  /** Wall clock for the whole rescue step. */
+  rescueBudgetMs?: number;
   /** Passed to providers that support it. Default true, matching prior behaviour. */
   openAccessOnly?: boolean;
   cache?: ProviderCache;
@@ -67,6 +87,12 @@ export type OrchestratorResult = {
    * the source facet.
    */
   authorities: AuthorityReport[];
+  /**
+   * What the rescue pass cost and what it bought. Reported separately from
+   * `authorities` because those describe the page and this describes the set:
+   * it is the one step that changes which papers are in the result at all.
+   */
+  rescue: RescueReport;
   /**
    * False when a provider failed or timed out, which makes `total` a lower
    * bound rather than an answer.
@@ -97,6 +123,8 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
     policy = {},
     authorities,
     enrichBudgetMs,
+    rescueLimit,
+    rescueBudgetMs,
     openAccessOnly = true,
     cache,
     providers = PROVIDERS,
@@ -115,13 +143,46 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
 
   const merged = mergePapers(fetched);
   const ranked = rank(merged, { query, ...(now ? { now: now().getTime() } : {}) }).map(s => s.paper);
-  const filtered = applyPolicy(ranked, filters, policy);
+
+  // Shared with the rescue below, so a paper that is asked about twice is
+  // fetched once.
+  const authorityCache = new AuthorityCache();
+
+  // The gate reads `fullText`, `oaStatus` and `stage`, and the authorities
+  // fill all three — so a paper failing it has been judged on what the
+  // providers happened to say rather than on what is knowable. `kept` needs no
+  // question asked; `candidates` are the ones the answer could still move.
+  const { kept, candidates } = partitionByPolicy(ranked, filters, policy);
+
+  const { papers: rescuedPapers, report: rescueReport } = await rescueCandidates(candidates, {
+    ...(authorities ? { authorities } : {}),
+    ...(rescueLimit !== undefined ? { limit: rescueLimit } : {}),
+    ...(rescueBudgetMs !== undefined ? { budgetMs: rescueBudgetMs } : {}),
+    ...(userAgent ? { userAgent } : {}),
+    cache: authorityCache,
+    filters,
+    policy
+  });
+
+  // Back into rank order. A rescued paper takes the position it always had —
+  // it was ranked with everything else and only ever excluded by the gate — so
+  // the set is rebuilt by walking `ranked` rather than by appending, and the
+  // enriched copy is substituted for the original it was made from.
+  const admitted = new Map(kept.map(paper => [paper.id, paper]));
+  for (const paper of rescuedPapers) admitted.set(paper.id, paper);
+  const filtered = ranked.flatMap(paper => {
+    const included = admitted.get(paper.id);
+    return included ? [included] : [];
+  });
+
   // After filtering so it only orders what will be returned, and before
   // pagination so a page is a slice of the sorted set.
   const sorted = sortPapers(filtered, sort);
 
-  // Facets describe the filtered set, so a bucket count is exactly how far
-  // selecting it narrows what is on screen.
+  // Facets describe the filtered set — after the rescue, so a paper Unpaywall
+  // found a copy for is counted in the buckets it belongs to. Counting before
+  // it would have described a set the caller never sees, which is the same
+  // mistake as faceting before filtering.
   const facets = generateFacets(sorted);
 
   const start = Math.max(page - 1, 0) * pageSize;
@@ -132,7 +193,8 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
   const { papers: enriched, reports: authorityReports } = await enrichPage(sorted.slice(start, start + pageSize), {
     ...(authorities ? { authorities } : {}),
     ...(enrichBudgetMs !== undefined ? { budgetMs: enrichBudgetMs } : {}),
-    ...(userAgent ? { userAgent } : {})
+    ...(userAgent ? { userAgent } : {}),
+    cache: authorityCache
   });
 
   /**
@@ -165,6 +227,7 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
     facets,
     reports,
     authorities: authorityReports,
+    rescue: rescueReport,
     complete: isComplete(reports),
     duration: Date.now() - startedAt
   };

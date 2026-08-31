@@ -363,3 +363,138 @@ describe('orchestrator search — statelessness', () => {
   });
 });
 
+/**
+ * The gap: `applyPolicy` runs before pagination and drops a paper with no
+ * retrievable copy, and enrichment — the only thing that could have found one
+ * — ran on a page that paper never reached. It was absent from `total`, from
+ * the facets, and from anything in the response that could have said so.
+ */
+describe('the rescue pass', () => {
+  const PDF = { url: 'https://example.org/rescued.pdf', kind: 'pdf' as const, verified: false };
+
+  const rescuer = (lookup: () => Promise<any>) => ({
+    id: 'unpaywall' as any,
+    capabilities: {
+      fields: ['fullText', 'oaStatus'] as any,
+      authoritative: ['fullText', 'oaStatus'] as any
+    },
+    pass: 0 as const,
+    lookup
+  });
+
+  // Ranked first — it is the top hit for this query — and dropped anyway,
+  // because Europe PMC advertised no copy for it.
+  const withoutCopy = paper({
+    id: 'europepmc:not',
+    doi: '10.1/not',
+    title: 'CRISPR study',
+    fullText: undefined,
+    sources: [ref('europepmc', { nativeId: 'not', rank: 0 })]
+  });
+
+  const withCopy = paper({
+    id: 'europepmc:has',
+    doi: '10.1/has',
+    title: 'CRISPR study',
+    sources: [ref('europepmc', { nativeId: 'has', rank: 1 })]
+  });
+
+  const providers = () => [stub('europepmc', [withoutCopy, withCopy])];
+
+  it('drops the paper when there is nobody to ask, as it always did', async () => {
+    const result = await search(QUERY, { providers: providers() });
+
+    expect(result.total).toBe(1);
+    expect(result.papers.map(p => p.id)).toEqual(['europepmc:has']);
+    expect(result.rescue).toMatchObject({ candidates: 1, examined: 0, rescued: 0 });
+  });
+
+  it('returns it once an authority finds a copy', async () => {
+    const result = await searchWith(QUERY, {
+      providers: providers(),
+      authorities: [rescuer(async () => ({ fullText: PDF }))]
+    });
+
+    expect(result.total).toBe(2);
+    expect(result.papers.map(p => p.id)).toContain('europepmc:not');
+    expect(result.rescue).toMatchObject({ candidates: 1, examined: 1, rescued: 1, bounded: false });
+  });
+
+  it('counts it in the facets, so a bucket still says what selecting it yields', async () => {
+    const result = await searchWith(QUERY, {
+      providers: providers(),
+      authorities: [rescuer(async () => ({ fullText: PDF }))]
+    });
+
+    expect(result.facets.source.find(b => b.value === 'europepmc')?.count).toBe(2);
+    expect(result.facets.source.find(b => b.value === 'europepmc')?.count).toBe(result.total);
+  });
+
+  it('puts it back at the rank it always had, not at the end', async () => {
+    // It was ranked with everything else and only ever excluded by the gate,
+    // so being rescued restores a position rather than granting a new one.
+    const result = await searchWith(QUERY, {
+      providers: providers(),
+      authorities: [rescuer(async () => ({ fullText: PDF }))]
+    });
+
+    expect(result.papers.map(p => p.id)).toEqual(['europepmc:not', 'europepmc:has']);
+  });
+
+  it('asks about a rescued paper once, not again when it lands on the page', async () => {
+    const lookup = vi.fn(async () => ({ fullText: PDF }));
+
+    await searchWith(QUERY, { providers: providers(), authorities: [rescuer(lookup)] });
+
+    const asked = lookup.mock.calls.map(([args]: any) => args.doi);
+
+    // The rescued paper is asked about by the rescue and then lands on the
+    // page the enrichment runs over. Without the shared AuthorityCache that is
+    // two identical requests to Unpaywall inside one search.
+    expect(asked.filter((doi: string) => doi === '10.1/not')).toHaveLength(1);
+    // The other paper was never a candidate, so the page is the first time
+    // anyone asks about it. That request is not a duplicate of anything.
+    expect(asked.filter((doi: string) => doi === '10.1/has')).toHaveLength(1);
+  });
+
+  it('leaves the set alone when the authority has no copy either', async () => {
+    const result = await searchWith(QUERY, {
+      providers: providers(),
+      authorities: [rescuer(async () => null)]
+    });
+
+    expect(result.total).toBe(1);
+    expect(result.rescue).toMatchObject({ examined: 1, rescued: 0 });
+  });
+
+  it('says so when the limit left candidates unasked', async () => {
+    const many = Array.from({ length: 4 }, (_, i) =>
+      paper({
+        id: `europepmc:${i}`,
+        doi: `10.1/${i}`,
+        title: 'CRISPR study',
+        fullText: undefined,
+        sources: [ref('europepmc', { nativeId: String(i), rank: i })]
+      }));
+
+    const result = await searchWith(QUERY, {
+      providers: [stub('europepmc', many)],
+      authorities: [rescuer(async () => ({ fullText: PDF }))],
+      rescueLimit: 2
+    });
+
+    expect(result.total).toBe(2);
+    expect(result.rescue).toMatchObject({ candidates: 4, examined: 2, rescued: 2, bounded: true });
+  });
+
+  it('can be turned off, which restores the old set exactly', async () => {
+    const result = await searchWith(QUERY, {
+      providers: providers(),
+      authorities: [rescuer(async () => ({ fullText: PDF }))],
+      rescueLimit: 0
+    });
+
+    expect(result.total).toBe(1);
+    expect(result.rescue).toMatchObject({ candidates: 1, examined: 0, rescued: 0 });
+  });
+});
