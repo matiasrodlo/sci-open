@@ -1,8 +1,8 @@
 {
   // The build emits from `src` alone, so `scripts/` sits outside the program
   // `tsconfig.json` describes and would never be checked. This adds it back
-  // without emitting: `compare-paths.ts` is the evidence phase 07 rests on,
-  // and a harness that stops compiling in silence measures nothing.
+  // without emitting, so the four harnesses in `scripts/` fail the typecheck
+  // rather than rotting quietly against the `src` they reach into.
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": true,

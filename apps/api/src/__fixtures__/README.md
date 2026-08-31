@@ -24,7 +24,7 @@ handful of records each — they exist to pin field mapping, not to be a corpus.
 | `datacite.json` | DataCite | |
 | `doaj.json` | DOAJ | |
 | `europepmc.json` | Europe PMC | `resultType=core` |
-| `ncbi-esearch.json` | PubMed | The id list |
+| `ncbi-esearch.json` | PubMed | The id list. Recorded, but no suite reads it — `esearch` returns ids and the normaliser is only given the `efetch` payload. Kept so a re-record produces both halves of the two-step call. |
 | `ncbi-efetch.xml` | PubMed | Abstract XML for those ids |
 | `openaire.json` | OpenAIRE | One record; the payload is ~200 KB per result |
 | `plos.json` | PLOS | Solr response |
@@ -49,6 +49,9 @@ in place, they are the kind of input the normalisers have to survive:
 
 - `datacite.json` contains `Universit� degli Studi di Siena`. DataCite
   serves that replacement character itself; it is not a decoding bug here.
-- OpenAIRE records carry the DOI under `pid[]` with an `@classid` key. The
-  connector reads the xml2js `$` shape instead and drops it — see the expected
-  failure in `openaire.test.ts`.
+- OpenAIRE records carry the DOI under `pid[]` with an `@classid` key. The old
+  connector read the xml2js spelling, `$.classid` and `_`, so no OpenAIRE
+  record carried a DOI and none could deduplicate against any other provider.
+  **Fixed** — `providers/openaire/__tests__/normalize.test.ts:28` now asserts
+  the DOI is read, and passes. Kept here because the shape is still the odd
+  one, and it is what the normaliser has to survive.
