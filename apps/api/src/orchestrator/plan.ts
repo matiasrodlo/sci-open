@@ -14,12 +14,6 @@ import type { ProviderEntry } from './registry';
  * different thing from predicting it in advance.
  */
 
-export type PlannedProvider = {
-  provider: ProviderEntry;
-  /** Set when the provider cannot express a year bound and we will filter after. */
-  filterYearsLocally: boolean;
-};
-
 export type SkippedProvider = {
   provider: ProviderId;
   /** Names the capability that was missing, so a skip is explainable. */
@@ -27,19 +21,19 @@ export type SkippedProvider = {
 };
 
 export type Plan = {
-  planned: PlannedProvider[];
+  planned: ProviderEntry[];
   skipped: SkippedProvider[];
 };
 
 export function plan(query: Query, providers: readonly ProviderEntry[]): Plan {
-  const planned: PlannedProvider[] = [];
+  const planned: ProviderEntry[] = [];
   const skipped: SkippedProvider[] = [];
 
   for (const provider of providers) {
     const { capabilities: caps, id } = provider;
 
     if (query.doi) {
-      if (caps.doiLookup) planned.push({ provider, filterYearsLocally: false });
+      if (caps.doiLookup) planned.push(provider);
       else skipped.push({ provider: id, reason: 'no doiLookup capability' });
       continue;
     }
@@ -50,10 +44,11 @@ export function plan(query: Query, providers: readonly ProviderEntry[]): Plan {
     }
 
     // A year bound a provider cannot express is not disqualifying — it reads
-    // wider and the orchestrator filters afterwards. Recorded so the cost is
-    // visible rather than accidental.
-    const wantsYears = query.years?.from !== undefined || query.years?.to !== undefined;
-    planned.push({ provider, filterYearsLocally: wantsYears && !caps.yearFilter });
+    // wider, and `applyPolicy` drops the out-of-range papers afterwards for
+    // every provider alike, so nothing here has to say so. A
+    // `filterYearsLocally` flag used to be computed at this line and read by
+    // nobody: the post-filter it described was already unconditional.
+    planned.push(provider);
   }
 
   return { planned, skipped };

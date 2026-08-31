@@ -37,31 +37,18 @@
    * It is wired to `prefers-color-scheme` rather than to a toggle. A toggle
    * needs a control, persistence and a server/client hydration story for the
    * initial paint; the OS preference needs none of those and is what a reader
-   * who wants dark mode has already set. `.dark` is kept as a selector beside
-   * the media query so a toggle can be added later without moving the tokens.
+   * who wants dark mode has already set.
+   *
+   * A `.dark` class selector used to sit here too, carrying a byte-identical
+   * copy of these twenty tokens, "so a toggle can be added later without
+   * moving the tokens". It saved nothing and risked something. Nothing added
+   * the class, and `darkMode: 'media'` keys Tailwind's own `dark:` variants to
+   * the media query — so setting `.dark` by hand would have flipped these
+   * custom properties while leaving every `dark:` utility unchanged, which is
+   * a half-applied theme rather than a working toggle. Adding a real one means
+   * changing `darkMode` to `'class'` and moving these tokens then; two copies
+   * free to drift in the meantime bought nothing toward it.
    */
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 84% 4.9%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
-  }
-
   @media (prefers-color-scheme: dark) {
     :root {
       --background: 222.2 84% 4.9%;

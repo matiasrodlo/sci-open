@@ -75,7 +75,7 @@ export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOut
   }));
 
   const settled = await Promise.all(
-    plan.planned.map(async ({ provider }): Promise<{ papers: Paper[]; report: ProviderReport }> => {
+    plan.planned.map(async (provider): Promise<{ papers: Paper[]; report: ProviderReport }> => {
       const startedAt = Date.now();
       const nativeQuery = provider.translate(query, { openAccessOnly });
 

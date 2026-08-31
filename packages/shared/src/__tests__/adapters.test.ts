@@ -27,7 +27,7 @@ function record(over: Partial<OARecord> = {}): OARecord {
     topics: ['genomics', 'crispr'],
     language: 'en',
     citationCount: 17,
-    sourceMetadata: { source: 'europepmc', latency: 421, enriched: true },
+    sourceMetadata: { source: 'europepmc', latency: 421 },
     createdAt: '2024-01-01T00:00:00.000Z',
     updatedAt: '2024-02-01T00:00:00.000Z',
     ...over

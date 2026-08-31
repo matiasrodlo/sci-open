@@ -34,7 +34,7 @@ function response(over: Partial<SearchResponse> = {}): SearchResponse {
     oaStatus: 'published',
     abstract: LONG_ABSTRACT,
     createdAt: '2024-01-01T00:00:00.000Z',
-    sourceMetadata: { source: 'europepmc', latency: 12, enriched: true }
+    sourceMetadata: { source: 'europepmc', latency: 12 }
   } as OARecord;
 
   return { hits: [hit], facets: {}, page: 1, pageSize: 20, total: 1, ...over };
@@ -71,15 +71,14 @@ describe('SearchCacheManager round trip', () => {
   });
 
   it('keeps every field of sourceMetadata', async () => {
-    // The same write path also stripped `enriched`, so provenance was lost
-    // on the second request for a query.
+    // The write path used to strip this object, so provenance was lost on the
+    // second request for a query.
     await cache.cacheSearchResults('crispr', PARAMS, response());
     const cached = await cache.getCachedSearchResults('crispr', PARAMS);
 
     expect(cached!.hits[0].sourceMetadata).toEqual({
       source: 'europepmc',
-      latency: 12,
-      enriched: true
+      latency: 12
     });
   });
 

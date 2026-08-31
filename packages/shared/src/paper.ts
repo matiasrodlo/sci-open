@@ -90,13 +90,6 @@ export type FieldSources = Partial<Record<ProvenancedField, ProviderId>>;
  * The field exists so that treating them as one paper later is an additive
  * change rather than a rewrite of `id` generation, which everything keys on.
  */
-export type PaperVersion = {
-  stage: PaperStage;
-  doi?: string;
-  year?: number;
-  ref: SourceRef;
-};
-
 export type Paper = {
   id: string;
   doi?: string;
@@ -122,9 +115,6 @@ export type Paper = {
   sources: SourceRef[];
   /** Who supplied each merged field. Empty when there was nothing to choose between. */
   fieldSources: FieldSources;
-  /** Reserved; see `PaperVersion`. */
-  versions?: PaperVersion[];
-
   retrievedAt: string;
   updatedAt?: string;
 

@@ -9,7 +9,6 @@ export type OASource =
 export type SourceMetadata = {
   source?: string;
   latency?: number;
-  enriched?: boolean;
 };
 
 export type OARecord = {
