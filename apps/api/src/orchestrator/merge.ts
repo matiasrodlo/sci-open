@@ -1,4 +1,4 @@
-import type { FieldSources, Paper, ProvenancedField, ProviderId, SourceRef } from '@open-access-explorer/shared';
+import type { FieldSources, Paper, ProvenancedField, ProviderId } from '@open-access-explorer/shared';
 
 /**
  * One work per paper, assembled from everything the providers said about it.

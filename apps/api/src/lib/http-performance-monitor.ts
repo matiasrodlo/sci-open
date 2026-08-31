@@ -1,4 +1,4 @@
-import { HttpPoolMetrics, httpClientFactory } from './http-client-factory';
+import { httpClientFactory } from './http-client-factory';
 import { log } from './logger';
 
 export interface PerformanceMetrics {
@@ -84,7 +84,7 @@ export class HttpPerformanceMonitor {
           connectionReuseRate: metrics.totalRequests > 0 ? metrics.reusedConnections / metrics.totalRequests : 0,
           averageResponseTime: metrics.averageResponseTime,
           errorRate: metrics.errorRate,
-          throughput: this.calculateThroughput(service, metrics.totalRequests)
+          throughput: this.calculateThroughput(service)
         };
 
         this.recordMetric(service, performanceMetric);
@@ -95,7 +95,7 @@ export class HttpPerformanceMonitor {
   /**
    * Calculate throughput for a service
    */
-  private calculateThroughput(service: string, totalRequests: number): number {
+  private calculateThroughput(service: string): number {
     const serviceMetrics = this.metrics.get(service) || [];
     if (serviceMetrics.length < 2) return 0;
 

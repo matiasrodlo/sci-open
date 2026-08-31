@@ -1,6 +1,5 @@
 import { CacheManager, CacheStrategy } from './cache-manager';
 import { OARecord } from '@open-access-explorer/shared';
-import { createHash } from 'crypto';
 
 export class PaperCacheManager {
   private cacheManager: CacheManager;
