@@ -13,21 +13,9 @@ export interface PerformanceMetrics {
   throughput: number; // requests per second
 }
 
-export interface PerformanceComparison {
-  before: PerformanceMetrics;
-  after: PerformanceMetrics;
-  improvement: {
-    connectionReuseRate: number;
-    responseTimeImprovement: number;
-    errorRateReduction: number;
-    throughputImprovement: number;
-  };
-}
-
 export class HttpPerformanceMonitor {
   private static instance: HttpPerformanceMonitor;
   private metrics: Map<string, PerformanceMetrics[]> = new Map();
-  private baselineMetrics: Map<string, PerformanceMetrics> = new Map();
   private isMonitoring: boolean = false;
   private monitoringInterval?: NodeJS.Timeout;
 
@@ -126,19 +114,6 @@ export class HttpPerformanceMonitor {
   }
 
   /**
-   * Set baseline metrics for comparison
-   */
-  setBaseline(service: string, metric: PerformanceMetrics): void {
-    this.baselineMetrics.set(service, metric);
-    log.debug(`Baseline metrics set for ${service}:`, {
-      connectionReuseRate: metric.connectionReuseRate,
-      averageResponseTime: metric.averageResponseTime,
-      errorRate: metric.errorRate,
-      throughput: metric.throughput
-    });
-  }
-
-  /**
    * Get current metrics for a service
    */
   getCurrentMetrics(service: string): PerformanceMetrics | null {
@@ -146,27 +121,6 @@ export class HttpPerformanceMonitor {
     if (!serviceMetrics || serviceMetrics.length === 0) return null;
     
     return serviceMetrics[serviceMetrics.length - 1];
-  }
-
-  /**
-   * Get performance comparison for a service
-   */
-  getPerformanceComparison(service: string): PerformanceComparison | null {
-    const baseline = this.baselineMetrics.get(service);
-    const current = this.getCurrentMetrics(service);
-    
-    if (!baseline || !current) return null;
-
-    return {
-      before: baseline,
-      after: current,
-      improvement: {
-        connectionReuseRate: current.connectionReuseRate - baseline.connectionReuseRate,
-        responseTimeImprovement: baseline.averageResponseTime - current.averageResponseTime,
-        errorRateReduction: baseline.errorRate - current.errorRate,
-        throughputImprovement: current.throughput - baseline.throughput
-      }
-    };
   }
 
   /**

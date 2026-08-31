@@ -165,23 +165,26 @@ curl -X POST http://localhost:4000/api/cache/clear \
 
 ### Performance Monitoring
 
-All four are admin-gated on the same bearer token as the cache routes.
+All three are admin-gated on the same bearer token as the cache routes.
 
 ```bash
 # Across every service
 curl http://localhost:4000/api/performance/metrics \
   -H "Authorization: Bearer $ADMIN_API_KEY"
 
-# One service, and against its baseline
+# One service
 curl http://localhost:4000/api/performance/metrics/<service> \
-  -H "Authorization: Bearer $ADMIN_API_KEY"
-curl http://localhost:4000/api/performance/comparison/<service> \
   -H "Authorization: Bearer $ADMIN_API_KEY"
 
 # Rendered report
 curl http://localhost:4000/api/performance/report \
   -H "Authorization: Bearer $ADMIN_API_KEY"
 ```
+
+There was a fourth, `/api/performance/comparison/<service>`, which returned a
+pooled-versus-unpooled comparison. It could only ever answer `404`: the
+baseline half was written by a `setBaseline` nothing called, and there was
+nothing to call it with, because this service has no unpooled arm to measure.
 
 The monitor is read by these endpoints only. Nothing consults it to decide
 which providers are asked — the scoring layer that did was deleted in the

@@ -349,27 +349,6 @@ async function routes(fastify: FastifyInstance) {
     }
   });
 
-  fastify.get('/api/performance/comparison/:service', adminOnly, async (request, reply) => {
-    try {
-      const { service } = request.params as { service: string };
-      const comparison = httpPerformanceMonitor.getPerformanceComparison(service);
-    
-      if (!comparison) {
-        reply.code(404);
-        return { error: `No comparison data found for service: ${service}` };
-      }
-    
-      return {
-        success: true,
-        data: comparison,
-        timestamp: new Date().toISOString()
-      };
-    } catch (error: any) {
-      reply.code(500);
-      return clientError(error, request.id);
-    }
-  });
-
   fastify.get('/api/performance/report', adminOnly, async (request, reply) => {
     try {
       const report = httpPerformanceMonitor.generateReport();

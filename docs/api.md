@@ -115,6 +115,43 @@ reported the same way.
 
 ---
 
+### PDF Download
+
+**POST** `/api/download-pdf`
+
+Streams a PDF through the API and returns it as an attachment. Publishers
+rarely allow a cross-origin fetch from the browser, which is the reason this
+proxy exists rather than the client fetching the file directly.
+
+**Request:**
+```json
+{
+  "pdfUrl": "https://example.org/article.pdf",
+  "paperId": "openalex:W2741809807"
+}
+```
+
+`pdfUrl` is required and must be `http` or `https`. `paperId` is optional and
+used only for logging.
+
+**Response:** the PDF bytes, with `Content-Type: application/pdf` and
+`Content-Disposition: attachment`.
+
+The URL is resolved and checked before anything is fetched, so this endpoint
+cannot be used to reach the internal network:
+
+| | |
+|---|---|
+| **400** | Not a valid URL, or the host would not resolve |
+| **403** | Resolves to a non-public address, or a redirect left http/https |
+| **413** | Larger than the download limit |
+| **415** | Upstream served something that is not a PDF |
+| **502** | Upstream could not be fetched |
+
+The check is applied again to each redirect, not only to the URL supplied.
+
+---
+
 ### Health Check
 
 **GET** `/health`
@@ -162,10 +199,6 @@ Aggregate HTTP client metrics across all provider services.
 **GET** `/api/performance/metrics/:service`
 
 Metrics for one service.
-
-**GET** `/api/performance/comparison/:service`
-
-Pooled versus unpooled comparison for one service.
 
 **GET** `/api/performance/report`
 
