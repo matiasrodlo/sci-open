@@ -49,7 +49,7 @@ Everything after this rewrites files that had uncommitted changes in them. Get t
 - [x] **Ranking and enrichment salvaged** to `docs/salvage/`, with headers recording what to fix on the way back in.
 - [x] **A real `UNPAYWALL_EMAIL` is set** and the User-Agent parsing is fixed, in one commit.
 - [x] **The worktree is gone** — 544 MB freed — and `.claude/` is ignored.
-- [x] **History rewritten.** `.git` went from **90 MB to 708 KB**: 228 MB of `node_modules` and 177 MB of `.next` stripped from 76 commits, against 3.6 MB of actual source. All 76 commits survive and the HEAD tree is byte-identical. Local `main` is now disjoint from `origin/main` and needs a force-push to publish.
+- [x] **History rewritten.** `.git` went from **90 MB to 708 KB**: 228 MB of `node_modules` and 177 MB of `.next` stripped from 76 commits, against 3.6 MB of actual source. All 76 commits survive and the HEAD tree is byte-identical. ~~Local `main` is now disjoint from `origin/main` and needs a force-push to publish.~~ **No longer true, and checked rather than assumed — 2026-08-30.** The remote was brought onto the rewritten history at some point after this was written. `origin/main` is an ancestor of local `main`, `git merge-base --is-ancestor` agrees, and publishing nine commits was an ordinary fast-forward — `a3a07e68..4f14bf6d`, no force. Left standing with its correction because a stale instruction to `--force` is the kind that gets followed: this claim was read, believed, and only then tested.
 
 > **Corrected here**
 >
