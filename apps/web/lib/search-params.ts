@@ -49,3 +49,30 @@ export function withFilter(
   params.delete('page');
   return params;
 }
+
+/**
+ * The page bound the API enforces, stated once on this side too.
+ *
+ * Keep in step with `MAX_PAGE` in `apps/api/src/lib/schemas.ts`. Duplicated
+ * rather than imported because that file is a server-side schema in another
+ * workspace package; the number is small, stable, and named on both sides so
+ * the pair is findable.
+ */
+export const MAX_PAGE = 1000;
+
+/**
+ * The page a URL is asking for, clamped to one that can exist.
+ *
+ * `parseInt(page ?? '') || 1` already mapped a missing or non-numeric value to
+ * 1, and it let a negative one through, because `-5` is truthy. The API's
+ * schema requires `1 <= page <= MAX_PAGE` and answers 400 outside it, which
+ * arrives in the UI as "There was an error performing your search" — telling
+ * the reader the service is broken when the truth is that their URL asked for
+ * a page that does not exist. A stale bookmark or a hand-edited address should
+ * land on the nearest real page instead.
+ */
+export function toPage(value: string | string[] | undefined): number {
+  const parsed = parseInt(toSingle(value) ?? '', 10);
+  if (!Number.isFinite(parsed)) return 1;
+  return Math.min(Math.max(parsed, 1), MAX_PAGE);
+}

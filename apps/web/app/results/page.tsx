@@ -8,7 +8,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ExportButton } from '@/components/ExportButton';
 import { ProviderCoverage } from '@/components/ProviderCoverage';
 import { searchPapers } from '@/lib/fetcher';
-import { toList, toSingle } from '@/lib/search-params';
+import { toList, toSingle, toPage } from '@/lib/search-params';
 import { SearchParams } from '@open-access-explorer/shared';
 
 // Force dynamic rendering
@@ -27,13 +27,14 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
   const yearFrom = toSingle(searchParams.yearFrom);
   const yearTo = toSingle(searchParams.yearTo);
   const sort = toSingle(searchParams.sort);
-  const page = toSingle(searchParams.page);
 
   if (!query) {
     return <EmptyState type="no-query" />;
   }
 
-  const currentPage = parseInt(page ?? '') || 1;
+  // Clamped rather than passed through — an out-of-range page used to reach the
+  // API, fail its schema, and surface as "Search Error". See `toPage`.
+  const currentPage = toPage(searchParams.page);
   const pageSize = 20; // Fixed page size like Web of Science
 
   const searchParamsObj: SearchParams = {
@@ -42,7 +43,12 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
     pageSize: pageSize,
     sort: (sort as any) || 'relevance',
     filters: {
-      source: toList(searchParams.sources),
+      // `source`, singular, which is what the API field, the facet key and
+      // every other filter on this page are called. It read `sources` here and
+      // so silently dropped the filter; nothing writes that parameter today,
+      // but the source facet group is the obvious next thing to add and it
+      // would have written the singular.
+      source: toList(searchParams.source),
       yearFrom: yearFrom ? parseInt(yearFrom) : undefined,
       yearTo: yearTo ? parseInt(yearTo) : undefined,
       oaStatus: toList(searchParams.oaStatus),

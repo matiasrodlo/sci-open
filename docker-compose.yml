@@ -2,7 +2,15 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      # Bound to the loopback interface, not to every one. The dev servers run
+      # on the host and reach Redis through this mapping, so it stays — but
+      # `6379:6379` published an unauthenticated Redis on every address the host
+      # answers on. That is fine on a laptop and is what the README's workflow
+      # uses; it is not fine on the server this same file invites, with its
+      # production NODE_ENV and `restart: unless-stopped`. The `api` service
+      # does not use this mapping at all: it reaches Redis over the compose
+      # network by service name.
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru

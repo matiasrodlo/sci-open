@@ -9,25 +9,23 @@ export class PaperCacheManager {
   }
 
   /**
-   * Cache one paper under both keys it can be looked up by.
+   * Cache one paper under the key it is looked up by.
    *
-   * Two copies, because `/api/paper/:id` is reached by either — a `source:id`
-   * from a result set, or a bare DOI. Both entries are the whole record, so
-   * either route answers without a second fetch.
-   *
-   * It used to write four. A title-hash copy and a separately extracted
-   * metadata blob went out on every detail view, and the methods that read
-   * them back had no callers — so two of every four writes were paid for and
-   * never collected. They were removed with their readers.
+   * It used to write four, then two. The title-hash copy and a separately
+   * extracted metadata blob went first, with the readers that never had
+   * callers. The DOI copy has now gone the same way: `/api/paper/:id` takes
+   * `source:nativeId`, which is what `docs/api.md` documents and the only thing
+   * the frontend sends, and the route's DOI probe in front of it was gated on
+   * `id.includes('10.')` — true of any arXiv id from 2010 on — so it spent a
+   * Redis round trip per request on a key that only a bare DOI could match. A
+   * bare DOI is not resolvable here anyway: `splitPaperId` finds no provider
+   * prefix and the lookup returns null, so the entry made the endpoint answer
+   * 200 while it lived and 404 once it expired. Asking about a DOI is what
+   * `POST /api/search` with `{ doi }` is for.
    */
   async cachePaperDetails(paper: OARecord): Promise<void> {
     const paperKey = this.generatePaperKey(paper.id);
     await this.cacheManager.set(paperKey, paper, CacheStrategy.PAPER_DETAILS);
-
-    if (paper.doi) {
-      const doiKey = this.generateDoiKey(paper.doi);
-      await this.cacheManager.set(doiKey, paper, CacheStrategy.PAPER_DETAILS);
-    }
   }
 
   /**
@@ -39,25 +37,9 @@ export class PaperCacheManager {
   }
 
   /**
-   * Get cached paper by DOI
-   */
-  async getCachedPaperByDoi(doi: string): Promise<OARecord | null> {
-    const doiKey = this.generateDoiKey(doi);
-    return await this.cacheManager.get<OARecord>(doiKey, CacheStrategy.PAPER_DETAILS);
-  }
-
-  /**
    * Generate cache key for paper
    */
   private generatePaperKey(paperId: string): string {
     return this.cacheManager.generateKey('paper', paperId);
-  }
-
-  /**
-   * Generate cache key for DOI
-   */
-  private generateDoiKey(doi: string): string {
-    const normalizedDoi = doi.toLowerCase().trim();
-    return this.cacheManager.generateKey('doi', normalizedDoi);
   }
 }

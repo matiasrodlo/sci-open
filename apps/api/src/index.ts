@@ -204,24 +204,22 @@ async function routes(fastify: FastifyInstance) {
         reply.header('X-Response-Time', responseTime.toString());
         return cached;
       }
-    
-      // Try to get by DOI if ID looks like a DOI
-      if (id.includes('10.')) {
-        const cachedByDoi = await paperCacheManager.getCachedPaperByDoi(id);
-        if (cachedByDoi) {
-          const responseTime = Date.now() - startTime;
-          fastify.log.info({ 
-            id, 
-            responseTime,
-            title: cachedByDoi.title 
-          }, 'Returning cached paper details by DOI');
-          reply.header('Cache-Control', 'public, max-age=600');
-          reply.header('X-Cache-Hit', 'doi');
-          reply.header('X-Response-Time', responseTime.toString());
-          return cachedByDoi;
-        }
-      }
-    
+
+      // A second lookup by DOI used to sit here, gated on `id.includes('10.')`.
+      // That test is looser than it reads — an arXiv id like `arxiv:2310.12345`
+      // contains `10.` — so ordinary requests paid a Redis round trip for a key
+      // nothing had written, which is the same guaranteed miss the `partial:`
+      // probe was removed from the search path for.
+      //
+      // Its tail was worse than the cost. For an id that genuinely is a bare
+      // DOI the lookup below returns null, because `splitPaperId` finds no
+      // provider prefix — so the URL answered 200 while an entry happened to be
+      // cached and 404 once it expired. This endpoint takes `source:nativeId`,
+      // as `docs/api.md` says and as the frontend only ever sends; a DOI is
+      // asked about through `POST /api/search` with `{ doi }`, which resolves
+      // it properly across every provider that can answer. The answer here is
+      // now consistently 404, and `cachePaperDetails` no longer writes a second
+      // copy under a key nothing reads.
       fastify.log.info({ id }, 'No cache hit, fetching paper details');
 
       // One question, asked of the provider that owns the id. Which request
