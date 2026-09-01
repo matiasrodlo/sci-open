@@ -25,32 +25,20 @@ import { execSync } from 'node:child_process';
 /**
  * Advisories we are knowingly carrying, and what clears each.
  *
- * Every entry here is blocked on a major upgrade that the runbook scopes as
- * its own task, because the fix version is behind a major. Fastify 4 -> 5 has
- * been done and its two entries are gone; what remains is Next, whose patches
- * are >=15.5.21 against a 14.x tree, and which requires React 19 and makes
- * `params` and `searchParams` async in every server component.
+ * **Empty, and that is the intended state rather than a milestone.** It held
+ * ten: two cleared by Fastify 4 -> 5 and eight by Next 14 -> 15, each entry
+ * naming the upgrade that would remove it. Both upgrades have been done, the
+ * gate reported all ten stale, and the tree is now at zero high or critical
+ * against 27 when this list was written.
  *
- * Nothing else belongs in this list. An advisory that `pnpm update` or a
- * `pnpm.overrides` entry can resolve should be resolved — that is how the
- * other 97 went.
+ * The gate's value was never that the list was empty — it was that a *new* high
+ * advisory breaks the build while every carried one is named, attributed to
+ * scheduled work, and impossible to add without saying why. That is what kept
+ * the list shrinking instead of accumulating, and it is why an entry added here
+ * has to carry the same two things: a reason, and the specific change that
+ * removes it.
  */
-const ACCEPTED = [
-  // Fastify 4 -> 5 is done, and both entries it covered are gone: the
-  // Content-Type body-validation bypass and the find-my-way advisory reached
-  // through fastify@4's pinned router. The gate reported them stale on the
-  // upgrade, which is the half of its job that is easy to leave untested.
-
-  // Next 14 -> 15. Seven DoS/SSRF advisories whose patch versions are all 15.x.
-  { id: 'GHSA-h25m-26qc-wcjf', pkg: 'next', clearedBy: 'Next 14 -> 15' },
-  { id: 'GHSA-q4gf-8mx6-v5v3', pkg: 'next', clearedBy: 'Next 14 -> 15' },
-  { id: 'GHSA-36qx-fr4f-26g5', pkg: 'next', clearedBy: 'Next 14 -> 15' },
-  { id: 'GHSA-8h8q-6873-q5fj', pkg: 'next', clearedBy: 'Next 14 -> 15' },
-  { id: 'GHSA-c4j6-fc7j-m34r', pkg: 'next', clearedBy: 'Next 14 -> 15' },
-  { id: 'GHSA-89xv-2m56-2m9x', pkg: 'next', clearedBy: 'Next 14 -> 15' },
-  { id: 'GHSA-m99w-x7hq-7vfj', pkg: 'next', clearedBy: 'Next 14 -> 15' },
-  { id: 'GHSA-p9j2-gv94-2wf4', pkg: 'next', clearedBy: 'Next 14 -> 15' }
-];
+const ACCEPTED = [];
 
 const BLOCKING = new Set(['high', 'critical']);
 

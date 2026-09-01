@@ -33,6 +33,24 @@ function apiOrigin(): string {
  * copied onto the next one. `host` in particular would make the API reject or
  * mis-route the request.
  */
+/**
+ * `x-forwarded-for` is deliberately absent from this list, and it is the one
+ * header whose passing-through matters.
+ *
+ * Everything the browser sends reaches the API through this handler, so the API
+ * sees one address — this process — for every visitor unless the chain reaches
+ * it. Its rate limit keys on that, and only believes the header from hops named
+ * in its own `TRUST_PROXY`; forwarding the chain intact is this side's half of
+ * the arrangement.
+ *
+ * Nothing can be *added* to the chain here. A route handler cannot see its own
+ * socket, so the address this process received the request from is not knowable
+ * from inside it. `NextRequest.ip` used to stand in and was removed in Next 15;
+ * it was only ever populated on Vercel, so self-hosted it was already
+ * undefined. The chain therefore has to be started by a real proxy or load
+ * balancer in front of this app — which is also the only arrangement in which
+ * the API could safely believe it.
+ */
 const HOP_BY_HOP = new Set([
   'host', 'connection', 'keep-alive', 'transfer-encoding', 'upgrade',
   'proxy-authenticate', 'proxy-authorization', 'te', 'trailer',
@@ -47,31 +65,6 @@ function forwardable(headers: Headers): Headers {
   return out;
 }
 
-/**
- * Carry the caller's address on to the API.
- *
- * Everything the browser sends reaches the API through this handler, so without
- * this the API sees one address — this process — for every visitor, and its
- * rate limit becomes a single site-wide bucket. The API only believes the
- * header from hops named in its own `TRUST_PROXY`; sending it is this side's
- * half of that arrangement.
- *
- * An existing chain is passed through rather than appended to. Appending
- * correctly means adding the address *we* received the request from, and a
- * route handler cannot see its own socket — so the honest options are to leave
- * the chain the upstream proxy built or to corrupt it, and the first is right.
- * `request.ip` is populated where the platform supplies it and is the only
- * address available here otherwise.
- */
-function withCallerAddress(headers: Headers, request: NextRequest): Headers {
-  if (headers.has('x-forwarded-for')) return headers;
-
-  const caller = request.ip;
-  if (caller) headers.set('x-forwarded-for', caller);
-
-  return headers;
-}
-
 async function proxy(request: NextRequest, path: string[]): Promise<Response> {
   const target = `${apiOrigin()}/api/${path.map(encodeURIComponent).join('/')}${request.nextUrl.search}`;
 
@@ -81,7 +74,7 @@ async function proxy(request: NextRequest, path: string[]): Promise<Response> {
   try {
     upstream = await fetch(target, {
       method: request.method,
-      headers: withCallerAddress(forwardable(request.headers), request),
+      headers: forwardable(request.headers),
       ...(hasBody ? { body: await request.arrayBuffer() } : {}),
       // A PDF can be tens of megabytes; the body is handed on as a stream
       // rather than buffered here.
@@ -104,16 +97,20 @@ async function proxy(request: NextRequest, path: string[]): Promise<Response> {
   });
 }
 
-type Context = { params: { path: string[] } };
+/**
+ * `params` is a promise since Next 15. Awaiting it is the whole of the change:
+ * the value inside is the same shape it always was.
+ */
+type Context = { params: Promise<{ path: string[] }> };
 
 export async function GET(request: NextRequest, { params }: Context) {
-  return proxy(request, params.path);
+  return proxy(request, (await params).path);
 }
 
 export async function POST(request: NextRequest, { params }: Context) {
-  return proxy(request, params.path);
+  return proxy(request, (await params).path);
 }
 
 export async function HEAD(request: NextRequest, { params }: Context) {
-  return proxy(request, params.path);
+  return proxy(request, (await params).path);
 }

@@ -4,11 +4,13 @@ const path = require('path');
 const nextConfig = {
   // Emit .next/standalone, which apps/web/Dockerfile copies into the runner stage
   output: 'standalone',
-  experimental: {
-    // Trace from the workspace root so the pnpm-linked @open-access-explorer/*
-    // packages are included in the standalone bundle
-    outputFileTracingRoot: path.join(__dirname, '../../'),
-  },
+
+  // Trace from the workspace root so the pnpm-linked @open-access-explorer/*
+  // packages are included in the standalone bundle. Top-level since Next 15;
+  // it was `experimental.outputFileTracingRoot` before, and left there it is
+  // ignored with a warning rather than applied — which would drop the linked
+  // workspace packages out of the standalone output.
+  outputFileTracingRoot: path.join(__dirname, '../../'),
 
   // There was an `env` block here inlining NEXT_PUBLIC_API_BASE, and a
   // `rewrites()` entry pointing /api/:path* at it. Both baked the API origin

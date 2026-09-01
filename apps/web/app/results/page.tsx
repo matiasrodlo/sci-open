@@ -15,11 +15,23 @@ import { SearchParams } from '@open-access-explorer/shared';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/** The query string, once resolved. */
+type ResultsSearchParams = { [key: string]: string | string[] | undefined };
+
+/**
+ * `searchParams` is a promise since Next 15. It is awaited once, in the page,
+ * and the resolved object is passed down — rather than threading the promise
+ * through and awaiting it twice for the two things that read it.
+ *
+ * Awaiting it here does not cost the streaming this page is arranged for. The
+ * slow part is the search itself, and that stays inside `ResultsContent` behind
+ * its own Suspense boundary; the query string resolves immediately.
+ */
 interface ResultsPageProps {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<ResultsSearchParams>;
 }
 
-async function ResultsContent({ searchParams }: ResultsPageProps) {
+async function ResultsContent({ searchParams }: { searchParams: ResultsSearchParams }) {
   // Multi-valued filters arrive as repeated parameters, so they are read with
   // `toList` rather than split on a comma. See `lib/search-params.ts` — a
   // venue like `Bioinformatics (Oxford, England)` cannot survive comma-joining.
@@ -129,10 +141,12 @@ async function ResultsContent({ searchParams }: ResultsPageProps) {
   }
 }
 
-export default function ResultsPage({ searchParams }: ResultsPageProps) {
+export default async function ResultsPage({ searchParams }: ResultsPageProps) {
+  const params = await searchParams;
+
   // Create a unique key from search params to force re-render
-  const searchKey = JSON.stringify(searchParams);
-  const query = (searchParams.q as string) || '';
+  const searchKey = JSON.stringify(params);
+  const query = (params.q as string) || '';
   
   return (
     <div className="space-y-8">
@@ -141,7 +155,7 @@ export default function ResultsPage({ searchParams }: ResultsPageProps) {
       </Suspense>
       
       <Suspense key={searchKey} fallback={<LoadingSkeleton />}>
-        <ResultsContent searchParams={searchParams} />
+        <ResultsContent searchParams={params} />
       </Suspense>
     </div>
   );
