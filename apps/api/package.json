@@ -17,14 +17,14 @@
     "typecheck": "tsc --noEmit && tsc -p tsconfig.scripts.json"
   },
   "dependencies": {
-    "@fastify/cors": "^8.5.0",
-    "@fastify/helmet": "^11.1.1",
-    "@fastify/rate-limit": "^9.1.0",
+    "@fastify/cors": "^11.3.0",
+    "@fastify/helmet": "^13.1.1",
+    "@fastify/rate-limit": "^11.2.0",
     "@open-access-explorer/shared": "workspace:*",
     "axios": "^1.20.0",
     "axios-retry": "^4.5.0",
     "dotenv": "^17.4.2",
-    "fastify": "^4.29.1",
+    "fastify": "^5.12.1",
     "ioredis": "^5.11.1",
     "xml2js": "^0.6.2"
   },

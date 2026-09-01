@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseTrustProxy, trustsAnyProxy } from '../trust-proxy';
+import { parseTrustProxy, trustProxyWarning, trustsAnyProxy } from '../trust-proxy';
 
 describe('parseTrustProxy', () => {
   it('trusts nothing when unset', () => {
@@ -17,9 +17,16 @@ describe('parseTrustProxy', () => {
     expect(parseTrustProxy('false')).toBe(false);
   });
 
-  it('reads a hop count as a number', () => {
-    expect(parseTrustProxy('1')).toBe(1);
-    expect(parseTrustProxy('2')).toBe(2);
+  it('refuses a hop count rather than passing it on', () => {
+    // Fastify 4 took a number here. Fastify 5 answers one with a function that
+    // trusts no address at all — hop-count-only trust cannot validate the
+    // immediate peer, so a direct client could spoof `X-Forwarded-*` by
+    // supplying enough hops. Failing closed is right upstream; handing the
+    // number over would mean a deployment that looks configured, boots
+    // cleanly, and silently keys the rate limit on the connecting address.
+    expect(parseTrustProxy('1')).toBe(false);
+    expect(parseTrustProxy('2')).toBe(false);
+    expect(parseTrustProxy('0')).toBe(false);
   });
 
   it('passes addresses, CIDRs and named ranges through for proxy-addr', () => {
@@ -31,17 +38,40 @@ describe('parseTrustProxy', () => {
 
   it('trims surrounding whitespace', () => {
     expect(parseTrustProxy('  loopback  ')).toBe('loopback');
-    expect(parseTrustProxy('  3  ')).toBe(3);
+    expect(parseTrustProxy('  3  ')).toBe(false);
   });
 });
 
 describe('trustsAnyProxy', () => {
   it('is false only for the off setting', () => {
-    // A hop count of 0 is still a configured value, and `''` is already false
-    // by the time it gets here — only `false` means "key on the socket".
     expect(trustsAnyProxy(false)).toBe(false);
     expect(trustsAnyProxy(true)).toBe(true);
-    expect(trustsAnyProxy(1)).toBe(true);
     expect(trustsAnyProxy('loopback')).toBe(true);
+    expect(trustsAnyProxy('10.0.0.1')).toBe(true);
+  });
+});
+
+describe('trustProxyWarning', () => {
+  // A hop count parses to `false`, which `trustsAnyProxy` reports the same way
+  // as "unset" — so without this the operator would get the wrong explanation,
+  // or none, for a variable they had deliberately set.
+  it('explains a hop count that cannot be honoured', () => {
+    const warning = trustProxyWarning('2');
+
+    expect(warning).toContain('hop count');
+    expect(warning).toContain('Fastify 5');
+  });
+
+  it('says nothing about a usable value', () => {
+    expect(trustProxyWarning('loopback')).toBeUndefined();
+    expect(trustProxyWarning('10.0.0.1')).toBeUndefined();
+    expect(trustProxyWarning('true')).toBeUndefined();
+  });
+
+  it('says nothing when the variable is simply unset', () => {
+    // The caller has its own line for that, and two warnings for one cause
+    // would bury the one that names a mistake.
+    expect(trustProxyWarning(undefined)).toBeUndefined();
+    expect(trustProxyWarning('')).toBeUndefined();
   });
 });

@@ -35,8 +35,16 @@ caller, taken from `X-Forwarded-For`:
 ```env
 TRUST_PROXY=10.0.1.7          # the web tier, or the load balancer in front of it
 TRUST_PROXY=172.16.0.0/12     # a CIDR, or a comma-separated list of either
-TRUST_PROXY=1                 # or a hop count, when position is what is known
+TRUST_PROXY=loopback          # or a named range
 ```
+
+A bare number used to mean "trust this many hops" and no longer does. Fastify 5
+answers a hop count by trusting *nothing* — hop-count-only trust cannot check
+the immediate peer, so a direct client could spoof `X-Forwarded-*` by supplying
+enough hops. Rather than hand the value over to be ignored in silence, the
+service refuses it and logs why at startup; a deployment carrying `TRUST_PROXY=1`
+would otherwise keep booting, keep looking configured, and quietly return to one
+rate-limit bucket for every visitor.
 
 Point it at the proxy and nothing else. `X-Forwarded-For` is a request header,
 so trusting an address that is not really a proxy lets any caller choose their

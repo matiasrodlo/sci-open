@@ -22,13 +22,15 @@ import { SingleFlight } from './lib/single-flight';
 import { log, useLogger } from './lib/logger';
 import { searchBodySchema, paperParamsSchema, downloadPdfBodySchema } from './lib/schemas';
 import { clientError } from './lib/client-error';
-import { parseTrustProxy, trustsAnyProxy } from './lib/trust-proxy';
+import { parseTrustProxy, trustProxyWarning, trustsAnyProxy } from './lib/trust-proxy';
 import { ProviderCache, lookupPaper } from './orchestrator';
 import { runOrchestrator } from './orchestrator/from-search-params';
 
 // See `lib/trust-proxy.ts`. This is what decides whether `request.ip` — and so
-// the rate limiter's key — is the caller or the proxy in front of them.
-const trustProxy = parseTrustProxy();
+// the rate limiter's key — is the caller or the proxy in front of them. Read
+// once and handed to both, so the parse and the warning cannot disagree.
+const trustProxySetting = process.env.TRUST_PROXY;
+const trustProxy = parseTrustProxy(trustProxySetting);
 
 const fastify = Fastify({
   logger: {
@@ -388,7 +390,10 @@ const start = async () => {
       );
     }
 
-    if (!trustsAnyProxy(trustProxy)) {
+    const trustProxyProblem = trustProxyWarning(trustProxySetting);
+    if (trustProxyProblem) {
+      fastify.log.warn(trustProxyProblem);
+    } else if (!trustsAnyProxy(trustProxy)) {
       fastify.log.warn(
         'TRUST_PROXY is not set: the rate limit is keyed on the connecting address. ' +
         'Behind the web tier that is one shared bucket for every visitor, not one each.'

@@ -26,21 +26,20 @@ import { execSync } from 'node:child_process';
  * Advisories we are knowingly carrying, and what clears each.
  *
  * Every entry here is blocked on a major upgrade that the runbook scopes as
- * its own task, because the fix version is behind a major: Fastify's patch is
- * >=5.7.2 against a 4.x tree, and Next's are >=15.x against 14.x. Neither is a
- * dependency bump — Fastify 5 requires Node 20+ and changes the logger and
- * plugin contracts, and Next 15 requires React 19 and makes `params` and
- * `searchParams` async in every server component.
+ * its own task, because the fix version is behind a major. Fastify 4 -> 5 has
+ * been done and its two entries are gone; what remains is Next, whose patches
+ * are >=15.5.21 against a 14.x tree, and which requires React 19 and makes
+ * `params` and `searchParams` async in every server component.
  *
  * Nothing else belongs in this list. An advisory that `pnpm update` or a
  * `pnpm.overrides` entry can resolve should be resolved — that is how the
  * other 97 went.
  */
 const ACCEPTED = [
-  // Fastify 4 -> 5. Content-Type header tab character allows body validation bypass.
-  { id: 'GHSA-jx2c-rxcm-jvmq', pkg: 'fastify', clearedBy: 'Fastify 4 -> 5' },
-  // Reached only through fastify@4's pinned router.
-  { id: 'GHSA-c96f-x56v-gq3h', pkg: 'find-my-way', clearedBy: 'Fastify 4 -> 5' },
+  // Fastify 4 -> 5 is done, and both entries it covered are gone: the
+  // Content-Type body-validation bypass and the find-my-way advisory reached
+  // through fastify@4's pinned router. The gate reported them stale on the
+  // upgrade, which is the half of its job that is easy to leave untested.
 
   // Next 14 -> 15. Seven DoS/SSRF advisories whose patch versions are all 15.x.
   { id: 'GHSA-h25m-26qc-wcjf', pkg: 'next', clearedBy: 'Next 14 -> 15' },
