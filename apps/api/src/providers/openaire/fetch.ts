@@ -1,4 +1,5 @@
-import axios from 'axios';
+import { getPooledClient } from '../../lib/http-client-factory';
+import { getServiceConfig } from '../../lib/http-pool-config';
 import type { OpenAireParams } from './translate';
 
 /** The only I/O in this provider. */
@@ -34,7 +35,9 @@ export async function fetchPage(
 ): Promise<OpenAirePayload> {
   const { baseUrl = DEFAULT_BASE_URL, pageSize, offset, timeoutMs, signal, userAgent } = options;
 
-  const response = await axios.get<OpenAirePayload>(`${baseUrl}/publications`, {
+  const client = getPooledClient(baseUrl, getServiceConfig('openaire'));
+
+  const response = await client.get<OpenAirePayload>('/publications', {
     params: {
       ...params,
       size: pageSize,
@@ -45,6 +48,10 @@ export async function fetchPage(
     headers: { Accept: 'application/json', ...(userAgent ? { 'User-Agent': userAgent } : {}) },
     ...(signal ? { signal } : {})
   });
+
+  if (response.status >= 400) {
+    throw new OpenAireUnavailableError(`HTTP ${response.status}`);
+  }
 
   const payload = response.data ?? {};
 

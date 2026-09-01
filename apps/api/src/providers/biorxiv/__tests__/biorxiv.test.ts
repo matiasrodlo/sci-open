@@ -122,15 +122,20 @@ describe('fetchByDoi — the URL it builds', () => {
     // slash returns 3 records, the escaped one returns 404.
     const { fetchByDoi } = await import('../fetch');
     const seen: string[] = [];
-    const axios = (await import('axios')).default;
-    const spy = vi.spyOn(axios, 'get').mockImplementation(async (url: any) => {
-      seen.push(String(url));
-      return { data: { collection: [] } } as any;
-    });
+    const factory = await import('../../../lib/http-client-factory');
+    const spy = vi.spyOn(factory, 'getPooledClient').mockReturnValue({
+      get: async (url: string) => {
+        seen.push(String(url));
+        return { status: 200, data: { collection: [] } };
+      }
+    } as any);
 
     await fetchByDoi('10.1101/2025.10.27.684732', { timeoutMs: 1000 });
     spy.mockRestore();
 
+    // The path is relative to the pooled client's base URL now, so the
+    // assertion is on the path rather than on a whole URL — the property that
+    // matters is unchanged: the DOI's slash survives into it.
     expect(seen[0]).toContain('/details/biorxiv/10.1101/2025.10.27.684732');
     expect(seen.every(u => !u.includes('%2F'))).toBe(true);
   });

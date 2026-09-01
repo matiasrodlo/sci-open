@@ -1,4 +1,5 @@
-import axios from 'axios';
+import { getPooledClient } from '../../lib/http-client-factory';
+import { getServiceConfig } from '../../lib/http-pool-config';
 
 /**
  * The only I/O in this provider.
@@ -78,7 +79,9 @@ export async function fetchPage(
 ): Promise<EuropePmcPayload> {
   const { baseUrl = DEFAULT_BASE_URL, pageSize, offset, timeoutMs, signal, userAgent } = options;
 
-  const response = await axios.get<EuropePmcPayload>(`${baseUrl}/search`, {
+  const client = getPooledClient(baseUrl, getServiceConfig('europepmc'));
+
+  const response = await client.get<EuropePmcPayload>('/search', {
     params: {
       query: nativeQuery,
       format: 'json',
@@ -93,6 +96,14 @@ export async function fetchPage(
     ...(signal ? { signal } : {}),
     ...(userAgent ? { headers: { 'User-Agent': userAgent } } : {})
   });
+
+  // The pooled client resolves a 4xx rather than throwing — `validateStatus:
+  // status < 500` — so the status is read here. Without this a 429 or a 400
+  // would reach `assertSearchResponse` as a malformed body and be reported as
+  // Europe PMC returning nonsense rather than as Europe PMC saying no.
+  if (response.status >= 400) {
+    throw new EuropePmcUnavailableError(`HTTP ${response.status}`);
+  }
 
   const payload = response.data ?? {};
   assertSearchResponse(payload);

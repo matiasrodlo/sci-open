@@ -1,4 +1,5 @@
-import axios from 'axios';
+import { getPooledClient } from '../../lib/http-client-factory';
+import { getServiceConfig } from '../../lib/http-pool-config';
 
 /**
  * The only I/O in this provider: a per-DOI lookup against both servers.
@@ -40,22 +41,33 @@ export type ServerCollection = { server: BiorxivServer; collection: unknown[] };
 export async function fetchByDoi(doi: string, options: FetchOptions): Promise<ServerCollection[]> {
   const { baseUrl = DEFAULT_BASE_URL, timeoutMs, signal, userAgent } = options;
 
+  // One client for both servers: they are two paths on one host, so they share
+  // a connection pool rather than each opening their own.
+  const client = getPooledClient(baseUrl, getServiceConfig('biorxiv'));
+
   const settled = await Promise.all(
     SERVERS.map(async (server): Promise<ServerCollection> => {
       try {
-        const response = await axios.get<{ collection?: unknown[] }>(
-          `${baseUrl}/details/${server}/${encodePath(doi)}`,
+        const response = await client.get<{ collection?: unknown[] }>(
+          `/details/${server}/${encodePath(doi)}`,
           {
             timeout: timeoutMs,
             ...(signal ? { signal } : {}),
             ...(userAgent ? { headers: { 'User-Agent': userAgent } } : {})
           }
         );
+        // A DOI that belongs to the other server 404s here, which is the
+        // expected outcome for one of the two on every lookup — so it is the
+        // common path, not the exceptional one, and the pooled client resolves
+        // it rather than throwing. Anything else is a real failure.
+        if (response.status === 404) return { server, collection: [] };
+        if (response.status >= 400) {
+          throw new Error(`bioRxiv ${response.status} from ${server}`);
+        }
+
         return { server, collection: response.data?.collection ?? [] };
       } catch (error: any) {
-        // A DOI that belongs to the other server 404s here, which is the
-        // expected outcome for one of the two on every lookup. Anything else
-        // is a real failure and propagates.
+        // Kept for a client that throws rather than resolves the 404.
         if (error?.response?.status === 404) return { server, collection: [] };
         throw error;
       }

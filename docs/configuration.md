@@ -154,18 +154,24 @@ HTTP_POOL_RETRY_ATTEMPTS=3
 HTTP_POOL_RETRY_DELAY=1000
 HTTP_POOL_ENABLE_HTTP2=true
 
-# Service-specific pools (JSON), merged over the global settings above
+# Service-specific pools (JSON), merged over the global settings above.
+# One per upstream: arxiv, biorxiv, core, crossref, datacite, doaj, europepmc,
+# ncbi, openaire, opencitations, openalex, plos, unpaywall.
 OPENALEX_POOL_CONFIG={"maxConnections": 30, "maxSockets": 100}
-CROSSREF_POOL_CONFIG={"maxConnections": 25, "maxSockets": 80}
-UNPAYWALL_POOL_CONFIG={"maxConnections": 40, "maxSockets": 120}
-DATACITE_POOL_CONFIG={"maxConnections": 15, "maxSockets": 40}
-NCBI_POOL_CONFIG={"maxConnections": 25, "maxSockets": 70}
+EUROPEPMC_POOL_CONFIG={"maxConnections": 30, "maxSockets": 100}
+CORE_POOL_CONFIG={"maxConnections": 20, "maxSockets": 60}
 ```
 
-Those five, and no others, because those five providers are the ones that fetch
-through the pooled client. CORE and Europe PMC call axios directly, so a
-`CORE_POOL_CONFIG` or `EUROPE_PMC_POOL_CONFIG` is parsed at startup into a map
-that nothing then queries.
+Every upstream fetches through the pooled client, so every upstream has a knob.
+That was not true until recently: five of the thirteen were pooled and the eight
+left out were the *search fan-out* — the expensive half. Europe PMC alone reads
+up to 600 records per query, and it opened a fresh connection each time, ran
+without the retry policy, and reported nothing to the monitor. So the metrics
+below described the five cheapest callers and were silent about the ones that
+decide how long a search takes.
+
+A name absent from the list falls back to the global defaults rather than
+failing, so a missing entry costs per-service tuning and nothing else.
 
 ### Administrative Access
 

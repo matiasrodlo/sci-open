@@ -1,4 +1,5 @@
-import axios from 'axios';
+import { getPooledClient } from '../../lib/http-client-factory';
+import { getServiceConfig } from '../../lib/http-pool-config';
 
 /** The only I/O in this provider. */
 
@@ -42,7 +43,11 @@ export type PlosPayload = {
 export async function fetchPage(nativeQuery: string, options: FetchOptions): Promise<PlosPayload> {
   const { baseUrl = DEFAULT_BASE_URL, pageSize, offset, timeoutMs, signal, userAgent } = options;
 
-  const response = await axios.get<PlosPayload>(baseUrl, {
+  const client = getPooledClient(baseUrl, getServiceConfig('plos'));
+
+  // The base URL is the whole endpoint, so the request path is empty; axios
+  // returns the base unchanged for a falsy relative URL.
+  const response = await client.get<PlosPayload>('', {
     params: {
       q: nativeQuery,
       rows: pageSize,
@@ -55,6 +60,10 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
     headers: { Accept: 'application/json', ...(userAgent ? { 'User-Agent': userAgent } : {}) },
     ...(signal ? { signal } : {})
   });
+
+  if (response.status >= 400) {
+    throw new PlosUnavailableError(`HTTP ${response.status}`);
+  }
 
   const payload = response.data ?? {};
 

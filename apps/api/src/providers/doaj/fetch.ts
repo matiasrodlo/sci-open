@@ -1,4 +1,5 @@
-import axios from 'axios';
+import { getPooledClient } from '../../lib/http-client-factory';
+import { getServiceConfig } from '../../lib/http-pool-config';
 import { usableApiKey } from '../../lib/api-key';
 
 /**
@@ -48,8 +49,10 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
   // 401, but sending a placeholder as a credential is wrong either way.
   const key = usableApiKey(apiKey);
 
-  const response = await axios.get<DoajPayload>(
-    `${baseUrl}/search/articles/${encodeURIComponent(nativeQuery)}`,
+  const client = getPooledClient(baseUrl, getServiceConfig('doaj'));
+
+  const response = await client.get<DoajPayload>(
+    `/search/articles/${encodeURIComponent(nativeQuery)}`,
     {
       params: {
         pageSize,
@@ -112,9 +115,11 @@ export async function fetchArticle(
 
   const key = usableApiKey(apiKey);
 
+  const client = getPooledClient(baseUrl, getServiceConfig('doaj'));
+
   try {
-    const response = await axios.get<Record<string, unknown>>(
-      `${baseUrl}/articles/${encodeURIComponent(id)}`,
+    const response = await client.get<Record<string, unknown>>(
+      `/articles/${encodeURIComponent(id)}`,
       {
         timeout: timeoutMs,
         headers: {
@@ -126,10 +131,17 @@ export async function fetchArticle(
       }
     );
 
+    // An id nobody has is an answer, not a failure — and the pooled client
+    // resolves that 404 rather than throwing it, so it is read here. The catch
+    // below stays for a client that does throw.
+    if (response.status === 404) return { results: [], total: 0 };
+    if (response.status >= 400) {
+      throw new DoajUnavailableError(`HTTP ${response.status}`);
+    }
+
     const article = response.data;
     return article?.id ? { results: [article], total: 1 } : { results: [], total: 0 };
   } catch (error: any) {
-    // An id nobody has is an answer, not a failure.
     if (error?.response?.status === 404) return { results: [], total: 0 };
     throw error;
   }

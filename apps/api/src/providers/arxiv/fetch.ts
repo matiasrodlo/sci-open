@@ -1,4 +1,5 @@
-import axios from 'axios';
+import { getPooledClient } from '../../lib/http-client-factory';
+import { getServiceConfig } from '../../lib/http-pool-config';
 import { parseStringPromise } from 'xml2js';
 
 /**
@@ -40,7 +41,10 @@ export type ArxivFeed = {
 export async function fetchPage(nativeQuery: string, options: FetchOptions): Promise<ArxivFeed> {
   const { baseUrl = DEFAULT_BASE_URL, pageSize, offset, timeoutMs, signal, userAgent } = options;
 
-  const response = await axios.get<string>(baseUrl, {
+  const client = getPooledClient(baseUrl, getServiceConfig('arxiv'));
+
+  // The base URL is the whole endpoint, so the request path is empty.
+  const response = await client.get<string>('', {
     params: {
       search_query: nativeQuery,
       start: Math.max(offset, 0),
@@ -55,6 +59,13 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
     ...(signal ? { signal } : {}),
     ...(userAgent ? { headers: { 'User-Agent': userAgent } } : {})
   });
+
+  // The pooled client resolves a 4xx rather than throwing, and the parser
+  // below would take an error page as a feed with no entries — a provider
+  // saying no, reported as a provider with nothing to say.
+  if (response.status >= 400) {
+    throw new Error(`arXiv ${response.status}`);
+  }
 
   return parseStringPromise(response.data);
 }

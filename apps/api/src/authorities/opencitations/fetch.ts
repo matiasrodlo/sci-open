@@ -1,4 +1,5 @@
-import axios from 'axios';
+import { getPooledClient } from '../../lib/http-client-factory';
+import { getServiceConfig } from '../../lib/http-pool-config';
 
 /**
  * The only I/O in this authority.
@@ -29,12 +30,16 @@ export async function lookupDoi(
 ): Promise<OpenCitationsPayload | null> {
   const { baseUrl = DEFAULT_BASE_URL, timeoutMs, signal, userAgent } = options;
 
-  const response = await axios.get<OpenCitationsPayload>(
-    `${baseUrl}/citation-count/doi:${encodeURIComponent(doi)}`,
+  const client = getPooledClient(baseUrl, getServiceConfig('opencitations'));
+
+  // `validateStatus` is no longer set per request: the pooled client already
+  // resolves a 4xx rather than throwing, which is what this call wanted and
+  // was overriding the default to get.
+  const response = await client.get<OpenCitationsPayload>(
+    `/citation-count/doi:${encodeURIComponent(doi)}`,
     {
       timeout: timeoutMs,
       headers: { Accept: 'application/json', ...(userAgent ? { 'User-Agent': userAgent } : {}) },
-      validateStatus: status => status < 500,
       ...(signal ? { signal } : {})
     }
   );

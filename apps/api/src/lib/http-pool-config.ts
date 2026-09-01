@@ -4,18 +4,32 @@ import { log } from './logger';
 /**
  * Pool settings, global and per service.
  *
- * The per-service list is deliberately short: it holds exactly the providers
- * that fetch through `getPooledClient`. CORE and Europe PMC call axios
- * directly, so a `CORE_POOL_CONFIG` or `EUROPE_PMC_POOL_CONFIG` was parsed at
- * startup into a map nothing then queried — they are no longer read, and no
- * longer documented.
+ * The list holds exactly the services that fetch through `getPooledClient`, and
+ * that is now all of them. It used to hold five of thirteen, and the eight it
+ * left out were the search fan-out — the expensive half, and the half that
+ * decides how long a search takes. They opened a fresh connection per request,
+ * ran without the retry policy, and reported nothing, so
+ * `/api/performance/*` described the five cheapest callers and was silent about
+ * everything a slow search is actually made of.
+ *
+ * Adding a service here is what makes `<NAME>_POOL_CONFIG` readable for it; a
+ * name absent from the list falls back to the global defaults rather than
+ * failing, so the list is about configurability rather than correctness.
  */
 const POOLED_SERVICES = [
   'OPENALEX',
   'CROSSREF',
   'UNPAYWALL',
   'DATACITE',
-  'NCBI'
+  'NCBI',
+  'ARXIV',
+  'BIORXIV',
+  'CORE',
+  'DOAJ',
+  'EUROPEPMC',
+  'OPENAIRE',
+  'OPENCITATIONS',
+  'PLOS'
 ] as const;
 
 export class HttpPoolConfigManager {

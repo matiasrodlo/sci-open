@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { get } = vi.hoisted(() => ({ get: vi.fn() }));
-vi.mock('axios', () => ({ default: { get } }));
+// The pooled client is half of what is under test: its
+// `validateStatus: status < 500` means a 404 and a 429 both *resolve*, so the
+// status is read from the response rather than caught. Every response below is
+// resolved, exactly as the real factory delivers them.
+vi.mock('../../../lib/http-client-factory', () => ({ getPooledClient: () => ({ get }) }));
 
 import { lookup } from '../index';
 

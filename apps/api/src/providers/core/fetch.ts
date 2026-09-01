@@ -1,4 +1,5 @@
-import axios from 'axios';
+import { getPooledClient } from '../../lib/http-client-factory';
+import { getServiceConfig } from '../../lib/http-pool-config';
 import { usableApiKey } from '../../lib/api-key';
 import type { CorePayload } from './normalize';
 
@@ -45,7 +46,9 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
   // under a second, where no header at all answers 200.
   const key = usableApiKey(apiKey);
 
-  const response = await axios.get<CorePayload>(`${baseUrl}/search/works/`, {
+  const client = getPooledClient(baseUrl, getServiceConfig('core'));
+
+  const response = await client.get<CorePayload>('/search/works/', {
     params: {
       q: nativeQuery,
       limit: pageSize,
@@ -59,6 +62,13 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
     },
     ...(signal ? { signal } : {})
   });
+
+  // Read rather than thrown: the pooled client resolves a 4xx. A bad key
+  // answers 401 here, and reporting that as "body carried nothing" would name
+  // the wrong cause.
+  if (response.status >= 400) {
+    throw new CoreUnavailableError(`HTTP ${response.status}`);
+  }
 
   const payload = response.data ?? {};
 
