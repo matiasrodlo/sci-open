@@ -1,5 +1,7 @@
 import axios from 'axios';
 import dns from 'dns';
+import http from 'http';
+import https from 'https';
 import net from 'net';
 import { PassThrough, Readable } from 'stream';
 import { promisify } from 'util';
@@ -85,21 +87,123 @@ function isBlockedHostname(hostname: string): boolean {
 }
 
 /**
- * Cheap synchronous check, used for redirect hops where we cannot await DNS.
+ * Marks a refusal raised from inside the socket guard, so it can be recognised
+ * again after axios and follow-redirects have each wrapped it.
+ */
+export const SSRF_REFUSED = 'ESSRFREFUSED';
+
+function refusal(message: string): PdfProxyError {
+  return Object.assign(new PdfProxyError(message, 403), { code: SSRF_REFUSED });
+}
+
+/**
+ * The address check, moved onto the socket.
+ *
+ * Validating the URL was never enough, and the gap was not subtle. The
+ * pre-flight check below resolves the hostname the caller sent; every
+ * **redirect** hop got `assertRoutableHostSync` instead, which — as its own
+ * name says — cannot await DNS, so it could only inspect hostname suffixes and
+ * literal IPs. A name that resolved inward was invisible to it. An attacker
+ * posted a URL on a host they controlled, that host answered 302 pointing at any
+ * name resolving to an internal address, and the proxy fetched it and streamed
+ * the body back. Reproduced against a local server through a `.nip.io`-style
+ * name: the response body came back to the caller intact.
+ *
+ * The same hole, in slower motion, existed without any redirect at all. The
+ * pre-flight resolved the name and then axios resolved it *again* to connect —
+ * two lookups, so a low-TTL record could answer public for the first and
+ * private for the second.
+ *
+ * Both close here, because this runs at the point of connection and nothing
+ * gets to re-resolve afterwards: `net` connects to the very address this
+ * returns. Every hop uses the same agents, so hop five is checked exactly as
+ * hop one is.
+ *
+ * The whole answer is rejected when any address in it is blocked, matching the
+ * pre-flight check rather than quietly connecting to whichever address happened
+ * to be public. A publisher does not answer with a private address; something
+ * aiming this at the private network does.
+ */
+export function guardedLookup(
+  hostname: string,
+  options: dns.LookupOneOptions | dns.LookupAllOptions | number,
+  callback: (err: NodeJS.ErrnoException | null, address?: any, family?: number) => void
+): void {
+  const requested = typeof options === 'number' ? { family: options } : (options ?? {});
+
+  // Always asked for in full, whatever the caller wanted, so every address the
+  // name carries is checked and not just the one that would have been used.
+  dns.lookup(hostname, { ...requested, all: true }, (error, addresses) => {
+    if (error) return callback(error);
+
+    const resolved = (addresses ?? []) as Array<{ address: string; family: number }>;
+    if (resolved.length === 0) {
+      return callback(refusal('Could not resolve the PDF host'));
+    }
+
+    if (resolved.some(record => isBlockedIp(record.address))) {
+      return callback(refusal('Refusing to download from a non-public address'));
+    }
+
+    // `all` is what Node asked for, not what we asked DNS for. Node 22+ sets it
+    // for happy-eyeballs; older paths and TLS may not.
+    if ((requested as dns.LookupAllOptions).all) return callback(null, resolved);
+
+    const [first] = resolved;
+    callback(null, first.address, first.family);
+  });
+}
+
+/** Agents that cannot be pointed inward, whatever the redirect chain says. */
+const guardedHttpAgent = new http.Agent({ keepAlive: true, lookup: guardedLookup });
+const guardedHttpsAgent = new https.Agent({ keepAlive: true, lookup: guardedLookup });
+
+/**
+ * Recognises a refusal from `guardedLookup` after it has been wrapped.
+ *
+ * A socket error travels through follow-redirects, which restates it as
+ * "Redirected request failed: ...", and then axios, which rebuilds it as an
+ * AxiosError. Neither keeps the instance, so the chain is walked for the marker
+ * rather than the class. Without this an SSRF refusal reaches the caller as a
+ * generic 502, which reads like the upstream being down.
+ */
+export function ssrfRefusalIn(error: unknown): PdfProxyError | undefined {
+  for (let current = error, depth = 0; current && depth < 5; depth++) {
+    const candidate = current as { code?: string; message?: string; cause?: unknown };
+    if (candidate.code === SSRF_REFUSED) {
+      return new PdfProxyError(candidate.message ?? 'Refusing to download from a non-public address', 403);
+    }
+    current = candidate.cause;
+  }
+  return undefined;
+}
+
+/**
+ * Cheap synchronous check, used for redirect hops before a socket is attempted.
+ *
+ * Kept as the first of two gates rather than the only one. It rejects a literal
+ * private address in a redirect without the cost of a lookup; `guardedLookup`
+ * is what catches the hostname that resolves to one.
  */
 export function assertRoutableHostSync(hostname: string): void {
   const host = hostname.replace(/^\[|\]$/g, '');
   if (isBlockedHostname(host)) {
-    throw new PdfProxyError('Refusing to download from a non-public host', 403);
+    throw refusal('Refusing to download from a non-public host');
   }
   if (net.isIP(host) && isBlockedIp(host)) {
-    throw new PdfProxyError('Refusing to download from a non-public address', 403);
+    throw refusal('Refusing to download from a non-public address');
   }
 }
 
 /**
  * Validates scheme and resolves the hostname, rejecting anything that lands on
  * a loopback, private, or link-local address.
+ *
+ * A pre-flight, not the guarantee. It answers a plainly bad URL with a clean
+ * 400 or 403 before any connection is opened, and it is the only place the
+ * scheme is checked. What it cannot do is speak for the address finally
+ * connected to — it resolves the name, and the connection resolves it again —
+ * so `guardedLookup` on the agents is what the safety actually rests on.
  */
 export async function assertPublicHttpUrl(rawUrl: string): Promise<URL> {
   let url: URL;
@@ -127,7 +231,7 @@ export async function assertPublicHttpUrl(rawUrl: string): Promise<URL> {
     }
 
     if (!addresses.length || addresses.some(record => isBlockedIp(record.address))) {
-      throw new PdfProxyError('Refusing to download from a non-public address', 403);
+      throw refusal('Refusing to download from a non-public address');
     }
   }
 
@@ -158,14 +262,22 @@ export async function fetchPdfStream(url: URL, userAgent: string): Promise<PdfSt
     responseType: 'stream',
     timeout: DOWNLOAD_TIMEOUT_MS,
     maxRedirects: MAX_REDIRECTS,
+    // The guard that actually holds. Both are set because follow-redirects
+    // picks the agent per hop by scheme, so a chain that crosses from https to
+    // http must not land on an unguarded default.
+    httpAgent: guardedHttpAgent,
+    httpsAgent: guardedHttpsAgent,
     headers: {
       'User-Agent': userAgent,
       Accept: 'application/pdf,*/*'
     },
     // Each redirect hop is a fresh chance to be pointed somewhere internal.
+    // This rejects the obvious form of that — a private literal, a non-http
+    // scheme — before a connection is attempted; `guardedLookup` on the agents
+    // above is what stops a hostname that resolves inward.
     beforeRedirect: (options: Record<string, any>) => {
       if (options.protocol !== 'http:' && options.protocol !== 'https:') {
-        throw new PdfProxyError('Refusing to follow a non-http redirect', 403);
+        throw refusal('Refusing to follow a non-http redirect');
       }
       assertRoutableHostSync(String(options.hostname || options.host || ''));
     },
@@ -173,6 +285,13 @@ export async function fetchPdfStream(url: URL, userAgent: string): Promise<PdfSt
   }).catch((error: any) => {
     if (error instanceof PdfProxyError) {
       throw error;
+    }
+    // Before the generic mapping below, because a refusal reaching the caller
+    // as "502, could not reach the PDF" reads like an upstream outage rather
+    // than a request we declined to make.
+    const refused = ssrfRefusalIn(error);
+    if (refused) {
+      throw refused;
     }
     const status = error.response?.status;
     throw new PdfProxyError(

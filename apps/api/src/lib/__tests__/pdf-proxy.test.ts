@@ -1,7 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import axios from 'axios';
 
 // pdf-proxy binds `promisify(dns.lookup)` at import time, so the resolver has
-// to be replaced at module level rather than spied on afterwards.
+// to be replaced at module level rather than spied on afterwards. The same stub
+// serves `guardedLookup`, which resolves through `dns.lookup` directly.
 const resolver = vi.hoisted(() => ({
   addresses: [] as { address: string }[],
   error: null as Error | null
@@ -14,7 +16,15 @@ vi.mock('dns', () => ({
   }
 }));
 
-import { assertRoutableHostSync, assertPublicHttpUrl, PdfProxyError } from '../pdf-proxy';
+import {
+  assertRoutableHostSync,
+  assertPublicHttpUrl,
+  guardedLookup,
+  ssrfRefusalIn,
+  fetchPdfStream,
+  PdfProxyError,
+  SSRF_REFUSED
+} from '../pdf-proxy';
 
 /**
  * The PDF proxy takes its URL from the browser, so without these checks the
@@ -148,5 +158,168 @@ describe('assertPublicHttpUrl', () => {
   it('rejects a host whose lookup fails', async () => {
     resolver.error = new Error('ENOTFOUND');
     await expect(assertPublicHttpUrl('https://missing.example.com/x.pdf')).rejects.toThrow(PdfProxyError);
+  });
+});
+
+/**
+ * The socket-level guard, which is what the safety actually rests on.
+ *
+ * Checking the URL was never enough. The pre-flight above resolves the name the
+ * caller sent; a **redirect** hop only ever got `assertRoutableHostSync`, which
+ * cannot await DNS and so could not see a hostname that resolves inward. An
+ * attacker posted a URL on a host they controlled, that host answered 302 at
+ * any name resolving to an internal address, and the body came back to them.
+ * Reproduced end to end before this existed.
+ *
+ * Driven through the stubbed resolver rather than a live socket, which is what
+ * keeps this suite offline — the same arrangement `assertPublicHttpUrl` is
+ * tested under.
+ */
+describe('guardedLookup', () => {
+  const lookup = (options: unknown = { all: true }) =>
+    new Promise<{ err: any; value: any }>(resolve => {
+      guardedLookup('publisher.example.com', options as any, (err, value) =>
+        resolve({ err, value })
+      );
+    });
+
+  beforeEach(() => {
+    resolver.addresses = [{ address: '93.184.216.34' }];
+    resolver.error = null;
+  });
+
+  it('refuses a name that resolves to a private address', async () => {
+    resolver.addresses = [{ address: '10.0.0.5' }];
+    const { err } = await lookup();
+
+    expect(err).toBeInstanceOf(PdfProxyError);
+    expect(err.statusCode).toBe(403);
+  });
+
+  it('refuses the cloud metadata address', async () => {
+    resolver.addresses = [{ address: '169.254.169.254' }];
+    expect((await lookup()).err).toBeInstanceOf(PdfProxyError);
+  });
+
+  it('refuses when any address in the answer is private, not just the first', async () => {
+    // Connecting to whichever address happened to be public would be the whole
+    // hole again, one DNS answer later.
+    resolver.addresses = [{ address: '93.184.216.34' }, { address: '127.0.0.1' }];
+    expect((await lookup()).err).toBeInstanceOf(PdfProxyError);
+  });
+
+  it('refuses a name that resolves to nothing', async () => {
+    resolver.addresses = [];
+    expect((await lookup()).err).toBeInstanceOf(PdfProxyError);
+  });
+
+  it('passes a public answer through', async () => {
+    const { err, value } = await lookup();
+
+    expect(err).toBeNull();
+    expect(value).toEqual([{ address: '93.184.216.34' }]);
+  });
+
+  it('answers with one address when Node did not ask for all', async () => {
+    // Node sets `all` for happy-eyeballs, but TLS and older paths may not, and
+    // handing an array back where a string is expected fails the connection.
+    const { err, value } = await lookup({ family: 4 });
+
+    expect(err).toBeNull();
+    expect(value).toBe('93.184.216.34');
+  });
+
+  it('propagates a resolver failure rather than dressing it as a refusal', async () => {
+    resolver.error = new Error('ENOTFOUND');
+    expect((await lookup()).err.message).toBe('ENOTFOUND');
+  });
+
+  it('marks every refusal so it survives being wrapped', async () => {
+    resolver.addresses = [{ address: '192.168.1.1' }];
+    expect((await lookup()).err.code).toBe(SSRF_REFUSED);
+  });
+});
+
+describe('ssrfRefusalIn', () => {
+  // A refusal raised inside the socket guard reaches the caller through
+  // follow-redirects, which restates it, and then axios, which rebuilds it as
+  // an AxiosError. Neither keeps the instance. Without this the caller is told
+  // "502, could not reach the PDF", which reads like an upstream outage rather
+  // than a request we declined to make.
+  it('finds a refusal wrapped two layers deep', () => {
+    const wrapped = Object.assign(new Error('Request failed'), {
+      cause: Object.assign(new Error('Redirected request failed: refused'), {
+        cause: Object.assign(new Error('Refusing to download from a non-public address'), {
+          code: SSRF_REFUSED
+        })
+      })
+    });
+
+    const found = ssrfRefusalIn(wrapped);
+    expect(found).toBeInstanceOf(PdfProxyError);
+    expect(found!.statusCode).toBe(403);
+    expect(found!.message).toBe('Refusing to download from a non-public address');
+  });
+
+  it('finds one that was not wrapped at all', () => {
+    const bare = Object.assign(new Error('Refusing to download from a non-public address'), {
+      code: SSRF_REFUSED
+    });
+    expect(ssrfRefusalIn(bare)).toBeInstanceOf(PdfProxyError);
+  });
+
+  it('leaves an ordinary transport failure alone', () => {
+    // A real upstream outage has to stay a 502, or the endpoint reports every
+    // failure as a refusal.
+    expect(ssrfRefusalIn(Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' })))
+      .toBeUndefined();
+  });
+
+  it('terminates on a cause cycle', () => {
+    const a: any = new Error('a');
+    const b: any = new Error('b');
+    a.cause = b;
+    b.cause = a;
+    expect(ssrfRefusalIn(a)).toBeUndefined();
+  });
+});
+
+describe('fetchPdfStream wiring', () => {
+  // `guardedLookup` being correct buys nothing if the request does not use it.
+  // Dropping these two lines from the axios config reopens the hole exactly,
+  // and every other test in this file would still pass — so the attachment is
+  // asserted rather than assumed.
+  afterEach(() => vi.restoreAllMocks());
+
+  const configOf = async () => {
+    const get = vi.spyOn(axios, 'get').mockRejectedValue(new Error('stop here'));
+    await fetchPdfStream(new URL('https://publisher.example.com/paper.pdf'), 'ua').catch(() => {});
+    return get.mock.calls[0][1] as any;
+  };
+
+  it('fetches through agents that resolve with the guard', async () => {
+    const config = await configOf();
+
+    expect(config.httpAgent.options.lookup).toBe(guardedLookup);
+    expect(config.httpsAgent.options.lookup).toBe(guardedLookup);
+  });
+
+  it('guards both schemes, so a chain crossing https to http stays checked', async () => {
+    // follow-redirects picks the agent per hop by scheme. One guarded agent and
+    // one default would leave every hop on the other scheme unprotected.
+    const config = await configOf();
+
+    expect(config.httpAgent).toBeDefined();
+    expect(config.httpsAgent).toBeDefined();
+    expect(config.httpAgent).not.toBe(config.httpsAgent);
+  });
+
+  it('still refuses a redirect to a private literal before connecting', async () => {
+    const config = await configOf();
+
+    expect(() => config.beforeRedirect({ protocol: 'http:', hostname: '169.254.169.254' }))
+      .toThrow(PdfProxyError);
+    expect(() => config.beforeRedirect({ protocol: 'file:', hostname: 'example.com' }))
+      .toThrow(PdfProxyError);
   });
 });
