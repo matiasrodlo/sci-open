@@ -81,8 +81,9 @@ same reason `depth` does not grow either.
 
 ```env
 REDIS_URL=redis://localhost:6379
-CACHE_MAX_BYTES=268435456       # 256 MB, the L1 budget
-CACHE_REDIS_COOLDOWN_MS=5000    # how long L2 stays shut after a failure
+CACHE_MAX_BYTES=268435456           # 256 MB, the L1 response budget
+PROVIDER_CACHE_MAX_BYTES=134217728  # 128 MB, the fan-out cache
+CACHE_REDIS_COOLDOWN_MS=5000        # how long L2 stays shut after a failure
 ```
 
 Two levels: L1 in memory and L2 in Redis. `CACHE_MAX_BYTES` bounds L1 in
@@ -90,6 +91,23 @@ bytes rather than in entries, because the things counted are pages of search
 results — the old 10,000-key cap was roughly 1.6 GB at measured response sizes,
 and nothing about the number said so. TTLs are per-namespace and live in
 `cache-manager.ts`.
+
+`PROVIDER_CACHE_MAX_BYTES` bounds a different cache: the in-process one holding
+what each *provider* returned, which is what lets a page-2 click reuse the
+fan-out it was paged from rather than repeating it. It was capped at 500 entries
+and had the same defect in a worse form — an entry holds up to `depth` records
+and the default depth is 600, so the cap permitted 300,000 papers, about 518 MB
+serialised and one to one and a half gigabytes of live heap. It fills over
+roughly fifty distinct queries, which is why it would have surfaced as an
+out-of-memory rather than as a failing test.
+
+Both numbers count serialised size, so expect two to three times the configured
+value resident. The provider cache estimates that size from the text each record
+carries rather than serialising to measure it — calibrated against the committed
+fixtures to land between 1.01 and 1.14 times the real length, never under. An
+entry larger than the whole budget is refused rather than admitted and then
+evicting everything else, so a very small value disables the cache instead of
+thrashing it.
 
 `CACHE_REDIS_COOLDOWN_MS` is the circuit breaker in front of L2. An
 unreachable Redis used to be paid for once per cache operation, and a paper

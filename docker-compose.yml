@@ -50,6 +50,12 @@ services:
       # would also trust anything on the host. Set it once that port is closed
       # or the deployment is behind a known proxy.
       - TRUST_PROXY=${TRUST_PROXY:-}
+      # Budgets for the two in-process caches, in bytes. Both count serialised
+      # size, so a container memory limit wants to be comfortably more than
+      # their sum. Empty uses the defaults: 256 MB of responses, 128 MB of
+      # provider fan-outs.
+      - CACHE_MAX_BYTES=${CACHE_MAX_BYTES:-}
+      - PROVIDER_CACHE_MAX_BYTES=${PROVIDER_CACHE_MAX_BYTES:-}
     restart: unless-stopped
     depends_on:
       redis:
