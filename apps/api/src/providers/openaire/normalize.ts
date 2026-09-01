@@ -1,4 +1,5 @@
 import type { Paper, FullText, OaRoute, SourceRef } from '@open-access-explorer/shared';
+import { httpUrl } from '@open-access-explorer/shared';
 import type { OpenAirePayload } from './fetch';
 
 /**
@@ -97,7 +98,7 @@ function pickRoute(result: any): OaRoute {
 function pickFullText(result: any): FullText | undefined {
   const instances = asArray(result?.children?.instance);
   const urls = instances.flatMap(instance =>
-    asArray(instance?.webresource).map(w => value(w?.url)).filter(Boolean)
+    asArray(instance?.webresource).map(w => httpUrl(value(w?.url))).filter(Boolean)
   ) as string[];
 
   const pdf = urls.find(u => u.toLowerCase().endsWith('.pdf'));
@@ -195,7 +196,7 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
       : 'unknown',
     ...(fullText ? { fullText } : {}),
     landingPage:
-      value(asArray(asArray(result.children?.instance)[0]?.webresource)[0]?.url) ??
+      httpUrl(value(asArray(asArray(result.children?.instance)[0]?.webresource)[0]?.url)) ??
       (doi
         ? `https://doi.org/${doi}`
         : `https://explore.openaire.eu/search/publication?articleId=${nativeId}`),

@@ -1,6 +1,7 @@
 'use client';
 
 import { ExternalLink } from 'lucide-react';
+import { openExternal } from '@/lib/external-link';
 
 interface PaperCitationsProps {
   citationCount?: number;
@@ -20,7 +21,7 @@ export function PaperCitations({ citationCount, doi }: PaperCitationsProps) {
         `https://scholar.google.com/scholar?q=${encodeURIComponent(doi)}`,
         `https://www.semanticscholar.org/search?q=${encodeURIComponent(doi)}`,
       ];
-      window.open(sources[1], '_blank'); // Default to Google Scholar for now
+      openExternal(sources[1]); // Default to Google Scholar for now
     }
   };
 

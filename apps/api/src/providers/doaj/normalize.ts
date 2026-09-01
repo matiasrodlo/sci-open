@@ -1,4 +1,5 @@
 import type { Paper, FullText, SourceRef } from '@open-access-explorer/shared';
+import { httpUrl } from '@open-access-explorer/shared';
 import type { DoajPayload } from './fetch';
 
 /**
@@ -38,10 +39,12 @@ function pickFullText(links: DoajLink[]): FullText | undefined {
   const pdf = links.find(
     l => l.content_type === 'application/pdf' || l.url?.toLowerCase().endsWith('.pdf')
   );
-  if (pdf?.url) return { url: pdf.url, kind: 'pdf', verified: false };
+  const pdfUrl = httpUrl(pdf?.url);
+  if (pdfUrl) return { url: pdfUrl, kind: 'pdf', verified: false };
 
   const html = links.find(l => l.content_type === 'text/html' || l.type === 'fulltext');
-  if (html?.url) return { url: html.url, kind: 'html', verified: false };
+  const htmlUrl = httpUrl(html?.url);
+  if (htmlUrl) return { url: htmlUrl, kind: 'html', verified: false };
 
   return undefined;
 }
@@ -56,7 +59,7 @@ function pickFullText(links: DoajLink[]): FullText | undefined {
  */
 function pickLandingPage(links: DoajLink[], doi: string | undefined, id: string): string {
   if (doi) return `https://doi.org/${doi}`;
-  const fulltext = links.find(l => l.type === 'fulltext')?.url;
+  const fulltext = httpUrl(links.find(l => l.type === 'fulltext')?.url);
   if (fulltext) return fulltext;
   return `https://doaj.org/article/${id}`;
 }

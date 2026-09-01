@@ -1,4 +1,5 @@
 import type { Paper, PaperStage, FullText, SourceRef } from '@open-access-explorer/shared';
+import { httpUrl } from '@open-access-explorer/shared';
 import type { DataCitePayload } from './fetch';
 
 /**
@@ -65,7 +66,7 @@ const NOT_A_PAPER = new Set([
 ]);
 
 function pickFullText(attrs: any): FullText | undefined {
-  const url = typeof attrs?.url === 'string' ? attrs.url : undefined;
+  const url = httpUrl(attrs?.url);
   if (!url) return undefined;
 
   // Only when DataCite says so, or the URL is plainly one. The old connector
@@ -132,8 +133,8 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
     ...(fullText ? { fullText } : {}),
     // The registered URL is a landing page. On 100 live records not one ended
     // in `.pdf`.
-    ...(attrs.url
-      ? { landingPage: String(attrs.url) }
+    ...(httpUrl(attrs.url)
+      ? { landingPage: httpUrl(attrs.url)! }
       : doi
         ? { landingPage: `https://doi.org/${doi}` }
         : {}),

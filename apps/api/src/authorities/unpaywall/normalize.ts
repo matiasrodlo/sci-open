@@ -1,4 +1,5 @@
 import type { AuthorityFacts, FullText, OaRoute, PaperStage } from '@open-access-explorer/shared';
+import { httpUrl } from '@open-access-explorer/shared';
 import { preferredPdfUrl } from '../../lib/pdf-url';
 import type { UnpaywallPayload } from './fetch';
 
@@ -73,7 +74,7 @@ export function pickFullText(response: any): FullText | undefined {
   const publisher = locations.find(l => l?.host_type === 'publisher');
   const best = text(response?.best_oa_location?.url_for_pdf);
 
-  const chosen = text(repository?.url_for_pdf) ?? text(publisher?.url_for_pdf) ?? best;
+  const chosen = httpUrl(text(repository?.url_for_pdf) ?? text(publisher?.url_for_pdf) ?? best);
   if (!chosen) return undefined;
 
   return { url: preferredPdfUrl(chosen), kind: 'pdf', verified: false };
@@ -82,7 +83,7 @@ export function pickFullText(response: any): FullText | undefined {
 /** The landing page of the copy we chose, falling back to the DOI. */
 function pickLandingPage(response: any): string | undefined {
   const doi = text(response?.doi);
-  return text(response?.best_oa_location?.url_for_landing_page)
+  return httpUrl(response?.best_oa_location?.url_for_landing_page)
     ?? (doi ? `https://doi.org/${doi}` : undefined);
 }
 

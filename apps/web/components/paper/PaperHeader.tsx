@@ -2,6 +2,7 @@ import { OARecord } from '@open-access-explorer/shared';
 import { ExternalLink, Quote } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import { externalHref } from '@/lib/external-link';
 
 interface PaperHeaderProps {
   paper: OARecord;
@@ -80,11 +81,13 @@ export function PaperHeader({ paper }: PaperHeaderProps) {
         </div>
       )}
 
-      {/* Landing Page Link */}
-      {paper.landingPage && (
+      {/* Landing Page Link. Screened the same way `openExternal` screens a
+          click target: React renders a `javascript:` href with a warning rather
+          than refusing it, and this URL comes from provider metadata. */}
+      {externalHref(paper.landingPage) && (
         <div className="pt-2">
           <Link 
-            href={paper.landingPage}
+            href={externalHref(paper.landingPage)!}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"

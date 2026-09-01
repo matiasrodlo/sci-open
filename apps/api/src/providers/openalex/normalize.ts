@@ -1,4 +1,5 @@
 import type { Paper, PaperStage, FullText, OaRoute, SourceRef } from '@open-access-explorer/shared';
+import { httpUrl } from '@open-access-explorer/shared';
 import type { OpenAlexPayload } from './fetch';
 
 /** OpenAlex payload -> Paper[]. Pure, and isolated per record. */
@@ -73,11 +74,11 @@ function pickFullText(work: any): FullText | undefined {
   // route OpenAlex found, which is often a landing page — the recorded page has
   // one pointing at a PMC article — so it is only called a PDF when it looks
   // like one.
-  const pdf = work?.best_oa_location?.pdf_url;
-  if (typeof pdf === 'string' && pdf) return { url: pdf, kind: 'pdf', verified: false };
+  const pdf = httpUrl(work?.best_oa_location?.pdf_url);
+  if (pdf) return { url: pdf, kind: 'pdf', verified: false };
 
-  const oaUrl = work?.open_access?.oa_url;
-  if (typeof oaUrl === 'string' && oaUrl) {
+  const oaUrl = httpUrl(work?.open_access?.oa_url);
+  if (oaUrl) {
     const kind = oaUrl.toLowerCase().endsWith('.pdf') ? 'pdf' : 'html';
     return { url: oaUrl, kind, verified: false };
   }

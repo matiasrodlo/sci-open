@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Download, ExternalLink, Quote, Share2, Check, Copy } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { generateBibTeX, downloadBibTeX } from '@/lib/bibtex';
+import { openExternal } from '@/lib/external-link';
 
 interface PaperActionsProps {
   paper: OARecord;
@@ -54,10 +55,11 @@ export function PaperActions({ paper }: PaperActionsProps) {
       console.error('Download error:', error);
       // Fallback: open in new tab. Only report failure if the fallback
       // can't run either, so a working download never shows an error.
-      const opened = paper.bestPdfUrl
-        ? window.open(paper.bestPdfUrl, '_blank')
-        : null;
-      if (!opened) {
+      // `openExternal` reports on the URL rather than the tab, which is what
+      // this needs: `noopener` makes `window.open` return null by
+      // specification, so testing its handle would show an error for every
+      // download that in fact opened fine.
+      if (!openExternal(paper.bestPdfUrl)) {
         setDownloadError('Failed to download PDF');
       }
     } finally {
@@ -127,7 +129,7 @@ export function PaperActions({ paper }: PaperActionsProps) {
       {/* View Source */}
       {paper.landingPage && (
         <Button
-          onClick={() => window.open(paper.landingPage, '_blank')}
+          onClick={() => openExternal(paper.landingPage)}
           variant="outline"
           className="w-full gap-2"
         >

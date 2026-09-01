@@ -1,4 +1,5 @@
 import type { Paper, FullText, SourceRef } from '@open-access-explorer/shared';
+import { httpUrl } from '@open-access-explorer/shared';
 import type { ArxivFeed } from './fetch';
 
 /**
@@ -65,7 +66,7 @@ type Link = { $?: { href?: string; type?: string; rel?: string } };
 
 function pickFullText(entry: any): FullText | undefined {
   const links: Link[] = Array.isArray(entry?.link) ? entry.link : [];
-  const pdf = links.find(l => l.$?.type === 'application/pdf')?.$?.href;
+  const pdf = httpUrl(links.find(l => l.$?.type === 'application/pdf')?.$?.href);
   if (!pdf) return undefined;
 
   // arXiv still advertises some links over http. Serving one to a browser on

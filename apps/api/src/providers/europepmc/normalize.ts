@@ -1,4 +1,5 @@
 import type { Paper, PaperStage, FullText, SourceRef } from '@open-access-explorer/shared';
+import { httpUrl } from '@open-access-explorer/shared';
 import type { EuropePmcPayload } from './fetch';
 
 /**
@@ -56,14 +57,16 @@ function pickFullText(raw: any): FullText | undefined {
   const urls = fullTextUrls(raw);
 
   const pdf = urls.find(u => u.documentStyle === 'pdf' || u.url?.toLowerCase().endsWith('.pdf'));
-  if (pdf?.url) return { url: pdf.url, kind: 'pdf', verified: false };
+  const pdfUrl = httpUrl(pdf?.url);
+  if (pdfUrl) return { url: pdfUrl, kind: 'pdf', verified: false };
 
   if (raw?.pmcid) {
     return { url: `https://europepmc.org/articles/${raw.pmcid}?pdf=render`, kind: 'pdf', verified: false };
   }
 
   const html = urls.find(u => u.documentStyle === 'html');
-  if (html?.url) return { url: html.url, kind: 'html', verified: false };
+  const htmlUrl = httpUrl(html?.url);
+  if (htmlUrl) return { url: htmlUrl, kind: 'html', verified: false };
 
   return undefined;
 }
@@ -78,8 +81,8 @@ function pickFullText(raw: any): FullText | undefined {
  */
 function pickLandingPage(raw: any): string | undefined {
   const urls = fullTextUrls(raw);
-  const html = urls.find(u => u.documentStyle === 'html');
-  if (html?.url) return html.url;
+  const html = httpUrl(urls.find(u => u.documentStyle === 'html')?.url);
+  if (html) return html;
   return raw?.doi ? `https://doi.org/${raw.doi}` : undefined;
 }
 

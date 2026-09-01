@@ -276,3 +276,49 @@ describe('applyFacts', () => {
     expect(target.publisher).toBeUndefined();
   });
 });
+
+describe('applyFacts URL screening', () => {
+  // The backstop. The normalisers already screen provider and authority URLs,
+  // and this is the one place every authority's facts pass through — so an
+  // authority added later cannot reopen the hole by skipping the check.
+  const authority = (over: any = {}): any => ({
+    id: 'unpaywall',
+    pass: 0,
+    capabilities: { fields: ['fullText', 'landingPage'], authoritative: ['fullText', 'landingPage'] },
+    lookup: async () => null,
+    ...over
+  });
+
+  it('refuses a scripted fullText URL', () => {
+    // `paper()` seeds a copy, so this also pins that a refused URL does not
+    // land even when the field is free to be overwritten.
+    const p = paper({ id: 'a', fullText: undefined });
+    const applied = applyFacts(p, { fullText: { url: 'javascript:alert(1)//x.pdf', kind: 'pdf', verified: false } } as any, authority());
+
+    expect(applied).toBe(0);
+    expect(p.fullText).toBeUndefined();
+  });
+
+  it('refuses a scripted landing page', () => {
+    const p = paper({ id: 'a', landingPage: undefined });
+    applyFacts(p, { landingPage: 'javascript:alert(1)' } as any, authority());
+
+    expect(p.landingPage).toBeUndefined();
+  });
+
+  it('does not let a bad URL displace a good one', () => {
+    const good = { url: 'https://repo.example.org/real.pdf', kind: 'pdf' as const, verified: true };
+    const p = paper({ id: 'a', fullText: good });
+    applyFacts(p, { fullText: { url: 'javascript:alert(1)//x.pdf', kind: 'pdf', verified: false } } as any, authority());
+
+    expect(p.fullText).toEqual(good);
+  });
+
+  it('still applies an ordinary URL', () => {
+    const p = paper({ id: 'a', fullText: undefined });
+    const applied = applyFacts(p, { fullText: { url: 'https://real.example.org/p.pdf', kind: 'pdf', verified: false } } as any, authority());
+
+    expect(applied).toBe(1);
+    expect(p.fullText?.url).toBe('https://real.example.org/p.pdf');
+  });
+});

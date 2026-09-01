@@ -1,4 +1,5 @@
 import type { AuthorityFacts, FullText, PaperStage } from '@open-access-explorer/shared';
+import { httpUrl } from '@open-access-explorer/shared';
 import type { CrossrefPayload } from './fetch';
 
 /** Crossref payload -> AuthorityFacts. Pure. */
@@ -52,7 +53,7 @@ export function pickFullText(work: any): FullText | undefined {
       && String(l?.['intended-application'] ?? '') !== 'similarity-checking'
   );
 
-  const url = typeof link?.URL === 'string' ? link.URL : undefined;
+  const url = httpUrl(link?.URL);
   return url ? { url, kind: 'pdf', verified: false } : undefined;
 }
 

@@ -5,6 +5,7 @@ import { Download, ExternalLink, Eye, Quote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OARecord } from '@open-access-explorer/shared';
 import { getPaper } from '@/lib/fetcher';
+import { openExternal } from '@/lib/external-link';
 import { cachePaper } from '@/lib/paper-cache';
 import Link from 'next/link';
 
@@ -49,8 +50,7 @@ export function ResultCard({ record }: ResultCardProps) {
     
     try {
       // If we already have a PDF URL, use it directly
-      if (record.bestPdfUrl) {
-        window.open(record.bestPdfUrl, '_blank');
+      if (record.bestPdfUrl && openExternal(record.bestPdfUrl)) {
         setIsDownloading(false);
         return;
       }
@@ -61,9 +61,7 @@ export function ResultCard({ record }: ResultCardProps) {
       // `bestPdfUrl` threw a TypeError here instead of reporting no PDF.
       const resolved = await getPaper(record.id);
       const url = resolved.bestPdfUrl;
-      if (url) {
-        window.open(url, '_blank');
-      } else {
+      if (!openExternal(url)) {
         setDownloadError('PDF not available');
       }
     } catch (error) {
@@ -182,7 +180,7 @@ export function ResultCard({ record }: ResultCardProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => window.open(record.landingPage, '_blank')}
+              onClick={() => openExternal(record.landingPage)}
               className="h-8 text-xs hover:bg-muted"
               aria-label={`Open the publisher page for ${record.title} in a new tab`}
             >

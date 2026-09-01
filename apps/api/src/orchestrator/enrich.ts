@@ -1,5 +1,7 @@
-import type {
-  AuthorityFacts, AuthorityReport, FieldSources, FullText, Paper, ProvenancedField
+import {
+  isHttpUrl,
+  type AuthorityFacts, type AuthorityReport, type FieldSources, type FullText,
+  type Paper, type ProvenancedField
 } from '@open-access-explorer/shared';
 import { preferredPdfUrl, servesInterstitial } from '../lib/pdf-url';
 import { AUTHORITIES, type AuthorityEntry } from '../authorities';
@@ -111,6 +113,15 @@ export function applyFacts(paper: Paper, facts: AuthorityFacts, authority: Autho
     const value = (facts as any)[field];
     if (value === undefined || value === null || value === '') continue;
     if (Array.isArray(value) && value.length === 0) continue;
+
+    // The same scheme check the providers' URLs get, at the one place every
+    // authority's facts pass through. The normalisers already apply it, so this
+    // is the backstop rather than the rule: an authority added later cannot
+    // skip it, and no route exists by which `fullText` becomes a
+    // `javascript:` URL after the providers have been screened. See
+    // `shared/url.ts`.
+    if (field === 'landingPage' && !isHttpUrl(value)) continue;
+    if (field === 'fullText' && !isHttpUrl((value as FullText)?.url)) continue;
 
     // Topics are additive rather than chosen: two vocabularies describing the
     // same work both say something true. Same rule the merge uses.

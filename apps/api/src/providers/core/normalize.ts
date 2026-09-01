@@ -1,4 +1,4 @@
-import type { Paper, FullText, SourceRef } from '@open-access-explorer/shared';
+import { httpUrl, type Paper, type FullText, type SourceRef } from '@open-access-explorer/shared';
 
 /**
  * CORE payload -> Paper[]. Pure, and isolated per record.
@@ -38,17 +38,22 @@ const isPdf = (url: string) => url.toLowerCase().split('?')[0].endsWith('.pdf');
  * then the reader page — as `html`, which is what it is.
  */
 export function pickFullText(raw: any): FullText | undefined {
-  const download = text(raw?.downloadUrl);
+  // Every candidate goes through `httpUrl` first, so one that is not a web
+  // address falls through to the next rather than being returned as a copy.
+  // `isPdf` is a test on the spelling of a URL and cannot do this itself:
+  // `javascript:alert(document.domain)//evil.pdf` ends in `.pdf` and satisfied
+  // it exactly as well as a real file did.
+  const download = httpUrl(text(raw?.downloadUrl));
   if (download && isPdf(download)) return { url: download, kind: 'pdf', verified: false };
 
-  const fromSource = asArray<string>(raw?.sourceFulltextUrls).map(text).find(u => u && isPdf(u));
+  const fromSource = asArray<string>(raw?.sourceFulltextUrls).map(u => httpUrl(text(u))).find(u => u && isPdf(u));
   if (fromSource) return { url: fromSource, kind: 'pdf', verified: false };
 
-  const fromLinks = asArray<CoreLink>(raw?.links).find(l => l.url && isPdf(l.url))?.url;
+  const fromLinks = asArray<CoreLink>(raw?.links).map(l => httpUrl(l.url)).find(u => u && isPdf(u));
   if (fromLinks) return { url: fromLinks, kind: 'pdf', verified: false };
 
   // Not a PDF, but still a way to read the paper.
-  const reader = asArray<CoreLink>(raw?.links).find(l => l.type === 'reader')?.url;
+  const reader = httpUrl(asArray<CoreLink>(raw?.links).find(l => l.type === 'reader')?.url);
   if (reader) return { url: reader, kind: 'html', verified: false };
 
   return undefined;
@@ -57,9 +62,9 @@ export function pickFullText(raw: any): FullText | undefined {
 /** The page a human should land on. The reader, where CORE offers one. */
 function pickLandingPage(raw: any, doi: string | undefined, id: string): string {
   const links = asArray<CoreLink>(raw?.links);
-  const reader = links.find(l => l.type === 'reader')?.url;
+  const reader = httpUrl(links.find(l => l.type === 'reader')?.url);
   if (reader) return reader;
-  const display = links.find(l => l.type === 'display')?.url;
+  const display = httpUrl(links.find(l => l.type === 'display')?.url);
   if (display) return display;
   if (doi) return `https://doi.org/${doi}`;
   return `https://core.ac.uk/works/${id}`;

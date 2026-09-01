@@ -97,3 +97,39 @@ describe('normalize — fields', () => {
     expect(outcome.skipped).toEqual([{ index: 0, nativeId: '1', reason: 'record has no title' }]);
   });
 });
+
+describe('URL scheme', () => {
+  /**
+   * `isPdf` tests the spelling of a URL, and
+   * `javascript:alert(document.domain)//evil.pdf` ends in `.pdf` exactly as
+   * well as a real file does. Nothing downstream checked the scheme either, so
+   * the value reached `window.open` in the browser, where a `javascript:` URL
+   * runs in the page's own origin. CORE indexes repository deposits, so this
+   * field is written by whoever deposited the record.
+   */
+  it.each([
+    'javascript:alert(document.domain)//evil.pdf',
+    'data:text/html,<script>alert(1)</script>#x.pdf',
+    'file:///etc/passwd.pdf',
+    'vbscript:msgbox(1)//x.pdf'
+  ])('refuses %s as a full text', url => {
+    expect(pickFullText({ downloadUrl: url })).toBeUndefined();
+  });
+
+  it('falls through to the next candidate rather than giving up', () => {
+    // A hostile downloadUrl must not cost the record its real copy.
+    expect(pickFullText({
+      downloadUrl: 'javascript:alert(1)//evil.pdf',
+      sourceFulltextUrls: ['https://repo.example.org/real.pdf']
+    })).toEqual({ url: 'https://repo.example.org/real.pdf', kind: 'pdf', verified: false });
+  });
+
+  it('refuses a scripted reader link too', () => {
+    expect(pickFullText({ links: [{ type: 'reader', url: 'javascript:alert(1)' }] })).toBeUndefined();
+  });
+
+  it('still accepts an ordinary PDF', () => {
+    expect(pickFullText({ downloadUrl: 'https://core.ac.uk/download/123.pdf' }))
+      .toEqual({ url: 'https://core.ac.uk/download/123.pdf', kind: 'pdf', verified: false });
+  });
+});
