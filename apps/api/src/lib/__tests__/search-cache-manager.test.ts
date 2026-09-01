@@ -54,8 +54,8 @@ describe('SearchCacheManager round trip', () => {
     // query got the whole text and everyone afterwards got a fragment cut
     // mid-word. A read has to be indistinguishable from a fresh result.
     const fresh = response();
-    await cache.cacheSearchResults('crispr', PARAMS, fresh);
-    const cached = await cache.getCachedSearchResults('crispr', PARAMS);
+    await cache.cacheSearchResults(PARAMS, fresh);
+    const cached = await cache.getCachedSearchResults(PARAMS);
 
     expect(cached).not.toBeNull();
     expect(cached!.hits[0].abstract).toBe(LONG_ABSTRACT);
@@ -64,8 +64,8 @@ describe('SearchCacheManager round trip', () => {
 
   it('round-trips a response unchanged', async () => {
     const fresh = response();
-    await cache.cacheSearchResults('crispr', PARAMS, fresh);
-    const cached = await cache.getCachedSearchResults('crispr', PARAMS);
+    await cache.cacheSearchResults(PARAMS, fresh);
+    const cached = await cache.getCachedSearchResults(PARAMS);
 
     expect(cached).toEqual(fresh);
   });
@@ -73,8 +73,8 @@ describe('SearchCacheManager round trip', () => {
   it('keeps every field of sourceMetadata', async () => {
     // The write path used to strip this object, so provenance was lost on the
     // second request for a query.
-    await cache.cacheSearchResults('crispr', PARAMS, response());
-    const cached = await cache.getCachedSearchResults('crispr', PARAMS);
+    await cache.cacheSearchResults(PARAMS, response());
+    const cached = await cache.getCachedSearchResults(PARAMS);
 
     expect(cached!.hits[0].sourceMetadata).toEqual({
       source: 'europepmc',
@@ -83,13 +83,50 @@ describe('SearchCacheManager round trip', () => {
   });
 
   it('misses on a different query', async () => {
-    await cache.cacheSearchResults('crispr', PARAMS, response());
-    expect(await cache.getCachedSearchResults('something else', PARAMS)).toBeNull();
+    await cache.cacheSearchResults(PARAMS, response());
+    expect(await cache.getCachedSearchResults({ ...PARAMS, q: 'something else' })).toBeNull();
   });
 
   it('misses on a different page of the same query', async () => {
-    await cache.cacheSearchResults('crispr', PARAMS, response());
-    const page2 = await cache.getCachedSearchResults('crispr', { ...PARAMS, page: 2 });
+    await cache.cacheSearchResults(PARAMS, response());
+    const page2 = await cache.getCachedSearchResults({ ...PARAMS, page: 2 });
     expect(page2).toBeNull();
+  });
+});
+
+describe('SearchCacheManager key identity', () => {
+  // The key used to be built from a `query` argument passed in beside the
+  // params, and the route passed `params.q || ''`. `params.doi` never reached
+  // it, so every DOI lookup with no `q` hashed the empty string and they all
+  // shared one entry — the second caller was served the first caller's paper,
+  // and the single-flight guard, which keys the same way, coalesced concurrent
+  // ones onto a single fan-out.
+  it('separates two different DOI lookups', () => {
+    const a = cache.keyFor({ doi: '10.1234/aaa' });
+    const b = cache.keyFor({ doi: '10.5678/bbb' });
+
+    expect(a).not.toBe(b);
+  });
+
+  it('keys a DOI lookup on the DOI, not on the absent query', () => {
+    // `runOrchestrator` builds its Query from `params.doi ?? params.q`, so the
+    // key has to name the DOI whether or not `q` is also set.
+    const doiOnly = cache.keyFor({ doi: '10.1234/aaa' });
+    const doiWithQuery = cache.keyFor({ doi: '10.1234/aaa', q: 'crispr' });
+
+    expect(doiWithQuery).toBe(doiOnly);
+    expect(doiOnly).not.toBe(cache.keyFor({ q: 'crispr' }));
+  });
+
+  it('separates queries that differ only in punctuation', () => {
+    // `\\w` is ASCII-only in JavaScript, so stripping everything outside
+    // `[\\w\\s]` folded these pairs together.
+    expect(cache.keyFor({ q: 'TNF-\u03b1' })).not.toBe(cache.keyFor({ q: 'TNF' }));
+    expect(cache.keyFor({ q: 'alpha/beta' })).not.toBe(cache.keyFor({ q: 'alphabeta' }));
+  });
+
+  it('still folds case and runs of whitespace', () => {
+    // The lossless half of the normalisation stays: these really are one search.
+    expect(cache.keyFor({ q: '  Machine   Learning ' })).toBe(cache.keyFor({ q: 'machine learning' }));
   });
 });

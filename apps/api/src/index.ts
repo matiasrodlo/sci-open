@@ -113,7 +113,7 @@ async function routes(fastify: FastifyInstance) {
       const params = request.body;
 
       // Check advanced cache first
-      const cached = await searchCacheManager.getCachedSearchResults(params.q || '', params);
+      const cached = await searchCacheManager.getCachedSearchResults(params);
       if (cached) {
         const responseTime = Date.now() - startTime;
         fastify.log.info({ 
@@ -132,11 +132,11 @@ async function routes(fastify: FastifyInstance) {
       // Everything from here to the cache write happens once per key, however
       // many callers are waiting on it.
       const { value: searchResult, coalesced } = await searchFlights.run(
-        searchCacheManager.keyFor(params.q || '', params),
+        searchCacheManager.keyFor(params),
         async () => {
           const result = await runOrchestrator(params, { cache: providerCache, userAgent });
 
-          await searchCacheManager.cacheSearchResults(params.q || '', params, result);
+          await searchCacheManager.cacheSearchResults(params, result);
 
           return result;
         }
