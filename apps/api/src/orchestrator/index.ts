@@ -9,13 +9,13 @@ import { rank } from './rank';
 import { applyPolicy, partitionByPolicy, type PolicyOptions, type UserFilters } from './policy';
 import { rescueCandidates, type RescueReport } from './rescue';
 import { AuthorityCache } from './authority-cache';
-import { generateFacets, type Facets } from './facet';
+import { facetBaseSets, generateFacets, type Facets } from './facet';
 import { sortPapers } from './sort';
 import { enrichPage } from './enrich';
 
 export * from './parse-query';
 export * from './lookup';
-export { PROVIDERS, plan, fanOut, isComplete, ProviderCache, mergePapers, rank, applyPolicy, generateFacets, sortPapers, enrichPage };
+export { PROVIDERS, plan, fanOut, isComplete, ProviderCache, mergePapers, rank, applyPolicy, generateFacets, facetBaseSets, sortPapers, enrichPage };
 export { partitionByPolicy } from './policy';
 export { rescueCandidates, canRescue, DEFAULT_RESCUE_LIMIT } from './rescue';
 export type { RescueReport } from './rescue';
@@ -183,7 +183,14 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
   // found a copy for is counted in the buckets it belongs to. Counting before
   // it would have described a set the caller never sees, which is the same
   // mistake as faceting before filtering.
-  const facets = generateFacets(sorted);
+  //
+  // With one exception, and it is what makes the panel usable: a facet is not
+  // counted over its own selection. Ticking one year used to leave the year
+  // facet holding only that year, so a second one could be neither seen nor
+  // added, and the OR semantics these filters already have were unreachable
+  // from the UI. `facetBaseSets` rebuilds, per ticked facet, the set the other
+  // filters admit. It costs nothing when nothing is ticked. See `facet.ts`.
+  const facets = generateFacets(sorted, facetBaseSets(ranked, filters, policy, admitted));
 
   const start = Math.max(page - 1, 0) * pageSize;
 

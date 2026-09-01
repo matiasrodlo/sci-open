@@ -498,3 +498,41 @@ describe('the rescue pass', () => {
     expect(result.rescue).toMatchObject({ candidates: 1, examined: 0, rescued: 0 });
   });
 });
+
+describe('facets after a filter is ticked', () => {
+  // The end-to-end half of `facet.test.ts`: through plan, merge, rank, the
+  // policy partition and the rescue, which is where `admitted` comes from.
+  const corpus = [
+    paper({ id: 'a', title: 'A', doi: '10.1/a', year: 2021, venue: 'Nature',
+            sources: [ref('europepmc', { nativeId: 'a', rank: 0 })] }),
+    paper({ id: 'b', title: 'B', doi: '10.1/b', year: 2022, venue: 'Science',
+            sources: [ref('europepmc', { nativeId: 'b', rank: 1 })] }),
+    paper({ id: 'c', title: 'C', doi: '10.1/c', year: 2023, venue: 'Cell',
+            sources: [ref('europepmc', { nativeId: 'c', rank: 2 })] })
+  ];
+
+  const providers = [stub('europepmc', corpus)];
+
+  it('leaves the unticked years selectable', async () => {
+    const result = await search(QUERY, { providers, filters: { year: ['2022'] } });
+
+    expect(result.total).toBe(1);
+    expect(result.papers.map(p => p.id)).toEqual(['b']);
+    // The whole point: 2021 and 2023 are still in the panel to be added.
+    expect(result.facets.year.map(b => b.value).sort()).toEqual([2021, 2022, 2023]);
+  });
+
+  it('leaves the unticked venues selectable', async () => {
+    const result = await search(QUERY, { providers, filters: { venue: ['Nature'] } });
+
+    expect(result.total).toBe(1);
+    expect(result.facets.venue.map(b => b.value).sort()).toEqual(['Cell', 'Nature', 'Science']);
+  });
+
+  it('returns the union when a second value is added', async () => {
+    const result = await search(QUERY, { providers, filters: { year: ['2021', '2023'] } });
+
+    expect(result.total).toBe(2);
+    expect(result.papers.map(p => p.id).sort()).toEqual(['a', 'c']);
+  });
+});

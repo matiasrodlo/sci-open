@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { generateFacets } from '../facet';
+import { facetBaseSets, generateFacets } from '../facet';
+import { matchesFilters } from '../policy';
 import { paper, ref } from './helpers';
 
 describe('generateFacets', () => {
@@ -82,5 +83,66 @@ describe('generateFacets', () => {
 
   it('returns empty buckets for an empty set rather than throwing', () => {
     Object.values(generateFacets([])).forEach(b => expect(b).toEqual([]));
+  });
+});
+
+describe('a facet is not counted over its own selection', () => {
+  // Every facet used to be counted over the fully filtered set, its own ticked
+  // values included, so ticking one value emptied the facet of every other. The
+  // panel renders what it is given: a second value could be neither seen nor
+  // added, and the OR semantics these filters already have were unreachable.
+  const corpus = [
+    paper({ id: 'a', year: 2021, venue: 'Nature', publisher: 'Springer', topics: ['crispr'] }),
+    paper({ id: 'b', year: 2022, venue: 'Science', publisher: 'AAAS', topics: ['crispr'] }),
+    paper({ id: 'c', year: 2023, venue: 'Cell', publisher: 'Elsevier', topics: ['genomics'] })
+  ];
+
+  const admitted = new Map(corpus.map(p => [p.id, p]));
+
+  const facetsWith = (filters: Parameters<typeof facetBaseSets>[1]) => {
+    const bases = facetBaseSets(corpus, filters, {}, admitted);
+    const selected = corpus.filter(p => matchesFilters(p, filters));
+    return generateFacets(selected, bases);
+  };
+
+  it('keeps offering the other years once one is ticked', () => {
+    const f = facetsWith({ year: ['2022'] });
+
+    expect(f.year.map(b => b.value).sort()).toEqual([2021, 2022, 2023]);
+    // Still one paper each: the count beside a bucket says what selecting it
+    // brings in, given everything else the reader has chosen.
+    expect(f.year.every(b => b.count === 1)).toBe(true);
+  });
+
+  it('keeps offering the other venues, publishers and topics', () => {
+    expect(facetsWith({ venue: ['Nature'] }).venue.map(b => b.value).sort())
+      .toEqual(['Cell', 'Nature', 'Science']);
+    expect(facetsWith({ publisher: ['AAAS'] }).publisher.map(b => b.value).sort())
+      .toEqual(['AAAS', 'Elsevier', 'Springer']);
+    expect(facetsWith({ topics: ['genomics'] }).topics.map(b => b.value).sort())
+      .toEqual(['crispr', 'genomics']);
+  });
+
+  it('still narrows one facet by the others', () => {
+    // Lifting a facet's own filter must not lift the rest: with 2021 ticked,
+    // the venue facet describes 2021 alone.
+    const f = facetsWith({ year: ['2021'] });
+
+    expect(f.venue).toEqual([{ value: 'Nature', count: 1 }]);
+    expect(f.year.map(b => b.value).sort()).toEqual([2021, 2022, 2023]);
+  });
+
+  it('counts a multi-select the way selecting it would return', () => {
+    const f = facetsWith({ year: ['2021', '2023'] });
+
+    expect(f.venue.map(b => b.value).sort()).toEqual(['Cell', 'Nature']);
+    expect(f.year.find(b => b.value === 2022)).toEqual({ value: 2022, count: 1 });
+  });
+
+  it('changes nothing when no filter is ticked', () => {
+    // The base sets are only built for facets that have a selection, so an
+    // unfiltered search takes exactly the path it always did.
+    expect(facetBaseSets(corpus, {}, {}, admitted)).toEqual({});
+    expect(facetsWith({})).toEqual(generateFacets(corpus));
   });
 });
