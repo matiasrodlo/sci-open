@@ -22,13 +22,19 @@ import { SingleFlight } from './lib/single-flight';
 import { log, useLogger } from './lib/logger';
 import { searchBodySchema, paperParamsSchema, downloadPdfBodySchema } from './lib/schemas';
 import { clientError } from './lib/client-error';
+import { parseTrustProxy, trustsAnyProxy } from './lib/trust-proxy';
 import { ProviderCache, lookupPaper } from './orchestrator';
 import { runOrchestrator } from './orchestrator/from-search-params';
+
+// See `lib/trust-proxy.ts`. This is what decides whether `request.ip` — and so
+// the rate limiter's key — is the caller or the proxy in front of them.
+const trustProxy = parseTrustProxy();
 
 const fastify = Fastify({
   logger: {
     level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug')
-  }
+  },
+  trustProxy
 });
 
 // Connectors and pipeline code log through lib/logger, which forwards here.
@@ -52,6 +58,13 @@ fastify.register(helmet);
  *
  * The window is generous for a person and tight for a loop. `/health` is
  * exempt so a container's own probe cannot be throttled out of reporting.
+ *
+ * The key is `request.ip`, which is the default and is deliberate — but it only
+ * names the caller when `TRUST_PROXY` says which hops in front of us are ours.
+ * Without it every request arrives from the web tier's address and this becomes
+ * one bucket for the whole site rather than one per caller. See
+ * `lib/trust-proxy.ts`; the warning at startup covers the case where it is
+ * needed and missing.
  */
 fastify.register(rateLimit, {
   max: Number(process.env.RATE_LIMIT_MAX) || 120,
@@ -374,6 +387,13 @@ const start = async () => {
     if (!getAdminKey()) {
       fastify.log.warn(
         'ADMIN_API_KEY is not set: the cache and performance endpoints are disabled'
+      );
+    }
+
+    if (!trustsAnyProxy(trustProxy)) {
+      fastify.log.warn(
+        'TRUST_PROXY is not set: the rate limit is keyed on the connecting address. ' +
+        'Behind the web tier that is one shared bucket for every visitor, not one each.'
       );
     }
 

@@ -42,6 +42,14 @@ services:
       # container at all.
       - ADMIN_API_KEY=${ADMIN_API_KEY:-}
       - LOG_LEVEL=${LOG_LEVEL:-}
+      # Which hops in front of this service may state the caller's address.
+      # Every browser request arrives via `web`, so without this the rate limit
+      # is one bucket for all visitors rather than one each. Left empty by
+      # default because the safe value depends on who can reach port 4000: the
+      # compose file publishes it on the host, so trusting the bridge network
+      # would also trust anything on the host. Set it once that port is closed
+      # or the deployment is behind a known proxy.
+      - TRUST_PROXY=${TRUST_PROXY:-}
     restart: unless-stopped
     depends_on:
       redis:

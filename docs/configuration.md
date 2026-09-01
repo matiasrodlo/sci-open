@@ -21,7 +21,30 @@ NODE_ENV=development
 LOG_LEVEL=debug
 RATE_LIMIT_MAX=120
 RATE_LIMIT_WINDOW=1 minute
+TRUST_PROXY=
 ```
+
+`TRUST_PROXY` decides what the rate limit counts. The limiter keys on
+`request.ip`, and with nothing trusted that is the address that opened the
+socket — which, because `apps/web` proxies every `/api/*` call server-side, is
+the web tier for all traffic. The 120-per-minute default is then one bucket
+shared by every visitor rather than one each, roughly two searches a second
+before everyone starts seeing `429`. Naming the proxy here restores the real
+caller, taken from `X-Forwarded-For`:
+
+```env
+TRUST_PROXY=10.0.1.7          # the web tier, or the load balancer in front of it
+TRUST_PROXY=172.16.0.0/12     # a CIDR, or a comma-separated list of either
+TRUST_PROXY=1                 # or a hop count, when position is what is known
+```
+
+Point it at the proxy and nothing else. `X-Forwarded-For` is a request header,
+so trusting an address that is not really a proxy lets any caller choose their
+own rate-limit key — a limit that applies to nobody, which is the worse half of
+the trade. `true` is only correct when the proxy is the sole thing that can
+reach the port; note that `docker-compose.yml` publishes `4000` on the host, so
+that is not the case under plain compose. The service logs a warning at startup
+whenever this is unset.
 
 `LOG_LEVEL` takes any pino level — `trace`, `debug`, `info`, `warn`, `error`,
 `fatal` — and defaults to `info` under `NODE_ENV=production`, `debug`

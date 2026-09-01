@@ -47,6 +47,31 @@ function forwardable(headers: Headers): Headers {
   return out;
 }
 
+/**
+ * Carry the caller's address on to the API.
+ *
+ * Everything the browser sends reaches the API through this handler, so without
+ * this the API sees one address — this process — for every visitor, and its
+ * rate limit becomes a single site-wide bucket. The API only believes the
+ * header from hops named in its own `TRUST_PROXY`; sending it is this side's
+ * half of that arrangement.
+ *
+ * An existing chain is passed through rather than appended to. Appending
+ * correctly means adding the address *we* received the request from, and a
+ * route handler cannot see its own socket — so the honest options are to leave
+ * the chain the upstream proxy built or to corrupt it, and the first is right.
+ * `request.ip` is populated where the platform supplies it and is the only
+ * address available here otherwise.
+ */
+function withCallerAddress(headers: Headers, request: NextRequest): Headers {
+  if (headers.has('x-forwarded-for')) return headers;
+
+  const caller = request.ip;
+  if (caller) headers.set('x-forwarded-for', caller);
+
+  return headers;
+}
+
 async function proxy(request: NextRequest, path: string[]): Promise<Response> {
   const target = `${apiOrigin()}/api/${path.map(encodeURIComponent).join('/')}${request.nextUrl.search}`;
 
@@ -56,7 +81,7 @@ async function proxy(request: NextRequest, path: string[]): Promise<Response> {
   try {
     upstream = await fetch(target, {
       method: request.method,
-      headers: forwardable(request.headers),
+      headers: withCallerAddress(forwardable(request.headers), request),
       ...(hasBody ? { body: await request.arrayBuffer() } : {}),
       // A PDF can be tens of megabytes; the body is handed on as a stream
       // rather than buffered here.
