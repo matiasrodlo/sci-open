@@ -16,7 +16,7 @@ vi.mock('ioredis', () => {
 });
 
 import { CacheManager } from '../cache-manager';
-import { SearchCacheManager } from '../search-cache-manager';
+import { SearchCacheManager, worthCaching } from '../search-cache-manager';
 
 // Longer than the 500 characters the cache used to keep
 const LONG_ABSTRACT =
@@ -128,5 +128,63 @@ describe('SearchCacheManager key identity', () => {
   it('still folds case and runs of whitespace', () => {
     // The lossless half of the normalisation stays: these really are one search.
     expect(cache.keyFor({ q: '  Machine   Learning ' })).toBe(cache.keyFor({ q: 'machine learning' }));
+  });
+});
+
+/**
+ * A degraded answer is returned but not remembered.
+ *
+ * `complete: false` means a provider failed or timed out, so `total` is a lower
+ * bound and whole sources are missing from the hits and the facets. Cached
+ * under the same key as a whole answer, one provider's bad minute was served to
+ * everyone asking that question for the next hour — and the frontend's retry
+ * could not get past it, because it re-posted the identical request and was
+ * answered from that entry.
+ */
+describe('worthCaching', () => {
+  it('is false only for an answer that reported itself incomplete', () => {
+    expect(worthCaching(response({ complete: false }))).toBe(false);
+    expect(worthCaching(response({ complete: true }))).toBe(true);
+  });
+
+  it('treats an absent `complete` as cacheable', () => {
+    // The field is optional in `SearchResponse`, and a response that never
+    // claimed to be partial is not one to throw away. Only an explicit false
+    // is evidence of a degraded read.
+    expect(worthCaching(response())).toBe(true);
+  });
+});
+
+describe('cacheSearchResults — refusing a degraded answer', () => {
+  it('does not store an incomplete result, and says it did not', async () => {
+    const manager = new SearchCacheManager(new CacheManager());
+    const params: SearchParams = { q: 'crispr' };
+
+    const stored = await manager.cacheSearchResults(params, response({ complete: false, total: 3 }));
+
+    expect(stored).toBe(false);
+    expect(await manager.getCachedSearchResults(params)).toBeNull();
+  });
+
+  it('stores a complete one', async () => {
+    const manager = new SearchCacheManager(new CacheManager());
+    const params: SearchParams = { q: 'crispr' };
+
+    const stored = await manager.cacheSearchResults(params, response({ complete: true }));
+
+    expect(stored).toBe(true);
+    expect(await manager.getCachedSearchResults(params)).not.toBeNull();
+  });
+
+  it('leaves an earlier complete answer in place when a later read is degraded', async () => {
+    // The refusal must not become a deletion: a good answer already cached is
+    // better than none, and a provider failing now says nothing about it.
+    const manager = new SearchCacheManager(new CacheManager());
+    const params: SearchParams = { q: 'crispr' };
+
+    await manager.cacheSearchResults(params, response({ complete: true, total: 42 }));
+    await manager.cacheSearchResults(params, response({ complete: false, total: 3 }));
+
+    expect((await manager.getCachedSearchResults(params))?.total).toBe(42);
   });
 });

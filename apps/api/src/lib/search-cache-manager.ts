@@ -26,6 +26,30 @@ import { SearchParams, SearchResponse } from '@open-access-explorer/shared';
  * params that decide it is a subject that can disagree with them, so it is not
  * passed in any more.
  */
+/**
+ * Whether an answer is worth remembering.
+ *
+ * `complete: false` means a provider failed or timed out, so `total` is a lower
+ * bound and whole sources are missing from the hits and the facets. Stored under
+ * the same key as a whole answer, one provider's bad minute was served to
+ * everyone asking that question for the next hour — and nothing could get past
+ * it, because the frontend's retry re-posted the identical request and was
+ * answered from that entry.
+ *
+ * Not storing it costs a repeated fan-out for a query that is failing anyway,
+ * and that is cheaper than it reads: `ProviderCache` only stores outcomes that
+ * succeeded, so a retry reuses the providers that answered and re-asks only the
+ * ones that did not.
+ *
+ * Exported because the route needs the same answer for the `Cache-Control` it
+ * sends. A degraded response that this refuses to store, while telling every
+ * cache between here and the reader to keep it for five minutes, would be back
+ * in front of the retry by another route.
+ */
+export function worthCaching(result: SearchResponse): boolean {
+  return result.complete !== false;
+}
+
 export class SearchCacheManager {
   private cacheManager: CacheManager;
 
@@ -34,9 +58,16 @@ export class SearchCacheManager {
   }
 
   /**
-   * Cache search results with intelligent key generation
+   * Cache search results with intelligent key generation.
+   *
+   * Refuses a degraded answer rather than leaving that to the caller — the
+   * store is what owns what it holds, and a rule enforced at one call site is a
+   * rule the next call site does not know about. Returns whether it stored
+   * anything, so a caller can say so.
    */
-  async cacheSearchResults(params: SearchParams, results: SearchResponse): Promise<void> {
+  async cacheSearchResults(params: SearchParams, results: SearchResponse): Promise<boolean> {
+    if (!worthCaching(results)) return false;
+
     const cacheKey = this.generateSearchKey(params);
 
     await this.cacheManager.set(
@@ -44,6 +75,8 @@ export class SearchCacheManager {
       results,
       CacheStrategy.SEARCH_RESULTS
     );
+
+    return true;
   }
 
   /**

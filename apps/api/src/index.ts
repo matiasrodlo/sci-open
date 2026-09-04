@@ -14,6 +14,7 @@ import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import { SearchParams, toOARecord } from '@open-access-explorer/shared';
 import { searchCacheManager, paperCacheManager, cacheManager } from './lib/cache';
+import { worthCaching } from './lib/search-cache-manager';
 import { httpPerformanceMonitor } from './lib/http-performance-monitor';
 import { httpClientFactory } from './lib/http-client-factory';
 import { assertPublicHttpUrl, fetchPdfStream, PdfProxyError } from './lib/pdf-proxy';
@@ -151,14 +152,30 @@ async function routes(fastify: FastifyInstance) {
         async () => {
           const result = await runOrchestrator(params, { cache: providerCache, userAgent });
 
-          await searchCacheManager.cacheSearchResults(params, result);
+          // A degraded answer is returned but not remembered — see
+          // `worthCaching`. The result is still worth having; `complete` is in
+          // the response so the UI can say what it is.
+          const stored = await searchCacheManager.cacheSearchResults(params, result);
+
+          if (!stored) {
+            fastify.log.warn(
+              { query: params.q, total: result.total },
+              'Search incomplete; returning it uncached so a retry can reach the providers that failed'
+            );
+          }
 
           return result;
         }
       );
 
       const responseTime = Date.now() - startTime;
-      reply.header('Cache-Control', 'public, max-age=300');
+      // The same rule the store applies, applied to every cache between here
+      // and the reader. A shared `max-age=300` on a degraded answer would put
+      // it back in front of the retry however firmly we declined to store it.
+      reply.header(
+        'Cache-Control',
+        worthCaching(searchResult) ? 'public, max-age=300' : 'no-store'
+      );
       reply.header('X-Cache-Hit', coalesced ? 'coalesced' : 'false');
       reply.header('X-Response-Time', responseTime.toString());
     

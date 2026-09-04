@@ -121,12 +121,11 @@ async function ResultsContent({ searchParams }: { searchParams: ResultsSearchPar
                   {/* Results */}
                   <div className="lg:col-span-3 space-y-6">
                     <SortBar />
-                    <PaginatedResults 
-                      initialResults={results.hits}
-                      initialTotal={results.total}
-                      initialPage={currentPage}
-                      initialPageSize={pageSize}
-                      searchParams={searchParamsObj}
+                    <PaginatedResults
+                      results={results.hits}
+                      total={results.total}
+                      page={currentPage}
+                      pageSize={pageSize}
                     />
                   </div>
                 </div>
