@@ -1,4 +1,5 @@
 import type { OASource } from './types';
+import type { AuthorityId } from './authority';
 
 /**
  * A work, as the orchestrator holds it after merging what every provider said
@@ -9,8 +10,25 @@ import type { OASource } from './types';
  * per field and recording who supplied it.
  */
 
-/** Which provider a value came from. Reuses the existing source union. */
-export type ProviderId = OASource;
+/**
+ * A source that returns *records* — the ten the fan-out asks, and the only ones
+ * that can appear in `SourceRef`.
+ *
+ * Narrower than `OASource` on purpose. That union holds fourteen names, and
+ * three of them — Crossref, Unpaywall, OpenCitations — are authorities: they
+ * answer per-DOI questions about a paper somebody else returned, and never
+ * return one themselves. (OpenAlex is both, and is the reason the two sets
+ * overlap rather than partition.)
+ *
+ * Aliasing the two made the distinction unstateable, and it showed up as three
+ * rows in `merge.ts`'s `PROVIDER_PRIORITY` that could never be consulted:
+ * `priorityOf` reads `paper.sources`, nothing ever appends an authority to
+ * `sources`, and the ranks sat there looking like trust decisions about
+ * Crossref and Unpaywall that the merge would honour. It could not honour them.
+ * They existed because `Record<ProviderId, number>` demanded every key of a
+ * union that had three names too many in it.
+ */
+export type ProviderId = Exclude<OASource, 'crossref' | 'unpaywall' | 'opencitations'>;
 
 /**
  * One provider's sighting of this paper.
@@ -76,7 +94,19 @@ export type ProvenancedField =
  * Only populated where it is informative — a paper assembled from one provider
  * has nothing to attribute that `sources` does not already say.
  */
-export type FieldSources = Partial<Record<ProvenancedField, ProviderId>>;
+export type FieldSources = Partial<Record<ProvenancedField, FieldSource>>;
+
+/**
+ * Who supplied one field: a provider that returned the record, or an authority
+ * that answered about it afterwards.
+ *
+ * This is the union `FieldSources` always needed and could not say while
+ * `ProviderId` was every source there is. `applyFacts` writes an authority id
+ * here — that is its whole job — so the type had to admit them, and admitting
+ * them by making *every* source a provider is what put unreachable rows in the
+ * merge's trust order.
+ */
+export type FieldSource = ProviderId | AuthorityId;
 
 /**
  * Reserved. Distinct DOIs are distinct papers today, which is what the data

@@ -101,19 +101,25 @@ describe('mergePapers', () => {
   });
 
   it('does not treat an unknown oaStatus as a value worth keeping', () => {
-    // crossref outranks unpaywall, so crossref is the base and its 'unknown'
+    // openalex outranks europepmc, so openalex is the base and its 'unknown'
     // has to lose to a real route from the lower-priority contributor.
+    //
+    // Written with `crossref` and `unpaywall` until `ProviderId` stopped
+    // admitting them. Those are authorities: they answer about a record rather
+    // than returning one, so no paper can carry either in `sources` and the
+    // ranks the test leaned on were rows the merge could never consult. The
+    // behaviour under test is real; only the cast was fictional.
     const merged = mergePapers([
-      paper({ id: 'c', doi: '10.1/x', oaStatus: 'unknown', sources: [ref('crossref')] }),
-      paper({ id: 'u', doi: '10.1/x', oaStatus: 'gold', sources: [ref('unpaywall')] })
+      paper({ id: 'o', doi: '10.1/x', oaStatus: 'unknown', sources: [ref('openalex')] }),
+      paper({ id: 'e', doi: '10.1/x', oaStatus: 'gold', sources: [ref('europepmc')] })
     ]);
     expect(merged[0].oaStatus).toBe('gold');
-    expect(merged[0].fieldSources.oaStatus).toBe('unpaywall');
+    expect(merged[0].fieldSources.oaStatus).toBe('europepmc');
   });
 
   it('prefers the higher-priority provider for a field they both supply', () => {
     const merged = mergePapers([
-      paper({ id: 'u', doi: '10.1/x', oaStatus: 'gold', sources: [ref('unpaywall')] }),
+      paper({ id: 'o', doi: '10.1/x', oaStatus: 'gold', sources: [ref('openalex')] }),
       paper({ id: 'e', doi: '10.1/x', oaStatus: 'bronze', sources: [ref('europepmc')] })
     ]);
     expect(merged[0].oaStatus).toBe('gold');

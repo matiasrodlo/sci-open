@@ -168,7 +168,11 @@ describe('orchestrator search', () => {
   });
 
   it('skips a provider that cannot serve the query and says so', async () => {
-    const doiOnly = stub('opencitations', [], {
+    // DataCite stands in for a provider that cannot take a keyword query. It
+    // was `opencitations`, which is an authority and never appears in a
+    // fan-out at all — the capabilities below are the stub's anyway, so the id
+    // only ever had to be a real provider.
+    const doiOnly = stub('datacite', [], {
       capabilities: {
         keywordSearch: false, doiLookup: true, fields: [], yearFilter: false,
         maxPageSize: 100, reportsTotal: false, suppliesCitations: true
@@ -176,7 +180,7 @@ describe('orchestrator search', () => {
     });
     const result = await search(QUERY, { providers: [stub('europepmc', page('europepmc', 3)), doiOnly] });
 
-    const skipped = result.reports.find(r => r.provider === 'opencitations');
+    const skipped = result.reports.find(r => r.provider === 'datacite');
     expect(skipped?.status).toBe('skipped');
     expect(skipped?.skipReason).toMatch(/keywordSearch/);
     // A deliberate skip does not make the result incomplete.

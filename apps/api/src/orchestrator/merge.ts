@@ -11,24 +11,42 @@ import type { FieldSources, Paper, ProvenancedField, ProviderId } from '@open-ac
  * the field consumers read, which makes that failure structurally impossible.
  */
 
-/** Trust order for choosing between two values of the same field. */
+/**
+ * Trust order for choosing between two values of the same field.
+ *
+ * Ten providers and eleven rows, because bioRxiv and medRxiv are one API that
+ * reports which server answered.
+ *
+ * It used to hold fourteen, and three of them — Crossref at 1, Unpaywall at 3,
+ * OpenCitations at 14 — could never be read. `priorityOf` maps over
+ * `paper.sources`, an authority is never appended there, and the ranks were
+ * only present because `Record<ProviderId, number>` demanded a key for every
+ * name in a union that also held the authorities. They read as trust decisions
+ * the merge would honour and it could not honour them; ranking Crossref first
+ * did nothing at all. Narrowing `ProviderId` to the sources that return records
+ * is what let them go — see `shared/paper.ts`.
+ */
 const PROVIDER_PRIORITY: Record<ProviderId, number> = {
-  crossref: 1,
-  openalex: 2,
-  unpaywall: 3,
-  europepmc: 4,
-  core: 5,
-  openaire: 6,
-  plos: 7,
-  arxiv: 8,
-  biorxiv: 9,
-  medrxiv: 10,
-  doaj: 11,
-  ncbi: 12,
-  datacite: 13,
-  opencitations: 14
+  openalex: 1,
+  europepmc: 2,
+  core: 3,
+  openaire: 4,
+  plos: 5,
+  arxiv: 6,
+  biorxiv: 7,
+  medrxiv: 8,
+  doaj: 9,
+  ncbi: 10,
+  datacite: 11
 };
 
+/**
+ * The `?? 99` is unreachable and stays: the table is exhaustive over
+ * `ProviderId`, so a `SourceRef` cannot name a row that is missing. It is the
+ * backstop for a provider added to the union and not to the table — which the
+ * compiler catches, but only in a build, and the cost of being wrong here is a
+ * `NaN` priority that sorts every merge group at random.
+ */
 function priorityOf(paper: Paper): number {
   return Math.min(...paper.sources.map(s => PROVIDER_PRIORITY[s.provider] ?? 99));
 }

@@ -1,4 +1,5 @@
-import type { Paper, PaperStage, ProvenancedField, ProviderId } from './paper';
+import type { Paper, PaperStage, ProvenancedField } from './paper';
+import type { OASource } from './types';
 
 /**
  * The second provider role: `lookup(doi) -> facts about a work we already have`.
@@ -52,7 +53,12 @@ export type AuthorityStatus = 'ok' | 'timeout' | 'error' | 'skipped';
  * already know" are all different, and only the third is worth the request.
  */
 export type AuthorityReport = {
-  authority: ProviderId;
+  /**
+   * Which authority this describes. It said `ProviderId` while that name meant
+   * every source there is, so the type allowed `authority: 'arxiv'` — a report
+   * about a search provider being consulted per DOI, which cannot happen.
+   */
+  authority: AuthorityId;
   status: AuthorityStatus;
   /** DOIs this authority was asked about. */
   asked: number;
@@ -67,5 +73,15 @@ export type AuthorityReport = {
   latency: number;
 };
 
-/** Which provider ids name an authority rather than a search provider. */
-export type AuthorityId = Extract<ProviderId, 'crossref' | 'unpaywall' | 'openalex' | 'opencitations'>;
+/**
+ * A source that answers per-DOI questions about a record somebody else
+ * returned.
+ *
+ * Extracted from `OASource` rather than from `ProviderId`, which is the half of
+ * the split that is easy to get wrong: `ProviderId` no longer contains
+ * Crossref, Unpaywall or OpenCitations, so narrowing *it* would silently leave
+ * this as `'openalex'` alone and every other authority would stop type-checking
+ * where it is named. The two sets are both subsets of `OASource`, and they
+ * overlap — OpenAlex is a provider and an authority both.
+ */
+export type AuthorityId = Extract<OASource, 'crossref' | 'unpaywall' | 'openalex' | 'opencitations'>;
