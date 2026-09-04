@@ -6,6 +6,8 @@ import {
   type FetchOptions, type ArticleFetchOptions
 } from './fetch';
 import { normalize, type SkippedRecord } from './normalize';
+import { readPages } from '../read-pages';
+import { log } from '../../lib/logger';
 
 export { capabilities, translate, fetchPage, fetchArticle, normalize, DoajUnavailableError };
 export type { TranslateOptions, FetchOptions, ArticleFetchOptions, SkippedRecord };
@@ -38,24 +40,33 @@ export async function search(query: Query, options: SearchOptions): Promise<Prov
 
   const started = Date.now();
 
-  const payload = await fetchPage(nativeQuery, {
-    ...fetchOptions,
-    pageSize: Math.min(Math.max(pageSize, 1), capabilities.maxPageSize),
-    offset
+  // DOAJ caps a page at 100 and the orchestrator asks for `depth` — 600 by
+  // default — so a single page returned a sixth of what was requested and
+  // reported it as a complete read. See `providers/read-pages.ts`.
+  const { items, total, requests } = await readPages({
+    wanted: pageSize,
+    perPage: capabilities.maxPageSize,
+    offset,
+    fetch: page => fetchPage(nativeQuery, { ...fetchOptions, ...page }),
+    itemsOf: payload => payload?.results ?? [],
+    totalOf: payload => (Number.isFinite(Number(payload?.total)) ? Number(payload.total) : undefined)
   });
 
   const latency = Date.now() - started;
-  const { papers, skipped } = normalize(payload, {
+
+  // Rebuilt as the one payload `normalize` reads, which is what keeps this
+  // module the only place that knows a read was ever more than one request.
+  const { papers, skipped } = normalize({ results: items }, {
     retrievedAt: now().toISOString(),
     rankOffset: offset,
     latency
   });
 
-  const reported = Number(payload?.total);
+  log.debug('DOAJ read', { requests, retrieved: papers.length, wanted: pageSize });
 
   return {
     papers,
-    ...(Number.isFinite(reported) ? { totalHits: reported } : {}),
+    ...(total !== undefined ? { totalHits: total } : {}),
     skipped,
     latency
   };
