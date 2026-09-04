@@ -8,7 +8,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ExportButton } from '@/components/ExportButton';
 import { ProviderCoverage } from '@/components/ProviderCoverage';
 import { searchPapers } from '@/lib/fetcher';
-import { toList, toSingle, toPage } from '@/lib/search-params';
+import { toList, toSingle, toPage, toYear, toSort } from '@/lib/search-params';
 import { SearchParams } from '@open-access-explorer/shared';
 
 // Force dynamic rendering
@@ -36,24 +36,28 @@ async function ResultsContent({ searchParams }: { searchParams: ResultsSearchPar
   // `toList` rather than split on a comma. See `lib/search-params.ts` — a
   // venue like `Bioinformatics (Oxford, England)` cannot survive comma-joining.
   const query = toSingle(searchParams.q);
-  const yearFrom = toSingle(searchParams.yearFrom);
-  const yearTo = toSingle(searchParams.yearTo);
-  const sort = toSingle(searchParams.sort);
 
   if (!query) {
     return <EmptyState type="no-query" />;
   }
 
-  // Clamped rather than passed through — an out-of-range page used to reach the
-  // API, fail its schema, and surface as "Search Error". See `toPage`.
+  // Every parameter the API's schema constrains is read through a helper that
+  // can only produce a value the schema accepts. Passed through raw, a stale
+  // bookmark or a hand-edited address reached the API, failed validation, and
+  // surfaced as "Search Error" — the service reported broken for a URL that
+  // simply asked for something that does not exist. See `toPage`, `toYear` and
+  // `toSort` in `lib/search-params.ts`.
   const currentPage = toPage(searchParams.page);
+  const yearFrom = toYear(searchParams.yearFrom);
+  const yearTo = toYear(searchParams.yearTo);
+  const sort = toSort(searchParams.sort);
   const pageSize = 20; // Fixed page size like Web of Science
 
   const searchParamsObj: SearchParams = {
     q: query,
     page: currentPage,
     pageSize: pageSize,
-    sort: (sort as any) || 'relevance',
+    sort,
     filters: {
       // `source`, singular, which is what the API field, the facet key and
       // every other filter on this page are called. It read `sources` here and
@@ -61,8 +65,8 @@ async function ResultsContent({ searchParams }: { searchParams: ResultsSearchPar
       // but the source facet group is the obvious next thing to add and it
       // would have written the singular.
       source: toList(searchParams.source),
-      yearFrom: yearFrom ? parseInt(yearFrom) : undefined,
-      yearTo: yearTo ? parseInt(yearTo) : undefined,
+      yearFrom,
+      yearTo,
       oaStatus: toList(searchParams.oaStatus),
       venue: toList(searchParams.venue),
       publisher: toList(searchParams.publisher),

@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { toList, toSingle, withFilter, toPage, MAX_PAGE } from '../search-params';
+import {
+  toList, toSingle, withFilter, toPage, toYear, toSort, MAX_PAGE, MIN_YEAR, MAX_YEAR
+} from '../search-params';
 
 /**
  * Facet values contain commas constantly — measured, 25 values in a single
@@ -104,5 +106,64 @@ describe('toPage', () => {
 
   it('takes the integer part of a decimal rather than rejecting it', () => {
     expect(toPage('2.9')).toBe(2);
+  });
+});
+
+/**
+ * `toYear` and `toSort` exist for the reason `toPage` does: every one of these
+ * parameters is constrained by the API's schema, and any value outside it
+ * answers 400, which this page renders as "There was an error performing your
+ * search" — the service reported broken for a URL that merely asked for
+ * something that cannot exist.
+ */
+describe('toYear', () => {
+  it('passes a year in range through', () => {
+    expect(toYear('2019')).toBe(2019);
+  });
+
+  it.each([undefined, '', 'abc', 'NaN'])('is undefined — no bound at all — for %s', value => {
+    // Unparseable means there is no year to filter on, so the honest answer is
+    // the unfiltered set. `yearFrom ? parseInt(yearFrom) : undefined` produced
+    // NaN here, which JSON.stringify writes as null, which the schema rejects.
+    expect(toYear(value as any)).toBeUndefined();
+  });
+
+  it('clamps out of range rather than dropping the bound', () => {
+    // Clamping matters most in the upper direction: dropping `yearTo=99999`
+    // would silently widen the search to everything, where clamping keeps what
+    // the reader plainly meant.
+    expect(toYear('999')).toBe(MIN_YEAR);
+    expect(toYear('99999')).toBe(MAX_YEAR);
+    expect(toYear('-5')).toBe(MIN_YEAR);
+  });
+
+  it('reads the first value when the parameter is repeated', () => {
+    expect(toYear(['2019', '2020'])).toBe(2019);
+  });
+});
+
+describe('toSort', () => {
+  it('passes every sort the API accepts through unchanged', () => {
+    for (const sort of ['relevance', 'date', 'date_asc', 'citations', 'citations_asc',
+                        'author', 'author_desc', 'venue', 'venue_desc', 'title', 'title_desc']) {
+      expect(toSort(sort)).toBe(sort);
+    }
+  });
+
+  it.each(['year', 'newest', 'date_desc', 'DATE', '', undefined])(
+    'falls back to relevance for %s',
+    value => {
+      // `?sort=year` from a stale bookmark or an older build of this page used
+      // to reach the API as `(sort as any)` and answer 400. Relevance is the
+      // fallback because it is already what a *missing* sort means, so an
+      // unreadable one lands where an absent one would.
+      expect(toSort(value as any)).toBe('relevance');
+    }
+  );
+
+  it('does not accept an inherited property as a sort', () => {
+    // The lookup is an own-property check: `'toString' in SORTS` is true.
+    expect(toSort('toString')).toBe('relevance');
+    expect(toSort('constructor')).toBe('relevance');
   });
 });
