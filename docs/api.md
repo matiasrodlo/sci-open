@@ -151,12 +151,21 @@ cannot be used to reach the internal network:
 | | |
 |---|---|
 | **400** | Not a valid URL, or the host would not resolve |
-| **403** | Resolves to a non-public address, or a redirect left http/https |
+| **403** | Resolves to a non-public address, a redirect left http/https, or the publisher refused the request |
+| **404** | The publisher has no PDF at that URL |
 | **413** | Larger than the download limit |
 | **415** | Upstream served something that is not a PDF |
-| **502** | Upstream could not be fetched |
+| **502** | Upstream could not be fetched, or answered with anything else |
 
 The check is applied again to each redirect, not only to the URL supplied.
+
+`403` and `404` are the two upstream answers reported as themselves, because
+they are the two a caller acts on differently: `404` says the record's
+`bestPdfUrl` is wrong and the file is not there, `403` says the file is there
+and this proxy is not allowed to fetch it — bot protection, which the reader's
+own browser may well get past. Every other upstream status is a `502`,
+including an upstream `429`: this endpoint answers with `429` when *the caller*
+has asked too often, and only that one is fixed by the caller waiting.
 
 ---
 

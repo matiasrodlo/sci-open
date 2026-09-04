@@ -12,6 +12,32 @@ interface PaperActionsProps {
   paper: OARecord;
 }
 
+/**
+ * What the API said went wrong, rather than the number it said it with.
+ *
+ * `PDF download failed with status ${response.status}` was all this reported,
+ * and the status is the least specific thing in the answer: a publisher
+ * refusing a robot, a URL the record was wrong about, and a landing page
+ * indexed as a PDF are three different problems, and the body names which one
+ * — "Upstream returned 403 for the PDF", "Upstream served text/html, not a
+ * PDF". Only the body is read; the `requestId` alongside it belongs in the
+ * API's log, not in the browser console.
+ *
+ * The status is still the fallback, because a 502 from the proxy in front of
+ * the API answers with its own shape and a gateway may answer with none at all.
+ */
+async function reasonFor(response: Response): Promise<string> {
+  try {
+    const body = await response.json();
+    if (typeof body?.error === 'string' && body.error) {
+      return `PDF download failed: ${body.error}`;
+    }
+  } catch {
+    // Not JSON, or no body. The status below is what is left.
+  }
+  return `PDF download failed with status ${response.status}`;
+}
+
 export function PaperActions({ paper }: PaperActionsProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -37,7 +63,7 @@ export function PaperActions({ paper }: PaperActionsProps) {
       });
 
       if (!response.ok) {
-        throw new Error(`PDF download failed with status ${response.status}`);
+        throw new Error(await reasonFor(response));
       }
 
       const blob = await response.blob();
@@ -52,14 +78,21 @@ export function PaperActions({ paper }: PaperActionsProps) {
       // browser has read the blob, so give it a moment first.
       setTimeout(() => window.URL.revokeObjectURL(url), 1000);
     } catch (error) {
-      console.error('Download error:', error);
       // Fallback: open in new tab. Only report failure if the fallback
       // can't run either, so a working download never shows an error.
       // `openExternal` reports on the URL rather than the tab, which is what
       // this needs: `noopener` makes `window.open` return null by
       // specification, so testing its handle would show an error for every
       // download that in fact opened fine.
-      if (!openExternal(paper.bestPdfUrl)) {
+      if (openExternal(paper.bestPdfUrl)) {
+        // Logged, because the proxy failing is worth seeing, but not as an
+        // error: the reader has the paper open in a tab and nothing is left to
+        // fix here. `console.error` raised Next's error overlay on the most
+        // ordinary outcome this endpoint has — a publisher refusing the proxy
+        // and the reader's own browser being sent to fetch it instead.
+        console.warn('Proxy download failed; opened the publisher link instead:', error);
+      } else {
+        console.error('Download error:', error);
         setDownloadError('Failed to download PDF');
       }
     } finally {

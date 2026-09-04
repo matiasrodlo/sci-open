@@ -254,6 +254,45 @@ function looksLikePdfResponse(url: URL, contentType: string): boolean {
 }
 
 /**
+ * The upstream's status, translated rather than collapsed.
+ *
+ * Every 4xx used to become a 404, which made the one failure a reader actually
+ * meets unreadable. Measured 2026-09-04 against the `bestPdfUrl` of a live
+ * search: `jbc.org`, `tandfonline.com` and a `doi.org` link that redirects to a
+ * publisher all answer **403** — bot protection, the same refusal
+ * `pdf-url.ts` documents for `academic.oup.com` and Wiley — and all three
+ * reached the browser as `PDF download failed with status 404`. The body said
+ * "Upstream returned 403 for the PDF" the whole time; only the status lied, and
+ * the status is the part the client reads.
+ *
+ * That is worth more than tidiness. "Not found" says the file is gone and the
+ * record is stale, which points at the provider metadata. "Forbidden" says the
+ * file is there and we are the ones not allowed to fetch it, which is why the
+ * caller's fallback — open the link in the reader's own tab, with the reader's
+ * own session — is the right next move rather than a consolation.
+ *
+ * Only the two that a caller can act on differently are kept. Anything else
+ * from a publisher is a gateway failure from here: the request left, something
+ * came back, and it was not the file.
+ */
+export function statusForUpstream(status: number): number {
+  // Gone is not found, one tense later.
+  if (status === 404 || status === 410) return 404;
+  // Both mean "the publisher will not serve this to us". 401 is not an
+  // invitation to authenticate: there are no credentials for this proxy to
+  // hold, and a reader's own browser may well be carrying some.
+  if (status === 401 || status === 403) return 403;
+  /**
+   * Everything else, 429 included. Passing an upstream 429 through would be
+   * the same mistake in a new place — this endpoint has its own rate limit
+   * answering with that code, so a client cannot tell "you asked us too often"
+   * from "we asked the publisher too often", and only the first is fixed by
+   * the client waiting.
+   */
+  return 502;
+}
+
+/**
  * Streams the PDF rather than buffering it, so a large file does not sit in
  * memory on its way to the browser.
  */
@@ -296,7 +335,7 @@ export async function fetchPdfStream(url: URL, userAgent: string): Promise<PdfSt
     const status = error.response?.status;
     throw new PdfProxyError(
       status ? `Upstream returned ${status} for the PDF` : `Could not reach the PDF: ${error.message}`,
-      status && status >= 400 && status < 500 ? 404 : 502
+      status ? statusForUpstream(status) : 502
     );
   });
 

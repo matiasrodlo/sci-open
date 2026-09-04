@@ -22,6 +22,7 @@ import {
   guardedLookup,
   ssrfRefusalIn,
   fetchPdfStream,
+  statusForUpstream,
   PdfProxyError,
   SSRF_REFUSED
 } from '../pdf-proxy';
@@ -281,6 +282,74 @@ describe('ssrfRefusalIn', () => {
     a.cause = b;
     b.cause = a;
     expect(ssrfRefusalIn(a)).toBeUndefined();
+  });
+});
+
+/**
+ * What the caller is told when the publisher said no.
+ *
+ * Every 4xx collapsed to 404 here, and the failure that reaches a reader most
+ * often is a 403 — measured 2026-09-04, `jbc.org`, `tandfonline.com` and a
+ * `doi.org` link into a publisher all answer 403 to this proxy, and all three
+ * surfaced in the browser as "PDF download failed with status 404". The two
+ * are opposite diagnoses: 404 sends someone to the provider metadata, 403 says
+ * the metadata was right and the fetch was refused.
+ */
+describe('statusForUpstream', () => {
+  it.each([
+    [404, 404, 'not there'],
+    [410, 404, 'gone is not found, one tense later']
+  ])('reports %i as %i (%s)', (upstream, expected) => {
+    expect(statusForUpstream(upstream)).toBe(expected);
+  });
+
+  it.each([
+    [401, 'no credentials exist for this proxy to offer'],
+    [403, 'bot protection — the file is there, we are refused']
+  ])('reports %i as 403 (%s)', upstream => {
+    expect(statusForUpstream(upstream)).toBe(403);
+  });
+
+  it('does not pass an upstream 429 through', () => {
+    // The route answers 429 from its own rate limit. Reusing the code for the
+    // publisher's would tell a caller to wait for a limit it is not near.
+    expect(statusForUpstream(429)).toBe(502);
+  });
+
+  it.each([[400], [418], [500], [503]])('reports %i as a gateway failure', upstream => {
+    expect(statusForUpstream(upstream)).toBe(502);
+  });
+});
+
+describe('fetchPdfStream — upstream failures', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const fetchAfter = async (error: unknown) => {
+    vi.spyOn(axios, 'get').mockRejectedValue(error);
+    return fetchPdfStream(new URL('https://publisher.example.com/paper.pdf'), 'ua')
+      .catch((e: PdfProxyError) => e);
+  };
+
+  it('carries a publisher 403 through as a 403', async () => {
+    const error = await fetchAfter({ response: { status: 403 }, message: 'Request failed' });
+
+    expect(error).toBeInstanceOf(PdfProxyError);
+    expect((error as PdfProxyError).statusCode).toBe(403);
+    // The message named the real status even while the code did not; it is the
+    // status the client reads, so both have to agree.
+    expect((error as PdfProxyError).message).toBe('Upstream returned 403 for the PDF');
+  });
+
+  it('keeps a genuine 404 a 404', async () => {
+    const error = await fetchAfter({ response: { status: 404 }, message: 'Request failed' });
+    expect((error as PdfProxyError).statusCode).toBe(404);
+  });
+
+  it('still reports a transport failure as a gateway failure', async () => {
+    const error = await fetchAfter(Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' }));
+
+    expect((error as PdfProxyError).statusCode).toBe(502);
+    expect((error as PdfProxyError).message).toBe('Could not reach the PDF: socket hang up');
   });
 });
 
