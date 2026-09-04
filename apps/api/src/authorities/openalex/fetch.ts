@@ -24,6 +24,7 @@ import type { OpenAlexPayload } from '../../providers/openalex/fetch';
 
 export type FetchOptions = {
   baseUrl?: string;
+  apiKey?: string;
   timeoutMs: number;
   signal?: AbortSignal;
   userAgent?: string;

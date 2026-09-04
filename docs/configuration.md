@@ -134,6 +134,7 @@ CORE_API_KEY=
 NCBI_API_KEY=
 DOAJ_API_KEY=
 DATACITE_API_KEY=
+OPENALEX_API_KEY=
 UNPAYWALL_EMAIL=your-email@example.com
 ```
 
@@ -141,6 +142,18 @@ Keys are optional, and an unset key is not the same as a placeholder one: a
 wrong credential is worse than none. DataCite answers a request carrying
 `Authorization: Bearer your_datacite_api_key_here` with `401`, where the same
 request with no header at all answers `200`. Leave them empty.
+
+**`OPENALEX_API_KEY` is the one worth setting anyway.** OpenAlex meters requests
+against a daily budget and an anonymous caller gets a tenth of what a key gets.
+Spend it and every request answers `429`; the provider reports that as a failed
+read rather than an empty one, so the search is marked incomplete and the
+coverage panel names OpenAlex as a source that did not answer — which is what an
+unkeyed dev run does on a single query. The key is free: make an account and
+copy it from `openalex.org/settings/api`. It is sent as `Authorization: Bearer`
+rather than the `api_key` query parameter OpenAlex also accepts, so it stays out
+of request URLs, logs and pool metrics. It covers all three roles that call
+OpenAlex — the search provider, the `/api/paper/:id` lookup and the DOI
+authority — because they share one fetch.
 
 **Base URLs are not configurable.** Each provider and authority takes its base
 URL as a `baseUrl` option that defaults to a module constant, and reads no

@@ -60,6 +60,7 @@ export const AUTHORITIES: AuthorityEntry[] = [
     lookup: ({ doi, timeoutMs, signal, userAgent }) =>
       openalex.lookup(doi, {
         timeoutMs,
+        ...(process.env.OPENALEX_API_KEY ? { apiKey: process.env.OPENALEX_API_KEY } : {}),
         ...(signal ? { signal } : {}),
         ...(userAgent ? { userAgent } : {})
       })

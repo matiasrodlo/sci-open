@@ -2,6 +2,7 @@ import type { AxiosInstance } from 'axios';
 import { getPooledClient } from '../../lib/http-client-factory';
 import { getServiceConfig } from '../../lib/http-pool-config';
 import { extractContactEmail } from '../../lib/contact-email';
+import { usableApiKey } from '../../lib/api-key';
 import type { OpenAlexParams } from './translate';
 
 /**
@@ -58,6 +59,7 @@ export class OpenAlexUnavailableError extends Error {
 
 export type FetchOptions = {
   baseUrl?: string;
+  apiKey?: string;
   pageSize: number;
   offset: number;
   timeoutMs: number;
@@ -74,9 +76,25 @@ export async function fetchPage(
   params: OpenAlexParams,
   options: FetchOptions
 ): Promise<OpenAlexPayload> {
-  const { baseUrl = DEFAULT_BASE_URL, pageSize, offset, timeoutMs, signal, userAgent } = options;
+  const {
+    baseUrl = DEFAULT_BASE_URL, apiKey, pageSize, offset, timeoutMs, signal, userAgent
+  } = options;
 
   const client: AxiosInstance = getPooledClient(baseUrl, getServiceConfig('openalex'));
+
+  // OpenAlex meters every request against a daily budget, and an anonymous
+  // caller gets a tenth of what a key gets — a free one, from
+  // `openalex.org/settings/api`. Spend it and the answer is a 429, which this
+  // provider reports as a failed read and the orchestrator reports as an
+  // incomplete search. Observed unkeyed on a single `CRISPR gene editing`
+  // fan-out: `OpenAlex 429: Anonymous search is temporarily rate-limited while
+  // the search cluster is under elevated load.`
+  //
+  // A header rather than the `api_key` query parameter OpenAlex also accepts.
+  // Both authenticate; only the header stays out of the request URL, and the
+  // URL is what reaches the logs and the pool's per-service metrics. It is
+  // also what `providers/core` and `providers/datacite` already do with theirs.
+  const key = usableApiKey(apiKey);
 
   // OpenAlex routes callers who identify themselves into a faster pool. It
   // reads either the User-Agent or a `mailto`; sending both is the documented
@@ -93,7 +111,11 @@ export async function fetchPage(
       ...(contactEmail ? { mailto: contactEmail } : {})
     },
     timeout: timeoutMs,
-    headers: { Accept: 'application/json', ...(userAgent ? { 'User-Agent': userAgent } : {}) },
+    headers: {
+      Accept: 'application/json',
+      ...(userAgent ? { 'User-Agent': userAgent } : {}),
+      ...(key ? { Authorization: `Bearer ${key}` } : {})
+    },
     ...(signal ? { signal } : {})
   });
 
@@ -119,6 +141,7 @@ export async function fetchPage(
 
 export type WorkFetchOptions = {
   baseUrl?: string;
+  apiKey?: string;
   timeoutMs: number;
   signal?: AbortSignal;
   userAgent?: string;
@@ -140,10 +163,12 @@ export type WorkFetchOptions = {
  * one-record page and `normalize` reads it unchanged.
  */
 export async function fetchWork(id: string, options: WorkFetchOptions): Promise<OpenAlexPayload> {
-  const { baseUrl = DEFAULT_BASE_URL, timeoutMs, signal, userAgent } = options;
+  const { baseUrl = DEFAULT_BASE_URL, apiKey, timeoutMs, signal, userAgent } = options;
 
   const client: AxiosInstance = getPooledClient(baseUrl, getServiceConfig('openalex'));
   const contactEmail = userAgent ? extractContactEmail(userAgent) : undefined;
+  // The entity endpoint is billed too, just less than a search. Same key.
+  const key = usableApiKey(apiKey);
 
   // Ids are stored stripped, but the old paper endpoint wrote the full URL
   // into `OARecord.id`, so a link made before this phase carries one.
@@ -163,7 +188,11 @@ export async function fetchWork(id: string, options: WorkFetchOptions): Promise<
       ...(contactEmail ? { mailto: contactEmail } : {})
     },
     timeout: timeoutMs,
-    headers: { Accept: 'application/json', ...(userAgent ? { 'User-Agent': userAgent } : {}) },
+    headers: {
+      Accept: 'application/json',
+      ...(userAgent ? { 'User-Agent': userAgent } : {}),
+      ...(key ? { Authorization: `Bearer ${key}` } : {})
+    },
     ...(signal ? { signal } : {})
   });
 

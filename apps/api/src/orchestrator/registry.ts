@@ -246,6 +246,7 @@ export const PROVIDERS: ProviderEntry[] = [
     async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
       return openalex.lookup(nativeId, {
         timeoutMs,
+        ...(process.env.OPENALEX_API_KEY ? { apiKey: process.env.OPENALEX_API_KEY } : {}),
         ...(signal ? { signal } : {}),
         ...(userAgent ? { userAgent } : {}),
         ...(now ? { now } : {})
@@ -257,6 +258,7 @@ export const PROVIDERS: ProviderEntry[] = [
         offset,
         timeoutMs,
         openAccessOnly,
+        ...(process.env.OPENALEX_API_KEY ? { apiKey: process.env.OPENALEX_API_KEY } : {}),
         ...(signal ? { signal } : {}),
         ...(userAgent ? { userAgent } : {}),
         ...(now ? { now } : {})
