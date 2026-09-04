@@ -65,7 +65,33 @@ function forwardable(headers: Headers): Headers {
   return out;
 }
 
+/**
+ * A segment that would walk out of `/api/`.
+ *
+ * `encodeURIComponent` does not escape a dot — it is unreserved — so `..`
+ * survives it unchanged, and the URL parser inside `fetch` then resolves the
+ * traversal before the request goes out. Measured: a path of `['..', '..',
+ * 'health']` builds `…:4000/api/../../health` and is requested as `/health`.
+ *
+ * That does not reach another host — the origin still comes from the
+ * environment, and only the path is the caller's — but it does reach any path
+ * on the API service, which is more than the comment above claims and more than
+ * this handler should offer. Today that is only `/health` and Fastify's 404,
+ * so the value of closing it is that the next thing mounted outside `/api` is
+ * not quietly exposed by a proxy nobody re-reads.
+ *
+ * Refused rather than stripped: a request naming a path that does not exist is
+ * a request to answer, not one to silently rewrite into a different one.
+ */
+function walksOut(segment: string): boolean {
+  return segment === '.' || segment === '..';
+}
+
 async function proxy(request: NextRequest, path: string[]): Promise<Response> {
+  if (path.some(walksOut)) {
+    return Response.json({ error: 'Not found' }, { status: 404 });
+  }
+
   const target = `${apiOrigin()}/api/${path.map(encodeURIComponent).join('/')}${request.nextUrl.search}`;
 
   const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
