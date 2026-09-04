@@ -24,7 +24,7 @@ import { log, useLogger } from './lib/logger';
 import { searchBodySchema, paperParamsSchema, downloadPdfBodySchema } from './lib/schemas';
 import { clientError } from './lib/client-error';
 import { parseTrustProxy, trustProxyWarning, trustsAnyProxy } from './lib/trust-proxy';
-import { ProviderCache, lookupPaper } from './orchestrator';
+import { ProviderCache, lookupPaper, enrichPage } from './orchestrator';
 import { runOrchestrator } from './orchestrator/from-search-params';
 
 // See `lib/trust-proxy.ts`. This is what decides whether `request.ip` — and so
@@ -247,13 +247,37 @@ async function routes(fastify: FastifyInstance) {
       // route's, which is why a hundred lines of per-connector branching
       // could go.
       const found = await lookupPaper(id, { userAgent });
-      const paper = found ? toOARecord(found) : null;
 
       // If no paper found, return 404
-      if (!paper) {
+      if (!found) {
         reply.code(404);
         return { error: 'Paper not found' };
       }
+
+      /**
+       * The same authorities the search path asks about its page, asked about
+       * the one record this endpoint returns.
+       *
+       * Without this the two ways of reaching a paper page disagreed, and the
+       * shareable one was the worse one. A click from the results list carries
+       * the record the search produced — merged across every provider that
+       * returned the work, then enriched — because the frontend caches it in
+       * `sessionStorage` on the way. A shared link, a reload or a new tab has
+       * no such copy and lands here, where `lookupPaper` asks exactly one
+       * provider and returns what it says: no citation count from
+       * OpenCitations, no access route or verified copy from Unpaywall, no
+       * fields filled in from Crossref. Same URL, two bodies.
+       *
+       * It is cheap where it lands. `enrichPage` returns immediately for a
+       * paper carrying no DOI, each lookup is bounded by its own timeout and
+       * the step's budget, an authority that fails is reported rather than
+       * thrown — so an Unpaywall outage costs the enrichment, not the paper —
+       * and this runs only on a cache miss, which is precisely the request
+       * that was being answered poorly. The result is then cached like any
+       * other, so the second visitor pays nothing.
+       */
+      const { papers: [enriched], reports } = await enrichPage([found], { userAgent });
+      const paper = toOARecord(enriched);
 
       // Cache the result using advanced cache manager
       await paperCacheManager.cachePaperDetails(paper);
@@ -263,10 +287,13 @@ async function routes(fastify: FastifyInstance) {
       reply.header('X-Cache-Hit', 'false');
       reply.header('X-Response-Time', responseTime.toString());
     
-      fastify.log.info({ 
-        id, 
+      // The fields the authorities actually wrote, which is the only number
+      // that says whether asking them was worth the requests.
+      fastify.log.info({
+        id,
         title: paper.title,
-        responseTime 
+        responseTime,
+        fieldsEnriched: reports.reduce((total, report) => total + report.applied, 0)
       }, 'Paper details fetched and cached');
     
       return paper;

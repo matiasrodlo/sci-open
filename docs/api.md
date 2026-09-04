@@ -87,6 +87,14 @@ search, which for bioRxiv, DataCite and PLOS is a DOI lookup because their
 native ids *are* DOIs. A record that comes back under a different id is not the
 one that was asked for, and the answer is 404 rather than that record.
 
+The record is then enriched by the same authorities the search path asks about
+its page — Unpaywall, Crossref and OpenCitations — so a paper reached by a
+shared link carries the same access route, verified copy and citation count as
+one reached by clicking a search result. A record with no DOI is returned as the
+provider gave it, since there is nothing to look up; an authority that fails or
+runs out of budget costs its own contribution and not the response. Enrichment
+runs only on a cache miss.
+
 **Response:** an `OARecord`, and nothing wrapping it.
 
 ```json
