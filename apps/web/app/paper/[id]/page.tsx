@@ -9,7 +9,7 @@ import { PaperActions } from '@/components/paper/PaperActions';
 import { PaperCitations } from '@/components/paper/PaperCitations';
 import { RelatedPapers } from '@/components/paper/RelatedPapers';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
-import { getCachedPaper } from '@/lib/paper-cache';
+import { cachePaper, getCachedPaper } from '@/lib/paper-cache';
 import { getPaper } from '@/lib/fetcher';
 import { OARecord } from '@open-access-explorer/shared';
 
@@ -23,23 +23,53 @@ function PaperContent() {
   useEffect(() => {
     // Decode the URL-encoded ID
     const id = decodeURIComponent(encodedId);
-    
-    // Try to get from cache first
-    const cached = getCachedPaper(id);
-    if (cached) {
-      setPaper(cached);
-      setLoading(false);
-      return;
-    }
 
-    // If not in cache, ask the API — through the fetcher, which is the only
-    // place that knows where the API is.
+    /**
+     * What the results list stashed on the way here, when the visitor came that
+     * way. A placeholder for the first paint and nothing more — see
+     * `lib/paper-cache.ts`.
+     *
+     * Reset rather than left standing, because this effect also runs when the
+     * id changes: without it the previous paper stays on screen while the next
+     * one loads.
+     */
+    const placeholder = getCachedPaper(id);
+    setPaper(placeholder);
+    setLoading(placeholder === null);
+    setError(false);
+
     let cancelled = false;
+
+    /**
+     * Asked on every view, placeholder or not.
+     *
+     * `/api/paper/:id` is the definition of the record: it enriches through the
+     * same authorities the search path uses, so what ends up on screen converges
+     * on the endpoint rather than on whatever a previous page happened to be
+     * holding. This used to be skipped entirely on a placeholder hit, which is
+     * what let a click and a shared link show different things.
+     *
+     * It replaces the placeholder outright rather than merging over it. A
+     * client-side merge would be the divergence again in a smaller form, and the
+     * one case where the endpoint currently answers with less — a record with no
+     * DOI, which enrichment skips, reached by a click that carried a record
+     * merged across several providers — is a gap to close in the endpoint, not
+     * to paper over here.
+     */
     getPaper(id)
-      .then(data => { if (!cancelled) setPaper(data); })
+      .then(data => {
+        if (cancelled) return;
+        setPaper(data);
+        // So a second visit in this session starts from the better record.
+        cachePaper(data);
+      })
       .catch(err => {
+        if (cancelled) return;
         console.error('Error fetching paper:', err);
-        if (!cancelled) setError(true);
+        // A refresh that failed is not a paper that is missing. With something
+        // already on screen the placeholder stands; with nothing, there is no
+        // other answer to give.
+        if (!placeholder) setError(true);
       })
       .finally(() => { if (!cancelled) setLoading(false); });
 
