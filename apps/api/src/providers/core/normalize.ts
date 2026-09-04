@@ -1,4 +1,4 @@
-import { httpUrl, type Paper, type FullText, type SourceRef } from '@open-access-explorer/shared';
+import { httpUrl, stripMarkup, type Paper, type FullText, type SourceRef } from '@open-access-explorer/shared';
 
 /**
  * CORE payload -> Paper[]. Pure, and isolated per record.
@@ -74,12 +74,15 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
   const nativeId = ref.nativeId;
   if (!nativeId) throw new Error('record has no id');
 
-  const title = text(raw?.title);
+  // Repository deposits, which is depositor-written metadata — the same input
+  // class as OpenAIRE, which indexes many of the same repositories.
+  const title = stripMarkup(raw?.title);
   if (!title) throw new Error('record has no title');
 
   const doi = text(raw?.doi);
   const year = Number(raw?.yearPublished);
   const citationCount = Number(raw?.citationCount);
+  const abstract = stripMarkup(raw?.abstract);
   const fullText = pickFullText(raw);
 
   // `journals[].title`. The old connector read `publishedVenue.name` and
@@ -98,7 +101,7 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
     ...(Number.isFinite(year) && year > 0 ? { year } : {}),
     ...(venue ? { venue } : {}),
     ...(text(raw?.publisher) ? { publisher: text(raw.publisher)! } : {}),
-    ...(text(raw?.abstract) ? { abstract: text(raw.abstract)! } : {}),
+    ...(abstract ? { abstract } : {}),
     // Deliberately empty. CORE gives one `fieldOfStudy` string per record and
     // it is not a subject field: across three recorded records it held
     // `info:eu-repo/semantics/article`, `Journal article` and `Chemistry` — a

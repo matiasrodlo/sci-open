@@ -1,5 +1,5 @@
 import type { AuthorityFacts, FullText, PaperStage } from '@open-access-explorer/shared';
-import { httpUrl } from '@open-access-explorer/shared';
+import { httpUrl, stripMarkup } from '@open-access-explorer/shared';
 import type { CrossrefPayload } from './fetch';
 
 /** Crossref payload -> AuthorityFacts. Pure. */
@@ -13,26 +13,6 @@ const first = (value: unknown): string | undefined => {
   const candidate = Array.isArray(value) ? value[0] : value;
   return typeof candidate === 'string' && candidate.trim() ? candidate.trim() : undefined;
 };
-
-/**
- * Crossref ships abstracts as JATS, tags and all — the recorded page begins
- * `<jats:title>Abstract</jats:title><jats:p>CRISPR/Cas9 technology…`. The old
- * path passed that straight through to `OARecord.abstract`, so the markup
- * reached the browser.
- *
- * The leading `Abstract` heading goes too. It is the label the field already
- * has, repeated inside its own value.
- */
-export function stripJats(markup: string): string {
-  return markup
-    .replace(/<jats:title>\s*abstract\s*<\/jats:title>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 /**
  * A fetchable PDF, and only a fetchable one.
@@ -103,10 +83,15 @@ export function normalize(payload: CrossrefPayload | null): AuthorityFacts | nul
   const work = (payload as any)?.message;
   if (!work) return null;
 
-  const title = first(work.title);
+  // Crossref ships both of these as JATS, tags and all — the recorded page's
+  // abstract begins `<jats:title>Abstract</jats:title><jats:p>CRISPR/Cas9
+  // technology…`, and its titles carry `<i>` and `<sub>` for species names and
+  // formulae. The old path passed them straight into `AuthorityFacts`, so the
+  // markup reached the browser.
+  const title = stripMarkup(first(work.title));
   const venue = first(work['container-title']) ?? first(work['short-container-title']);
   const year = pickYear(work);
-  const abstract = typeof work.abstract === 'string' ? stripJats(work.abstract) : undefined;
+  const abstract = stripMarkup(work.abstract);
   const authors = pickAuthors(work);
   const topics = asArray<string>(work.subject).filter(s => typeof s === 'string' && s.trim());
   const citationCount = Number(work['is-referenced-by-count']);

@@ -1,4 +1,5 @@
 import type { Paper, SourceRef } from '@open-access-explorer/shared';
+import { stripMarkup } from '@open-access-explorer/shared';
 import type { PlosPayload } from './fetch';
 
 /** PLOS Solr payload -> Paper[]. Pure, and isolated per record. */
@@ -48,12 +49,16 @@ function normalizeOne(doc: any, ref: SourceRef): Paper {
   const nativeId = typeof doc?.id === 'string' ? doc.id : '';
   if (!nativeId) throw new Error('record has no id');
 
-  const title = first(doc.title_display) ?? first(doc.title);
+  // `title_display` is the display form, which is why it carries markup:
+  // `Confounds of using the <i>unc-58</i> selection marker` is in the recorded
+  // page, and nothing here removed it, so the reader saw the tags.
+  const title = stripMarkup(first(doc.title_display) ?? first(doc.title));
   if (!title) throw new Error('record has no title');
 
   // PLOS returns the DOI as a single-element array.
   const doi = first(doc.doi);
   const year = Number.parseInt(String(doc.publication_date ?? '').slice(0, 4), 10);
+  const abstract = stripMarkup(first(doc.abstract));
 
   const authors = asArray<string>(doc.author_display).length
     ? asArray<string>(doc.author_display)
@@ -68,9 +73,9 @@ function normalizeOne(doc: any, ref: SourceRef): Paper {
     ...(doc.journal ? { venue: String(doc.journal) } : {}),
     // PLOS is the publisher of every record it returns.
     publisher: 'Public Library of Science',
-    // Trimmed: Solr returns the abstract with the source document's leading
-    // newline and indentation still on it.
-    ...(first(doc.abstract) ? { abstract: first(doc.abstract)! } : {}),
+    // Solr returns the abstract with the source document's leading newline and
+    // indentation still on it, and with the JATS the article was typeset from.
+    ...(abstract ? { abstract } : {}),
     topics: pickTopics(doc),
     // PLOS publishes in English and reports no language field.
     language: 'en',

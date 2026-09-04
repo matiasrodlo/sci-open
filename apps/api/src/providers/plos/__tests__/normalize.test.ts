@@ -33,6 +33,41 @@ describe('normalize — topics', () => {
   });
 });
 
+describe('normalize — markup', () => {
+  it('takes the JATS out of the recorded title', () => {
+    // The reported bug. `title_display` is the display form, so it is the one
+    // that carries markup, and nothing removed it — GET
+    // /api/paper/plos:10.1371%2Fjournal.pone.0265114 answered with the tags in
+    // the string and the card printed them.
+    expect(RECORDED.response.docs[0].title_display).toContain('<i>');
+    expect(run(RECORDED).papers[0].title).toBe(
+      'Confounds of using the unc-58 selection marker highlights the importance of genotyping co-CRISPR genes'
+    );
+  });
+
+  it('takes it out of a hand-built title too', () => {
+    expect(find('10.1371/journal.pone.0265114').title).toBe(
+      'Optimization of CRISPR/LbCas12a-mediated gene editing in Arabidopsis'
+    );
+  });
+
+  it('reads a JATS abstract as running prose', () => {
+    // Three separate things at once: the paragraph tags break the text, the
+    // superscript does not, and `&lt;` is decoded rather than stripped as a
+    // tag — `p < 0.05` is an inequality, and `/<[^>]*>/` would have eaten
+    // `< 0.05.</p><p>A second paragraph.</p>` whole.
+    expect(find('10.1371/journal.pone.0265114').abstract).toBe(
+      'Editing at 37oC was significant at p < 0.05. A second paragraph.'
+    );
+  });
+
+  it('skips a record whose title is only markup rather than emptying it', () => {
+    const { papers, skipped } = run(EDGE);
+    expect(papers.some(p => p.id === 'plos:10.1371/journal.pone.0000005')).toBe(false);
+    expect(skipped.some(s => s.nativeId === '10.1371/journal.pone.0000005')).toBe(true);
+  });
+});
+
 describe('normalize — the recorded fixture', () => {
   it('reads every doc', () => {
     const { papers, skipped } = run(RECORDED);
@@ -81,9 +116,11 @@ describe('normalize — record shapes', () => {
   });
 
   it('costs exactly one record when a doc cannot be read', () => {
+    // Two docs in the fixture have no readable title: one with the field
+    // absent, one whose title is nothing but an empty tag pair.
     const { papers, skipped } = run(EDGE);
-    expect(papers).toHaveLength(EDGE.response.docs.length - 1);
-    expect(skipped).toHaveLength(1);
-    expect(skipped[0].reason).toBe('record has no title');
+    expect(papers).toHaveLength(EDGE.response.docs.length - 2);
+    expect(skipped).toHaveLength(2);
+    expect(skipped.map(s => s.reason)).toEqual(['record has no title', 'record has no title']);
   });
 });

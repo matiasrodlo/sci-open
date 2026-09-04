@@ -5,3 +5,4 @@ export * from './provider';
 export * from './authority';
 export * from './adapters';
 export * from './url';
+export * from './text';

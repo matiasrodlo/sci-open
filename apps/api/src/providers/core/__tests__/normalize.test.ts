@@ -3,12 +3,14 @@ import fs from 'fs';
 import path from 'path';
 import { normalize, totalHits, pickFullText } from '../normalize';
 
-const RECORDED = JSON.parse(
-  fs.readFileSync(path.resolve(__dirname, '../__fixtures__/recorded.json'), 'utf8')
-);
+const read = (p: string) => JSON.parse(fs.readFileSync(path.resolve(__dirname, p), 'utf8'));
+const RECORDED = read('../__fixtures__/recorded.json');
+const EDGE = read('../__fixtures__/edge-cases.json');
 
 const AT = '2026-08-30T00:00:00.000Z';
 const run = () => normalize(RECORDED, { retrievedAt: AT });
+const find = (id: number) =>
+  normalize(EDGE, { retrievedAt: AT }).papers.find(p => p.id === `core:${id}`)!;
 
 describe('normalize — the reader page is not a PDF', () => {
   it('offers a real PDF on every recorded record', () => {
@@ -131,5 +133,21 @@ describe('URL scheme', () => {
   it('still accepts an ordinary PDF', () => {
     expect(pickFullText({ downloadUrl: 'https://core.ac.uk/download/123.pdf' }))
       .toEqual({ url: 'https://core.ac.uk/download/123.pdf', kind: 'pdf', verified: false });
+  });
+});
+
+describe('normalize — markup', () => {
+  it("takes the tags out of the depositor's metadata", () => {
+    // CORE indexes repository deposits, which is depositor-written metadata —
+    // the same input class as OpenAIRE, which indexes many of the same
+    // repositories and has stripped it since it was written.
+    expect(find(900001).title).toBe('Editing of Arabidopsis genes & their regulators');
+    expect(find(900001).abstract).toBe('Yields rose > 40%. Effects held at 37oC.');
+  });
+
+  it('skips a record whose title is only markup rather than emptying it', () => {
+    const { papers, skipped } = normalize(EDGE, { retrievedAt: AT });
+    expect(papers.map(p => p.id)).toEqual(['core:900001']);
+    expect(skipped).toEqual([{ index: 1, nativeId: '900002', reason: 'record has no title' }]);
   });
 });

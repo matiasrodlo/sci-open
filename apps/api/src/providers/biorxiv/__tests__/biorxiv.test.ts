@@ -6,9 +6,9 @@ import { normalize } from '../normalize';
 import { capabilities } from '../capabilities';
 import { translate } from '../index';
 
-const RECORDED = JSON.parse(
-  fs.readFileSync(path.resolve(__dirname, '../../../__fixtures__/biorxiv.json'), 'utf8')
-);
+const read = (p: string) => JSON.parse(fs.readFileSync(path.resolve(__dirname, p), 'utf8'));
+const RECORDED = read('../../../__fixtures__/biorxiv.json');
+const EDGE = read('../__fixtures__/edge-cases.json');
 
 const AT = '2026-08-29T00:00:00.000Z';
 const run = (collections: any[]) => normalize(collections, { retrievedAt: AT });
@@ -164,5 +164,24 @@ describe('normalize — versions of one preprint', () => {
     expect(papers).toHaveLength(1);
     expect(skipped).toHaveLength(1);
     expect(skipped[0].reason).toBe('record has no doi');
+  });
+});
+
+describe('normalize — markup', () => {
+  const edge = () => run([{ server: 'biorxiv', collection: EDGE.collection }]);
+  const find = (doi: string) => edge().papers.find(p => p.id === `biorxiv:${doi}`)!;
+
+  it("takes the tags out of the submitted manuscript's own text", () => {
+    const record = find('10.1101/2022.01.01.000001');
+    expect(record.title).toBe('Editing of Arabidopsis genes & their regulators');
+    expect(record.abstract).toBe('Yields rose > 40%. Effects held at 37oC.');
+  });
+
+  it('skips a record whose title is only markup rather than emptying it', () => {
+    const { papers, skipped } = edge();
+    expect(papers.map(p => p.id)).toEqual(['biorxiv:10.1101/2022.01.01.000001']);
+    expect(skipped).toEqual([
+      { index: 1, nativeId: '10.1101/2022.01.01.000002', reason: 'record has no title' }
+    ]);
   });
 });

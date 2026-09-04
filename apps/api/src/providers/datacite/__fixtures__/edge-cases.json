@@ -1,6 +1,6 @@
 {
   "_comment": "Hand-built, unlike the recorded datacite.json. Shapes the recorded page lacks: a dataset, an actual PDF, and a record with no title. Proportions are modelled on 100 live records for `crispr gene editing` — 11 datasets, 1 with a PDF format.",
-  "meta": { "total": 5 },
+  "meta": { "total": 6 },
   "data": [
     {
       "_case": "a dataset — a legitimate DataCite record and not a paper",
@@ -60,6 +60,25 @@
       "_case": "unreadable: must cost exactly one record",
       "id": "10.5281/zenodo.555",
       "attributes": { "doi": "10.5281/zenodo.555", "publicationYear": 2019 }
+    },
+    {
+      "_case": "markup and entities in the depositor's own title and description",
+      "id": "10.5281/zenodo.555",
+      "attributes": {
+        "doi": "10.5281/zenodo.555",
+        "titles": [{ "title": "Editing <i>Arabidopsis</i> at 37<sup>o</sup>C" }],
+        "creators": [{ "name": "Johnson, Katherine" }],
+        "publicationYear": 2022,
+        "publisher": "Zenodo",
+        "url": "https://zenodo.org/record/555",
+        "descriptions": [
+          {
+            "descriptionType": "Abstract",
+            "description": "<p>Yields were &gt; 40% at p &lt; 0.05.</p><p>A second paragraph.</p>"
+          }
+        ],
+        "types": { "resourceTypeGeneral": "Text" }
+      }
     }
   ]
 }

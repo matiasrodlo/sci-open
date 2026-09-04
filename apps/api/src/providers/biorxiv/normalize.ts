@@ -1,4 +1,5 @@
 import type { Paper, SourceRef } from '@open-access-explorer/shared';
+import { stripMarkup } from '@open-access-explorer/shared';
 import type { BiorxivServer, ServerCollection } from './fetch';
 
 /** bioRxiv/medRxiv records -> Paper[]. Pure, and isolated per record. */
@@ -27,7 +28,9 @@ function normalizeOne(raw: any, server: BiorxivServer, ref: SourceRef): Paper {
   const doi = present(raw?.doi);
   if (!doi) throw new Error('record has no doi');
 
-  const title = present(raw?.title);
+  // Straight out of the submitted manuscript's JATS, which is where the
+  // inline markup in a preprint title lives.
+  const title = stripMarkup(present(raw?.title));
   if (!title) throw new Error('record has no title');
 
   const date = present(raw?.date);
@@ -38,6 +41,8 @@ function normalizeOne(raw: any, server: BiorxivServer, ref: SourceRef): Paper {
   // Not used as this record's `doi` — that stays the preprint's, which is what
   // this record is — but it is the reason `published` is read at all.
   const publishedDoi = present(raw?.published);
+
+  const abstract = stripMarkup(present(raw?.abstract));
 
   return {
     id: `${server}:${doi}`,
@@ -50,7 +55,7 @@ function normalizeOne(raw: any, server: BiorxivServer, ref: SourceRef): Paper {
       .filter(Boolean),
     ...(Number.isFinite(year) ? { year } : {}),
     venue: VENUES[server],
-    ...(present(raw?.abstract) ? { abstract: present(raw.abstract)! } : {}),
+    ...(abstract ? { abstract } : {}),
     topics: present(raw?.category) ? [present(raw.category)!] : [],
     language: 'en',
 

@@ -1,6 +1,6 @@
 {
   "_comment": "Hand-built, unlike the recorded europepmc.json. Each record isolates a shape the recorded fixture happens not to contain. Keep them minimal: they are here to pin behaviour, not to look realistic.",
-  "hitCount": 5,
+  "hitCount": 6,
   "resultList": {
     "result": [
       {
@@ -45,6 +45,16 @@
         "id": "BARE1",
         "source": "MED",
         "title": "A bare but readable record"
+      },
+      {
+        "_case": "inline markup in the title and the abstract, which is what the publisher deposited",
+        "id": "MARKUP1",
+        "source": "MED",
+        "doi": "10.1000/markup",
+        "title": "Loss of <i>AtRING1</i> in <sup>35</sup>S lines",
+        "pubYear": "2021",
+        "abstractText": "We generated atring1<sup>ko</sup> and two deletion mutants.<br/>Growth was reduced at p &lt; 0.05.",
+        "journalInfo": { "journal": { "title": "Journal of Marked Up Things" } }
       }
     ]
   }

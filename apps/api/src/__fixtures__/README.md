@@ -55,3 +55,14 @@ in place, they are the kind of input the normalisers have to survive:
   **Fixed** — `providers/openaire/__tests__/normalize.test.ts:28` now asserts
   the DOI is read, and passes. Kept here because the shape is still the odd
   one, and it is what the normaliser has to survive.
+- Titles and abstracts arrive with the publisher's own markup in them.
+  `plos.json` carries `<i>unc-58</i>` in a `title_display`, `europepmc.json`
+  carries `atring1<sup>ko</sup>` in an `abstractText`, and `datacite.json`
+  carries `&gt;` in a description — nothing renders HTML, so a tag that
+  survives normalisation is shown to the reader as a tag.
+  **Fixed** — every provider except arXiv and PubMed now runs these two fields
+  through `stripMarkup` from `@open-access-explorer/shared`, which
+  `packages/shared/src/__tests__/text.test.ts` pins. The two exceptions are
+  deliberate and the reason is in each normaliser: arXiv metadata is LaTeX,
+  where `<` and `>` are inequalities, and xml2js has already resolved PubMed's
+  inline elements before a string exists.

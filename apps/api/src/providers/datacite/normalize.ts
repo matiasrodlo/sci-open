@@ -1,5 +1,5 @@
 import type { Paper, PaperStage, FullText, SourceRef } from '@open-access-explorer/shared';
-import { httpUrl } from '@open-access-explorer/shared';
+import { httpUrl, stripMarkup } from '@open-access-explorer/shared';
 import type { DataCitePayload } from './fetch';
 
 /**
@@ -92,22 +92,26 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
 
   // No 'Untitled' default. The old connector used one, which turns an
   // unreadable record into a result rather than a reported skip.
-  const title = asArray<any>(attrs.titles)[0]?.title;
-  if (typeof title !== 'string' || !title.trim()) throw new Error('record has no title');
+  // Depositor-supplied, and escaped at source: a recorded abstract carries
+  // `&gt;` in an inequality.
+  const title = stripMarkup(asArray<any>(attrs.titles)[0]?.title);
+  if (!title) throw new Error('record has no title');
 
   const doi = typeof attrs.doi === 'string' ? attrs.doi : undefined;
   const year = Number(attrs.publicationYear);
 
-  const abstract = asArray<any>(attrs.descriptions).find(
-    d => d?.descriptionType === 'Abstract' || !d?.descriptionType
-  )?.description;
+  const abstract = stripMarkup(
+    asArray<any>(attrs.descriptions).find(
+      d => d?.descriptionType === 'Abstract' || !d?.descriptionType
+    )?.description
+  );
 
   const fullText = pickFullText(attrs);
 
   return {
     id: `datacite:${nativeId}`,
     ...(doi ? { doi } : {}),
-    title: title.trim(),
+    title,
     authors: asArray<any>(attrs.creators)
       .map(c =>
         typeof c?.name === 'string' && c.name.trim()
@@ -120,7 +124,7 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
     // The old connector fell back to the literal string 'DataCite Repository',
     // which is a fabricated venue.
     ...(attrs.publisher ? { publisher: String(attrs.publisher) } : {}),
-    ...(abstract ? { abstract: String(abstract) } : {}),
+    ...(abstract ? { abstract } : {}),
     topics: asArray<any>(attrs.subjects)
       .map(s => s?.subject)
       .filter((s: unknown): s is string => typeof s === 'string' && s.trim().length > 0),

@@ -1,7 +1,7 @@
 {
   "_comment": "Hand-built, unlike the recorded plos.json. The recorded page was captured before `subject` was requested, so it carries none — which is exactly the field the old connector's topics defect is about. Subject paths are copied verbatim from a live query.",
   "response": {
-    "numFound": 4,
+    "numFound": 6,
     "start": 0,
     "docs": [
       {
@@ -42,6 +42,26 @@
       {
         "_case": "unreadable: must cost exactly one record",
         "id": "10.1371/journal.pone.0000004",
+        "publication_date": "2018-06-01T00:00:00Z",
+        "journal": "PLOS ONE"
+      },
+      {
+        "_case": "JATS in the display title and the abstract, which is what Solr serves",
+        "id": "10.1371/journal.pone.0265114",
+        "title_display": "Optimization of CRISPR/LbCas12a-mediated gene editing in <i>Arabidopsis</i>",
+        "author_display": ["Katherine Johnson"],
+        "abstract": ["\n      <p>Editing at 37<sup>o</sup>C was significant at p &lt; 0.05.</p>\n      <p>A second paragraph.</p>\n    "],
+        "publication_date": "2022-03-16T00:00:00Z",
+        "journal": "PLOS ONE",
+        "article_type": "Research Article",
+        "doi": ["10.1371/journal.pone.0265114"],
+        "subject": ["/Biology and life sciences/Genetics/Genomics"]
+      },
+      {
+        "_case": "a title that is nothing but markup: no title, not an empty one",
+        "id": "10.1371/journal.pone.0000005",
+        "title_display": "<i></i>",
+        "author_display": ["Katherine Johnson"],
         "publication_date": "2018-06-01T00:00:00Z",
         "journal": "PLOS ONE"
       }
