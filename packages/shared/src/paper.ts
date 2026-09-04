@@ -1,7 +1,4 @@
-import type { OARecord, OASource, SourceMetadata } from './types';
-
-/** The `oaStatus` vocabulary of the shape being replaced. */
-export type LegacyOaStatus = NonNullable<OARecord['oaStatus']>;
+import type { OASource } from './types';
 
 /**
  * A work, as the orchestrator holds it after merging what every provider said
@@ -117,21 +114,4 @@ export type Paper = {
   fieldSources: FieldSources;
   retrievedAt: string;
   updatedAt?: string;
-
-  /**
-   * Values kept only so `toOARecord` can reproduce the old shape exactly.
-   * Nothing in the new model reads them. They live as long as the adapter
-   * does, which is as long as the API's external contract is `OARecord`.
-   */
-  compat?: {
-    sourceMetadata?: SourceMetadata;
-    /**
-     * The exact legacy status. Needed because `stage` maps both an absent
-     * `oaStatus` and an explicit `'other'` to `'unknown'`, and the adapter has
-     * to tell them apart to return the record it was given.
-     */
-    oaStatus?: LegacyOaStatus;
-    /** Whether the source record carried a `topics` array at all, empty or not. */
-    hadTopics?: boolean;
-  };
 };

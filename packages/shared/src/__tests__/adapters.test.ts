@@ -1,15 +1,22 @@
 import { describe, it, expect } from 'vitest';
-import type { OARecord, Paper } from '../index';
-import { fromOARecord, toOARecord } from '../index';
+import type { OARecord, Paper, PaperStage } from '../index';
+import { toOARecord } from '../index';
 
 /**
- * The property the phase-07 flag rests on: switching paths must not change the
- * response. If a field does not survive this round trip, results shift when
- * the flag moves and the comparison script cannot tell a real improvement from
- * an adapter bug.
+ * `toOARecord` is the response shape in one function: every search hit and
+ * every paper lookup leaves the service through it. What these assert is that
+ * it reports what the `Paper` carried and nothing else — no invented keys, no
+ * dropped optional field, and the provider attribution taken from the record
+ * the merge was built on.
+ *
+ * The round-trip suite that used to sit here went with `fromOARecord`. It
+ * asserted `toOARecord(fromOARecord(x))` returned `x` unchanged, which was the
+ * property the phase-07 flag rested on while two paths ran side by side. With
+ * one path there is no second shape for a record to enter in, so what is left
+ * to pin is the one direction that runs.
  */
 
-function record(over: Partial<OARecord> = {}): OARecord {
+function paper(over: Partial<Paper> = {}): Paper {
   return {
     id: 'europepmc:42',
     doi: '10.1234/example',
@@ -19,176 +26,136 @@ function record(over: Partial<OARecord> = {}): OARecord {
     venue: 'Journal of Things',
     publisher: 'Thing Press',
     abstract: 'We studied things and report what we found.',
-    source: 'europepmc',
-    sourceId: '42',
-    oaStatus: 'published',
-    bestPdfUrl: 'https://example.org/paper.pdf',
-    landingPage: 'https://doi.org/10.1234/example',
     topics: ['genomics', 'crispr'],
     language: 'en',
     citationCount: 17,
-    sourceMetadata: { source: 'europepmc', latency: 421 },
-    createdAt: '2024-01-01T00:00:00.000Z',
+    oaStatus: 'green',
+    stage: 'published',
+    fullText: { url: 'https://example.org/paper.pdf', kind: 'pdf', verified: false },
+    landingPage: 'https://doi.org/10.1234/example',
+    sources: [
+      {
+        provider: 'europepmc',
+        nativeId: '42',
+        rank: 0,
+        retrievedAt: '2024-01-01T00:00:00.000Z',
+        latency: 421
+      }
+    ],
+    fieldSources: {},
+    retrievedAt: '2024-01-01T00:00:00.000Z',
     updatedAt: '2024-02-01T00:00:00.000Z',
     ...over
-  } as OARecord;
+  };
 }
 
-describe('OARecord round trip', () => {
-  it('preserves a fully populated record exactly', () => {
-    const original = record();
-    expect(toOARecord(fromOARecord(original))).toEqual(original);
-  });
-
-  it('preserves a record carrying only what OARecord requires', () => {
-    const minimal: OARecord = {
-      id: 'arxiv:2301.00001',
-      title: 'Bare',
-      authors: [],
-      source: 'arxiv',
-      sourceId: '2301.00001',
-      createdAt: '2024-01-01T00:00:00.000Z'
-    };
-    expect(toOARecord(fromOARecord(minimal))).toEqual(minimal);
-  });
-
-  it.each(['preprint', 'accepted', 'published', 'other'] as const)(
-    'preserves oaStatus %s',
-    status => {
-      const original = record({ oaStatus: status });
-      expect(toOARecord(fromOARecord(original)).oaStatus).toBe(status);
-    }
-  );
-
-  it('tells an absent oaStatus apart from an explicit "other"', () => {
-    // Both map to stage 'unknown', so the adapter has to remember which it saw.
-    const absent = record({ oaStatus: undefined });
-    const other = record({ oaStatus: 'other' });
-
-    expect('oaStatus' in toOARecord(fromOARecord(absent))).toBe(false);
-    expect(toOARecord(fromOARecord(other)).oaStatus).toBe('other');
-  });
-
-  it('tells an absent topics list apart from an empty one', () => {
-    const absent = record({ topics: undefined });
-    const empty = record({ topics: [] });
-
-    expect('topics' in toOARecord(fromOARecord(absent))).toBe(false);
-    expect(toOARecord(fromOARecord(empty)).topics).toEqual([]);
-  });
-
-  it.each([
-    ['no doi', { doi: undefined }],
-    ['no abstract', { abstract: undefined }],
-    ['no venue or publisher', { venue: undefined, publisher: undefined }],
-    ['no pdf', { bestPdfUrl: undefined }],
-    ['no landing page', { landingPage: undefined }],
-    ['no citation count', { citationCount: undefined }],
-    ['no source metadata', { sourceMetadata: undefined }],
-    ['no updatedAt', { updatedAt: undefined }],
-    ['zero citations', { citationCount: 0 }],
-    ['empty authors', { authors: [] }]
-  ])('preserves a record with %s', (_name, over) => {
-    const original = record(over as Partial<OARecord>);
-    expect(toOARecord(fromOARecord(original))).toEqual(original);
-  });
-
-  it('does not invent keys that were absent', () => {
-    const minimal: OARecord = {
-      id: 'arxiv:1',
-      title: 'Bare',
-      authors: [],
-      source: 'arxiv',
-      sourceId: '1',
-      createdAt: '2024-01-01T00:00:00.000Z'
-    };
-    expect(Object.keys(toOARecord(fromOARecord(minimal))).sort()).toEqual(
-      Object.keys(minimal).sort()
-    );
-  });
-});
-
-describe('fromOARecord', () => {
-  it('makes the originating provider the only source', () => {
-    const paper = fromOARecord(record(), 7);
-    expect(paper.sources).toHaveLength(1);
-    expect(paper.sources[0]).toEqual({
-      provider: 'europepmc',
-      nativeId: '42',
-      rank: 7,
-      retrievedAt: '2024-01-01T00:00:00.000Z',
-      latency: 421
-    });
-  });
-
-  it('attributes nothing, because a single-source record has nothing to choose between', () => {
-    expect(fromOARecord(record()).fieldSources).toEqual({});
-  });
-
-  it('reads the legacy status as a version stage, not an access route', () => {
-    // The old field held 'preprint' in the slot Unpaywall uses for 'gold'.
-    // The route is genuinely unknown until Unpaywall is consulted.
-    const paper = fromOARecord(record({ oaStatus: 'preprint' }));
-    expect(paper.stage).toBe('preprint');
-    expect(paper.oaStatus).toBe('unknown');
-  });
-
-  it('treats a pdf url as unverified full text', () => {
-    // The provider claimed a PDF; nobody has fetched it. CORE claims plenty
-    // that turn out to be HTML reader pages.
-    expect(fromOARecord(record()).fullText).toEqual({
-      url: 'https://example.org/paper.pdf',
-      kind: 'pdf',
-      verified: false
-    });
-  });
-
-  it('leaves compat off entirely when there is nothing to carry', () => {
-    const clean = fromOARecord({
-      id: 'arxiv:1',
-      title: 'Bare',
-      authors: [],
-      source: 'arxiv',
-      sourceId: '1',
-      createdAt: '2024-01-01T00:00:00.000Z'
-    });
-    expect(clean.compat).toBeUndefined();
-  });
-});
+/** Everything `Paper` requires and nothing it does not. */
+function bare(over: Partial<Paper> = {}): Paper {
+  return {
+    id: 'arxiv:2301.00001',
+    title: 'Bare',
+    authors: [],
+    topics: [],
+    oaStatus: 'unknown',
+    stage: 'unknown',
+    sources: [
+      { provider: 'arxiv', nativeId: '2301.00001', rank: 0, retrievedAt: '2024-01-01T00:00:00.000Z' }
+    ],
+    fieldSources: {},
+    retrievedAt: '2024-01-01T00:00:00.000Z',
+    ...over
+  };
+}
 
 describe('toOARecord', () => {
+  it('flattens a fully populated paper', () => {
+    const expected: OARecord = {
+      id: 'europepmc:42',
+      doi: '10.1234/example',
+      title: 'A study of things',
+      authors: ['Lovelace, Ada', 'Babbage, Charles'],
+      year: 2020,
+      venue: 'Journal of Things',
+      publisher: 'Thing Press',
+      abstract: 'We studied things and report what we found.',
+      source: 'europepmc',
+      sourceId: '42',
+      oaStatus: 'published',
+      bestPdfUrl: 'https://example.org/paper.pdf',
+      landingPage: 'https://doi.org/10.1234/example',
+      topics: ['genomics', 'crispr'],
+      language: 'en',
+      citationCount: 17,
+      createdAt: '2024-01-01T00:00:00.000Z',
+      updatedAt: '2024-02-01T00:00:00.000Z'
+    };
+
+    expect(toOARecord(paper())).toEqual(expected);
+  });
+
+  it('does not invent keys for what the paper did not carry', () => {
+    expect(Object.keys(toOARecord(bare())).sort()).toEqual(
+      ['authors', 'createdAt', 'id', 'source', 'sourceId', 'title'].sort()
+    );
+  });
+
   it('reports a merged paper under its first source', () => {
-    const paper = fromOARecord(record());
-    paper.sources.push({
-      provider: 'ncbi',
-      nativeId: '999',
-      rank: 3,
-      retrievedAt: '2024-01-01T00:00:00.000Z'
+    const merged = paper({
+      sources: [
+        { provider: 'europepmc', nativeId: '42', rank: 0, retrievedAt: '2024-01-01T00:00:00.000Z' },
+        { provider: 'ncbi', nativeId: '999', rank: 3, retrievedAt: '2024-01-01T00:00:00.000Z' }
+      ]
     });
 
-    const back = toOARecord(paper);
-    expect(back.source).toBe('europepmc');
-    expect(back.sourceId).toBe('42');
+    const record = toOARecord(merged);
+    expect(record.source).toBe('europepmc');
+    expect(record.sourceId).toBe('42');
   });
 
   it('refuses a paper with no sources rather than inventing one', () => {
-    const orphan = { ...fromOARecord(record()), sources: [] } as Paper;
-    expect(() => toOARecord(orphan)).toThrow(/no sources/);
+    expect(() => toOARecord(paper({ sources: [] }))).toThrow(/no sources/);
   });
 
-  it('derives the legacy status from stage for a paper the orchestrator built', () => {
-    // No compat, because it was never an OARecord.
-    const built: Paper = {
-      id: 'x:1',
-      title: 'Built',
-      authors: [],
-      topics: [],
-      oaStatus: 'green',
-      stage: 'preprint',
-      sources: [{ provider: 'arxiv', nativeId: '1', rank: 0, retrievedAt: '2024-01-01T00:00:00.000Z' }],
-      fieldSources: {},
-      retrievedAt: '2024-01-01T00:00:00.000Z'
-    };
-    expect(toOARecord(built).oaStatus).toBe('preprint');
+  it.each([
+    ['preprint', 'preprint'],
+    ['accepted', 'accepted'],
+    ['published', 'published']
+  ] as Array<[PaperStage, OARecord['oaStatus']]>)(
+    'reports stage %s as oaStatus %s',
+    (stage, expected) => {
+      expect(toOARecord(paper({ stage })).oaStatus).toBe(expected);
+    }
+  );
+
+  it('leaves oaStatus off entirely for an unknown stage', () => {
+    // `other` is a claim about a record, not an admission of not knowing, so
+    // the absent field is what says the stage was never established.
+    expect('oaStatus' in toOARecord(paper({ stage: 'unknown' }))).toBe(false);
+  });
+
+  it('drops the graded access route, which the old shape cannot express', () => {
+    // `oaStatus` on an OARecord is the version, not the route. A paper Unpaywall
+    // called `green` reports as `published` here, and the route is lost until
+    // the response shape changes.
+    const record = toOARecord(paper({ oaStatus: 'gold', stage: 'published' }));
+    expect(record.oaStatus).toBe('published');
+  });
+
+  it('advertises the full text copy as the best pdf url', () => {
+    expect(toOARecord(paper()).bestPdfUrl).toBe('https://example.org/paper.pdf');
+    expect('bestPdfUrl' in toOARecord(bare())).toBe(false);
+  });
+
+  it('keeps a zero citation count, which is a measurement rather than a gap', () => {
+    expect(toOARecord(paper({ citationCount: 0 })).citationCount).toBe(0);
+  });
+
+  it('omits topics when there are none, rather than sending an empty list', () => {
+    expect('topics' in toOARecord(paper({ topics: [] }))).toBe(false);
+  });
+
+  it('dates the record from when the paper was retrieved', () => {
+    const record = toOARecord(paper({ retrievedAt: '2025-06-01T12:00:00.000Z' }));
+    expect(record.createdAt).toBe('2025-06-01T12:00:00.000Z');
   });
 });
