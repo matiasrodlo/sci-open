@@ -53,7 +53,60 @@ function audit() {
   }
 }
 
-const report = JSON.parse(audit());
+/**
+ * A report that actually describes the tree, or nothing.
+ *
+ * `pnpm audit` exits non-zero for two unrelated reasons — it found advisories,
+ * and it could not run — and this script reads the output off the failure
+ * either way. So the two have to be told apart here, and they were not.
+ *
+ * Measured: with the registry unreachable, `pnpm audit --json` writes
+ * `{"error":{"code":"ERR_SOCKET_TIMEOUT","message":"request to
+ * https://registry.npmjs.org/-/npm/v1/security/audits failed"}}` to **stdout**
+ * and exits non-zero. The old code parsed that, found no `advisories` key, took
+ * the `?? {}` branch, printed `advisories: 0 total —` with an empty breakdown,
+ * and exited 0 with "No unaccepted high-severity advisories." A registry blip,
+ * a proxy change or an offline runner turned the one blocking job in CI into a
+ * green no-op — the precise failure this gate exists to prevent, wearing the
+ * gate's own success message.
+ *
+ * `metadata.vulnerabilities` is the discriminator: a real report always carries
+ * it, including a clean one, where every count is zero. An explicit `error` key
+ * is reported as itself, because "the audit could not run" deserves a better
+ * message than "the report was the wrong shape".
+ */
+function reportFrom(raw) {
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    fail('pnpm audit did not return JSON', raw.slice(0, 500));
+  }
+
+  if (parsed.error) {
+    fail('pnpm audit could not run', `${parsed.error.code ?? 'unknown'}: ${parsed.error.message ?? ''}`);
+  }
+
+  if (!parsed.metadata?.vulnerabilities) {
+    fail(
+      'pnpm audit returned no vulnerability summary',
+      'A real report always carries metadata.vulnerabilities, a clean one included. ' +
+      'Treating this as "no advisories" is how the gate passes without auditing anything.'
+    );
+  }
+
+  return parsed;
+}
+
+function fail(headline, detail) {
+  console.error(`audit gate: ${headline}`);
+  if (detail) console.error(`  ${detail}`);
+  console.error('\nThe gate blocks rather than passing, because it cannot tell a clean tree');
+  console.error('from an audit that never happened.');
+  process.exit(1);
+}
+
+const report = reportFrom(audit());
 const advisories = Object.values(report.advisories ?? {});
 const accepted = new Map(ACCEPTED.map(entry => [entry.id, entry]));
 
@@ -61,7 +114,8 @@ const blocking = advisories.filter(a => BLOCKING.has(a.severity));
 const unexpected = blocking.filter(a => !accepted.has(a.github_advisory_id));
 const seen = new Set(blocking.map(a => a.github_advisory_id));
 
-const counts = report.metadata?.vulnerabilities ?? {};
+// Guaranteed by `reportFrom`, which is where a missing summary is caught.
+const counts = report.metadata.vulnerabilities;
 console.log(
   `advisories: ${advisories.length} total — ` +
   Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(', ')
