@@ -137,6 +137,8 @@ async function routes(fastify: FastifyInstance) {
           responseTime,
           totalResults: cached.total 
         }, 'Returning cached search results');
+        // Inert on a POST, like its counterpart on the fresh path below —
+        // stated for the same reason, and see the note there.
         reply.header('Cache-Control', 'public, max-age=300');
         reply.header('X-Cache-Hit', 'true');
         reply.header('X-Response-Time', responseTime.toString());
@@ -169,9 +171,27 @@ async function routes(fastify: FastifyInstance) {
       );
 
       const responseTime = Date.now() - startTime;
-      // The same rule the store applies, applied to every cache between here
-      // and the reader. A shared `max-age=300` on a degraded answer would put
-      // it back in front of the retry however firmly we declined to store it.
+      /**
+       * The same rule the store applies, stated to every cache between here and
+       * the reader — and on this route, stated to nobody.
+       *
+       * Search is a POST, and a POST response is not cacheable in any way that
+       * a later POST can be answered from: RFC 9111 lets a cache store one only
+       * against a `Content-Location` this never sets, and then only to answer a
+       * subsequent *GET* of that URI. So neither branch here does anything, and
+       * that includes `no-store` — the protection this line was credited with
+       * was never in force. What actually keeps a degraded answer out of the
+       * way of the retry is `worthCaching` refusing to store it, which is a
+       * decision this service makes for itself and does not delegate.
+       *
+       * Kept rather than deleted, because it is the correct header either way
+       * and the cost of being right is one line. It becomes load-bearing the
+       * moment anything about this route changes — a GET variant for
+       * bookmarkable searches, a CDN in front of the API — and the failure it
+       * would prevent then is a stale degraded answer served to everyone, which
+       * is worth more than the line costs now. It is documentation of intent
+       * until then, not a control.
+       */
       reply.header(
         'Cache-Control',
         worthCaching(searchResult) ? 'public, max-age=300' : 'no-store'
@@ -311,8 +331,37 @@ async function routes(fastify: FastifyInstance) {
   // `pdfUrl` is non-optional here because the schema requires it: validation
   // rejects the request before the handler runs, so the type says what is
   // actually true inside it rather than repeating a check Fastify already made.
+  /**
+   * Its own budget, because it is not the same kind of request as a search.
+   *
+   * Both used to spend the one `RATE_LIMIT_MAX`, which priced two things that
+   * are expensive in different currencies as though they were the same. A
+   * search costs a fan-out to ten providers and a few kilobytes back: what it
+   * spends is other people's API quota. A download costs one upstream request
+   * and streams up to `MAX_PDF_BYTES` — fifty megabytes — holding a socket open
+   * for as long as the publisher takes: what it spends is bandwidth and
+   * connections. One number could only be right for one of them, and it was set
+   * for search.
+   *
+   * Twenty a minute is many more PDFs than a person opens and far fewer than a
+   * scraper wants. The worst case is still large — twenty times fifty megabytes
+   * is a gigabyte a minute per caller — so this is a starting point to measure
+   * against real traffic, not a settled figure; `RATE_LIMIT_DOWNLOAD_MAX` is
+   * there so it can move without a deploy of new code.
+   *
+   * A per-route `config.rateLimit` gives the route a bucket of its own rather
+   * than a share of the global one, which is the point: a reader downloading
+   * papers no longer spends the search allowance, and a search loop no longer
+   * locks them out of the file they were reading.
+   */
   fastify.post<{ Body: { paperId?: string; pdfUrl: string } }>('/api/download-pdf', {
-    schema: { body: downloadPdfBodySchema }
+    schema: { body: downloadPdfBodySchema },
+    config: {
+      rateLimit: {
+        max: Number(process.env.RATE_LIMIT_DOWNLOAD_MAX) || 20,
+        timeWindow: process.env.RATE_LIMIT_WINDOW || '1 minute'
+      }
+    }
   }, async (request, reply) => {
     const { paperId, pdfUrl } = request.body;
 
@@ -325,6 +374,12 @@ async function routes(fastify: FastifyInstance) {
       if (pdf.contentLength) {
         reply.header('Content-Length', pdf.contentLength.toString());
       }
+      // Also a POST, so also inert — a browser will not reuse this for the
+      // next download of the same paper, and the hour named here has never
+      // saved a single request. Worth stating because a fifty-megabyte body
+      // with a one-hour freshness on it reads exactly like a working cache.
+      // Making it real means a GET, keyed on the paper rather than on a URL in
+      // a body, which is a route change and not a header change.
       reply.header('Cache-Control', 'private, max-age=3600');
 
       fastify.log.info({ paperId, pdfUrl: url.href }, 'Streaming PDF to client');
