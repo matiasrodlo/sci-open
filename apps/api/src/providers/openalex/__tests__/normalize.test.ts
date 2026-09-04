@@ -140,3 +140,15 @@ describe('normalize — the rest', () => {
     expect(totalHits(RECORDED)).toBe(185434);
   });
 });
+
+describe('normalize — markup', () => {
+  it('takes the JATS OpenAlex carries through from Crossref out of the title', () => {
+    expect(find('W6').title).toBe('Editing of Arabidopsis genes');
+  });
+
+  it('cleans the abstract after the inverted index is rejoined', () => {
+    // The index is built from the publisher's abstract, so a token can be a
+    // tag; the string only exists once the positions are put back in order.
+    expect(find('W6').abstract).toBe('Yields were > 40%.');
+  });
+});

@@ -108,3 +108,18 @@ describe('normalize — record shapes', () => {
     expect(run(RECORDED).papers.map(p => p.sources[0].rank)).toEqual([0, 1, 2]);
   });
 });
+
+describe('normalize — markup', () => {
+  it('decodes the ampersand the publisher escaped', () => {
+    // bibjson is the publisher's own deposit, passed through as it arrives —
+    // which is why the recorded page's affiliations read `Eye &amp; ENT
+    // Hospital`. Titles and abstracts come from the same strings.
+    expect(find('markup000000000000000000000001').title)
+      .toBe('Hearing loss in the Eya4 mouse & its rescue');
+  });
+
+  it('reads a multi-paragraph abstract as running prose', () => {
+    expect(find('markup000000000000000000000001').abstract)
+      .toBe('Thresholds fell > 20 dB. Recovery was partial.');
+  });
+});

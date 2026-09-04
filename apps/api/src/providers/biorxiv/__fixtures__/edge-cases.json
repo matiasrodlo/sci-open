@@ -1,0 +1,26 @@
+{
+  "_comment": "Hand-built, unlike the recorded biorxiv.json. The API serves the submitted manuscript's own text, so a title or abstract arrives with the JATS the preprint was typeset from.",
+  "collection": [
+    {
+      "_case": "markup and entities out of the submitted JATS",
+      "doi": "10.1101/2022.01.01.000001",
+      "title": "Editing of <i>Arabidopsis</i> genes &amp; their regulators",
+      "authors": "Johnson, Katherine; Lovelace, Ada",
+      "date": "2022-01-01",
+      "version": "1",
+      "category": "plant biology",
+      "abstract": "<p>Yields rose &gt; 40%.</p><p>Effects held at 37<sup>o</sup>C.</p>",
+      "published": "NA"
+    },
+    {
+      "_case": "a title that is nothing but markup: no title, not an empty one",
+      "doi": "10.1101/2022.01.01.000002",
+      "title": "<i></i>",
+      "authors": "Turing, Alan",
+      "date": "2022-01-02",
+      "version": "1",
+      "category": "neuroscience",
+      "published": "NA"
+    }
+  ]
+}

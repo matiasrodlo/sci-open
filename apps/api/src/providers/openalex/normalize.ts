@@ -1,5 +1,5 @@
 import type { Paper, PaperStage, FullText, OaRoute, SourceRef } from '@open-access-explorer/shared';
-import { httpUrl } from '@open-access-explorer/shared';
+import { httpUrl, stripMarkup } from '@open-access-explorer/shared';
 import type { OpenAlexPayload } from './fetch';
 
 /** OpenAlex payload -> Paper[]. Pure, and isolated per record. */
@@ -112,9 +112,9 @@ function normalizeOne(work: any, ref: SourceRef): Paper {
   const nativeId = ref.nativeId;
   if (!nativeId) throw new Error('record has no id');
 
-  const title = typeof work?.title === 'string' && work.title.trim()
-    ? work.title.trim()
-    : typeof work?.display_name === 'string' ? work.display_name.trim() : '';
+  // OpenAlex carries Crossref's title through unedited, so it carries
+  // Crossref's inline JATS with it.
+  const title = stripMarkup(work?.title) ?? stripMarkup(work?.display_name);
   if (!title) throw new Error('record has no title');
 
   const doi = typeof work?.doi === 'string'
@@ -125,6 +125,9 @@ function normalizeOne(work: any, ref: SourceRef): Paper {
   const year = Number(work?.publication_year);
   const citationCount = Number(work?.cited_by_count);
   const fullText = pickFullText(work);
+  // The index is built from the publisher's abstract, so a token can be a
+  // tag; rejoining them puts it back into a sentence.
+  const abstract = stripMarkup(reconstructAbstract(work?.abstract_inverted_index));
 
   return {
     id: `openalex:${nativeId}`,
@@ -144,9 +147,7 @@ function normalizeOne(work: any, ref: SourceRef): Paper {
     ...(source.host_organization_name
       ? { publisher: String(source.host_organization_name) }
       : {}),
-    ...(reconstructAbstract(work?.abstract_inverted_index)
-      ? { abstract: reconstructAbstract(work.abstract_inverted_index)! }
-      : {}),
+    ...(abstract ? { abstract } : {}),
     topics: pickTopics(work),
     ...(work?.language ? { language: String(work.language) } : {}),
     ...(Number.isFinite(citationCount) ? { citationCount } : {}),

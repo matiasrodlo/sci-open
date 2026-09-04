@@ -1,5 +1,5 @@
 import type { Paper, PaperStage, FullText, SourceRef } from '@open-access-explorer/shared';
-import { httpUrl } from '@open-access-explorer/shared';
+import { httpUrl, stripMarkup } from '@open-access-explorer/shared';
 import type { EuropePmcPayload } from './fetch';
 
 /**
@@ -117,8 +117,12 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
   const nativeId = raw?.id != null ? String(raw.id) : '';
   if (!nativeId) throw new Error('record has no id');
 
-  const title = typeof raw.title === 'string' ? raw.title.trim() : '';
+  // Europe PMC serves the publisher's own strings: the recorded page's
+  // abstract carries `atring1<sup>ko</sup>`, and the tags reached the reader.
+  const title = stripMarkup(raw.title);
   if (!title) throw new Error('record has no title');
+
+  const abstract = stripMarkup(raw.abstractText);
 
   const year = raw.pubYear ? Number.parseInt(String(raw.pubYear), 10) : undefined;
   const citationCount = raw.citedByCount !== undefined ? Number(raw.citedByCount) : undefined;
@@ -133,7 +137,7 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
     // The journal is under `journalInfo.journal.title`, so venue was empty on
     // every record from the highest-yield provider in the fan-out.
     ...(raw.journalInfo?.journal?.title ? { venue: String(raw.journalInfo.journal.title) } : {}),
-    ...(raw.abstractText ? { abstract: String(raw.abstractText) } : {}),
+    ...(abstract ? { abstract } : {}),
     topics: asArray<string>(raw.keywordList?.keyword).filter(Boolean).map(String),
     ...(raw.language ? { language: String(raw.language) } : {}),
     ...(Number.isFinite(citationCount) ? { citationCount } : {}),

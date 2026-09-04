@@ -1,6 +1,6 @@
 {
   "_comment": "Hand-built, unlike the recorded doaj.json. Each record isolates a shape the recorded page happens not to contain — most importantly an actual PDF link, since not one of the three recorded records has one.",
-  "total": 6,
+  "total": 7,
   "results": [
     {
       "_case": "a real PDF, which the recorded fixture has none of",
@@ -72,6 +72,19 @@
       "_case": "unreadable: must cost exactly one record",
       "id": "notitle0000000000000000000000006",
       "bibjson": { "year": "2018", "author": [{ "name": "Nobody" }] }
+    },
+    {
+      "_case": "markup and entities in the publisher's own bibjson",
+      "id": "markup000000000000000000000001",
+      "last_updated": "2024-01-01T00:00:00Z",
+      "bibjson": {
+        "title": "Hearing loss in the <i>Eya4</i> mouse &amp; its rescue",
+        "year": "2022",
+        "author": [{ "name": "Katherine Johnson" }],
+        "abstract": "<p>Thresholds fell &gt; 20 dB.</p><p>Recovery was partial.</p>",
+        "journal": { "title": "Eye &amp; ENT Reports", "publisher": "A Publisher", "language": ["EN"] },
+        "identifier": [{ "type": "doi", "id": "10.1000/markup" }]
+      }
     }
   ]
 }

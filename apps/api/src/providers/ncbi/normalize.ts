@@ -60,7 +60,20 @@ function text(node: any, key: string): string | undefined {
   return undefined;
 }
 
-/** Text of an element that is itself the node, e.g. an entry in a list. */
+/**
+ * Text of an element that is itself the node, e.g. an entry in a list.
+ *
+ * Neither this nor `text` runs `stripMarkup`, and unlike arXiv that is not
+ * because there is no markup. PubMed's DTD allows `<i>`, `<sup>` and `<sub>`
+ * inside `ArticleTitle` and `AbstractText`, but xml2js has already resolved
+ * them by the time a string exists here — and resolved them lossily: it
+ * gathers an element's character data into `_` and its children into their own
+ * keys, so `Editing of <i>Arabidopsis</i> genes` arrives as
+ * `{ _: 'Editing of  genes', i: ['Arabidopsis'] }` and the italicised word is
+ * dropped. `stripMarkup` cannot see that and would not fix it; recovering the
+ * word needs the parser configured to preserve mixed content, which is a
+ * change to `fetch.ts` rather than to this file.
+ */
 function textOf(value: any): string | undefined {
   if (typeof value === 'string') return value.trim() || undefined;
   if (value && typeof value === 'object' && typeof value._ === 'string') {

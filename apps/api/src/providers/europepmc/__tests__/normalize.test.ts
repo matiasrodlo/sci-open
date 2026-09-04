@@ -13,6 +13,31 @@ const EDGE = JSON.parse(
 const AT = '2026-08-29T00:00:00.000Z';
 const run = (payload: unknown) => normalize(payload as any, { retrievedAt: AT });
 
+const find = (id: string) => run(EDGE).papers.find(p => p.id === `europepmc:${id}`)!;
+
+describe('normalize — markup', () => {
+  it('takes the superscript out of the recorded abstract', () => {
+    // Europe PMC serves the publisher's own strings. The recorded page carries
+    // `atring1<sup>ko</sup>`, and the tags reached the reader.
+    const recorded = run(RECORDED).papers.find(p => p.abstract?.includes('atring1'))!;
+    expect(RECORDED.resultList.result.some((r: any) => r.abstractText?.includes('<sup>'))).toBe(true);
+    expect(recorded.abstract).toContain('atring1ko');
+    expect(recorded.abstract).not.toContain('<');
+  });
+
+  it('joins across an inline element and breaks across a block one', () => {
+    // A superscript sits inside a word — `atring1 ko` would be a different
+    // string — while a `<br/>` ends a run of text.
+    expect(find('MARKUP1').abstract).toBe(
+      'We generated atring1ko and two deletion mutants. Growth was reduced at p < 0.05.'
+    );
+  });
+
+  it('takes it out of the title as well as the abstract', () => {
+    expect(find('MARKUP1').title).toBe('Loss of AtRING1 in 35S lines');
+  });
+});
+
 describe('normalize — the recorded fixture', () => {
   const { papers, skipped } = run(RECORDED);
 

@@ -1,5 +1,5 @@
 import type { Paper, FullText, OaRoute, SourceRef } from '@open-access-explorer/shared';
-import { httpUrl } from '@open-access-explorer/shared';
+import { httpUrl, stripMarkup } from '@open-access-explorer/shared';
 import type { OpenAirePayload } from './fetch';
 
 /**
@@ -38,24 +38,6 @@ function value(node: any): string | undefined {
 function attr(node: any, name: string): string | undefined {
   const raw = node?.[`@${name}`];
   return typeof raw === 'string' ? raw.trim() || undefined : undefined;
-}
-
-function stripMarkup(text: string): string {
-  return text
-    .replace(/<[^>]*>/g, '')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    // `&apos;` is a standard XML entity and OpenAIRE emits it — the decode
-    // list left it out, so abstracts reached the reader as
-    // "Alzheimer&apos;s disease".
-    .replace(/&apos;/g, "'")
-    .replace(/&#39;/g, "'")
-    // Last, so a literally-escaped entity such as `&amp;quot;` survives as
-    // `&quot;` rather than being decoded twice.
-    .replace(/&amp;/g, '&')
-    .replace(/\s+/g, ' ')
-    .trim();
 }
 
 /**
@@ -161,14 +143,17 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
   const result = raw?.metadata?.['oaf:entity']?.['oaf:result'];
   if (!result) throw new Error('record has no oaf:result');
 
-  const title = pickTitle(result);
+  // Stripped before the emptiness check, not after: a title that is nothing
+  // but markup is a record with no title, and reporting it as one is what
+  // keeps an empty string out of the field.
+  const title = stripMarkup(pickTitle(result));
   if (!title) throw new Error('record has no title');
 
   const nativeId = ref.nativeId;
   if (!nativeId) throw new Error('record has no objIdentifier');
 
   const doi = pickDoi(result);
-  const abstract = pickAbstract(result);
+  const abstract = stripMarkup(pickAbstract(result));
   const accepted = value(result.dateofacceptance);
   const year = Number.parseInt(accepted?.slice(0, 4) ?? '', 10);
   const fullText = pickFullText(result);
@@ -176,14 +161,14 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
   return {
     id: `openaire:${nativeId}`,
     ...(doi ? { doi } : {}),
-    title: stripMarkup(title),
+    title,
     authors: asArray(result.creator).map(value).filter((a): a is string => Boolean(a)),
     ...(Number.isFinite(year) ? { year } : {}),
     // The journal, not the publishing house. The old connector assigned
     // `publisher` to both, so every venue read "Elsevier BV" and the like.
     ...(value(result.journal) ? { venue: value(result.journal)! } : {}),
     ...(value(result.publisher) ? { publisher: value(result.publisher)! } : {}),
-    ...(abstract ? { abstract: stripMarkup(abstract) } : {}),
+    ...(abstract ? { abstract } : {}),
     topics: pickTopics(result),
     // `@classid` — the old connector read `$`, which is the language *name*
     // slot and absent here, so every record fell back to 'en'.

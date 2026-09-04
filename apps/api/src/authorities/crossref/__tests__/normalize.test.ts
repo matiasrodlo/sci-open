@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalize, pickFullText, stripJats, capabilities } from '../index';
+import { normalize, pickFullText, capabilities } from '../index';
 import open from '../__fixtures__/open.json';
 import closed from '../__fixtures__/closed.json';
 
@@ -46,8 +46,12 @@ describe('crossref normalize', () => {
       expect(facts.abstract?.toLowerCase().startsWith('abstract')).toBe(false);
     });
 
-    it('collapses the whitespace a stripped tag leaves behind', () => {
-      expect(stripJats('<jats:p>one</jats:p>  <jats:p>two</jats:p>')).toBe('one two');
+    it('collapses the whitespace the stripped tags leave behind', () => {
+      // The recorded abstract is one `<jats:p>` per paragraph, indented in the
+      // source document. `stripMarkup`'s own suite pins the rule; this pins
+      // that the recorded payload comes out of it as running prose.
+      expect(facts.abstract).not.toMatch(/\s{2}/);
+      expect(facts.abstract?.trim()).toBe(facts.abstract);
     });
   });
 

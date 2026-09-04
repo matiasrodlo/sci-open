@@ -1,6 +1,6 @@
 {
   "_comment": "Hand-built, unlike recorded.json. Shapes the recorded page does not contain: a preprint, a record with no DOI, an inverted index with a repeated word, and a record that cannot be read.",
-  "meta": { "count": 5 },
+  "meta": { "count": 6 },
   "results": [
     {
       "_case": "a repeated word must be emitted at every position it occupies",
@@ -61,6 +61,22 @@
       "type": "article",
       "publication_year": 2018,
       "authorships": []
+    },
+    {
+      "_case": "Crossref's inline JATS, carried through unedited",
+      "id": "https://openalex.org/W6",
+      "doi": "https://doi.org/10.1000/markup",
+      "title": "Editing of <i>Arabidopsis</i> genes",
+      "type": "article",
+      "publication_year": 2022,
+      "cited_by_count": 1,
+      "language": "en",
+      "authorships": [{ "author": { "display_name": "Katherine Johnson" } }],
+      "primary_location": {
+        "source": { "display_name": "A Journal", "host_organization_name": "A Publisher" }
+      },
+      "open_access": { "is_oa": true, "oa_status": "gold", "oa_url": "https://example.org/markup.pdf" },
+      "abstract_inverted_index": { "<p>": [0], "Yields": [1], "were": [2], "&gt;": [3], "40%.": [4] }
     }
   ]
 }

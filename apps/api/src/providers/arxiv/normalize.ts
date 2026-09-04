@@ -56,7 +56,14 @@ function first(value: unknown): string | undefined {
   return undefined;
 }
 
-/** Atom carries text with the source document's line wrapping still in it. */
+/**
+ * Atom carries text with the source document's line wrapping still in it.
+ *
+ * Deliberately not `stripMarkup`, which every other provider's title and
+ * abstract goes through. arXiv metadata is LaTeX, not markup: it has no tags
+ * to remove, and `<` and `>` in an abstract are inequalities — `$n < m$`,
+ * `p > 0.05`. There is nothing to gain here and a class of abstract to damage.
+ */
 function flatten(value: unknown): string | undefined {
   const text = first(value);
   return text ? text.replace(/\s+/g, ' ').trim() : undefined;

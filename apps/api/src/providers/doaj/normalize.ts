@@ -1,5 +1,5 @@
 import type { Paper, FullText, SourceRef } from '@open-access-explorer/shared';
-import { httpUrl } from '@open-access-explorer/shared';
+import { httpUrl, stripMarkup } from '@open-access-explorer/shared';
 import type { DoajPayload } from './fetch';
 
 /**
@@ -86,8 +86,13 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
 
   const bibjson = raw?.bibjson ?? {};
 
-  const title = typeof bibjson.title === 'string' ? bibjson.title.trim() : '';
+  // bibjson is the publisher's own deposit, passed through as it arrives —
+  // which is why the recorded page's affiliations read `Eye &amp; ENT
+  // Hospital`. Titles and abstracts come from the same strings.
+  const title = stripMarkup(bibjson.title);
   if (!title) throw new Error('record has no title');
+
+  const abstract = stripMarkup(bibjson.abstract);
 
   const doi = asArray<any>(bibjson.identifier).find(i => i?.type === 'doi')?.id;
   const links = asArray<DoajLink>(bibjson.link);
@@ -111,7 +116,7 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
     // 'DOAJ Journal', which is a fabricated venue on any record missing one.
     ...(bibjson.journal?.title ? { venue: String(bibjson.journal.title) } : {}),
     ...(bibjson.journal?.publisher ? { publisher: String(bibjson.journal.publisher) } : {}),
-    ...(bibjson.abstract ? { abstract: String(bibjson.abstract) } : {}),
+    ...(abstract ? { abstract } : {}),
     topics: pickTopics(bibjson),
     ...(language ? { language } : {}),
 

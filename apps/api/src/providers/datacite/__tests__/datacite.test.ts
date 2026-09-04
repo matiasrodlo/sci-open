@@ -163,3 +163,20 @@ describe('fetchPage — an unconfigured key is not a key', () => {
     expect(headers.Authorization).toBeUndefined();
   });
 });
+
+describe('normalize — markup', () => {
+  it('decodes the entities the depositor escaped', () => {
+    // A recorded description carries `&gt;` in an inequality; nothing decoded
+    // it, so the reader saw the entity.
+    const recorded = run(RECORDED).papers.find(p => p.abstract?.includes('>'))!;
+    expect(RECORDED.data.some((d: any) =>
+      d.attributes.descriptions?.some((x: any) => String(x.description).includes('&gt;')))).toBe(true);
+    expect(recorded.abstract).not.toContain('&gt;');
+  });
+
+  it('takes the tags out of the title and the description', () => {
+    const record = find('10.5281/zenodo.555');
+    expect(record.title).toBe('Editing Arabidopsis at 37oC');
+    expect(record.abstract).toBe('Yields were > 40% at p < 0.05. A second paragraph.');
+  });
+});

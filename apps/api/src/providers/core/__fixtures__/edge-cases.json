@@ -1,0 +1,26 @@
+{
+  "_comment": "Hand-built, unlike recorded.json — which needed a CORE_API_KEY to record and holds three ordinary records. CORE indexes repository deposits, so its titles and abstracts are depositor-written and arrive with whatever markup the deposit carried.",
+  "totalHits": 2,
+  "limit": 2,
+  "offset": 0,
+  "results": [
+    {
+      "_case": "markup and entities in the depositor's own metadata",
+      "id": 900001,
+      "title": "Editing of <i>Arabidopsis</i> genes &amp; their regulators",
+      "abstract": "<p>Yields rose &gt; 40%.</p><p>Effects held at 37<sup>o</sup>C.</p>",
+      "doi": "10.1000/coremarkup",
+      "yearPublished": 2022,
+      "citationCount": 4,
+      "authors": [{ "name": "Johnson, Katherine" }],
+      "language": { "code": "en" },
+      "downloadUrl": "https://core.ac.uk/download/900001.pdf"
+    },
+    {
+      "_case": "a title that is nothing but markup: no title, not an empty one",
+      "id": 900002,
+      "title": "<p> </p>",
+      "yearPublished": 2021
+    }
+  ]
+}
