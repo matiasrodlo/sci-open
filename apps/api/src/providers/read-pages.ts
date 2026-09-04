@@ -48,6 +48,25 @@ export type ReadPagesOptions<Payload, Item> = {
   itemsOf(payload: Payload): Item[];
   /** The provider's own count of everything matching, where it reports one. */
   totalOf(payload: Payload): number | undefined;
+  /**
+   * Whether the final request may ask for only the records still wanted,
+   * rather than a full page that is then trimmed. Off by default.
+   *
+   * It depends on how the provider addresses a read, and the two shapes are
+   * not interchangeable. DOAJ and OpenAIRE derive a **page number** from
+   * `offset / pageSize`, so a request whose size differs from its neighbours'
+   * lands on a different page than the arithmetic intends — which is why
+   * OpenAlex, addressed the same way, states that every request asks for a full
+   * page. NCBI takes `retstart`, an absolute record offset, so the size of a
+   * request says nothing about where it starts and the last one is free to be
+   * short.
+   *
+   * Worth having only where the surplus is expensive. At `depth` 600 against a
+   * 500-record page, a full second page fetches 1,000 records to return 600 —
+   * and for NCBI those are abstract XML, the bulkiest payload of any provider
+   * and the thing its page ceiling exists to bound in the first place.
+   */
+  exactLastPage?: boolean;
 };
 
 export type PagesRead<Item> = {
@@ -61,7 +80,7 @@ export type PagesRead<Item> = {
 export async function readPages<Payload, Item>(
   options: ReadPagesOptions<Payload, Item>
 ): Promise<PagesRead<Item>> {
-  const { offset, fetch, itemsOf, totalOf } = options;
+  const { offset, fetch, itemsOf, totalOf, exactLastPage = false } = options;
   const wanted = Math.max(options.wanted, 1);
   const perPage = Math.max(options.perPage, 1);
 
@@ -94,9 +113,14 @@ export async function readPages<Payload, Item>(
   // The remainder goes out together — the objection to sequential reads is
   // sound, and this is two rounds rather than `pages` of them.
   const rest = await Promise.all(
-    Array.from({ length: pages - 1 }, (_, index) =>
-      fetch({ pageSize: perPage, offset: offset + (index + 1) * perPage })
-    )
+    Array.from({ length: pages - 1 }, (_, index) => {
+      const page = index + 1;
+      const remaining = wanted - page * perPage;
+      return fetch({
+        pageSize: exactLastPage ? Math.max(Math.min(perPage, remaining), 1) : perPage,
+        offset: offset + page * perPage
+      });
+    })
   );
 
   return done([firstItems, ...rest.map(itemsOf)].flat(), pages);

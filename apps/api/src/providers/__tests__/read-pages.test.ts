@@ -143,6 +143,55 @@ describe('not paying for pages that are not there', () => {
   });
 });
 
+describe('exactLastPage', () => {
+  it('asks the closing request for only what is still wanted', async () => {
+    // NCBI addresses records by `retstart`, so a short final request lands
+    // where the arithmetic intends. At depth 600 against a 500-record page,
+    // a full second page would fetch 1,000 abstracts to return 600.
+    const fetch = corpus(5000);
+
+    const { items } = await readPages<Payload, string>({
+      wanted: 600,
+      perPage: 500,
+      offset: 0,
+      exactLastPage: true,
+      fetch,
+      itemsOf: p => p.items,
+      totalOf: p => p.total
+    });
+
+    expect(fetch.mock.calls.map(([a]) => a.pageSize)).toEqual([500, 100]);
+    expect(fetch.mock.calls.map(([a]) => a.offset)).toEqual([0, 500]);
+    expect(items).toHaveLength(600);
+  });
+
+  it('still asks for full pages in the middle of a read', async () => {
+    const fetch = corpus(5000);
+
+    await readPages<Payload, string>({
+      wanted: 250,
+      perPage: 100,
+      offset: 0,
+      exactLastPage: true,
+      fetch,
+      itemsOf: p => p.items,
+      totalOf: p => p.total
+    });
+
+    expect(fetch.mock.calls.map(([a]) => a.pageSize)).toEqual([100, 100, 50]);
+  });
+
+  it('is off by default, because a page-numbered API cannot take a short page', async () => {
+    // DOAJ and OpenAIRE derive their page number from `offset / pageSize`, so
+    // a request sized differently from its neighbours lands on the wrong page.
+    const fetch = corpus(5000);
+
+    await read(fetch, 600, 500);
+
+    expect(fetch.mock.calls.map(([a]) => a.pageSize)).toEqual([500, 500]);
+  });
+});
+
 describe('reporting', () => {
   it('carries the corpus-wide total through', async () => {
     fetch = corpus(5000);
