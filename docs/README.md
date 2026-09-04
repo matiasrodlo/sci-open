@@ -29,6 +29,7 @@ Visit `http://localhost:3000`
 
 - [Architecture](./architecture.md) - System design and components
 - [Architecture Diagram](./architecture-diagram.md) - Mermaid diagrams of the whole app
+- [Platform Workflow](./workflow.md) - Mermaid diagrams of what happens at runtime
 - [API Reference](./api.md) - Endpoints and data models
 - [Development](./development.md) - Setup and development guide
 - [Configuration](./configuration.md) - Environment variables and settings

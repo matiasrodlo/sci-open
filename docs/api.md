@@ -64,7 +64,7 @@ Search for papers across multiple sources.
 ```
 
 **Headers:**
-- `X-Cache-Hit`: `true` | `similar` | `false`
+- `X-Cache-Hit`: `true` | `false` | `coalesced`
 - `X-Response-Time`: milliseconds
 - `Cache-Control`: `public, max-age=300`
 
@@ -267,10 +267,19 @@ A rendered summary of the above.
   hits: OARecord[];               // Search results
   facets: Record<string, any>;    // Facet counts
   page: number;                   // Current page
-  total: number;                  // Total results
+  total: number;                  // Size of the filtered set
   pageSize: number;               // Page size
+  complete?: boolean;             // False when a provider failed or timed out
+  bounded?: boolean;              // True when the rescue pass was cut short
 }
 ```
+
+`total` is an answer only when `complete` is not `false` and `bounded` is not
+`true`. They are separate because the causes are: `complete: false` means a
+source did not answer, so papers are missing from the hits and the facets;
+`bounded: true` means every source answered but the rescue could not ask about
+every paper the open-access gate would drop, so some were dropped without being
+looked up. Either one makes `total` a lower bound.
 
 ## Error Responses
 

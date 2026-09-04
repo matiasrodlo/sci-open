@@ -102,7 +102,7 @@ flowchart TB
     CM["CacheManager<br/>key: namespace:hash(subject):hash(variant)"]
     L1[("L1 · MemoryCache<br/>bounded in bytes, LRU")]
     L2[("L2 · Redis<br/>ioredis, walked with SCAN")]
-    SCM["SearchCacheManager<br/>exact + similar-query hits"]
+    SCM["SearchCacheManager<br/>one key per request<br/>a degraded answer is not stored"]
     PCM["PaperCacheManager<br/>by id and by DOI"]
   end
 
@@ -243,13 +243,9 @@ sequenceDiagram
     SC->>CM: get(key)
     CM-->>SC: hit / miss
 
-    alt exact cache hit
+    alt cache hit
         SC-->>F: SearchResponse
         F-->>N: 200 · X-Cache-Hit: true
-    else similar query cached
-        F->>SC: getSimilarResults(q, params)
-        SC-->>F: SearchResponse
-        F-->>N: 200 · X-Cache-Hit: similar
     else cache miss
         F->>SF: run(key, …) — one fan-out however many callers wait
         SF->>OR: runOrchestrator(params)
@@ -257,11 +253,11 @@ sequenceDiagram
         OR->>OR: plan — capabilities decide who is asked
         OR->>P: fanOut, in parallel, per-provider timeout
         P-->>OR: Paper[] + ProviderReport per provider
-        OR->>OR: merge → rank → filter → sort → facet → paginate
+        OR->>OR: merge → rank → filter → rescue → sort → facet → paginate
         OR->>AU: enrichPage — the returned page only
         AU-->>OR: fields, each attributed in fieldSources
         OR-->>SF: papers, facets, reports, complete
-        SF->>SC: cacheSearchResults + cacheFacets
+        SF->>SC: cacheSearchResults — stored only when complete
         F-->>N: 200 · X-Cache-Hit: false | coalesced
     end
 

@@ -70,6 +70,7 @@ other twelve upstreams) is optional — unset falls back to the global
 Comprehensive documentation is available in the [`/docs`](./docs) directory:
 
 - **[Architecture](./docs/architecture.md)** - System design and components
+- **[Platform Workflow](./docs/workflow.md)** - Mermaid diagrams of what happens at runtime
 - **[API Reference](./docs/api.md)** - Endpoints and data models
 - **[Development](./docs/development.md)** - Setup and development guide
 - **[Configuration](./docs/configuration.md)** - Environment variables and settings
