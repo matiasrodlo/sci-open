@@ -75,7 +75,15 @@ export class HttpClientFactory {
     const client = this.createPooledClient(baseUrl, config);
 
     this.clients.set(baseUrl, client);
-    this.initializeMetrics(this.normalizeUrl(baseUrl));
+
+    // Only when the host is new. Two base URLs on one host — a second endpoint
+    // under a different path, which OpenAlex and NCBI are each one change away
+    // from — share a metrics key, so initialising unconditionally would zero
+    // the first client's counters the moment the second was built.
+    const metricsKey = this.normalizeUrl(baseUrl);
+    if (!this.metrics.has(metricsKey)) {
+      this.initializeMetrics(metricsKey);
+    }
 
     return client;
   }
@@ -250,7 +258,19 @@ export class HttpClientFactory {
   }
 
   /**
-   * Reset metrics for a specific client or all clients
+   * Reset metrics for a specific client or all clients.
+   *
+   * There are two key spaces here and they are not the same: `clients` is keyed
+   * by the **full** base URL, because several services live under a path and
+   * normalising that away made axios resolve every request against the bare
+   * host; `metrics` is keyed by the **normalised** origin. Every write goes
+   * through `normalizeUrl`, and the reset-all branch below did not — it fed
+   * `initializeMetrics` the raw client keys, so the eight of thirteen services
+   * whose base URL carries a path (NCBI's /entrez/eutils, OpenAIRE's /search,
+   * CORE's /v3, DataCite's /dois, arXiv's /api/query, PLOS's /search, Europe
+   * PMC's, DOAJ's /api) ended up with entries under a key `updateMetrics` never
+   * looks up. Its `if (!metrics) return` then dropped every subsequent
+   * measurement for them, silently and permanently.
    */
   resetMetrics(baseUrl?: string): void {
     if (baseUrl) {
@@ -266,9 +286,9 @@ export class HttpClientFactory {
       }
     } else {
       this.metrics.clear();
-      // Reinitialize metrics for existing clients
+      // Reinitialised under the same key the recording path writes to.
       for (const [url] of this.clients) {
-        this.initializeMetrics(url);
+        this.initializeMetrics(this.normalizeUrl(url));
       }
     }
   }
