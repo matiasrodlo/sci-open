@@ -65,8 +65,24 @@ const TIMEOUT_MS = arg('timeout', 20000);
 
 const USER_AGENT = `OpenAccessExplorer/1.0 (mailto:${process.env.UNPAYWALL_EMAIL || 'your-email@example.com'})`;
 
-/** The providers this actually concerns: no by-id route, so `lookup` searches. */
+/**
+ * The providers this actually concerns: no by-id route, so `lookup` searches.
+ *
+ * Split further by whether ids can be *sampled* from them. Drawing a realistic
+ * sample means running keyword searches, and bioRxiv has no keyword index at
+ * all — `capabilities.keywordSearch` is false because the API exposes date
+ * windows and a per-DOI lookup and nothing else. An empty row for it used to
+ * print beside the others and read as a pass, which is the one thing a
+ * measurement must never do.
+ *
+ * It is also the provider least exposed to the question. Its native ids are
+ * DOIs and `doiLookup` is true, so `parseQuery` sends a lookup to
+ * `/details/{server}/{doi}` — an exact endpoint, not a ranked list where a
+ * depth can cut the answer off.
+ */
 const SEARCHES_FOR_IDS = PROVIDERS.filter(p => !p.lookup);
+const SAMPLEABLE = SEARCHES_FOR_IDS.filter(p => p.capabilities.keywordSearch);
+const UNSAMPLEABLE = SEARCHES_FOR_IDS.filter(p => !p.capabilities.keywordSearch);
 
 /** The same comparison `lookupPaper` makes, so a hit here is a hit there. */
 function matches(paper: Paper, provider: string, nativeId: string): boolean {
@@ -127,21 +143,24 @@ async function main() {
       'endpoint 404s today.\n'
   );
 
-  const rows: Array<{ provider: string; n: number; worst: number | null; over: number; missed: number }> = [];
+  const rows: Array<{
+    provider: string; n: number; worst: number | null; over: number; missed: number; errors: number;
+  }> = [];
 
-  for (const entry of SEARCHES_FOR_IDS) {
+  for (const entry of SAMPLEABLE) {
     console.log(`${entry.id}:`);
     const ids = await sampleIds(entry);
 
     if (ids.length === 0) {
       console.log('  no ids sampled — provider returned nothing for any query\n');
-      rows.push({ provider: entry.id, n: 0, worst: null, over: 0, missed: 0 });
+      rows.push({ provider: entry.id, n: 0, worst: null, over: 0, missed: 0, errors: 0 });
       continue;
     }
 
     let worst: number | null = null;
     let over = 0;
     let missed = 0;
+    let errors = 0;
 
     for (const nativeId of ids) {
       try {
@@ -157,27 +176,61 @@ async function main() {
         }
         worst = worst === null ? rank : Math.max(worst, rank);
       } catch (error) {
+        errors += 1;
         console.error(`  error  ${nativeId}: ${(error as Error).message}`);
       }
     }
 
-    console.log(`  ${ids.length} sampled · worst rank ${worst ?? 'n/a'} · ${over} past depth 10 · ${missed} not found\n`);
-    rows.push({ provider: entry.id, n: ids.length, worst, over, missed });
+    // `answered` is the only number the verdict may rest on. A probe that threw
+    // asked nothing, and counting the ids we *meant* to probe is how a run that
+    // mostly failed reports a clean result.
+    const answered = ids.length - errors;
+    console.log(
+      `  ${answered}/${ids.length} probed · worst rank ${worst ?? 'n/a'} · ` +
+        `${over} past depth 10 · ${missed} not found · ${errors} errored\n`
+    );
+    rows.push({ provider: entry.id, n: ids.length, worst, over, missed, errors });
   }
 
-  console.log('provider     sampled  worst rank  past 10  not found');
+  console.log('provider     probed  worst rank  past 10  not found  errored');
   for (const r of rows) {
     console.log(
-      `${r.provider.padEnd(12)} ${String(r.n).padStart(7)} ${String(r.worst ?? '-').padStart(11)} ` +
-        `${String(r.over).padStart(8)} ${String(r.missed).padStart(10)}`
+      `${r.provider.padEnd(12)} ${String(r.n - r.errors).padStart(6)} ${String(r.worst ?? '-').padStart(11)} ` +
+        `${String(r.over).padStart(8)} ${String(r.missed).padStart(10)} ${String(r.errors).padStart(8)}`
+    );
+  }
+
+  for (const entry of UNSAMPLEABLE) {
+    console.log(
+      `${entry.id.padEnd(12)} ${'-'.padStart(6)} ${'-'.padStart(11)} ${'-'.padStart(8)} ${'-'.padStart(10)} ` +
+        `${'-'.padStart(8)}   not sampled: no keyword index to draw ids from`
     );
   }
 
   const broken = rows.filter(r => r.over > 0 || r.missed > 0);
+  if (broken.length > 0) {
+    console.log(`\n${broken.map(r => r.provider).join(', ')} returned records lookup.ts would not have found.`);
+    return;
+  }
+
+  /**
+   * A pass has to be a pass *over something*. A provider whose probes all threw
+   * and one that was never probed are both absences of evidence, and reporting
+   * either as "the assumption holds" is how a measurement becomes a rubber
+   * stamp.
+   */
+  const thin = rows.filter(r => r.n - r.errors === 0).map(r => r.provider);
+  const partial = rows.filter(r => r.errors > 0 && r.n - r.errors > 0).map(r => r.provider);
+  const gaps = [...thin, ...UNSAMPLEABLE.map(p => p.id)];
+
+  console.log('\nEvery record actually probed was inside depth 10.');
+  if (partial.length > 0) {
+    console.log(`Partial coverage: ${partial.join(', ')} lost probes to errors — rerun before trusting those rows.`);
+  }
   console.log(
-    broken.length === 0
-      ? '\nEvery sampled record was inside depth 10. The assumption holds for this sample.'
-      : `\n${broken.map(r => r.provider).join(', ')} returned records lookup.ts would not have found.`
+    gaps.length === 0
+      ? 'Coverage is complete: the assumption holds for this sample.'
+      : `Not covered at all: ${gaps.join(', ')}. The assumption is unmeasured for them.`
   );
 }
 
