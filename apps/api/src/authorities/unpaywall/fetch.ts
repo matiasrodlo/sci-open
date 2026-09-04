@@ -25,6 +25,32 @@ export type FetchOptions = {
 export type UnpaywallPayload = Record<string, unknown>;
 
 /**
+ * A DOI as a path segment, with its own slash left alone.
+ *
+ * Unpaywall's endpoint is `/v2/{doi}`, so the slash between a DOI's prefix and
+ * suffix is a real path separator and has to stay one — which is why this is
+ * not a bare `encodeURIComponent` the way Crossref's is, where the whole DOI
+ * occupies one segment.
+ *
+ * Everything else has to be escaped, and two characters make it a correctness
+ * bug rather than tidiness: `#` and `?` are structural in a URL, so a DOI
+ * carrying either was silently truncated and Unpaywall was asked about a
+ * different work. Both occur in the wild — Wiley's SICI-derived DOIs end in
+ * `#` — for example
+ * `10.1002/1521-3773(20010316)40:6<9::AID-ANIE9>3.3.CO;2-#`, which reached
+ * the wire as `…3.3.CO;2-` with the fragment marker and everything after it
+ * dropped.
+ *
+ * The cost of that is not a missing field. Unpaywall is the only authority
+ * authoritative on `fullText` and `oaStatus`, so a lookup that answers about
+ * the wrong DOI leaves the paper failing `passesPolicy`, and it is dropped
+ * from `total` and from the facets rather than merely under-described.
+ */
+function doiPath(doi: string): string {
+  return encodeURIComponent(doi).replace(/%2F/gi, '/');
+}
+
+/**
  * Resolves one DOI, or `null` when Unpaywall does not have it.
  *
  * The address is not optional — Unpaywall answers 422 without one — so a
@@ -41,7 +67,7 @@ export async function lookupDoi(doi: string, options: FetchOptions): Promise<Unp
   const client = getPooledClient(baseUrl, getServiceConfig('unpaywall'));
 
   try {
-    const response = await client.get<UnpaywallPayload>(`/${doi}`, {
+    const response = await client.get<UnpaywallPayload>(`/${doiPath(doi)}`, {
       params: { email },
       timeout: timeoutMs,
       headers: { Accept: 'application/json', 'User-Agent': userAgent! },
