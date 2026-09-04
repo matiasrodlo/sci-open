@@ -86,5 +86,24 @@ export type SearchResponse = {
    * bound rather than an answer.
    */
   complete?: boolean;
+  /**
+   * True when the rescue pass was cut short, which *also* makes `total` a lower
+   * bound — for a different reason, and one `complete` cannot express.
+   *
+   * The open-access gate drops papers on fields the authorities supply, so the
+   * papers it would drop are asked about before it drops them. That pass is
+   * bounded in number and in time (`SEARCH_RESCUE_LIMIT`, and its own budget),
+   * and whatever it did not reach is dropped unasked. So there may be more
+   * retrievable open-access papers than `total` says, with every provider
+   * having answered perfectly.
+   *
+   * Kept separate from `complete` rather than folded into it. They are read by
+   * different consumers for different purposes: `complete` is the one that says
+   * an answer is degraded and should not be *stored*, and a bounded rescue is
+   * not degraded — ask again and the same limit cuts the same list at the same
+   * place. Folding this in would mean never caching a search whose rescue hit
+   * its limit, which for a broad query is most of them.
+   */
+  bounded?: boolean;
 };
 

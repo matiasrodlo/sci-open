@@ -127,6 +127,73 @@ describe('rescueCandidates', () => {
     expect(report).toMatchObject({ candidates: 1, examined: 0, rescued: 0, bounded: true });
   });
 
+  /**
+   * `examined` is the number of candidates that answered, not the number the
+   * limit set out to ask.
+   *
+   * They are the same until the budget expires, and the slice's length was
+   * reported as though they always were — so a pass the budget stopped at forty
+   * of two hundred reported two hundred examined. `bounded` was true either
+   * way, which is exactly why the wrong number could sit there: the flag was
+   * right and the count beside it was not.
+   */
+  describe('what examined counts', () => {
+    it('counts the candidates that answered, not the ones it set out to ask', async () => {
+      const stalls = new Set(['10.1/2', '10.1/3']);
+      const lookup = vi.fn(({ doi }: { doi: string }) =>
+        stalls.has(doi)
+          // Never settles, and ignores the signal — the case `untilBudget`
+          // exists for, and the one the old count could not see.
+          ? new Promise<AuthorityFacts | null>(() => {})
+          : Promise.resolve({ fullText: PDF })
+      );
+      const candidates = Array.from({ length: 4 }, (_, i) =>
+        candidate({ id: `europepmc:${i}`, doi: `10.1/${i}` }));
+
+      const { report } = await rescueCandidates(candidates, {
+        authorities: [authority('unpaywall', null, { lookup })],
+        limit: 4,
+        budgetMs: 30,
+        concurrency: 4
+      });
+
+      expect(lookup).toHaveBeenCalledTimes(4);
+      // Four were attempted, two came back. The old count said four.
+      expect(report).toMatchObject({ candidates: 4, examined: 2, bounded: true });
+    });
+
+    it('counts a paper the authority knew nothing about', async () => {
+      // A null is an answer: this paper has no copy anyone knows of, so it was
+      // judged and dropped rather than dropped unjudged. Nothing is bounded.
+      const { report } = await rescueCandidates([candidate()], {
+        authorities: [unpaywall(null)]
+      });
+
+      expect(report).toMatchObject({ candidates: 1, examined: 1, rescued: 0, bounded: false });
+    });
+
+    it('does not count a paper whose lookup failed', async () => {
+      // Asked, and told nothing usable. That leaves the paper as unjudged as
+      // never asking, so it is a shortfall and the count has to show it.
+      const lookup = vi.fn(async () => { throw new Error('unpaywall said 503'); });
+      const { report } = await rescueCandidates([candidate()], {
+        authorities: [authority('unpaywall', null, { lookup })]
+      });
+
+      expect(report).toMatchObject({ candidates: 1, examined: 0, rescued: 0, bounded: true });
+    });
+
+    it('counts a paper once however many authorities asked about it', async () => {
+      // `asked` in the authority reports is per authority and would say two.
+      const { report } = await rescueCandidates([candidate()], {
+        authorities: [authority('unpaywall', null), authority('openalex', { fullText: PDF })]
+      });
+
+      expect(report.examined).toBe(1);
+      expect(report.authorities.reduce((n, r) => n + r.asked, 0)).toBe(2);
+    });
+  });
+
   it('is not bounded when no authority could have been asked in the first place', async () => {
     // Nothing was left unasked, so `total` is as complete as this
     // configuration can make it and should not claim otherwise.

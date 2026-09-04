@@ -50,6 +50,23 @@ export type EnrichOptions = {
 export type EnrichResult = {
   papers: Paper[];
   reports: AuthorityReport[];
+  /**
+   * How many of the papers handed in got a usable answer — a lookup came back
+   * for them, in time, saying something the caller can act on. A null counts:
+   * "this authority knows nothing about that DOI" settles the question. A
+   * failed lookup and one the budget never reached do not, because both leave
+   * the paper exactly as unjudged as never asking would have.
+   *
+   * The reports cannot answer this. `asked` is per authority and counts tasks
+   * *started*, so it double-counts a paper two authorities both looked up and
+   * over-counts one whose lookup was abandoned mid-flight. This counts distinct
+   * papers, so `handed in − examined` is the shortfall and nothing else.
+   *
+   * The page path ignores it — enrichment there is optional detail, and a paper
+   * nobody reached is still returned. The rescue is the caller that needs it,
+   * because there a paper nobody reached is a paper silently dropped.
+   */
+  examined: number;
 };
 
 const DEFAULT_TIMEOUT_MS = 2500;
@@ -242,16 +259,26 @@ export async function enrichPage(
         applied: 0,
         skipReason: withDoi.length === 0 ? 'no paper on the page carries a DOI' : 'not consulted',
         latency: 0
-      }))
+      })),
+      examined: 0
     };
   }
 
   const controller = new AbortController();
   const expiry = setTimeout(() => controller.abort(), budgetMs);
 
-  const tally = new Map<string, { asked: number; answered: number; applied: number; errors: number; error?: string; startedAt: number; latency: number }>();
+  /**
+   * Papers a lookup actually came back for, by id.
+   *
+   * A set rather than a counter because a paper is asked about once per
+   * authority and examined either way, and because the two passes mean the
+   * same paper appears in two rounds of tasks.
+   */
+  const examined = new Set<string>();
+
+  const tally = new Map<string, { asked: number; settled: number; answered: number; applied: number; errors: number; error?: string; startedAt: number; latency: number }>();
   for (const authority of authorities) {
-    tally.set(authority.id, { asked: 0, answered: 0, applied: 0, errors: 0, startedAt: Date.now(), latency: 0 });
+    tally.set(authority.id, { asked: 0, settled: 0, answered: 0, applied: 0, errors: 0, startedAt: Date.now(), latency: 0 });
   }
 
   try {
@@ -276,12 +303,39 @@ export async function enrichPage(
               const facts = cache
                 ? await cache.fetch(authority.id, paper.doi!, lookup)
                 : await lookup();
-              // The page may already have been returned; see `untilBudget`.
-              if (!facts || controller.signal.aborted) return;
+              // The page may already have been returned; see `untilBudget`. A
+              // lookup that lands after the budget is discarded, so the paper
+              // it was about was not examined — nothing it said can count.
+              if (controller.signal.aborted) return;
+
+              // Answered, including a null: "this authority knows nothing about
+              // that DOI" is an answer, and the paper had its chance.
+              examined.add(paper.id);
+              counters.settled += 1;
+
+              if (!facts) return;
               counters.answered += 1;
               counters.applied += applyFacts(paper, facts, authority);
             } catch (error) {
+              // Deliberately *not* examined. The question was put and came back
+              // with nothing usable, so this paper is as unjudged as one the
+              // budget never reached — and `candidates - examined` is only the
+              // shortfall it claims to be if a failed lookup counts as a gap.
               counters.errors += 1;
+
+              // Settled all the same, and this is where the two counts part
+              // company. They answer different questions: `examined` asks
+              // whether the *paper* was judged, and a failed lookup leaves it
+              // as unjudged as silence; `settled` asks whether the *authority*
+              // finished the task, and a failure is a conclusion — which is
+              // what the `error` status below is for.
+              //
+              // Guarded on the signal for the same reason the success path is.
+              // A lookup that threw *because* the budget aborted it was cut
+              // off rather than concluded, and counting it would let a late
+              // `AbortError` erase the very timeout that caused it.
+              if (!controller.signal.aborted) counters.settled += 1;
+
               counters.error ??= error instanceof Error ? error.message : String(error);
             } finally {
               counters.latency = Date.now() - counters.startedAt;
@@ -305,9 +359,19 @@ export async function enrichPage(
 
     // A budget that ran out is a timeout for whoever had work left, and
     // nothing at all for an authority that had already finished.
+    //
+    // `settled` is what says which of those an authority is, and it had to be
+    // counted separately because no combination of the others could. The test
+    // was `answered + errors < asked`, and `answered` only counts a lookup that
+    // returned *facts* — so every null answer looked like outstanding work.
+    // Unpaywall returns nulls for most of a page by nature, so any expiry at
+    // all reported it as having timed out, with the budget named as the reason,
+    // when it had answered every question it was asked and answered them fast.
+    // Measured on two papers with a 50ms budget and a second authority hanging:
+    // `{ asked: 2, answered: 0, status: 'timeout' }`.
     const status =
       c.asked === 0 ? 'skipped'
-      : expired && c.answered + c.errors < c.asked ? 'timeout'
+      : expired && c.settled < c.asked ? 'timeout'
       : c.errors > 0 && c.answered === 0 ? 'error'
       : 'ok';
 
@@ -328,5 +392,5 @@ export async function enrichPage(
     };
   });
 
-  return { papers: enriched, reports };
+  return { papers: enriched, reports, examined: examined.size };
 }

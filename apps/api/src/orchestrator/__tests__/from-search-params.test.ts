@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import type { Query, SearchParams } from '@open-access-explorer/shared';
+import type { AuthorityEntry } from '../../authorities';
 import type { ProviderEntry } from '../registry';
 import { runOrchestrator, toUserFilters } from '../from-search-params';
 import { paper, ref } from './helpers';
@@ -176,5 +177,145 @@ describe('runOrchestrator: the response', () => {
     // pageOf ascends by year, so a date sort has to bring the last ones forward.
     expect(response.hits.map(h => h.year)).toEqual([2024, 2023]);
     expect(response.sort).toBe('date');
+  });
+
+  /**
+   * The other way `total` stops being an answer, and the one `complete` cannot
+   * express.
+   *
+   * A paper failing the open-access gate on fields the authorities supply is
+   * asked about before it is dropped — but only the first `SEARCH_RESCUE_LIMIT`
+   * of them, so whatever the limit cuts off is dropped unasked and the count is
+   * short with every provider having answered. That was visible only in a debug
+   * log until it reached the response, which meant a reader was shown a bounded
+   * total with nothing to mark it as one.
+   */
+  describe('a total bounded by the rescue', () => {
+    /** Authoritative on a gated field, so `canRescue` picks it up. */
+    const rescuer: AuthorityEntry = {
+      id: 'unpaywall',
+      capabilities: { fields: ['fullText', 'oaStatus'], authoritative: ['fullText', 'oaStatus'] },
+      pass: 0,
+      lookup: async () => null
+    };
+
+    /** Fails the gate — no copy — but carries the DOI that makes it askable. */
+    const gated = (i: number) =>
+      paper({
+        id: `europepmc:${i}`,
+        doi: `10.1234/gated.${i}`,
+        sources: [ref('europepmc', { nativeId: String(i), rank: i })],
+        fullText: undefined
+      });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it('says so when the limit cut the candidate list short', async () => {
+      vi.stubEnv('SEARCH_RESCUE_LIMIT', '1');
+      const { entry } = recorder([gated(1), gated(2)]);
+
+      const response = await runOrchestrator({ q: 'crispr' }, {
+        providers: [entry],
+        authorities: [rescuer]
+      });
+
+      expect(response.bounded).toBe(true);
+      // And it is not the same statement as `complete`: every provider answered.
+      expect(response.complete).toBe(true);
+    });
+
+    it('says so when the step was turned off entirely', async () => {
+      // A limit of zero is an operator's decision, but the count is a lower
+      // bound for exactly the same reason.
+      vi.stubEnv('SEARCH_RESCUE_LIMIT', '0');
+      const { entry } = recorder([gated(1)]);
+
+      const response = await runOrchestrator({ q: 'crispr' }, {
+        providers: [entry],
+        authorities: [rescuer]
+      });
+
+      expect(response.bounded).toBe(true);
+    });
+
+    it('is false when every candidate was asked about', async () => {
+      vi.stubEnv('SEARCH_RESCUE_LIMIT', '50');
+      const { entry } = recorder([gated(1), gated(2)]);
+
+      const response = await runOrchestrator({ q: 'crispr' }, {
+        providers: [entry],
+        authorities: [rescuer]
+      });
+
+      expect(response.bounded).toBe(false);
+    });
+
+    it('is false when there was nothing to ask about', async () => {
+      // Every paper passes the gate, so the rescue never runs.
+      const { entry } = recorder();
+
+      expect((await run({ q: 'crispr' }, [entry])).bounded).toBe(false);
+    });
+
+    /**
+     * The budget, not the limit, is what decides how many candidates are
+     * reached — 200 of them at a concurrency of 16 is 12.5 waves, and five
+     * seconds only covers that if the mean lookup beats 400ms against a
+     * per-lookup timeout of 2500ms. It had no setting at all while the limit,
+     * which on a broad query is never the binding constraint, was the one an
+     * operator was pointed at.
+     */
+    describe('SEARCH_RESCUE_BUDGET_MS', () => {
+      /** Slower than any budget these tests set. */
+      const slowRescuer: AuthorityEntry = {
+        ...rescuer,
+        lookup: () => new Promise(resolve => setTimeout(() => resolve(null), 500))
+      };
+
+      it('cuts the pass short, with the limit nowhere near reached', async () => {
+        vi.stubEnv('SEARCH_RESCUE_LIMIT', '500');
+        vi.stubEnv('SEARCH_RESCUE_BUDGET_MS', '20');
+        const { entry } = recorder([gated(1), gated(2)]);
+
+        const started = Date.now();
+        const response = await runOrchestrator({ q: 'crispr' }, {
+          providers: [entry],
+          authorities: [slowRescuer]
+        });
+
+        // Held for the budget rather than for the lookup, which is the whole
+        // point of the setting existing.
+        expect(Date.now() - started).toBeLessThan(400);
+        expect(response.bounded).toBe(true);
+        expect(response.complete).toBe(true);
+      });
+
+      it('falls back to the default rather than honouring a zero', async () => {
+        // A limit of zero means "do not run the step" and is honoured. A budget
+        // of zero would mean "run it and abort before anything can return",
+        // which spends the setup to guarantee nothing, so it is refused.
+        vi.stubEnv('SEARCH_RESCUE_BUDGET_MS', '0');
+        const { entry } = recorder([gated(1)]);
+
+        const response = await runOrchestrator({ q: 'crispr' }, {
+          providers: [entry],
+          authorities: [rescuer]
+        });
+
+        expect(response.bounded).toBe(false);
+      });
+
+      it('ignores a value that is not a number', async () => {
+        vi.stubEnv('SEARCH_RESCUE_BUDGET_MS', 'soon');
+        const { entry } = recorder([gated(1)]);
+
+        expect((await runOrchestrator({ q: 'crispr' }, {
+          providers: [entry],
+          authorities: [rescuer]
+        })).bounded).toBe(false);
+      });
+    });
   });
 });

@@ -81,7 +81,11 @@ export type RescueOptions = {
 export type RescueReport = {
   /** Papers the gate would have dropped that were worth a question. */
   candidates: number;
-  /** Of those, how many the limit and the budget allowed us to ask about. */
+  /**
+   * Of those, how many actually came back with an answer — which the limit, the
+   * budget and a failing authority each cut into. `candidates - examined` is
+   * the number dropped without ever being judged.
+   */
   examined: number;
   /** Of those, how many now pass and rejoin the set. */
   rescued: number;
@@ -98,7 +102,21 @@ export type RescueReport = {
 
 export const DEFAULT_RESCUE_LIMIT = 200;
 const DEFAULT_TIMEOUT_MS = 2500;
-const DEFAULT_BUDGET_MS = 5000;
+
+/**
+ * Wall clock for the whole step, and — not the limit — the constraint that
+ * actually decides how many candidates get asked about.
+ *
+ * The two defaults cannot both bind. 200 candidates at a concurrency of 16 is
+ * 12.5 waves, which fits in five seconds only if the mean Unpaywall lookup is
+ * under 400ms, while the per-lookup timeout alone is 2500ms. So on any broad
+ * query the budget expires first and the limit is never reached, and an
+ * operator who raises `SEARCH_RESCUE_LIMIT` to rescue more papers changes
+ * nothing at all.
+ *
+ * Exported and configurable for that reason. It is the number worth moving.
+ */
+export const DEFAULT_RESCUE_BUDGET_MS = 5000;
 const DEFAULT_CONCURRENCY = 16;
 
 export type RescueResult = {
@@ -120,7 +138,7 @@ export async function rescueCandidates(
     authorities = AUTHORITIES,
     limit = DEFAULT_RESCUE_LIMIT,
     timeoutMs = DEFAULT_TIMEOUT_MS,
-    budgetMs = DEFAULT_BUDGET_MS,
+    budgetMs = DEFAULT_RESCUE_BUDGET_MS,
     concurrency = DEFAULT_CONCURRENCY,
     userAgent,
     cache,
@@ -142,13 +160,15 @@ export async function rescueCandidates(
   // being deliberate does not make `total` any less of a lower bound.
   if (limit <= 0) return empty(candidates.length, true);
 
-  const examined = candidates.slice(0, limit);
+  // What the limit allows us to try. How many of these are actually reached is
+  // the budget's business, and is what `RescueReport.examined` reports.
+  const attempted = candidates.slice(0, limit);
 
   // The same step as the page enrichment, pointed at a different set. Reusing
   // it rather than repeating its pool, budget and abort handling is deliberate
   // — the care in `enrichPage` about a lookup that outlives its budget applies
   // here word for word.
-  const { papers, reports } = await enrichPage(examined, {
+  const { papers, reports, examined: answered } = await enrichPage(attempted, {
     authorities: rescuers,
     timeoutMs,
     budgetMs,
@@ -167,11 +187,24 @@ export async function rescueCandidates(
     papers: rescued,
     report: {
       candidates: candidates.length,
-      examined: examined.length,
+      // What was actually asked, not what was handed over to be asked. These
+      // differ exactly when the budget expires mid-flight, which is the case
+      // this number exists to make visible — reporting the size of the slice
+      // said 200 candidates were examined when the budget had stopped the pass
+      // at forty, and the field's own comment already promised "the limit *and
+      // the budget*".
+      examined: answered,
       rescued: rescued.length,
       // A budget that expired mid-flight leaves the set as short as a limit
-      // that never asked, so both say so.
-      bounded: examined.length < candidates.length || reports.some(r => r.status === 'timeout'),
+      // that never asked, so both say so — and with `answered` counting only
+      // the candidates that came back, the first term now carries the limit,
+      // the budget and a failed lookup alike.
+      //
+      // The timeout check is not redundant behind it. With more than one
+      // rescuing authority, one can answer for every candidate while another is
+      // cut off partway: every paper is examined, and a question that might
+      // have changed the answer still went unasked.
+      bounded: answered < candidates.length || reports.some(r => r.status === 'timeout'),
       authorities: reports
     }
   };

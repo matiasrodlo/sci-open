@@ -253,6 +253,75 @@ describe('enrichPage', () => {
       // The page is still the page. Enrichment failing costs detail, not results.
       expect(papers).toHaveLength(1);
     });
+
+    /**
+     * The budget is a fact about the page, and the status is a fact about one
+     * authority. Conflating them blamed the wrong one.
+     *
+     * The test used to be `answered + errors < asked`, and `answered` counts
+     * only lookups that returned facts — so an authority whose honest answer is
+     * "never heard of that DOI" looked, for every such paper, like it still had
+     * work outstanding. One slow sibling then reported it as having exceeded a
+     * budget it had beaten comfortably. Unpaywall answers most of a page that
+     * way, and it is the one authority the rescue depends on.
+     */
+    it('does not blame an authority that finished for a budget someone else spent', async () => {
+      // Answers instantly, for every paper, with "I know nothing about that DOI".
+      const fast = authority('openalex', null, {
+        capabilities: { fields: ['publisher'], authoritative: [] }
+      });
+
+      // Never answers. This is what actually spends the budget.
+      const slow = authority('crossref', null, {
+        capabilities: { fields: ['publisher'], authoritative: [] },
+        lookup: () => new Promise(resolve => setTimeout(() => resolve(null), 5000))
+      });
+
+      const { reports } = await enrichPage(
+        [withDoi({ id: 'a' }), withDoi({ id: 'b', doi: '10.1/b' })],
+        { authorities: [fast, slow], budgetMs: 50 }
+      );
+
+      expect(reports.find(r => r.authority === 'openalex')).toMatchObject({
+        status: 'ok', asked: 2, answered: 0
+      });
+      // The one that did spend it is still named.
+      expect(reports.find(r => r.authority === 'crossref')).toMatchObject({ status: 'timeout' });
+    });
+  });
+
+  /**
+   * The page path does not read this — a paper nobody reached is still returned
+   * — but `rescue.ts` does, where a paper nobody reached is a paper dropped.
+   * The counts in the reports cannot stand in for it: `asked` is per authority
+   * and counts tasks started, not papers settled.
+   */
+  describe('how many papers were settled', () => {
+    it('counts only the papers carrying a DOI to ask about', async () => {
+      const page = [withDoi({ id: 'a' }), paper({ id: 'b' })];
+
+      const { examined } = await enrichPage(page, {
+        authorities: [authority('crossref', { publisher: 'Springer' })]
+      });
+
+      expect(examined).toBe(1);
+    });
+
+    it('is zero when there was nobody to ask', async () => {
+      const { examined } = await enrichPage([withDoi()], { authorities: [] });
+
+      expect(examined).toBe(0);
+    });
+
+    it('does not count a paper the budget never got an answer for', async () => {
+      const slow = authority('crossref', null, {
+        lookup: () => new Promise(resolve => setTimeout(() => resolve({ publisher: 'Springer' }), 5000))
+      });
+
+      const { examined } = await enrichPage([withDoi()], { authorities: [slow], budgetMs: 50 });
+
+      expect(examined).toBe(0);
+    });
   });
 });
 

@@ -17,7 +17,7 @@ export * from './parse-query';
 export * from './lookup';
 export { PROVIDERS, plan, fanOut, isComplete, ProviderCache, mergePapers, rank, applyPolicy, generateFacets, facetBaseSets, sortPapers, enrichPage };
 export { partitionByPolicy } from './policy';
-export { rescueCandidates, canRescue, DEFAULT_RESCUE_LIMIT } from './rescue';
+export { rescueCandidates, canRescue, DEFAULT_RESCUE_LIMIT, DEFAULT_RESCUE_BUDGET_MS } from './rescue';
 export type { RescueReport } from './rescue';
 export { AuthorityCache } from './authority-cache';
 

@@ -48,6 +48,12 @@ export function toSearchResponse(
     ...(echo.filters !== undefined ? { filters: echo.filters } : {}),
     ...(echo.sort !== undefined ? { sort: echo.sort } : {}),
     duration: result.duration,
-    complete: result.complete
+    complete: result.complete,
+    // The other reason `total` can be a lower bound, and the one `complete` has
+    // no way to say. It was previously visible only in a debug log, so a reader
+    // was shown a bounded count with nothing to indicate it was one. The rest of
+    // `RescueReport` — how many candidates there were, how many were examined —
+    // stays internal: it describes the work, and this describes the answer.
+    bounded: result.rescue.bounded
   };
 }

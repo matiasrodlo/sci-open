@@ -42,9 +42,23 @@ import { SearchParams, SearchResponse } from '@open-access-explorer/shared';
  * ones that did not.
  *
  * Exported because the route needs the same answer for the `Cache-Control` it
- * sends. A degraded response that this refuses to store, while telling every
- * cache between here and the reader to keep it for five minutes, would be back
- * in front of the retry by another route.
+ * sends — though on a POST that header persuades nobody, so this function is
+ * not one half of a defence but the whole of it. See the note at the header
+ * itself in `index.ts`.
+ *
+ * `bounded` is deliberately *not* consulted, though it makes `total` a lower
+ * bound just as `complete: false` does. The two are not the same kind of event.
+ * A provider's failure is transient and a retry can fix it, which is the whole
+ * argument above; a rescue that hit its limit is deterministic — the same query
+ * ranks the same candidates and the limit cuts the list at the same place — so
+ * declining to store it would repeat a ten-provider fan-out forever to arrive
+ * at the identical answer. A broad query is bounded routinely, so this is the
+ * difference between a cache and no cache.
+ *
+ * The one case that blurs is a rescue bounded by its *budget* rather than its
+ * limit, which is transient like a provider timeout. It is stored anyway: the
+ * cost is a slightly short `total` for five minutes, against a repeated fan-out
+ * for every broad search, and the response says `bounded` either way.
  */
 export function worthCaching(result: SearchResponse): boolean {
   return result.complete !== false;

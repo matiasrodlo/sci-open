@@ -6,7 +6,7 @@ import type { ProviderCache } from './provider-cache';
 import type { ProviderEntry } from './registry';
 import type { AuthorityEntry } from '../authorities';
 import { toSearchResponse } from './to-search-response';
-import { DEFAULT_RESCUE_LIMIT } from './rescue';
+import { DEFAULT_RESCUE_BUDGET_MS, DEFAULT_RESCUE_LIMIT } from './rescue';
 import { log } from '../lib/logger';
 
 /**
@@ -67,6 +67,28 @@ function rescueLimit(): number {
   return Number.isFinite(raw) && raw >= 0 ? raw : DEFAULT_RESCUE_LIMIT;
 }
 
+/**
+ * How long the whole rescue pass may take, and the setting that actually
+ * decides how many candidates are reached.
+ *
+ * `SEARCH_RESCUE_LIMIT` was the only knob for a long time, and it is the wrong
+ * one to reach for first: the two defaults cannot both bind, and on a broad
+ * query it is always this budget that expires while the limit sits unreached.
+ * An operator raising the limit to rescue more papers was changing a number
+ * with no effect. See `DEFAULT_RESCUE_BUDGET_MS`.
+ *
+ * Zero is refused rather than honoured, which is the one place this parses
+ * differently from the limit. A limit of zero is a coherent instruction — do
+ * not run the step — and already has that meaning; a budget of zero would mean
+ * "run the step, and abort it before the first lookup can return", which spends
+ * the setup to guarantee nothing. Anyone who wants the step off wants
+ * `SEARCH_RESCUE_LIMIT=0`.
+ */
+function rescueBudgetMs(): number {
+  const raw = Number(process.env.SEARCH_RESCUE_BUDGET_MS);
+  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_RESCUE_BUDGET_MS;
+}
+
 export type RunOptions = {
   /** Shared across requests, which is the only way caching a fan-out pays. */
   cache?: ProviderCache;
@@ -122,6 +144,7 @@ export async function runOrchestrator(
     openAccessOnly,
     policy: { requireOpenAccess: openAccessOnly },
     rescueLimit: rescueLimit(),
+    rescueBudgetMs: rescueBudgetMs(),
     ...(options.cache ? { cache: options.cache } : {}),
     ...(options.userAgent ? { userAgent: options.userAgent } : {}),
     ...(options.providers ? { providers: options.providers } : {}),
