@@ -74,8 +74,14 @@ jspm_packages/
 .nuxt
 
 # Gatsby files
+#
+# The `public` entry that used to live here is gone. This is not a Gatsby
+# project, and an unanchored `public` matches at every depth — so it ignored
+# `apps/web/public/`, which is where Next serves static assets from.
+# `apps/web/Dockerfile` already carries a note anticipating that directory
+# being added, so the first favicon or OG image would have been untracked *and*
+# missing from the image: two things to discover instead of none.
 .cache/
-public
 
 # Storybook build outputs
 .out
