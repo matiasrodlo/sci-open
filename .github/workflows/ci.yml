@@ -44,6 +44,57 @@ jobs:
       - name: Build
         run: pnpm build
 
+  images:
+    name: docker images
+    runs-on: ubuntu-latest
+    # `compose` is the shipping path and nothing in CI touched it, so a
+    # Dockerfile could break and land on `main` with every check green. The
+    # ways it breaks are ones the other jobs cannot see by construction: they
+    # run against the workspace with `node_modules` present and every package
+    # linked, while the images install from the lockfile inside a scratch
+    # container and copy a deliberately narrow subset of the tree. A new
+    # workspace package, a dependency that needs a build toolchain the Alpine
+    # base lacks, a file the `COPY` lines do not name — each is invisible until
+    # something builds the image.
+    #
+    # Build only. Nothing is pushed and nothing is run: the assertion is that
+    # both images build from a clean checkout, which is the part that was
+    # unasserted.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Separate steps rather than one `docker compose build` so a failure names
+      # which image failed, and so the two get their own cache scopes — they
+      # share a base layer but diverge immediately, and one scope would have
+      # them evicting each other.
+      - name: Build API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: false
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,scope=api,mode=max
+
+      - name: Build web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: false
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,scope=web,mode=max
+
+      # The images are only half of what compose has to get right. This parses
+      # the file, resolves every interpolation and validates the schema, which
+      # is what catches a typo in a service name or an environment entry that
+      # does not parse — cheap, and the file is edited more often than the
+      # Dockerfiles are.
+      - name: Validate compose file
+        run: docker compose config --quiet
+
   audit:
     name: dependency audit
     runs-on: ubuntu-latest

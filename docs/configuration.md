@@ -21,8 +21,24 @@ NODE_ENV=development
 LOG_LEVEL=debug
 RATE_LIMIT_MAX=120
 RATE_LIMIT_WINDOW=1 minute
+RATE_LIMIT_DOWNLOAD_MAX=20
 TRUST_PROXY=
 ```
+
+`RATE_LIMIT_MAX` covers every route but one. `/api/download-pdf` has its own
+bucket, `RATE_LIMIT_DOWNLOAD_MAX`, because the two requests are expensive in
+different currencies and one number could only ever be right for one of them: a
+search costs a fan-out to ten providers and returns a few kilobytes, spending
+other people's API quota, while a download costs one upstream request and
+streams up to fifty megabytes, spending bandwidth and holding a connection for
+as long as the publisher takes. Sharing a budget meant a reader downloading
+papers spent the search allowance and a search loop locked them out of the file
+they were reading.
+
+Twenty a minute is more PDFs than a person opens and fewer than a scraper wants.
+It is a starting point rather than a measured figure — the worst case is still a
+gigabyte a minute per caller — so expect to move it once there is real traffic to
+look at. Both limits share `RATE_LIMIT_WINDOW`.
 
 `TRUST_PROXY` decides what the rate limit counts. The limiter keys on
 `request.ip`, and with nothing trusted that is the address that opened the
@@ -33,10 +49,22 @@ before everyone starts seeing `429`. Naming the proxy here restores the real
 caller, taken from `X-Forwarded-For`:
 
 ```env
-TRUST_PROXY=10.0.1.7          # the web tier, or the load balancer in front of it
+TRUST_PROXY=10.0.1.7          # the load balancer, by address
 TRUST_PROXY=172.16.0.0/12     # a CIDR, or a comma-separated list of either
 TRUST_PROXY=loopback          # or a named range
 ```
+
+**Not the web tier.** It is the address the API sees, so naming it looks like
+the obvious answer and is the one setting that makes this worse. `apps/web`
+cannot *start* the chain: neither the route handler nor the server-side fetcher
+can see the socket it was reached on, so neither can append the visitor's
+address — both only pass on an `X-Forwarded-For` that was already there. Trust
+the web tier with nothing in front of it and the header is whatever the caller
+typed, so every caller picks their own rate-limit key and the limit applies to
+nobody. Name the thing in front of `apps/web` — the load balancer, the ingress,
+the reverse proxy — which is the only hop that can both see the real address and
+overwrite a forged one. If there is nothing in front of `apps/web`, leave this
+unset and accept the shared bucket; it is the safer of the two failures.
 
 A bare number used to mean "trust this many hops" and no longer does. Fastify 5
 answers a hop count by trusting *nothing* — hop-count-only trust cannot check
@@ -64,6 +92,7 @@ logging.
 
 ```env
 SEARCH_RESCUE_LIMIT=200         # papers the gate may ask about before dropping them
+SEARCH_RESCUE_BUDGET_MS=5000    # how long that whole pass may take
 ```
 
 Every search applies two gates the caller did not ask for — a paper needs a
@@ -84,6 +113,22 @@ Set it to `0` to turn the step off and restore the previous result set. The
 limit is deliberately independent of which page was requested: a window that
 grew as the reader paged would change `total` underneath them, which is the
 same reason `depth` does not grow either.
+
+**`SEARCH_RESCUE_BUDGET_MS` is usually the one to move.** The two settings
+cannot both bind, and on a broad query it is never the limit that stops the
+pass: 200 candidates at a concurrency of 16 is 12.5 waves, which fits in five
+seconds only if the mean Unpaywall lookup comes back under 400ms — against a
+per-lookup timeout of 2500ms. So the default limit is rarely reached, and
+raising it to rescue more papers changes nothing measurable. Raise the budget
+instead, and expect the search to take about that much longer in the worst
+case; the limit is then the ceiling on what the extra time can cost you in
+requests.
+
+Zero is refused here and falls back to the default, which is the one place this
+parses differently from the limit. `SEARCH_RESCUE_LIMIT=0` is a coherent
+instruction — do not run the step — while a budget of zero would run it and
+abort before the first lookup could return, paying the setup to guarantee
+nothing.
 
 ### Cache
 
@@ -252,10 +297,12 @@ API_ORIGIN=https://api.yourdomain.com
   disabled. They are not served unauthenticated when it is missing; the gate
   fails closed. `apps/web` proxies `/api/*` straight through, so an open one
   would be reachable from any browser that can load the site.
-- **`TRUST_PROXY`** — name the proxy in front of the API by address or CIDR.
-  Unset, the rate limit is keyed on the connecting address, which behind the web
-  tier is one shared bucket for every visitor. Do not set it to `true` unless
-  nothing but the proxy can open a connection to the port.
+- **`TRUST_PROXY`** — name the proxy in front of **`apps/web`** by address or
+  CIDR, not the web tier itself. Unset, the rate limit is keyed on the
+  connecting address, which behind the web tier is one shared bucket for every
+  visitor; pointed at the web tier, which cannot start the forwarded chain, it
+  is no bucket at all and any caller can choose their own key. Do not set it to
+  `true` unless nothing but the proxy can open a connection to the port.
 - **Redis** — put credentials in `REDIS_URL`
   (`redis://user:password@host:6379`), and do not publish the port. The compose
   file binds it to `127.0.0.1` for this reason.

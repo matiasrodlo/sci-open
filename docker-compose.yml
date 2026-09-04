@@ -45,6 +45,11 @@ services:
       - NCBI_API_KEY=${NCBI_API_KEY:-}
       - DOAJ_API_KEY=${DOAJ_API_KEY:-}
       - DATACITE_API_KEY=${DATACITE_API_KEY:-}
+      # Added with the key itself and missed here, which is the same defect the
+      # comment above describes and the reason `compose-env.test.ts` now exists.
+      # Without it a container's OpenAlex traffic is metered at the anonymous
+      # rate however carefully the key was set in `.env`.
+      - OPENALEX_API_KEY=${OPENALEX_API_KEY:-}
       # Without this the cache and performance routes are disabled rather than
       # served unauthenticated, so there was no way to enable them in a
       # container at all.
@@ -58,12 +63,35 @@ services:
       # would also trust anything on the host. Set it once that port is closed
       # or the deployment is behind a known proxy.
       - TRUST_PROXY=${TRUST_PROXY:-}
+      # What that trust setting is counting. Empty uses 120 per minute.
+      - RATE_LIMIT_MAX=${RATE_LIMIT_MAX:-}
+      - RATE_LIMIT_WINDOW=${RATE_LIMIT_WINDOW:-}
+      # The PDF proxy's own budget, separate because it streams up to 50 MB per
+      # call and search does not. Empty uses 20 per window.
+      - RATE_LIMIT_DOWNLOAD_MAX=${RATE_LIMIT_DOWNLOAD_MAX:-}
+      # The open-access gate's rescue pass: how many papers it may ask about,
+      # and how long the whole pass gets. The budget is the one that binds on a
+      # broad query — see docs/configuration.md.
+      - SEARCH_RESCUE_LIMIT=${SEARCH_RESCUE_LIMIT:-}
+      - SEARCH_RESCUE_BUDGET_MS=${SEARCH_RESCUE_BUDGET_MS:-}
       # Budgets for the two in-process caches, in bytes. Both count serialised
       # size, so a container memory limit wants to be comfortably more than
       # their sum. Empty uses the defaults: 256 MB of responses, 128 MB of
       # provider fan-outs.
       - CACHE_MAX_BYTES=${CACHE_MAX_BYTES:-}
       - PROVIDER_CACHE_MAX_BYTES=${PROVIDER_CACHE_MAX_BYTES:-}
+      # How long a failed Redis stays written off before it is tried again.
+      - CACHE_REDIS_COOLDOWN_MS=${CACHE_REDIS_COOLDOWN_MS:-}
+      # Connection pooling for the outbound provider calls. Every one of these
+      # is documented and none of them reached the container, which is exactly
+      # the kind of setting whose absence looks like the tuning not helping.
+      - HTTP_POOL_MAX_SOCKETS=${HTTP_POOL_MAX_SOCKETS:-}
+      - HTTP_POOL_MAX_CONNECTIONS=${HTTP_POOL_MAX_CONNECTIONS:-}
+      - HTTP_POOL_KEEP_ALIVE_TIMEOUT=${HTTP_POOL_KEEP_ALIVE_TIMEOUT:-}
+      - HTTP_POOL_TIMEOUT=${HTTP_POOL_TIMEOUT:-}
+      - HTTP_POOL_RETRY_ATTEMPTS=${HTTP_POOL_RETRY_ATTEMPTS:-}
+      - HTTP_POOL_RETRY_DELAY=${HTTP_POOL_RETRY_DELAY:-}
+      - HTTP_POOL_ENABLE_HTTP2=${HTTP_POOL_ENABLE_HTTP2:-}
     restart: unless-stopped
     depends_on:
       redis:
