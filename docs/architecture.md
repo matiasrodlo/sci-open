@@ -130,25 +130,48 @@ derives:
 
 ```
 1. Client → API: POST /api/search
-2. Cache lookup: exact key, then a similar one
+2. Cache lookup: one key, derived from the request
 3. On a miss, one fan-out per key however many callers are waiting (single-flight)
 4. Orchestrator: plan → fan out → merge → rank → filter → rescue → facet →
    paginate → enrich
-5. Paper[] → SearchResponse, and the result is cached
+5. Paper[] → SearchResponse, cached unless a provider failed
 ```
 
-The response carries a `providers` report — what each one was asked, what it
-returned, and whether it failed, timed out or was skipped — and `complete`,
-which is false when a provider failed, making `total` a lower bound.
+Step 2 used to read "exact key, then a similar one". The similar-key lookup
+probed a `partial:` namespace that nothing in the service ever wrote, so it was
+a guaranteed miss — and, past L1, a guaranteed Redis round trip — in front of
+every fresh search. It is gone.
+
+Step 5 is conditional for the reason the response carries `complete` at all. The
+report says what each provider was asked, what it returned, and whether it
+failed, timed out or was skipped; `complete` is false when one failed, which
+makes `total` a lower bound. An answer in that state is returned but not stored,
+at either cache level or anywhere downstream — a provider's bad minute is not
+worth serving for the next hour, and serving it is what left the frontend's
+retry answered from the entry it was trying to get past.
 
 ### Paper Details
 
 ```
 1. Client → API: GET /api/paper/:id
-2. Check cache, by id and then by DOI
+2. Check cache, by the id that was asked for
 3. lookupPaper: split `source:nativeId`, ask that provider for that record
-4. Cache and return
+4. Ask the authorities about that one record
+5. Cache and return
 ```
+
+Step 4 is `enrichPage` pointed at a single paper, which is the same step the
+search path runs over a page of twenty. A record reached this way came from one
+provider and has been through no merge, so it carries only what that provider
+said — the endpoint returned a thinner record than the search results it was
+opened from.
+
+Step 2 used to read "by id and then by DOI". The DOI probe was gated on
+`id.includes('10.')`, which is true of any arXiv id from 2010 on, so ordinary
+requests spent a Redis round trip on a key only a bare DOI could match — and a
+bare DOI is not resolvable here anyway, because `splitPaperId` finds no provider
+prefix. While an entry happened to be cached the URL answered 200, and 404 once
+it expired. Asking about a DOI is what `POST /api/search` with `{ doi }` is for.
 
 Step 3 is one question with two answers, decided by the provider's API rather
 than by preference: a by-id endpoint where there is one (OpenAlex, DOAJ,

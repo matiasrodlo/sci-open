@@ -260,21 +260,40 @@ API_ORIGIN=https://api.yourdomain.com
 
 ### Cache TTLs
 
-Fixed per strategy, in `STRATEGY_CONFIGS` (`apps/api/src/lib/cache-manager.ts`),
-and deliberately not configurable — a TTL that can be set per deployment is a
-TTL nobody can reason about from the code:
+There are two caches, and only one of them has levels. Keeping that straight is
+the difference between "L1" meaning something and it meaning "the fast one".
+
+**The response cache** (`apps/api/src/lib/cache-manager.ts`) holds whole
+`/api/search` and `/api/paper/:id` answers, keyed on the request. It has two
+levels — L1 in memory in front of L2 in Redis — and its TTLs are fixed per
+strategy in `STRATEGY_CONFIGS`, deliberately not configurable, because a TTL
+that can be set per deployment is a TTL nobody can reason about from the code:
 
 | Strategy | L1 (memory) | L2 (Redis) |
 |---|---|---|
 | Search results | 5 min | 1 hour |
 | Paper details | 10 min | 2 hours |
 
-There is no third level and no 24-hour tier. The old L3 was an unbounded `Map`
-with no expiry that `get` promoted from, so any entry reaching it was served
-indefinitely and the other two levels' TTLs stopped meaning anything. What is
-tunable is how much the caches may *hold* — `CACHE_MAX_BYTES` and
-`PROVIDER_CACHE_MAX_BYTES` — and how long L2 stays shut after a Redis failure,
-`CACHE_REDIS_COOLDOWN_MS`.
+There is no third *level*, and no 24-hour tier. The old L3 was an unbounded
+`Map` with no expiry that `get` promoted from, so any entry reaching it was
+served indefinitely and the other two levels' TTLs stopped meaning anything.
+
+An answer that reported itself `complete: false` is not stored at either level,
+and is sent with `no-store` so nothing between the API and the reader stores it
+either. A provider's bad minute is not worth remembering for an hour, and
+remembering it is what put the frontend's retry in front of its own cache entry.
+
+**The fan-out cache** (`apps/api/src/orchestrator/provider-cache.ts`) is a
+separate cache rather than a further level of that one, which is why the README
+counts it alongside rather than as an "L3". It holds what each *provider*
+returned, keyed on the provider and the native query it was sent — not on the
+request — so changing page, sort or a post-fetch filter reuses the fan-out
+instead of repeating it. One TTL of ten minutes, in process, per provider.
+
+What is tunable on both is how much they may *hold*: `CACHE_MAX_BYTES` for the
+response cache and `PROVIDER_CACHE_MAX_BYTES` for the fan-out one, each counting
+serialised bytes. Plus `CACHE_REDIS_COOLDOWN_MS`, which is how long L2 stays
+shut after Redis has failed.
 
 ### Connection Pools
 
