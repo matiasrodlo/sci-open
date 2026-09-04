@@ -235,21 +235,46 @@ API_ORIGIN=https://api.yourdomain.com
 
 ### Security
 
-- Use strong API keys
-- Enable HTTPS
-- Configure CORS properly
-- Set secure Redis passwords
-- Use environment-specific secrets
+- **`ADMIN_API_KEY`** — set it, or `/api/cache/*` and `/api/performance/*` stay
+  disabled. They are not served unauthenticated when it is missing; the gate
+  fails closed. `apps/web` proxies `/api/*` straight through, so an open one
+  would be reachable from any browser that can load the site.
+- **`TRUST_PROXY`** — name the proxy in front of the API by address or CIDR.
+  Unset, the rate limit is keyed on the connecting address, which behind the web
+  tier is one shared bucket for every visitor. Do not set it to `true` unless
+  nothing but the proxy can open a connection to the port.
+- **Redis** — put credentials in `REDIS_URL`
+  (`redis://user:password@host:6379`), and do not publish the port. The compose
+  file binds it to `127.0.0.1` for this reason.
+- **HTTPS** — terminate it at the proxy. Neither service does its own TLS.
+- **CORS is not a setting, and does not need to be one.** The API sends no
+  cross-origin headers when `NODE_ENV=production`
+  (`origin: false`, `apps/api/src/index.ts`), which is correct for the only
+  topology this app ships: the browser talks to `apps/web`, and
+  `app/api/[...path]/route.ts` forwards to the API server-side, so no
+  cross-origin request is ever made. Pointing a browser directly at the API is
+  therefore not a supported deployment — it fails with no CORS headers at all,
+  and the fix is `API_ORIGIN`, not a CORS allowlist.
 
 ## Performance Tuning
 
 ### Cache TTLs
 
-Adjust based on data freshness requirements:
+Fixed per strategy, in `STRATEGY_CONFIGS` (`apps/api/src/lib/cache-manager.ts`),
+and deliberately not configurable — a TTL that can be set per deployment is a
+TTL nobody can reason about from the code:
 
-- **Short TTL** (5 min): Frequently updated sources
-- **Medium TTL** (1 hour): Stable metadata
-- **Long TTL** (24 hours): Static content
+| Strategy | L1 (memory) | L2 (Redis) |
+|---|---|---|
+| Search results | 5 min | 1 hour |
+| Paper details | 10 min | 2 hours |
+
+There is no third level and no 24-hour tier. The old L3 was an unbounded `Map`
+with no expiry that `get` promoted from, so any entry reaching it was served
+indefinitely and the other two levels' TTLs stopped meaning anything. What is
+tunable is how much the caches may *hold* — `CACHE_MAX_BYTES` and
+`PROVIDER_CACHE_MAX_BYTES` — and how long L2 stays shut after a Redis failure,
+`CACHE_REDIS_COOLDOWN_MS`.
 
 ### Connection Pools
 
