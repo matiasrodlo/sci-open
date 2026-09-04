@@ -63,8 +63,9 @@ export class HttpPerformanceMonitor {
 
     if (allMetrics instanceof Map) {
       for (const [service, metrics] of allMetrics) {
+        const timestamp = new Date();
         const performanceMetric: PerformanceMetrics = {
-          timestamp: new Date(),
+          timestamp,
           service,
           totalRequests: metrics.totalRequests,
           reusedConnections: metrics.reusedConnections,
@@ -72,7 +73,7 @@ export class HttpPerformanceMonitor {
           connectionReuseRate: metrics.totalRequests > 0 ? metrics.reusedConnections / metrics.totalRequests : 0,
           averageResponseTime: metrics.averageResponseTime,
           errorRate: metrics.errorRate,
-          throughput: this.calculateThroughput(service)
+          throughput: this.throughputSince(service, timestamp, metrics.totalRequests)
         };
 
         this.recordMetric(service, performanceMetric);
@@ -81,19 +82,31 @@ export class HttpPerformanceMonitor {
   }
 
   /**
-   * Calculate throughput for a service
+   * Requests per second over the interval that just elapsed.
+   *
+   * Measured against the sample being built, not against the two already
+   * stored. It used to be computed before `recordMetric` pushed the new sample,
+   * so its "latest" and "previous" were in fact samples n-1 and n-2: every
+   * figure `/api/performance/*` reported described the *previous* window, and
+   * the first two intervals reported zero for a service that had been serving
+   * requests throughout both.
+   *
+   * The first sample of a service still reports zero, and now for a reason that
+   * is true: there is no elapsed interval to divide by yet.
+   *
+   * The counter can also go backwards, because `resetMetrics` zeroes it — and a
+   * negative rate is a worse answer than none, so it clamps rather than
+   * reporting the reset as though the service had un-served requests.
    */
-  private calculateThroughput(service: string): number {
-    const serviceMetrics = this.metrics.get(service) || [];
-    if (serviceMetrics.length < 2) return 0;
+  private throughputSince(service: string, at: Date, totalRequests: number): number {
+    const samples = this.metrics.get(service);
+    if (!samples || samples.length === 0) return 0;
 
-    const latest = serviceMetrics[serviceMetrics.length - 1];
-    const previous = serviceMetrics[serviceMetrics.length - 2];
-    
-    const timeDiff = latest.timestamp.getTime() - previous.timestamp.getTime();
-    const requestDiff = latest.totalRequests - previous.totalRequests;
-    
-    return timeDiff > 0 ? (requestDiff / timeDiff) * 1000 : 0; // requests per second
+    const previous = samples[samples.length - 1];
+    const elapsedMs = at.getTime() - previous.timestamp.getTime();
+    if (elapsedMs <= 0) return 0;
+
+    return (Math.max(totalRequests - previous.totalRequests, 0) / elapsedMs) * 1000;
   }
 
   /**
