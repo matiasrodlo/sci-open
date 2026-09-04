@@ -51,6 +51,30 @@ describe('fetchWork', () => {
     expect(get.mock.calls[0]![1].params.filter).toBeUndefined();
   });
 
+  it('escapes the id, which arrives from the caller', async () => {
+    // `nativeId` is whatever followed `openalex:` in `/api/paper/:id`. Raw, a
+    // `..` segment walks out of `/works/` and a `?` starts a query string, so
+    // the caller chooses the path and parameters of a request this service
+    // makes. It cannot reach another host — the path always begins `/works/`,
+    // so axios never reads it as absolute — and `lookupPaper`'s `matches`
+    // guard discards whatever comes back, which is why the cost is a wasted
+    // upstream request rather than a disclosure. It is still not a request we
+    // should be making.
+    get.mockResolvedValue(resolved(200, WORK));
+
+    await fetchWork('../authors/A5023888391', options);
+
+    expect(get.mock.calls[0]![0]).toBe('/works/..%2Fauthors%2FA5023888391');
+  });
+
+  it('escapes a query string in the id rather than letting it become one', async () => {
+    get.mockResolvedValue(resolved(200, WORK));
+
+    await fetchWork('W1?select=id', options);
+
+    expect(get.mock.calls[0]![0]).toBe('/works/W1%3Fselect%3Did');
+  });
+
   it('strips a full OpenAlex URL, which is what old links carry', async () => {
     // The route this replaces wrote `work.id` — the URL — into `OARecord.id`.
     get.mockResolvedValue(resolved(200, WORK));

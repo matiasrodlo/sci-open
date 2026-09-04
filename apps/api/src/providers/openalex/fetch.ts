@@ -149,7 +149,15 @@ export async function fetchWork(id: string, options: WorkFetchOptions): Promise<
   // into `OARecord.id`, so a link made before this phase carries one.
   const workId = stripOpenAlexPrefix(id);
 
-  const response = await client.get(`/works/${workId}`, {
+  // Encoded because it is caller-supplied: `workId` is whatever followed
+  // `openalex:` in `/api/paper/:id`. Unescaped, a `..` segment or a `?` steers
+  // the request at other paths and parameters on OpenAlex. It could not leave
+  // the host — the path always starts `/works/`, so axios never reads it as an
+  // absolute URL — and `lookupPaper`'s `matches` guard rejects a record that is
+  // not the one asked for, so what this actually costs is a wasted upstream
+  // request. Encoding it is what `providers/doaj/fetch.ts` already does with
+  // the same kind of value.
+  const response = await client.get(`/works/${encodeURIComponent(workId)}`, {
     params: {
       select: SELECT,
       ...(contactEmail ? { mailto: contactEmail } : {})
