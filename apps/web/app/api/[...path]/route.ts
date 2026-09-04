@@ -87,6 +87,22 @@ function walksOut(segment: string): boolean {
   return segment === '.' || segment === '..';
 }
 
+/**
+ * How long the API may take to *answer*, not to finish sending.
+ *
+ * Every other hop in this system owns a budget — twenty seconds per provider,
+ * two and a half per authority lookup, five for the whole rescue — and this one
+ * did not. Node's `fetch` defaults to a 300-second headers timeout, so an API
+ * that accepted the connection and then hung held a request here for five
+ * minutes, and the reader saw a spinner for all of it.
+ *
+ * Thirty seconds is above anything the two routes that reach the API through
+ * here can legitimately take. `/api/paper/:id` is a 15s lookup plus a 6s
+ * enrichment budget; `/api/download-pdf` answers as soon as the publisher's
+ * headers arrive. A slower answer than this is a hung upstream, not a slow one.
+ */
+const UPSTREAM_TIMEOUT_MS = 30000;
+
 async function proxy(request: NextRequest, path: string[]): Promise<Response> {
   if (path.some(walksOut)) {
     return Response.json({ error: 'Not found' }, { status: 404 });
@@ -95,6 +111,19 @@ async function proxy(request: NextRequest, path: string[]): Promise<Response> {
   const target = `${apiOrigin()}/api/${path.map(encodeURIComponent).join('/')}${request.nextUrl.search}`;
 
   const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
+
+  /**
+   * The budget covers the wait for headers and stops there.
+   *
+   * `AbortSignal.timeout` would have been shorter and wrong: it keeps counting
+   * after the response resolves, so it aborts the *body* mid-stream — and the
+   * one route through here that streams is the PDF proxy, where fifty megabytes
+   * over a slow link is a normal minute rather than a stuck upstream. `fetch`
+   * resolves once the headers arrive, so clearing the timer there bounds the
+   * part that can hang without putting a clock on the part that is merely long.
+   */
+  const controller = new AbortController();
+  const expiry = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
 
   let upstream: Response;
   try {
@@ -105,15 +134,28 @@ async function proxy(request: NextRequest, path: string[]): Promise<Response> {
       // A PDF can be tens of megabytes; the body is handed on as a stream
       // rather than buffered here.
       redirect: 'manual',
-      cache: 'no-store'
+      cache: 'no-store',
+      signal: controller.signal
     });
   } catch (error) {
+    // A timeout and a refused connection are both gateway failures, but they
+    // are different ones: 504 says the API is up and not answering, 502 says it
+    // could not be reached at all.
+    if (controller.signal.aborted) {
+      return Response.json(
+        { error: 'The API did not answer', detail: `no response within ${UPSTREAM_TIMEOUT_MS}ms` },
+        { status: 504 }
+      );
+    }
+
     // The API being unreachable is a gateway failure, and saying so is more
     // use than a 500 that looks like an application bug.
     return Response.json(
       { error: 'The API is unreachable', detail: error instanceof Error ? error.message : String(error) },
       { status: 502 }
     );
+  } finally {
+    clearTimeout(expiry);
   }
 
   return new Response(upstream.body, {

@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { headers } from 'next/headers';
 import { AdvancedSearchBar } from '@/components/AdvancedSearchBar';
 import { FacetPanel } from '@/components/FacetPanel';
 import { SortBar } from '@/components/SortBar';
@@ -7,8 +8,10 @@ import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { ExportButton } from '@/components/ExportButton';
 import { ProviderCoverage } from '@/components/ProviderCoverage';
+import { SearchError } from '@/components/SearchError';
 import { searchPapers } from '@/lib/fetcher';
 import { toList, toSingle, toPage, toYear, toSort } from '@/lib/search-params';
+import { classifySearchError } from '@/lib/search-error';
 import { SearchParams } from '@open-access-explorer/shared';
 
 // Force dynamic rendering
@@ -77,9 +80,18 @@ async function ResultsContent({ searchParams }: { searchParams: ResultsSearchPar
     },
   };
 
+  /**
+   * This search is issued by the server, so it carries no address of its own.
+   *
+   * Passing the incoming chain on is what keeps the API's rate limit keyed on
+   * the visitor rather than on the web tier — see `Caller` in `lib/fetcher.ts`.
+   * `headers()` is a promise since Next 15, like `searchParams` above.
+   */
+  const forwardedFor = (await headers()).get('x-forwarded-for') ?? undefined;
+
   try {
-    const results = await searchPapers(searchParamsObj);
-    
+    const results = await searchPapers(searchParamsObj, { forwardedFor });
+
     if (results.hits.length === 0) {
       return <EmptyState type="no-results" />;
     }
@@ -109,6 +121,7 @@ async function ResultsContent({ searchParams }: { searchParams: ResultsSearchPar
                   <ProviderCoverage
                     providers={results.providerTotals}
                     complete={results.complete}
+                    bounded={results.bounded}
                   />
                 )}
 
@@ -132,15 +145,22 @@ async function ResultsContent({ searchParams }: { searchParams: ResultsSearchPar
               </div>
             );
   } catch (error) {
-    console.error('Search error:', error);
-    return (
-      <div className="text-center py-12">
-        <h3 className="text-lg font-semibold mb-2">Search Error</h3>
-        <p className="text-muted-foreground">
-          There was an error performing your search. Please try again.
-        </p>
-      </div>
-    );
+    /**
+     * One panel used to cover every failure here, so a stale bookmark, a rate
+     * limit and a stopped API were the same sentence to the reader — and the
+     * 502/504 distinction the API proxy draws so carefully never reaches this
+     * path at all, because a server-rendered search does not go through it.
+     * `classifySearchError` recovers the distinction from what the client
+     * threw; `SearchError` says what each one means. See `lib/search-error.ts`.
+     */
+    const failure = classifySearchError(error);
+
+    // Kept, and now says which kind it was. The reader gets one of five
+    // panels; whoever is reading the logs gets the error and the bucket it
+    // was put in, which is what makes a miscategorised failure findable.
+    console.error('Search error:', failure, error);
+
+    return <SearchError failure={failure} />;
   }
 }
 

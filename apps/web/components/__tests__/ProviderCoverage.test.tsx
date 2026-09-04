@@ -79,6 +79,54 @@ describe('telling a skip from a failure', () => {
   });
 });
 
+/**
+ * A count can be short with every source having answered.
+ *
+ * The rescue asks about the papers the open-access gate would drop, bounded in
+ * number and in time, and drops the rest unasked. `complete` cannot say this —
+ * it is computed from the provider reports, and they are all fine — so a reader
+ * was shown a bounded total with nothing to mark it as one.
+ */
+describe('a total bounded by the rescue rather than by a source', () => {
+  it('warns, without claiming a source failed', () => {
+    render(<ProviderCoverage providers={[answered('europepmc')]} complete bounded />);
+
+    expect(banner()).not.toBeNull();
+    expect(banner()!.textContent).toContain('This count is a lower bound');
+    expect(banner()!.textContent).toContain('retrievable copy');
+    // The wording for the other cause would be a lie here.
+    expect(banner()!.textContent).not.toContain('did not answer');
+    expect(banner()!.textContent).not.toContain('This search is incomplete');
+  });
+
+  it('says a source failed when one did, even if the rescue was also bounded', () => {
+    // A missing source is the more serious of the two and names itself; the
+    // bounded rescue does not get to displace it.
+    render(
+      <ProviderCoverage
+        providers={[answered('europepmc'), failed('openaire')]}
+        complete={false}
+        bounded
+      />
+    );
+
+    expect(banner()!.textContent).toContain('This search is incomplete');
+    expect(banner()!.textContent).toContain('OpenAIRE');
+  });
+
+  it('stays silent when the rescue was not bounded', () => {
+    render(<ProviderCoverage providers={[answered('europepmc')]} complete bounded={false} />);
+
+    expect(banner()).toBeNull();
+  });
+
+  it('treats an absent bounded as not-known-to-be-bounded', () => {
+    render(<ProviderCoverage providers={[answered('europepmc')]} complete />);
+
+    expect(banner()).toBeNull();
+  });
+});
+
 describe('what it shows for a provider that answered', () => {
   it('shows each provider under its own name, not its id', () => {
     render(<ProviderCoverage providers={[answered('ncbi'), answered('europepmc')]} complete />);

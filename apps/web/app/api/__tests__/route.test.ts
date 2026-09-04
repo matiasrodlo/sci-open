@@ -270,3 +270,65 @@ describe('what comes back', () => {
     });
   });
 });
+
+describe('how long the API is given to answer', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('passes a signal, so the wait is bounded at all', async () => {
+    await GET(request('http://localhost:3000/api/search'), context('search'));
+
+    expect(called().init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('answers 504 when the API accepts the request and then hangs', async () => {
+    // Distinct from the 502 below: the API is up, it is simply not answering.
+    // Node's `fetch` would have waited 300 seconds for this on its own.
+    vi.useFakeTimers();
+    fetchMock.mockImplementation(
+      (_target: string, init: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init.signal!.addEventListener('abort', () =>
+            reject(new DOMException('The operation was aborted.', 'AbortError'))
+          );
+        })
+    );
+
+    const pending = GET(request('http://localhost:3000/api/search'), context('search'));
+    await vi.advanceTimersByTimeAsync(30000);
+    const response = await pending;
+
+    expect(response.status).toBe(504);
+    expect(await response.json()).toEqual({
+      error: 'The API did not answer',
+      detail: 'no response within 30000ms'
+    });
+  });
+
+  it('does not time out an answer that arrives inside the budget', async () => {
+    vi.useFakeTimers();
+    fetchMock.mockImplementation(
+      (_target: string, _init: RequestInit) =>
+        new Promise(resolve => setTimeout(() => resolve(upstream()), 29000))
+    );
+
+    const pending = GET(request('http://localhost:3000/api/search'), context('search'));
+    await vi.advanceTimersByTimeAsync(29000);
+
+    expect((await pending).status).toBe(200);
+  });
+
+  it('stops the clock once the headers arrive, so a long download is not cut off', async () => {
+    // The budget is on the wait for an answer, not on the transfer. The PDF
+    // proxy streams up to fifty megabytes through here, and a slow minute of
+    // that is an ordinary download rather than a hung upstream —
+    // `AbortSignal.timeout` would have aborted it mid-body.
+    vi.useFakeTimers();
+
+    await GET(request('http://localhost:3000/api/paper/x'), context('paper', 'x'));
+    await vi.advanceTimersByTimeAsync(600000);
+
+    expect(called().init.signal!.aborted).toBe(false);
+  });
+});

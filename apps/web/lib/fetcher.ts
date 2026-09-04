@@ -27,8 +27,41 @@ function apiUrl(path: string): string {
   return typeof window === 'undefined' ? `${SERVER_API_ORIGIN}${path}` : path;
 }
 
-export async function searchPapers(params: SearchParams): Promise<SearchResponse> {
-  const response = await axios.post<SearchResponse>(apiUrl('/api/search'), params);
+/**
+ * Who the API is answering, when this call is made on the reader's behalf
+ * rather than by the reader's own browser.
+ *
+ * A browser request reaches the API through `app/api/[...path]/route.ts`, which
+ * forwards `x-forwarded-for` for one reason: the API's rate limit keys on
+ * `request.ip`, and without the chain it sees this process's address for every
+ * visitor. A server-rendered search does not go through that handler — it is
+ * issued here, straight to `API_ORIGIN` — so it arrived carrying nothing, and
+ * the API keyed *every search in the product* on the web tier.
+ *
+ * That is not a security nicety, it is the search capacity of the whole site.
+ * `/results` is a server component and `Pagination` navigates by URL, so every
+ * search is rendered on the server: with `RATE_LIMIT_MAX` at 120 a minute, the
+ * site as a whole had 120 searches a minute and one script could spend them.
+ *
+ * The chain has to be *started* by a real proxy in front of this app, exactly
+ * as the route handler's own comment says — a server component cannot see its
+ * own socket any more than a route handler can. So this passes on what it was
+ * given and invents nothing; the API, in turn, believes it only for the hops
+ * named in its `TRUST_PROXY`.
+ */
+export type Caller = {
+  /** The incoming request's `x-forwarded-for`, when there is one. */
+  forwardedFor?: string | undefined;
+};
+
+function callerHeaders(caller: Caller): Record<string, string> {
+  return caller.forwardedFor ? { 'x-forwarded-for': caller.forwardedFor } : {};
+}
+
+export async function searchPapers(params: SearchParams, caller: Caller = {}): Promise<SearchResponse> {
+  const response = await axios.post<SearchResponse>(apiUrl('/api/search'), params, {
+    headers: callerHeaders(caller)
+  });
   return response.data;
 }
 

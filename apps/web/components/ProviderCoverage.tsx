@@ -25,6 +25,16 @@ interface ProviderCoverageProps {
    * never reported it — treated as "not known to be degraded".
    */
   complete?: boolean;
+  /**
+   * True when the rescue pass was cut short, which makes the total a lower
+   * bound for a different reason: papers were dropped for want of a retrievable
+   * copy without anyone being asked whether one exists.
+   *
+   * Reported separately because it needs different words. Every provider can
+   * have answered perfectly and the count still be short, so the notice for
+   * this case must not say a source failed.
+   */
+  bounded?: boolean;
 }
 
 /**
@@ -44,7 +54,7 @@ interface ProviderCoverageProps {
  * a failure is the bug phase 08 fixed in the comparison sweep, and it would be
  * the same bug here.
  */
-export function ProviderCoverage({ providers, complete }: ProviderCoverageProps) {
+export function ProviderCoverage({ providers, complete, bounded }: ProviderCoverageProps) {
   const skipped = providers.filter(p => p.error?.startsWith('skipped:'));
   const failed = providers.filter(p => p.error && !p.error.startsWith('skipped:'));
   const answered = providers
@@ -56,7 +66,12 @@ export function ProviderCoverage({ providers, complete }: ProviderCoverageProps)
   }
 
   const label = (source: string) => PROVIDER_LABELS[source] || source;
-  const degraded = complete === false || failed.length > 0;
+
+  // Two different reasons the count can be short, and the notice has to say
+  // which one it is. A source that did not answer is a gap in the corpus; a
+  // bounded rescue is a gap in what was asked about papers we did retrieve.
+  const sourceGap = complete === false || failed.length > 0;
+  const degraded = sourceGap || bounded === true;
 
   return (
     <div className="rounded-lg border bg-muted/20 px-4 py-3">
@@ -92,16 +107,24 @@ export function ProviderCoverage({ providers, complete }: ProviderCoverageProps)
         >
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" aria-hidden="true" />
           <p className="text-amber-900 dark:text-amber-200">
-            <span className="font-medium">This search is incomplete.</span>{' '}
+            <span className="font-medium">
+              {sourceGap ? 'This search is incomplete.' : 'This count is a lower bound.'}
+            </span>{' '}
             {failed.length > 0 ? (
               <>
                 {failed.map(p => label(p.source)).join(', ')}{' '}
                 {failed.length === 1 ? 'did not answer' : 'did not answer'}, so the count
                 above is a lower bound — there are more matching papers than are shown.
               </>
-            ) : (
+            ) : sourceGap ? (
               <>
                 At least one source did not answer, so the count above is a lower bound.
+              </>
+            ) : (
+              <>
+                Every source answered, but not every paper could be checked for a
+                retrievable copy — some were left out without being looked up, so there
+                may be more open-access papers than are shown.
               </>
             )}
           </p>
