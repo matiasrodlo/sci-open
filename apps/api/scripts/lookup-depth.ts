@@ -68,21 +68,26 @@ const USER_AGENT = `OpenAccessExplorer/1.0 (mailto:${process.env.UNPAYWALL_EMAIL
 /**
  * The providers this actually concerns: no by-id route, so `lookup` searches.
  *
- * Split further by whether ids can be *sampled* from them. Drawing a realistic
- * sample means running keyword searches, and bioRxiv has no keyword index at
- * all — `capabilities.keywordSearch` is false because the API exposes date
- * windows and a per-DOI lookup and nothing else. An empty row for it used to
- * print beside the others and read as a pass, which is the one thing a
- * measurement must never do.
+ * Whether ids can be *sampled* from one is decided by trying, not by reading
+ * `capabilities.keywordSearch`. That flag was the obvious predicate and it is
+ * the wrong one: it answers "should the orchestrator spend a fan-out request
+ * here", which is not the same question. DataCite declares it false because its
+ * records are datasets, disjoint from the literature providers by construction,
+ * so keyword hits would merge with nothing — but the API keyword-searches
+ * perfectly well, and filtering on the flag silently dropped a provider this
+ * script had already measured at rank 0 across fifteen ids.
  *
- * It is also the provider least exposed to the question. Its native ids are
- * DOIs and `doiLookup` is true, so `parseQuery` sends a lookup to
- * `/details/{server}/{doi}` — an exact endpoint, not a ranked list where a
- * depth can cut the answer off.
+ * bioRxiv is the genuinely different case: no keyword index exists at all, only
+ * date windows and a per-DOI lookup. It falls out of the same empirical test by
+ * returning nothing, and is reported as uncovered rather than as a pass — which
+ * is the distinction that matters and the one the flag was standing in for.
+ *
+ * bioRxiv is also the provider least exposed to the question. Its native ids
+ * are DOIs and `doiLookup` is true, so `parseQuery` sends a lookup to
+ * `/details/{server}/{doi}` — an exact endpoint, not a ranked list a depth can
+ * cut off.
  */
 const SEARCHES_FOR_IDS = PROVIDERS.filter(p => !p.lookup);
-const SAMPLEABLE = SEARCHES_FOR_IDS.filter(p => p.capabilities.keywordSearch);
-const UNSAMPLEABLE = SEARCHES_FOR_IDS.filter(p => !p.capabilities.keywordSearch);
 
 /** The same comparison `lookupPaper` makes, so a hit here is a hit there. */
 function matches(paper: Paper, provider: string, nativeId: string): boolean {
@@ -147,7 +152,7 @@ async function main() {
     provider: string; n: number; worst: number | null; over: number; missed: number; errors: number;
   }> = [];
 
-  for (const entry of SAMPLEABLE) {
+  for (const entry of SEARCHES_FOR_IDS) {
     console.log(`${entry.id}:`);
     const ids = await sampleIds(entry);
 
@@ -194,16 +199,16 @@ async function main() {
 
   console.log('provider     probed  worst rank  past 10  not found  errored');
   for (const r of rows) {
+    if (r.n === 0) {
+      console.log(
+        `${r.provider.padEnd(12)} ${'-'.padStart(6)} ${'-'.padStart(11)} ${'-'.padStart(8)} ${'-'.padStart(10)} ` +
+          `${'-'.padStart(8)}   no ids to draw: provider has no keyword index`
+      );
+      continue;
+    }
     console.log(
       `${r.provider.padEnd(12)} ${String(r.n - r.errors).padStart(6)} ${String(r.worst ?? '-').padStart(11)} ` +
         `${String(r.over).padStart(8)} ${String(r.missed).padStart(10)} ${String(r.errors).padStart(8)}`
-    );
-  }
-
-  for (const entry of UNSAMPLEABLE) {
-    console.log(
-      `${entry.id.padEnd(12)} ${'-'.padStart(6)} ${'-'.padStart(11)} ${'-'.padStart(8)} ${'-'.padStart(10)} ` +
-        `${'-'.padStart(8)}   not sampled: no keyword index to draw ids from`
     );
   }
 
@@ -219,9 +224,8 @@ async function main() {
    * either as "the assumption holds" is how a measurement becomes a rubber
    * stamp.
    */
-  const thin = rows.filter(r => r.n - r.errors === 0).map(r => r.provider);
+  const gaps = rows.filter(r => r.n - r.errors === 0).map(r => r.provider);
   const partial = rows.filter(r => r.errors > 0 && r.n - r.errors > 0).map(r => r.provider);
-  const gaps = [...thin, ...UNSAMPLEABLE.map(p => p.id)];
 
   console.log('\nEvery record actually probed was inside depth 10.');
   if (partial.length > 0) {
