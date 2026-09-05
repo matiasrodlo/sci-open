@@ -1,5 +1,5 @@
 import type { Paper, SourceRef } from '@open-access-explorer/shared';
-import { stripMarkup } from '@open-access-explorer/shared';
+import { fullTextAt, stripMarkup } from '@open-access-explorer/shared';
 import type { BiorxivServer, ServerCollection } from './fetch';
 
 /** bioRxiv/medRxiv records -> Paper[]. Pure, and isolated per record. */
@@ -44,6 +44,12 @@ function normalizeOne(raw: any, server: BiorxivServer, ref: SourceRef): Paper {
 
   const abstract = stripMarkup(present(raw?.abstract));
 
+  // Through `fullTextAt` like every other copy, even though this URL is built
+  // here rather than taken from the payload: one function decides what counts
+  // as a copy, so a preprint server that changes its paths cannot quietly
+  // start advertising an abstract page as one.
+  const fullText = fullTextAt(`https://www.${server}.org/content/${doi}v${version}.full.pdf`, 'pdf');
+
   return {
     id: `${server}:${doi}`,
     doi,
@@ -63,11 +69,7 @@ function normalizeOne(raw: any, server: BiorxivServer, ref: SourceRef): Paper {
     // providers that leave this unknown, there is nothing to find out here.
     oaStatus: 'green',
     stage: 'preprint',
-    fullText: {
-      url: `https://www.${server}.org/content/${doi}v${version}.full.pdf`,
-      kind: 'pdf',
-      verified: false
-    },
+    ...(fullText ? { fullText } : {}),
     landingPage: `https://www.${server}.org/content/${doi}v${version}`,
 
     sources: [ref],

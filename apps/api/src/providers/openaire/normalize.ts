@@ -1,5 +1,5 @@
 import type { Paper, FullText, OaRoute, SourceRef } from '@open-access-explorer/shared';
-import { httpUrl, stripMarkup } from '@open-access-explorer/shared';
+import { fullTextAt, httpUrl, stripMarkup } from '@open-access-explorer/shared';
 import type { OpenAirePayload } from './fetch';
 
 /**
@@ -84,10 +84,15 @@ function pickFullText(result: any): FullText | undefined {
   ) as string[];
 
   const pdf = urls.find(u => u.toLowerCase().endsWith('.pdf'));
-  if (pdf) return { url: pdf, kind: 'pdf', verified: false };
+  const fromPdf = fullTextAt(pdf, 'pdf');
+  if (fromPdf) return fromPdf;
 
-  const any = urls[0];
-  return any ? { url: any, kind: 'html', verified: false } : undefined;
+  // `urls[0]` is whatever web resource the deposit listed first, and for an
+  // OpenAIRE record that is very often the DOI it is also filed under — the
+  // same string this normaliser writes to `landingPage` a few lines below.
+  // `fullTextAt` is what stops the landing page being counted twice, once as
+  // the address and once as the copy.
+  return urls.map(u => fullTextAt(u, 'html')).find(Boolean);
 }
 
 /** Subject terms: FOS classifications and author keywords alike. */

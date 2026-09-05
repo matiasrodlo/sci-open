@@ -1,5 +1,5 @@
 import type { AuthorityFacts, FullText, OaRoute, PaperStage } from '@open-access-explorer/shared';
-import { httpUrl } from '@open-access-explorer/shared';
+import { fullTextAt, httpUrl } from '@open-access-explorer/shared';
 import { preferredPdfUrl } from '../../lib/pdf-url';
 import type { UnpaywallPayload } from './fetch';
 
@@ -77,7 +77,7 @@ export function pickFullText(response: any): FullText | undefined {
   const chosen = httpUrl(text(repository?.url_for_pdf) ?? text(publisher?.url_for_pdf) ?? best);
   if (!chosen) return undefined;
 
-  return { url: preferredPdfUrl(chosen), kind: 'pdf', verified: false };
+  return fullTextAt(preferredPdfUrl(chosen), 'pdf');
 }
 
 /** The landing page of the copy we chose, falling back to the DOI. */

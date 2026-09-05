@@ -1,5 +1,5 @@
 import type { Paper, FullText, SourceRef } from '@open-access-explorer/shared';
-import { httpUrl } from '@open-access-explorer/shared';
+import { fullTextAt, httpUrl } from '@open-access-explorer/shared';
 import type { ArxivFeed } from './fetch';
 
 /**
@@ -78,7 +78,7 @@ function pickFullText(entry: any): FullText | undefined {
 
   // arXiv still advertises some links over http. Serving one to a browser on
   // an https page gets it blocked as mixed content.
-  return { url: pdf.replace(/^http:\/\//, 'https://'), kind: 'pdf', verified: false };
+  return fullTextAt(pdf.replace(/^http:\/\//, 'https://'), 'pdf');
 }
 
 function pickAuthors(entry: any): string[] {

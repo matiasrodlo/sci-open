@@ -1,5 +1,5 @@
 import type { Paper, PaperStage, FullText, SourceRef } from '@open-access-explorer/shared';
-import { httpUrl, stripMarkup } from '@open-access-explorer/shared';
+import { fullTextAt, httpUrl, stripMarkup } from '@open-access-explorer/shared';
 import type { EuropePmcPayload } from './fetch';
 
 /**
@@ -57,18 +57,15 @@ function pickFullText(raw: any): FullText | undefined {
   const urls = fullTextUrls(raw);
 
   const pdf = urls.find(u => u.documentStyle === 'pdf' || u.url?.toLowerCase().endsWith('.pdf'));
-  const pdfUrl = httpUrl(pdf?.url);
-  if (pdfUrl) return { url: pdfUrl, kind: 'pdf', verified: false };
+  const fromPdf = fullTextAt(pdf?.url, 'pdf');
+  if (fromPdf) return fromPdf;
 
   if (raw?.pmcid) {
-    return { url: `https://europepmc.org/articles/${raw.pmcid}?pdf=render`, kind: 'pdf', verified: false };
+    return fullTextAt(`https://europepmc.org/articles/${raw.pmcid}?pdf=render`, 'pdf');
   }
 
   const html = urls.find(u => u.documentStyle === 'html');
-  const htmlUrl = httpUrl(html?.url);
-  if (htmlUrl) return { url: htmlUrl, kind: 'html', verified: false };
-
-  return undefined;
+  return fullTextAt(html?.url, 'html');
 }
 
 /**

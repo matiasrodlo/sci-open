@@ -195,6 +195,77 @@
               }
             }
           }
+        },
+        {
+          "_case": "web resources that are only the paper's own address \u2014 the shape that made half of `total` landing pages",
+          "header": {
+            "dri:objIdentifier": {
+              "$": "od______1234::gggg"
+            }
+          },
+          "metadata": {
+            "oaf:entity": {
+              "oaf:result": {
+                "title": {
+                  "$": "A record with nothing but locators"
+                },
+                "bestaccessright": {
+                  "@classid": "OPEN",
+                  "@classname": "Open Access"
+                },
+                "children": {
+                  "instance": [
+                    {
+                      "webresource": {
+                        "url": {
+                          "$": "https://doi.org/10.1000/locator"
+                        }
+                      }
+                    },
+                    {
+                      "webresource": {
+                        "url": {
+                          "$": "https://pubmed.ncbi.nlm.nih.gov/41442816"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "_case": "a repository page, which is a way to read the paper rather than a pointer to it",
+          "header": {
+            "dri:objIdentifier": {
+              "$": "od______1234::hhhh"
+            }
+          },
+          "metadata": {
+            "oaf:entity": {
+              "oaf:result": {
+                "title": {
+                  "$": "A record read on a repository page"
+                },
+                "bestaccessright": {
+                  "@classid": "OPEN",
+                  "@classname": "Open Access"
+                },
+                "children": {
+                  "instance": [
+                    {
+                      "webresource": {
+                        "url": {
+                          "$": "https://repository.example.org/items/1234"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
         }
       ]
     }

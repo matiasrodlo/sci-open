@@ -71,7 +71,21 @@ export type PaperStage = 'preprint' | 'accepted' | 'published' | 'unknown';
 
 export type FullTextKind = 'pdf' | 'html' | 'xml';
 
-/** A retrievable copy. `verified` means we actually confirmed it, not that a provider claimed it. */
+/**
+ * A copy of the paper, as opposed to a page about it. Built with `fullTextAt`,
+ * which is where the difference is decided.
+ *
+ * `verified` means we fetched the URL and a copy came back. **Nothing sets it
+ * today** — no step in the pipeline fetches a candidate copy — so it is false
+ * on every record, and a consumer must read it as "not confirmed" rather than
+ * as "confirmed absent". It is a slot, kept because `enrich.ts` already
+ * prefers a verified copy over an unverified one and so will need no change
+ * when something fills it.
+ *
+ * Which is why the field's presence is a provider's claim, not a guarantee.
+ * `fullTextAt` throws out the claims that are false on their face — a DOI
+ * resolver, an abstract page — and what remains is unchecked.
+ */
 export type FullText = {
   url: string;
   kind: FullTextKind;

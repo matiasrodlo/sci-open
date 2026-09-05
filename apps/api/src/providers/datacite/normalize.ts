@@ -1,5 +1,5 @@
 import type { Paper, PaperStage, FullText, SourceRef } from '@open-access-explorer/shared';
-import { httpUrl, stripMarkup } from '@open-access-explorer/shared';
+import { fullTextAt, httpUrl, stripMarkup } from '@open-access-explorer/shared';
 import type { DataCitePayload } from './fetch';
 
 /**
@@ -76,7 +76,7 @@ function pickFullText(attrs: any): FullText | undefined {
     asArray<string>(attrs?.formats).includes('application/pdf') ||
     url.toLowerCase().endsWith('.pdf');
 
-  return isPdf ? { url, kind: 'pdf', verified: false } : undefined;
+  return isPdf ? fullTextAt(url, 'pdf') : undefined;
 }
 
 function normalizeOne(raw: any, ref: SourceRef): Paper {

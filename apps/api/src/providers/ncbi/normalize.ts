@@ -1,4 +1,5 @@
 import type { Paper, FullText, SourceRef } from '@open-access-explorer/shared';
+import { fullTextAt } from '@open-access-explorer/shared';
 
 /**
  * Parsed PubMed XML -> Paper[]. Pure, and isolated per record.
@@ -182,11 +183,7 @@ function pickAbstract(article: any): string | undefined {
 
 function pickFullText(pmcId: string | undefined): FullText | undefined {
   if (!pmcId) return undefined;
-  return {
-    url: `https://www.ncbi.nlm.nih.gov/pmc/articles/${pmcId}/pdf/`,
-    kind: 'pdf',
-    verified: false
-  };
+  return fullTextAt(`https://www.ncbi.nlm.nih.gov/pmc/articles/${pmcId}/pdf/`, 'pdf');
 }
 
 function normalizeOne(raw: any, ref: SourceRef): Paper {

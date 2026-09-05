@@ -1,4 +1,4 @@
-import { httpUrl, stripMarkup, type Paper, type FullText, type SourceRef } from '@open-access-explorer/shared';
+import { fullTextAt, httpUrl, stripMarkup, type Paper, type FullText, type SourceRef } from '@open-access-explorer/shared';
 
 /**
  * CORE payload -> Paper[]. Pure, and isolated per record.
@@ -44,19 +44,17 @@ export function pickFullText(raw: any): FullText | undefined {
   // `javascript:alert(document.domain)//evil.pdf` ends in `.pdf` and satisfied
   // it exactly as well as a real file did.
   const download = httpUrl(text(raw?.downloadUrl));
-  if (download && isPdf(download)) return { url: download, kind: 'pdf', verified: false };
-
   const fromSource = asArray<string>(raw?.sourceFulltextUrls).map(u => httpUrl(text(u))).find(u => u && isPdf(u));
-  if (fromSource) return { url: fromSource, kind: 'pdf', verified: false };
-
   const fromLinks = asArray<CoreLink>(raw?.links).map(l => httpUrl(l.url)).find(u => u && isPdf(u));
-  if (fromLinks) return { url: fromLinks, kind: 'pdf', verified: false };
-
   // Not a PDF, but still a way to read the paper.
-  const reader = httpUrl(asArray<CoreLink>(raw?.links).find(l => l.type === 'reader')?.url);
-  if (reader) return { url: reader, kind: 'html', verified: false };
+  const reader = asArray<CoreLink>(raw?.links).find(l => l.type === 'reader')?.url;
 
-  return undefined;
+  return (
+    (download && isPdf(download) ? fullTextAt(download, 'pdf') : undefined) ??
+    fullTextAt(fromSource, 'pdf') ??
+    fullTextAt(fromLinks, 'pdf') ??
+    fullTextAt(reader, 'html')
+  );
 }
 
 /** The page a human should land on. The reader, where CORE offers one. */

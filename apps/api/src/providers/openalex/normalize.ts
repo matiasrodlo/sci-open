@@ -1,5 +1,5 @@
 import type { Paper, PaperStage, FullText, OaRoute, SourceRef } from '@open-access-explorer/shared';
-import { httpUrl, stripMarkup } from '@open-access-explorer/shared';
+import { fullTextAt, httpUrl, stripMarkup } from '@open-access-explorer/shared';
 import type { OpenAlexPayload } from './fetch';
 
 /** OpenAlex payload -> Paper[]. Pure, and isolated per record. */
@@ -74,16 +74,16 @@ function pickFullText(work: any): FullText | undefined {
   // route OpenAlex found, which is often a landing page — the recorded page has
   // one pointing at a PMC article — so it is only called a PDF when it looks
   // like one.
-  const pdf = httpUrl(work?.best_oa_location?.pdf_url);
-  if (pdf) return { url: pdf, kind: 'pdf', verified: false };
+  const pdf = fullTextAt(work?.best_oa_location?.pdf_url, 'pdf');
+  if (pdf) return pdf;
 
   const oaUrl = httpUrl(work?.open_access?.oa_url);
-  if (oaUrl) {
-    const kind = oaUrl.toLowerCase().endsWith('.pdf') ? 'pdf' : 'html';
-    return { url: oaUrl, kind, verified: false };
-  }
+  if (!oaUrl) return undefined;
 
-  return undefined;
+  // `oa_url` is where the largest share of the locators came from: OpenAlex
+  // reports the DOI as the open-access location whenever that is the best
+  // route it knows, which is a route to the paper and not the paper.
+  return fullTextAt(oaUrl, oaUrl.toLowerCase().endsWith('.pdf') ? 'pdf' : 'html');
 }
 
 /**

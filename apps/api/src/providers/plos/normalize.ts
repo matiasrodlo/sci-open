@@ -1,5 +1,5 @@
 import type { Paper, SourceRef } from '@open-access-explorer/shared';
-import { stripMarkup } from '@open-access-explorer/shared';
+import { fullTextAt, stripMarkup } from '@open-access-explorer/shared';
 import type { PlosPayload } from './fetch';
 
 /** PLOS Solr payload -> Paper[]. Pure, and isolated per record. */
@@ -64,6 +64,15 @@ function normalizeOne(doc: any, ref: SourceRef): Paper {
     ? asArray<string>(doc.author_display)
     : asArray<string>(doc.author);
 
+  // PLOS serves the PDF off the DOI. The journal slug in the path is not
+  // load-bearing: `/plosone/` resolves a PLOS Genetics or PLOS Biology DOI to
+  // the right file, checked on both. Built through `fullTextAt` like every
+  // other copy in the pipeline, so that one function decides what a copy is
+  // even where the URL is ours rather than a provider's claim.
+  const fullText = doi
+    ? fullTextAt(`https://journals.plos.org/plosone/article/file?id=${doi}&type=printable`, 'pdf')
+    : undefined;
+
   return {
     id: `plos:${nativeId}`,
     ...(doi ? { doi } : {}),
@@ -84,18 +93,7 @@ function normalizeOne(doc: any, ref: SourceRef): Paper {
     // than guessed — the same case as DOAJ.
     oaStatus: 'gold',
     stage: 'published',
-    // PLOS serves the PDF off the DOI. The journal slug in the path is not
-    // load-bearing: `/plosone/` resolves a PLOS Genetics or PLOS Biology DOI
-    // to the right file, checked on both.
-    ...(doi
-      ? {
-          fullText: {
-            url: `https://journals.plos.org/plosone/article/file?id=${doi}&type=printable`,
-            kind: 'pdf' as const,
-            verified: false
-          }
-        }
-      : {}),
+    ...(fullText ? { fullText } : {}),
     ...(doi ? { landingPage: `https://doi.org/${doi}` } : {}),
 
     sources: [ref],

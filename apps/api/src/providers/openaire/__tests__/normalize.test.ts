@@ -92,7 +92,29 @@ describe('normalize — record shapes', () => {
   });
 
   it('offers a non-PDF resource as html rather than calling it a PDF', () => {
-    expect(run(RECORDED).papers[0].fullText?.kind).toBe('html');
+    expect(find('od______1234::hhhh').fullText).toEqual({
+      url: 'https://repository.example.org/items/1234',
+      kind: 'html',
+      verified: false
+    });
+  });
+
+  /**
+   * The recorded record's two web resources are its DOI and its PubMed entry,
+   * and `pickFullText` used to hand back whichever came first as the copy. It
+   * is the commonest shape OpenAIRE returns — 791 of 1,530 non-PDF `fullText`
+   * values across three live searches were `doi.org` — and it is why `total`
+   * could call a paper retrievable on the strength of its own address.
+   */
+  it('does not offer the paper\'s own address as a copy of it', () => {
+    expect(run(RECORDED).papers[0].fullText).toBeUndefined();
+    expect(find('od______1234::gggg').fullText).toBeUndefined();
+  });
+
+  it('still records that address as the landing page', () => {
+    // The URL is not lost, it is filed correctly — which is the whole of the
+    // change. A reader still gets a link; it is no longer counted as a copy.
+    expect(run(RECORDED).papers[0].landingPage).toBe('https://doi.org/10.1016/j.enzmictec.2025.110799');
   });
 
   it('strips markup and entities from the title and abstract', () => {

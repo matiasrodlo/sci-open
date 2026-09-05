@@ -39,16 +39,24 @@ import { PROVIDERS } from '../../orchestrator/registry';
  * the two cannot drift apart silently either.
  */
 const PINNED: Record<string, { version: number; normalizer: string }> = {
-  arxiv: { version: 1, normalizer: 'dbdaf1e5d12a' },
-  biorxiv: { version: 1, normalizer: '1090a5f4143e' },
-  core: { version: 1, normalizer: '237c7946ed17' },
-  datacite: { version: 1, normalizer: 'ae45bfbce3d8' },
-  doaj: { version: 1, normalizer: '7412d502f23c' },
-  europepmc: { version: 1, normalizer: 'a68e98b0d231' },
-  ncbi: { version: 1, normalizer: '154d8a5c8fc5' },
-  openaire: { version: 1, normalizer: '05fcde43e805' },
-  openalex: { version: 1, normalizer: '62941ef2bcaa' },
-  plos: { version: 1, normalizer: 'e007dcd2b4ea' }
+  // Version 1 still: these four build their PDF URL themselves, from a DOI or
+  // a PMC id, and `fullTextAt` cannot reject a URL of that shape. The file
+  // changed; nothing it emits did.
+  arxiv: { version: 1, normalizer: 'b4dbc2c699cb' },
+  biorxiv: { version: 1, normalizer: '21ff7b344e3c' },
+  ncbi: { version: 1, normalizer: '69c75a02a8e6' },
+  plos: { version: 1, normalizer: '3c6958bbacb4' },
+
+  // Version 2: these six take the URL from the payload, so `fullTextAt` can
+  // and does reject one — a DOI resolver, a Handle, a record page. Records
+  // that were cached carrying their own address as `fullText` must not be
+  // served again, since that value is what admitted them to `total`.
+  core: { version: 2, normalizer: '047e4326ebe5' },
+  datacite: { version: 2, normalizer: 'e25ea42d0c08' },
+  doaj: { version: 2, normalizer: '52ed78538ef1' },
+  europepmc: { version: 2, normalizer: 'e464db8efb04' },
+  openaire: { version: 2, normalizer: '6fdb80e907b4' },
+  openalex: { version: 2, normalizer: '0e9a57defe1e' }
 };
 
 const PROVIDER_DIR = join(__dirname, '..');

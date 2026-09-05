@@ -144,7 +144,7 @@ export const PROVIDERS: ProviderEntry[] = [
     id: 'doaj',
     capabilities: doaj.capabilities,
     translate: (query, options) => doaj.translate(query, options),
-    normalizerVersion: 1,
+    normalizerVersion: 2,
     async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
       return doaj.lookup(nativeId, {
         timeoutMs,
@@ -198,7 +198,7 @@ export const PROVIDERS: ProviderEntry[] = [
     id: 'openaire',
     capabilities: openaire.capabilities,
     translate: (query, options) => openaire.translate(query, options),
-    normalizerVersion: 1,
+    normalizerVersion: 2,
     async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
       return openaire.lookup(nativeId, {
         timeoutMs,
@@ -228,7 +228,7 @@ export const PROVIDERS: ProviderEntry[] = [
     id: 'datacite',
     capabilities: datacite.capabilities,
     translate: (query, options) => datacite.translate(query, options),
-    normalizerVersion: 1,
+    normalizerVersion: 2,
     async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
       const result = await datacite.search(query, {
         pageSize: depth,
@@ -267,7 +267,7 @@ export const PROVIDERS: ProviderEntry[] = [
     id: 'openalex',
     capabilities: openalex.capabilities,
     translate: (query, options) => openalex.translate(query, options),
-    normalizerVersion: 1,
+    normalizerVersion: 2,
     async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
       return openalex.lookup(nativeId, {
         timeoutMs,
@@ -299,7 +299,7 @@ export const PROVIDERS: ProviderEntry[] = [
     id: 'core',
     capabilities: core.capabilities,
     translate: (query, options) => core.translate(query, options),
-    normalizerVersion: 1,
+    normalizerVersion: 2,
     async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
       return core.lookup(nativeId, {
         timeoutMs,
@@ -331,7 +331,7 @@ export const PROVIDERS: ProviderEntry[] = [
     id: 'europepmc',
     capabilities: europepmc.capabilities,
     translate: (query, options) => europepmc.translate(query, options),
-    normalizerVersion: 1,
+    normalizerVersion: 2,
     async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
       const result = await europepmc.search(query, {
         pageSize: depth,

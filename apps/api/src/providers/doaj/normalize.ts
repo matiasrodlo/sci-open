@@ -1,5 +1,5 @@
 import type { Paper, FullText, SourceRef } from '@open-access-explorer/shared';
-import { httpUrl, stripMarkup } from '@open-access-explorer/shared';
+import { fullTextAt, httpUrl, stripMarkup } from '@open-access-explorer/shared';
 import type { DoajPayload } from './fetch';
 
 /**
@@ -39,14 +39,12 @@ function pickFullText(links: DoajLink[]): FullText | undefined {
   const pdf = links.find(
     l => l.content_type === 'application/pdf' || l.url?.toLowerCase().endsWith('.pdf')
   );
-  const pdfUrl = httpUrl(pdf?.url);
-  if (pdfUrl) return { url: pdfUrl, kind: 'pdf', verified: false };
-
   const html = links.find(l => l.content_type === 'text/html' || l.type === 'fulltext');
-  const htmlUrl = httpUrl(html?.url);
-  if (htmlUrl) return { url: htmlUrl, kind: 'html', verified: false };
 
-  return undefined;
+  // `fullTextAt` can reject either candidate, so the HTML link is a real
+  // fallback rather than a branch: a `type: 'fulltext'` link pointing at the
+  // article's DOI is not a copy, and the record may still carry one that is.
+  return fullTextAt(pdf?.url, 'pdf') ?? fullTextAt(html?.url, 'html');
 }
 
 /**
