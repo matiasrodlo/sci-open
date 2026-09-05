@@ -58,7 +58,10 @@ export async function search(query: Query, options: SearchOptions): Promise<Prov
   const { openAccessOnly, pageSize = 50, offset = 0, now = () => new Date(), ...fetchOptions } = options;
 
   const params = toParams(query, { openAccessOnly });
-  if (!params.search && !params.filter) return { papers: [], skipped: [], latency: 0 };
+  // `toParams` returns nothing at all when there is nothing to ask for, which
+  // is the whole of the check: an empty query used to leave `is_oa:true`
+  // standing on its own, and that filter matches the open-access corpus.
+  if (!params.filter) return { papers: [], skipped: [], latency: 0 };
 
   const wanted = Math.max(pageSize, 1);
   const perPage = capabilities.maxPageSize;

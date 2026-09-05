@@ -8,6 +8,11 @@ import type { ProviderCapabilities } from '@open-access-explorer/shared';
  * fixture could not be recorded.
  */
 export const capabilities: ProviderCapabilities = {
+  /**
+   * Scoped to `title_and_abstract.search` — see `translate.ts`. The `search`
+   * parameter reads the full text too, and reported 4,636,103 matches for `ai`
+   * where the title and abstract hold 940,199.
+   */
   keywordSearch: true,
   doiLookup: true,
 

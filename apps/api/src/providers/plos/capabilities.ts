@@ -9,6 +9,11 @@ import type { ProviderCapabilities } from '@open-access-explorer/shared';
  * explicitly), and the date range narrows 6,644 to 1,173.
  */
 export const capabilities: ProviderCapabilities = {
+  /**
+   * Scoped to `title`, `abstract` and `subject` — see `translate.ts`. PLOS
+   * indexes its own full text, so `everything:` was reading it: 5,563 matches
+   * for `crispr gene editing` where the title and abstract hold 359.
+   */
   keywordSearch: true,
   doiLookup: true,
 

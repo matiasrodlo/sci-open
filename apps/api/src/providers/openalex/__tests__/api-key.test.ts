@@ -27,7 +27,7 @@ describe('the OpenAlex API key', () => {
   it('goes out as a bearer token on a search', async () => {
     get.mockResolvedValue(resolved(200, { results: [WORK] }));
 
-    await fetchPage({ search: 'crispr' }, { ...pageOptions, apiKey: 'oa-key-123' });
+    await fetchPage({ filter: 'title_and_abstract.search:crispr' }, { ...pageOptions, apiKey: 'oa-key-123' });
 
     expect(sentTo(0).headers.Authorization).toBe('Bearer oa-key-123');
   });
@@ -45,7 +45,7 @@ describe('the OpenAlex API key', () => {
     // in an access log and in the pool's per-service metrics.
     get.mockResolvedValue(resolved(200, { results: [WORK] }));
 
-    await fetchPage({ search: 'crispr' }, { ...pageOptions, apiKey: 'oa-key-123' });
+    await fetchPage({ filter: 'title_and_abstract.search:crispr' }, { ...pageOptions, apiKey: 'oa-key-123' });
 
     expect(sentTo(0).params.api_key).toBeUndefined();
     expect(JSON.stringify(sentTo(0).params)).not.toContain('oa-key-123');
@@ -56,7 +56,7 @@ describe('the OpenAlex API key', () => {
     // `Authorization: Bearer undefined` is a rejected one.
     get.mockResolvedValue(resolved(200, { results: [WORK] }));
 
-    await fetchPage({ search: 'crispr' }, pageOptions);
+    await fetchPage({ filter: 'title_and_abstract.search:crispr' }, pageOptions);
 
     expect(sentTo(0).headers).not.toHaveProperty('Authorization');
   });
@@ -68,7 +68,7 @@ describe('the OpenAlex API key', () => {
     get.mockResolvedValue(resolved(200, { results: [WORK] }));
 
     await fetchPage(
-      { search: 'crispr' },
+      { filter: 'title_and_abstract.search:crispr' },
       { ...pageOptions, apiKey: 'your_openalex_api_key_here' }
     );
 
@@ -80,7 +80,7 @@ describe('the OpenAlex API key', () => {
     // and both are meant to go out together.
     get.mockResolvedValue(resolved(200, { results: [WORK] }));
 
-    await fetchPage({ search: 'crispr' }, { ...pageOptions, apiKey: 'oa-key-123' });
+    await fetchPage({ filter: 'title_and_abstract.search:crispr' }, { ...pageOptions, apiKey: 'oa-key-123' });
 
     expect(sentTo(0).params.mailto).toBe('test@example.com');
   });

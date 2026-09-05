@@ -27,11 +27,33 @@ const EARLIEST = 1000;
 const LATEST = 9999;
 
 export type OpenAlexParams = {
-  /** Free text. Absent for a DOI lookup, which filters instead. */
-  search?: string;
-  /** Comma-separated, OpenAlex's own syntax. */
+  /** Comma-separated, OpenAlex's own syntax. Everything goes here. */
   filter?: string;
 };
+
+/**
+ * OpenAlex reads `,` as the separator between filters and `|` as OR *within*
+ * one, so neither can survive inside a search value — a query for `crispr,
+ * cas9` would be read as two filters and the second one would not parse.
+ *
+ * Spaces, because the alternative is dropping the words either side of the
+ * comma together. There is no documented escape.
+ */
+function filterSafe(value: string): string {
+  return value.replace(/[,|]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * A phrase, quoted — with the quotes inside it removed first.
+ *
+ * Every other provider's translate does this and OpenAlex's did not, because
+ * the value used to go out as its own `search` parameter where an unbalanced
+ * quote was merely a bad search. Inside a filter it is a malformed filter.
+ */
+function quote(phrase: string): string {
+  const inner = phrase.replace(/"/g, ' ').replace(/\s+/g, ' ').trim();
+  return inner ? `"${inner}"` : '';
+}
 
 export type TranslateOptions = {
   /** Adds `is_oa:true`, which OpenAlex applies upstream. */
@@ -55,16 +77,43 @@ export function toParams(query: Query, options: TranslateOptions = {}): OpenAlex
     return filters.length > 0 ? { filter: filters.join(',') } : {};
   }
 
-  // OpenAlex's `search` honours quoted phrases; bare terms are already
-  // required, so there is nothing to spell out for them.
-  const search = [...query.terms.map(t => t.trim()), ...query.phrases.map(p => `"${p.trim()}"`)]
-    .filter(t => t && t !== '""')
-    .join(' ');
+  // OpenAlex's search honours quoted phrases; bare terms are already required,
+  // so there is nothing to spell out for them.
+  const search = filterSafe(
+    [...query.terms.map(t => t.trim()), ...query.phrases.map(quote)].filter(Boolean).join(' ')
+  );
 
-  return {
-    ...(search ? { search } : {}),
-    ...(filters.length > 0 ? { filter: filters.join(',') } : {})
-  };
+  /**
+   * Nothing to search for means no request, and it has to be decided here.
+   *
+   * The caller's emptiness check reads the returned params, and `is_oa:true`
+   * alone is a perfectly valid filter — for the entire open-access corpus. A
+   * query with no words would have fanned out and started reading it.
+   */
+  if (!search) return {};
+
+  /**
+   * `title_and_abstract.search`, not the `search` parameter.
+   *
+   * The `search` parameter searches the full text as well, and the difference
+   * is not marginal: measured on `ai`, `search=ai` with `is_oa:true` reports
+   * **4,636,103** matches and `title_and_abstract.search:ai` reports
+   * **940,199**. The first number was the one the header showed as its floor,
+   * because it is the largest — so the figure a reader saw for "how much is
+   * out there" was set by whichever provider asked the vaguest question, and
+   * OpenAlex asks the vaguest one in the fan-out by a factor of five.
+   *
+   * It is also a precision change and not only a reporting one. A paper that
+   * merely mentions the words somewhere in its body is not what a search for
+   * them is asking for, and it was competing for the 600 records we read.
+   *
+   * Relevance ordering survives the move: verified against the live API, the
+   * filter form returns `relevance_score` and orders by it, which is what the
+   * rank fusion in `orchestrator/rank.ts` reads.
+   */
+  filters.push(`title_and_abstract.search:${search}`);
+
+  return { filter: filters.join(',') };
 }
 
 export function translate(query: Query, options: TranslateOptions = {}): string {
