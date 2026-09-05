@@ -46,6 +46,12 @@ describe('mergePapers', () => {
       paper({ id: 'b', doi: undefined, title: 'Same Paper', year: 2020 })
     ]);
     expect(merged).toHaveLength(2);
+
+    // And so the DOI-less one stays DOI-less. `mergeGroup` carried a line that
+    // looked like it would fix this — take the contributor's DOI when the base
+    // has none — and it could never run, because the two are never in the same
+    // group. Asserting the shape here is what keeps it from being written again.
+    expect(merged.find(p => p.id === 'b')!.doi).toBeUndefined();
   });
 
   it('takes the higher-priority provider as the base', () => {

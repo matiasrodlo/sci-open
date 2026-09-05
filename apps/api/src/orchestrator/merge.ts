@@ -101,6 +101,13 @@ function hasValue(paper: Paper, field: ProvenancedField): boolean {
  * but only where the value came from somewhere other than the base, since
  * attributing every field of a single-source paper repeats what `sources`
  * already says.
+ *
+ * The DOI is not among the fields filled in that way, and there is nothing to
+ * fill: `identityKey` groups on the DOI when there is one, so either every
+ * record here has the same DOI or none of them has one at all. A backfill line
+ * sat here doing nothing, and it read as a promise this function does not make
+ * — that a DOI-less record could pick one up from a neighbour. It cannot; the
+ * neighbour would be in a different group.
  */
 function mergeGroup(group: Paper[]): Paper {
   const ordered = [...group].sort((a, b) => priorityOf(a) - priorityOf(b));
@@ -139,7 +146,6 @@ function mergeGroup(group: Paper[]): Paper {
       if (from && !fieldSources.topics) fieldSources.topics = from;
     }
 
-    if (!merged.doi && contributor.doi) merged.doi = contributor.doi;
   }
 
   merged.fieldSources = fieldSources;
