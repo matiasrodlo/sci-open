@@ -38,6 +38,11 @@ export const capabilities: ProviderCapabilities = {
    */
   keywordSearch: false,
 
+  // Also not "no keyword index": DataCite's works fine. What it returns is
+  // records that cannot be read and overlap nothing, which is a statement
+  // about the corpus rather than the API.
+  skipReason: { keywordSearch: 'no retrievable copies to contribute' },
+
   /**
    * On, and this is the case DataCite is actually good for. A DataCite DOI
    * resolves here and nowhere else in the fan-out — precisely because the

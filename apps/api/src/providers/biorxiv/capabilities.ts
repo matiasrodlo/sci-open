@@ -25,6 +25,9 @@ export const capabilities: ProviderCapabilities = {
    */
   keywordSearch: false,
 
+  // The one of the three keyword refusals that is actually about an index.
+  skipReason: { keywordSearch: 'no keyword index' },
+
   /**
    * On, and this is what the API is actually for. `/details/{server}/{doi}`
    * answers directly, and preprint DOIs are exactly what the other providers

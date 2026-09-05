@@ -46,10 +46,41 @@ export type ProviderReport = {
  * missing.
  */
 export type ProviderCapabilities = {
-  /** Has a real keyword index. False for bioRxiv, which scans a date window. */
+  /**
+   * Worth sending a keyword query to.
+   *
+   * Not the same as "has a keyword index", which is what this used to say and
+   * what the UI went on to tell readers. Three providers declare it false and
+   * only one of them lacks an index: bioRxiv's API offers date windows and
+   * nothing else, while CORE is too slow to answer inside the budget and
+   * DataCite's records never survive the retrievability filter. Both of those
+   * have a perfectly good index and are declined for a reason of our own.
+   *
+   * So a `false` here says nothing about why, and `skipReason` has to.
+   */
   keywordSearch: boolean;
   /** Can resolve a DOI to a single record. */
   doiLookup: boolean;
+  /**
+   * Why this provider declines a capability, in words a reader can be shown.
+   *
+   * Required for each of `keywordSearch` and `doiLookup` that is false —
+   * enforced by `capabilities.test.ts`, since the type cannot say "required
+   * when that other field is false" without turning this object into a union.
+   *
+   * It exists because the reason was being invented at the far end. `plan.ts`
+   * produced "no keywordSearch capability", which is the mechanical fact and
+   * not a reason, and the panel rendered every skip as "no keyword index for
+   * it" — true of bioRxiv, false of the other two, and unfalsifiable from
+   * where it was written. The provider knows why it is being skipped; nothing
+   * downstream does, so nothing downstream should be guessing.
+   *
+   * Kept short: it is shown after the provider's name in one muted line.
+   */
+  skipReason?: {
+    keywordSearch?: string;
+    doiLookup?: string;
+  };
   /** Fields this provider actually populates. */
   fields: readonly ProvenancedField[];
   /** Can express a year bound in the query, rather than us filtering after. */

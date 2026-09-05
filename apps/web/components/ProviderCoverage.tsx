@@ -1,5 +1,7 @@
+import { Fragment } from 'react';
 import { ProviderTotal } from '@open-access-explorer/shared';
 import { AlertTriangle } from 'lucide-react';
+import { coverageOf, isFailed, isSkipped, skipsByReason } from '@/lib/coverage';
 
 const PROVIDER_LABELS: Record<string, string> = {
   openalex: 'OpenAlex',
@@ -47,16 +49,21 @@ interface ProviderCoverageProps {
  *
  * The three outcomes are kept apart on purpose, because the whole point of
  * `ProviderReport` was that they are different things. A provider that was
- * *skipped* declined to guess — CORE and DataCite have no keyword index worth
- * the name, and the backend says so rather than sending a query it knows will
- * be answered badly. A provider that *failed* was asked and did not answer,
- * and that is the one that makes the total a lower bound. Reporting a skip as
- * a failure is the bug phase 08 fixed in the comparison sweep, and it would be
- * the same bug here.
+ * *skipped* declined to guess, and the backend says so rather than sending a
+ * query it knows will be answered badly. A provider that *failed* was asked
+ * and did not answer, and that is the one that makes the total a lower bound.
+ * Reporting a skip as a failure is the bug phase 08 fixed in the comparison
+ * sweep, and it would be the same bug here.
+ *
+ * What this component does **not** do any more is say why a provider was
+ * skipped. It used to print one sentence — "no keyword index for it" — for
+ * every skip, which is true of bioRxiv and false of CORE (too slow) and
+ * DataCite (nothing retrievable to contribute), the two it named most often.
+ * The reason arrives with the report now; see `ProviderCapabilities.skipReason`.
  */
 export function ProviderCoverage({ providers, complete, bounded }: ProviderCoverageProps) {
-  const skipped = providers.filter(p => p.error?.startsWith('skipped:'));
-  const failed = providers.filter(p => p.error && !p.error.startsWith('skipped:'));
+  const skipped = providers.filter(isSkipped);
+  const failed = providers.filter(isFailed);
   const answered = providers
     .filter(p => !p.error && (p.retrieved > 0 || typeof p.totalHits === 'number'))
     .sort((a, b) => (b.totalHits ?? 0) - (a.totalHits ?? 0));
@@ -110,31 +117,68 @@ export function ProviderCoverage({ providers, complete, bounded }: ProviderCover
             <span className="font-medium">
               {sourceGap ? 'This search is incomplete.' : 'This count is a lower bound.'}
             </span>{' '}
-            {failed.length > 0 ? (
+            {/*
+              Every reason that applies, not the first one. These were an
+              if/else chain, so a search that both lost a source *and* dropped
+              papers unexamined reported only the source — the reader was told
+              one of two independent things that had gone wrong, and the
+              rescue's shortfall is invisible everywhere else in the response.
+
+              They are genuinely independent: a source gap is a hole in the
+              corpus, a bounded rescue is a hole in what was asked about the
+              papers that did arrive. Either can happen without the other, and
+              on a broad query both usually do.
+            */}
+            {sourceGap && (
               <>
-                {failed.map(p => label(p.source)).join(', ')}{' '}
-                {failed.length === 1 ? 'did not answer' : 'did not answer'}, so the count
-                above is a lower bound — there are more matching papers than are shown.
+                {failed.length > 0
+                  ? `${failed.map(p => label(p.source)).join(', ')} did not answer`
+                  : 'At least one source did not answer'}
+                , so the count above is a lower bound — there are more matching papers
+                than are shown.{' '}
               </>
-            ) : sourceGap ? (
+            )}
+            {bounded === true && (
+              // Two spellings of one fact, because the first clause of the
+              // original — "Every source answered, but…" — is a lie the moment
+              // it appears beside a source that did not.
               <>
-                At least one source did not answer, so the count above is a lower bound.
-              </>
-            ) : (
-              <>
-                Every source answered, but not every paper could be checked for a
-                retrievable copy — some were left out without being looked up, so there
-                may be more open-access papers than are shown.
+                {sourceGap ? 'Separately, not' : 'Every source answered, but not'} every paper
+                could be checked for a retrievable copy — some were left out without being
+                looked up, so there may be more open-access papers than are shown.
               </>
             )}
           </p>
         </div>
       )}
 
+      {/*
+        Not in the amber banner, deliberately. A truncated read is what a broad
+        query normally does — it is true of nearly every search here — and
+        putting a warning on the normal case is how a reader learns to stop
+        reading warnings. The banner stays for the two things that actually went
+        wrong. This is the fact that explains the number above it, and it sits
+        beside the "not searched" line as a fact of the same kind.
+      */}
+      {coverageOf(providers).truncated && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Each source was read to a fixed depth, so the total above is what those reads held
+          after de-duplication
+          <span className="opacity-70"> — not everything that matches.</span>
+        </p>
+      )}
+
       {skipped.length > 0 && (
         <p className="mt-2 text-xs text-muted-foreground">
-          Not searched for this query: {skipped.map(p => label(p.source)).join(', ')}
-          <span className="opacity-70"> — no keyword index for it.</span>
+          Not searched for this query:{' '}
+          {skipsByReason(providers).map(({ reason, sources }, index) => (
+            <Fragment key={reason}>
+              {index > 0 && '; '}
+              {sources.map(label).join(', ')}
+              <span className="opacity-70"> — {reason}</span>
+            </Fragment>
+          ))}
+          <span className="opacity-70">.</span>
         </p>
       )}
     </div>

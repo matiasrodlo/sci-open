@@ -10,11 +10,11 @@ import { ProviderCoverage } from '../ProviderCoverage';
  * the `error` field — `skipped:` prefixed or not — which is exactly the kind of
  * distinction that collapses under a later edit.
  *
- * A provider that was *skipped* declined to guess: it has no keyword index, and
- * the backend says so rather than sending a query it knows will be answered
- * badly. A provider that *failed* was asked and did not answer, and only that
- * makes the total a lower bound. Reporting a skip as a failure is the bug
- * phase 08 fixed in the comparison sweep, and it would be the same bug here.
+ * A provider that was *skipped* declined to guess, and said why — the reason
+ * comes from `ProviderCapabilities.skipReason` and is shown verbatim. A
+ * provider that *failed* was asked and did not answer, and only that makes the
+ * total a lower bound. Reporting a skip as a failure is the bug phase 08 fixed
+ * in the comparison sweep, and it would be the same bug here.
  */
 
 const answered = (source: string, over: Partial<ProviderTotal> = {}): ProviderTotal => ({
@@ -25,10 +25,10 @@ const answered = (source: string, over: Partial<ProviderTotal> = {}): ProviderTo
 });
 
 const failed = (source: string): ProviderTotal => ({ source, retrieved: 0, error: 'exceeded the 20000ms budget' });
-const skipped = (source: string): ProviderTotal => ({
+const skipped = (source: string, reason = 'no keyword index'): ProviderTotal => ({
   source,
   retrieved: 0,
-  error: 'skipped: no keywordSearch capability'
+  error: `skipped: ${reason}`
 });
 
 const banner = () => screen.queryByRole('status');
@@ -55,11 +55,54 @@ describe('telling a skip from a failure', () => {
     expect(banner()).toBeNull();
   });
 
-  it('lists a skipped provider as not searched, with the reason', () => {
-    render(<ProviderCoverage providers={[answered('europepmc'), skipped('core')]} complete />);
+  it('lists a skipped provider as not searched, with the reason it was given', () => {
+    render(
+      <ProviderCoverage
+        providers={[answered('europepmc'), skipped('core', 'too slow to answer in time')]}
+        complete
+      />
+    );
 
-    expect(screen.getByText(/Not searched for this query/).textContent).toContain('CORE');
-    expect(screen.getByText(/Not searched for this query/).textContent).toContain('no keyword index');
+    const line = screen.getByText(/Not searched for this query/).textContent!;
+    expect(line).toContain('CORE');
+    expect(line).toContain('too slow to answer in time');
+  });
+
+  /**
+   * The panel used to print "no keyword index for it" for every skip. It is
+   * true of bioRxiv and false of CORE, which has one and is too slow, and of
+   * DataCite, which has one and returns nothing readable. Three providers, one
+   * sentence, two lies — and nothing at this end could have known better,
+   * because the reason lived in the capability files.
+   */
+  it('does not invent a reason of its own', () => {
+    render(
+      <ProviderCoverage
+        providers={[
+          answered('europepmc'),
+          skipped('core', 'too slow to answer in time'),
+          skipped('datacite', 'no retrievable copies to contribute')
+        ]}
+        complete
+      />
+    );
+
+    expect(screen.getByText(/Not searched for this query/).textContent).not.toContain('keyword index');
+  });
+
+  it('names each reason once, with everyone it applies to', () => {
+    // Six providers decline a DOI query between them for one reason. Six lines
+    // saying the same thing is worse than one line naming six providers.
+    render(
+      <ProviderCoverage
+        providers={[answered('europepmc'), skipped('core', 'no DOI index'), skipped('plos', 'no DOI index')]}
+        complete
+      />
+    );
+
+    const line = screen.getByText(/Not searched for this query/).textContent!;
+    expect(line).toContain('CORE, PLOS');
+    expect(line.match(/no DOI index/g)).toHaveLength(1);
   });
 
   it('warns on complete: false even when no provider carries an error', () => {
@@ -99,9 +142,11 @@ describe('a total bounded by the rescue rather than by a source', () => {
     expect(banner()!.textContent).not.toContain('This search is incomplete');
   });
 
-  it('says a source failed when one did, even if the rescue was also bounded', () => {
-    // A missing source is the more serious of the two and names itself; the
-    // bounded rescue does not get to displace it.
+  it('reports both when both happened, rather than the first of the two', () => {
+    // They are independent: a source gap is a hole in the corpus, a bounded
+    // rescue is a hole in what was asked about the papers that did arrive. An
+    // if/else chain showed only the source, and the rescue's shortfall appears
+    // nowhere else in the response.
     render(
       <ProviderCoverage
         providers={[answered('europepmc'), failed('openaire')]}
@@ -110,8 +155,13 @@ describe('a total bounded by the rescue rather than by a source', () => {
       />
     );
 
-    expect(banner()!.textContent).toContain('This search is incomplete');
-    expect(banner()!.textContent).toContain('OpenAIRE');
+    const text = banner()!.textContent!;
+    expect(text).toContain('This search is incomplete');
+    expect(text).toContain('OpenAIRE');
+    expect(text).toContain('retrievable copy');
+    // "Every source answered, but…" is the wording for the other case, and it
+    // is false beside a source that did not.
+    expect(text).not.toContain('Every source answered');
   });
 
   it('stays silent when the rescue was not bounded', () => {
@@ -124,6 +174,46 @@ describe('a total bounded by the rescue rather than by a source', () => {
     render(<ProviderCoverage providers={[answered('europepmc')]} complete />);
 
     expect(banner()).toBeNull();
+  });
+});
+
+/**
+ * The number in the header is `depth × providers that answered`, less
+ * duplicates and less what the gates dropped — measured on `ai` as 1,716 with
+ * three sources up and 2,891 with five, minutes apart. The panel is where a
+ * reader can see that per source; this line is what connects it to the total.
+ *
+ * Deliberately not in the amber banner: a truncated read is the normal state of
+ * a broad search, and a warning shown on the normal case teaches people to
+ * ignore warnings.
+ */
+describe('saying what the total is a total of', () => {
+  it('says the read was cut short when a source held more than was read', () => {
+    render(<ProviderCoverage providers={[answered('openaire', { totalHits: 684999, retrieved: 600 })]} complete />);
+
+    expect(screen.getByText(/read to a fixed depth/).textContent).toContain('not everything that matches');
+    // Not an alarm — nothing failed.
+    expect(banner()).toBeNull();
+  });
+
+  it('stays quiet when every source was read to the end', () => {
+    // A query narrow enough to exhaust its sources really does have a complete
+    // count, and saying otherwise would be its own kind of lie.
+    render(<ProviderCoverage providers={[answered('doaj', { totalHits: 12, retrieved: 12 })]} complete />);
+
+    expect(screen.queryByText(/read to a fixed depth/)).toBeNull();
+  });
+
+  it('says it alongside a failure, since the two shorten the count differently', () => {
+    render(
+      <ProviderCoverage
+        providers={[answered('openaire', { totalHits: 684999, retrieved: 600 }), failed('arxiv')]}
+        complete={false}
+      />
+    );
+
+    expect(banner()!.textContent).toContain('arXiv');
+    expect(screen.getByText(/read to a fixed depth/)).toBeTruthy();
   });
 });
 

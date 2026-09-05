@@ -12,6 +12,7 @@ import { SearchError } from '@/components/SearchError';
 import { searchPapers } from '@/lib/fetcher';
 import { toList, toSingle, toPage, toYear, toSort } from '@/lib/search-params';
 import { classifySearchError } from '@/lib/search-error';
+import { coverageOf, totalLabel } from '@/lib/coverage';
 import { SearchParams } from '@open-access-explorer/shared';
 
 // Force dynamic rendering
@@ -96,6 +97,16 @@ async function ResultsContent({ searchParams }: { searchParams: ResultsSearchPar
       return <EmptyState type="no-results" />;
     }
 
+    /**
+     * What `results.total` is a total of.
+     *
+     * It used to be labelled "retrievable open-access papers", which reads as
+     * a count of the literature and is not one: it is the survivors of a fixed
+     * read depth per provider, so the same query answers 1,716 with three
+     * sources up and 2,891 with five. See `lib/coverage.ts`.
+     */
+    const coverage = coverageOf(results.providerTotals ?? []);
+
             return (
               <div className="space-y-8">
                 {/* Results Header */}
@@ -103,8 +114,15 @@ async function ResultsContent({ searchParams }: { searchParams: ResultsSearchPar
                   <div className="flex items-center justify-between">
                     <div className="flex items-baseline gap-3">
                       <h1 className="text-xl font-semibold">{query}</h1>
-                      <span className="text-sm text-muted-foreground">
-                        {results.total.toLocaleString()} retrievable open-access papers
+                      <span
+                        className="text-sm text-muted-foreground"
+                        title={
+                          coverage.truncated
+                            ? 'Each source is read to a fixed depth, so this is what those reads held after de-duplication — not everything that matches.'
+                            : undefined
+                        }
+                      >
+                        {totalLabel(results.total, coverage)}
                       </span>
                     </div>
                     <ExportButton 

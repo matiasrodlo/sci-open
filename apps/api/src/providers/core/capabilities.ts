@@ -24,6 +24,11 @@ export const capabilities: ProviderCapabilities = {
    */
   keywordSearch: false,
 
+  // Not "no keyword index" — CORE has one, and the panel used to say otherwise
+  // for want of anywhere to put the real reason. Six searches in ten miss the
+  // budget; that is the reason, and it is the one a reader can act on.
+  skipReason: { keywordSearch: 'too slow to answer in time' },
+
   /**
    * On, and this is what CORE is for. CORE aggregates repository deposits, so
    * its value is finding a readable copy of a paper already identified, which

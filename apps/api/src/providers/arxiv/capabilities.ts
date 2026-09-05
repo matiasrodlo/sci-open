@@ -22,6 +22,8 @@ export const capabilities: ProviderCapabilities = {
   // missing capability instead of recording a silent nothing.
   doiLookup: false,
 
+  skipReason: { doiLookup: 'no DOI index' },
+
   fields: [
     'title',
     'abstract',

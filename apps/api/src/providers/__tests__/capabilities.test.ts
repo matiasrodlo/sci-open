@@ -108,6 +108,54 @@ describe('provider capabilities', () => {
         expect(provider.capabilities.fields).toContain('citationCount');
       }
     });
+
+    /**
+     * A declined capability has to say why, and the reason has to be one a
+     * reader can be shown — `ProviderCoverage` renders it verbatim.
+     *
+     * The type cannot require this without becoming a discriminated union that
+     * every provider pays for, so it is required here. It is worth requiring
+     * because the failure already happened: `keywordSearch: false` was read as
+     * "has no keyword index", which is what the field's own comment said, and
+     * the panel told readers exactly that about CORE and DataCite — both of
+     * which have one. Nobody writing the frontend could have known better,
+     * because the reason was not written anywhere it could reach.
+     */
+    it('says why, for each capability it declines', () => {
+      for (const capability of ['keywordSearch', 'doiLookup'] as const) {
+        if (provider.capabilities[capability]) continue;
+
+        const reason = provider.capabilities.skipReason?.[capability];
+
+        expect(
+          reason,
+          `${id} declares \`${capability}: false\` with no \`skipReason\` beside it. ` +
+            'The panel shows that reason to readers; without one it falls back to ' +
+            'naming the flag, which is not a reason.'
+        ).toBeTruthy();
+
+        // Rendered after the provider's name in one muted line, so it is a
+        // phrase rather than a sentence.
+        expect(reason!.length, `${id}: "${reason}"`).toBeLessThanOrEqual(60);
+        expect(reason, id).toBe(reason!.trim());
+        expect(reason, `${id} should not end with a full stop`).not.toMatch(/\.$/);
+      }
+    });
+  });
+
+  /**
+   * The three that decline a keyword query, and the reason the panel can no
+   * longer print one sentence for all of them: one has no index, and the other
+   * two have a perfectly good one and are declined for reasons of our own.
+   */
+  it('does not tell the same story about all three keyword refusals', () => {
+    const declining = PROVIDERS.filter(p => !p.capabilities.keywordSearch);
+    expect(declining.map(p => p.id).sort()).toEqual(['biorxiv', 'core', 'datacite']);
+
+    const reasons = declining.map(p => p.capabilities.skipReason!.keywordSearch!);
+
+    expect(new Set(reasons).size).toBe(3);
+    expect(reasons.filter(r => r.includes('keyword index'))).toHaveLength(1);
   });
 
   /**

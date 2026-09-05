@@ -16,7 +16,19 @@ import type { ProviderEntry } from './registry';
 
 export type SkippedProvider = {
   provider: ProviderId;
-  /** Names the capability that was missing, so a skip is explainable. */
+  /**
+   * Why, in the provider's own words — `capabilities.skipReason`.
+   *
+   * It used to be the name of the missing capability, which is the mechanical
+   * fact and not a reason: "no keywordSearch capability" says a flag is false
+   * and nothing about why. The panel then supplied a why of its own, the same
+   * one for every skip, and got it wrong for two of the three providers it
+   * regularly names. The reason travels from the provider now.
+   *
+   * The fallback below is the backstop for a capability declared false with no
+   * reason beside it. `capabilities.test.ts` makes that a failing test rather
+   * than a string a reader has to interpret.
+   */
   reason: string;
 };
 
@@ -34,12 +46,12 @@ export function plan(query: Query, providers: readonly ProviderEntry[]): Plan {
 
     if (query.doi) {
       if (caps.doiLookup) planned.push(provider);
-      else skipped.push({ provider: id, reason: 'no doiLookup capability' });
+      else skipped.push({ provider: id, reason: caps.skipReason?.doiLookup ?? 'no doiLookup capability' });
       continue;
     }
 
     if (!caps.keywordSearch) {
-      skipped.push({ provider: id, reason: 'no keywordSearch capability' });
+      skipped.push({ provider: id, reason: caps.skipReason?.keywordSearch ?? 'no keywordSearch capability' });
       continue;
     }
 
