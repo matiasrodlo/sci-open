@@ -45,6 +45,90 @@ export type NcbiPayload = {
   articles: unknown[];
 };
 
+/** Options for a request that names its records rather than searching for them. */
+export type RecordFetchOptions = Omit<FetchOptions, 'pageSize' | 'offset'>;
+
+type EfetchOptions = {
+  client: AxiosInstance;
+  key?: string;
+  headers?: Record<string, string>;
+  timeoutMs: number;
+  signal?: AbortSignal;
+};
+
+/**
+ * The records for a list of PMIDs.
+ *
+ * `undefined` means the response carried no `PubmedArticleSet` at all, which is
+ * what PubMed answers both for ids it does not have and for a request it could
+ * not serve. The two callers read that differently — a search handed efetch ids
+ * esearch had just returned, so an empty set there is the provider failing,
+ * while a lookup of an id nobody has is an ordinary answer — so the decision is
+ * left to them rather than made here.
+ */
+async function efetch(pmids: string[], options: EfetchOptions): Promise<unknown[] | undefined> {
+  const { client, key, headers, timeoutMs, signal } = options;
+
+  // The id list goes in a POST body: a few hundred PMIDs overflow the URI
+  // length limit and NCBI answers an oversized GET with 414, which the pooled
+  // client does not treat as an error — so the failure used to surface only as
+  // zero results.
+  const body = new URLSearchParams({
+    db: 'pubmed',
+    id: pmids.join(','),
+    retmode: 'xml',
+    rettype: 'abstract',
+    ...(key ? { api_key: key } : {})
+  });
+
+  const fetched = await client.post('/efetch.fcgi', body.toString(), {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...(headers ?? {}) },
+    timeout: timeoutMs,
+    ...(signal ? { signal } : {})
+  });
+
+  if (typeof fetched.data !== 'string') {
+    throw new NcbiUnavailableError(`efetch returned ${typeof fetched.data}, not XML (HTTP ${fetched.status})`);
+  }
+
+  const parsed = await parseStringPromise(fetched.data);
+  const articles = parsed?.PubmedArticleSet?.PubmedArticle;
+
+  if (articles === undefined) return undefined;
+  return Array.isArray(articles) ? articles : [articles];
+}
+
+/**
+ * One record by its PMID, without going through esearch.
+ *
+ * The id *is* the key efetch takes, so the search half of this module has
+ * nothing to contribute to the question — and routing a PMID through
+ * `translate` actively breaks it: the id arrives as a bare term and comes out
+ * as `(37494408[tiab] OR 37494408[mh])`, searching the abstracts and MeSH
+ * headings for a number that appears in neither. That is what made the paper
+ * endpoint 404 for every PubMed record.
+ */
+export async function fetchRecord(
+  nativeId: string,
+  options: RecordFetchOptions
+): Promise<NcbiPayload> {
+  const { baseUrl = DEFAULT_BASE_URL, apiKey, timeoutMs, signal, userAgent } = options;
+
+  const client: AxiosInstance = getPooledClient(baseUrl, getServiceConfig('ncbi'));
+  const key = usableApiKey(apiKey);
+
+  const articles = await efetch([nativeId], {
+    client,
+    timeoutMs,
+    ...(key ? { key } : {}),
+    ...(userAgent ? { headers: { 'User-Agent': userAgent } } : {}),
+    ...(signal ? { signal } : {})
+  });
+
+  // An id nobody has is an answer, not a failure.
+  return { articles: articles ?? [] };
+}
+
 export async function fetchPage(nativeQuery: string, options: FetchOptions): Promise<NcbiPayload> {
   const {
     baseUrl = DEFAULT_BASE_URL,
@@ -101,31 +185,16 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
     return { articles: [], ...(totalHits !== undefined ? { totalHits } : {}) };
   }
 
-  // The id list goes in a POST body: a few hundred PMIDs overflow the URI
-  // length limit and NCBI answers an oversized GET with 414, which the pooled
-  // client does not treat as an error — so the failure used to surface only as
-  // zero results.
-  const body = new URLSearchParams({
-    db: 'pubmed',
-    id: pmids.join(','),
-    retmode: 'xml',
-    rettype: 'abstract',
-    ...(key ? { api_key: key } : {})
-  });
-
-  const fetched = await client.post('/efetch.fcgi', body.toString(), {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...(headers ?? {}) },
-    timeout: timeoutMs,
+  const articles = await efetch(pmids, {
+    client,
+    timeoutMs,
+    ...(key ? { key } : {}),
+    ...(headers ? { headers } : {}),
     ...(signal ? { signal } : {})
   });
 
-  if (typeof fetched.data !== 'string') {
-    throw new NcbiUnavailableError(`efetch returned ${typeof fetched.data}, not XML (HTTP ${fetched.status})`);
-  }
-
-  const parsed = await parseStringPromise(fetched.data);
-  const articles = parsed?.PubmedArticleSet?.PubmedArticle;
-
+  // These are ids esearch has just handed back, so a response with no
+  // PubmedArticleSet in it is the provider failing rather than an empty corpus.
   if (articles === undefined) {
     throw new NcbiUnavailableError(
       `efetch returned no PubmedArticleSet for ${pmids.length} ids it was given`
@@ -133,7 +202,7 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
   }
 
   return {
-    articles: Array.isArray(articles) ? articles : [articles],
+    articles,
     ...(totalHits !== undefined ? { totalHits } : {})
   };
 }

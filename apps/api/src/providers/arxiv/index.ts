@@ -1,7 +1,7 @@
 import type { Paper, Query } from '@open-access-explorer/shared';
 import { capabilities } from './capabilities';
 import { translate, type TranslateOptions } from './translate';
-import { fetchPage, type FetchOptions } from './fetch';
+import { fetchPage, fetchRecord, type FetchOptions, type RecordFetchOptions } from './fetch';
 import { normalize, totalHits, ArxivQueryError, type SkippedRecord } from './normalize';
 
 /**
@@ -12,8 +12,8 @@ import { normalize, totalHits, ArxivQueryError, type SkippedRecord } from './nor
  * and makes no open-access decision. Those are the orchestrator's.
  */
 
-export { capabilities, translate, fetchPage, normalize, totalHits, ArxivQueryError };
-export type { TranslateOptions, FetchOptions, SkippedRecord };
+export { capabilities, translate, fetchPage, fetchRecord, normalize, totalHits, ArxivQueryError };
+export type { TranslateOptions, FetchOptions, RecordFetchOptions, SkippedRecord };
 
 export type SearchOptions = TranslateOptions &
   Omit<FetchOptions, 'pageSize' | 'offset'> & {
@@ -74,4 +74,18 @@ export async function search(
     skipped,
     latency
   };
+}
+
+export type LookupOptions = RecordFetchOptions & { now?: () => Date };
+
+/** One paper by its arXiv identifier, with or without a version suffix. */
+export async function lookup(nativeId: string, options: LookupOptions): Promise<Paper | null> {
+  const { now = () => new Date(), ...fetchOptions } = options;
+
+  const started = Date.now();
+  const payload = await fetchRecord(nativeId, fetchOptions);
+  const latency = Date.now() - started;
+
+  const { papers } = normalize(payload, { retrievedAt: now().toISOString(), latency });
+  return papers[0] ?? null;
 }

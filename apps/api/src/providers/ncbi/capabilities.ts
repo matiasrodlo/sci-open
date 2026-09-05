@@ -8,6 +8,12 @@ import type { ProviderCapabilities } from '@open-access-explorer/shared';
  * so it is genuinely applied upstream rather than accepted and ignored.
  */
 export const capabilities: ProviderCapabilities = {
+  /**
+   * Scoped to `[tiab]` and `[mh]` — see `translate.ts`. Worth knowing here
+   * because `reportsTotal` below is a count of *this* query, and unscoped it
+   * was counting a different thing from every other provider in the fan-out:
+   * 287,637 for `ai` against 60,399 in the title or abstract.
+   */
   keywordSearch: true,
 
   // `"10.x/y"[DOI]` resolves to the single record.

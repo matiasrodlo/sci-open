@@ -14,8 +14,36 @@ import type { Query } from '@open-access-explorer/shared';
  * asked the question the user meant.
  */
 
-/** Every clause searches all metadata fields; arXiv has no combined default. */
-const FIELD = 'all';
+/**
+ * The two fields a search for a subject means, and arXiv has no combined
+ * default for them.
+ *
+ * `all:` was here, and it is every metadata field arXiv holds — the authors,
+ * the submitter's comments, the journal reference, the category names. On a
+ * word that is also a surname or a category that is mostly noise, and the
+ * count it produced sat in the panel beside DOAJ's title/abstract/keywords
+ * figure as though the two answered the same question.
+ *
+ * Each term gets its own `(ti: OR abs:)` pair rather than one pair wrapping
+ * the whole query, because a field prefix binds to the token after it and
+ * nothing else — the same trap Europe PMC has, where `TITLE_ABS:gene editing`
+ * scopes `gene` and leaves `editing` loose across the index.
+ *
+ * Worth stating plainly: this is a guard rather than a measured win. On
+ * `crispr` the two forms return **112 records each** — nobody is named Crispr
+ * and it is not a category, so `all:` had nothing extra to match. The change
+ * earns itself on a word that collides with an author's surname or a category
+ * label, which is exactly the case that made PubMed's unscoped count 4.8×
+ * its title-and-abstract one. arXiv's own rate limiting kept that comparison
+ * from being measured here.
+ *
+ * `cat:` is deliberately not in the list, though it is the nearest thing arXiv
+ * has to the subject index that `MESH`, `KW` and PLOS's `subject` contribute
+ * elsewhere. Its values are codes — `cs.AI`, `q-bio.GN` — so a word query
+ * cannot match one, and including it would add a clause that can only ever
+ * return nothing.
+ */
+const FIELDS = ['ti', 'abs'] as const;
 
 /**
  * Concrete endpoints for a half-open range, because arXiv rejects a wildcard
@@ -30,7 +58,12 @@ const LATEST = '999912312359';
  * only option that keeps the rest of the phrase searchable.
  */
 function quote(phrase: string): string {
-  return `${FIELD}:"${phrase.replace(/"/g, ' ').replace(/\s+/g, ' ').trim()}"`;
+  return `"${phrase.replace(/"/g, ' ').replace(/\s+/g, ' ').trim()}"`;
+}
+
+/** One search word or quoted phrase, in the title or the abstract. */
+function scoped(value: string): string {
+  return `(${FIELDS.map(field => `${field}:${value}`).join(' OR ')})`;
 }
 
 export type TranslateOptions = {
@@ -49,8 +82,8 @@ export function translate(query: Query, _options: TranslateOptions = {}): string
 
   // No DOI clause: arXiv has no DOI index, which `capabilities.doiLookup`
   // declares, so the orchestrator never routes a DOI lookup here.
-  const terms = query.terms.filter(t => t.trim()).map(t => `${FIELD}:${t.trim()}`);
-  const phrases = query.phrases.filter(p => p.trim()).map(quote);
+  const terms = query.terms.filter(t => t.trim()).map(t => scoped(t.trim()));
+  const phrases = query.phrases.filter(p => p.trim()).map(p => scoped(quote(p)));
 
   if (terms.length > 0) {
     const joined = terms.join(` ${query.join} `);

@@ -38,20 +38,21 @@ export type ArxivFeed = {
   };
 };
 
-export async function fetchPage(nativeQuery: string, options: FetchOptions): Promise<ArxivFeed> {
-  const { baseUrl = DEFAULT_BASE_URL, pageSize, offset, timeoutMs, signal, userAgent } = options;
+/** Options for a request that names its records rather than searching for them. */
+export type RecordFetchOptions = Omit<FetchOptions, 'pageSize' | 'offset'>;
+
+/** The one request both entry points make, differing only in what they ask for. */
+async function get(
+  params: Record<string, string | number>,
+  options: RecordFetchOptions
+): Promise<ArxivFeed> {
+  const { baseUrl = DEFAULT_BASE_URL, timeoutMs, signal, userAgent } = options;
 
   const client = getPooledClient(baseUrl, getServiceConfig('arxiv'));
 
   // The base URL is the whole endpoint, so the request path is empty.
   const response = await client.get<string>('', {
-    params: {
-      search_query: nativeQuery,
-      start: Math.max(offset, 0),
-      max_results: pageSize,
-      sortBy: 'relevance',
-      sortOrder: 'descending'
-    },
+    params,
     timeout: timeoutMs,
     // The feed is XML; letting axios guess invites it to hand back a partly
     // parsed object on a content-type it recognises.
@@ -68,4 +69,42 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
   }
 
   return parseStringPromise(response.data);
+}
+
+export async function fetchPage(nativeQuery: string, options: FetchOptions): Promise<ArxivFeed> {
+  const { pageSize, offset, ...rest } = options;
+
+  return get(
+    {
+      search_query: nativeQuery,
+      start: Math.max(offset, 0),
+      max_results: pageSize,
+      sortBy: 'relevance',
+      sortOrder: 'descending'
+    },
+    rest
+  );
+}
+
+/**
+ * One record, named rather than searched for.
+ *
+ * `id_list` is a different parameter from `search_query`, not a query written
+ * in a different way, which is why this is a second entry point rather than
+ * something `translate` could express. An arXiv identifier appears in no
+ * searchable field — `(ti:1706.03762 OR abs:1706.03762 OR …)`, which is what
+ * routing a native id through `translate` produces, matches nothing — so the
+ * paper endpoint answered 404 for every arXiv record before this existed.
+ *
+ * A versioned id round-trips exactly: `id_list=1706.03762v7` comes back as
+ * `http://arxiv.org/abs/1706.03762v7`, which matters because `normalize` keeps
+ * the version in `nativeId` and `lookupPaper` compares the two. An id nobody
+ * has yields a feed with no entries, and a malformed one an error entry whose
+ * id is not the one asked for — rejected by that same comparison.
+ */
+export async function fetchRecord(
+  nativeId: string,
+  options: RecordFetchOptions
+): Promise<ArxivFeed> {
+  return get({ id_list: nativeId, max_results: 1 }, options);
 }

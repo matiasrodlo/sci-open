@@ -15,10 +15,17 @@ import { PROVIDERS, type ProviderEntry } from './registry';
  * rather than a preference:
  *
  * - **A by-id endpoint**, where the provider has one. `ProviderEntry.lookup`.
- * - **The search endpoint**, otherwise. That is not a fallback for the six
- *   providers without a `lookup`: arXiv, PubMed and Europe PMC index their own
- *   ids as searchable text, and bioRxiv, DataCite and PLOS mint DOIs as native
- *   ids, so the id *is* a DOI lookup once `parseQuery` recognises it.
+ * - **The search endpoint**, otherwise. That is not a fallback for the three
+ *   providers without a `lookup`: bioRxiv, DataCite and PLOS mint DOIs as
+ *   native ids, so the id *is* a DOI lookup once `parseQuery` recognises it.
+ *
+ * The second branch used to carry arXiv, PubMed and Europe PMC as well, on the
+ * grounds that they index their own ids as searchable text. Whether they do is
+ * beside the point, because a native id reaches `translate` as an ordinary
+ * term and comes back scoped to the fields a keyword belongs in — `(ti:… OR
+ * abs:…)`, `(…[tiab] OR …[mh])`, `(TITLE_ABS:… OR MESH:… OR KW:…)` — none of
+ * which contain an identifier. All three answered 404 for every record they
+ * owned. They have `lookup` entries now.
  *
  * The old route took `results[0]` from whatever the search returned. This one
  * requires the record to be the record that was asked for, so a near miss is a

@@ -62,9 +62,17 @@ export type ProviderEntry = {
    * to ask for one.
    *
    * Absent means "ask the search endpoint for it", which `lookupPaper` does —
-   * and for the six providers without an entry here that is not a fallback but
-   * the right request: three of them mint DOIs as their native ids, so the id
-   * *is* a DOI lookup, and the other three index theirs as searchable text.
+   * and for the three providers without an entry here that is not a fallback
+   * but the right request: bioRxiv, DataCite and PLOS mint DOIs as their
+   * native ids, so the id *is* a DOI lookup.
+   *
+   * arXiv, PubMed and Europe PMC were in that group too, on the claim that
+   * they index their ids as searchable text. They do not, or not in the fields
+   * their `translate` scopes a term to, and the paper endpoint 404'd on every
+   * record from all three until they got the entries below. A native id is not
+   * a search term, and the only providers that can be asked for one through
+   * `search` are the ones whose ids are DOIs — which `parseQuery` recognises
+   * and routes to a DOI clause rather than a scoped keyword.
    */
   lookup?(args: ProviderLookupArgs): Promise<Paper | null>;
 };
@@ -90,6 +98,14 @@ export const PROVIDERS: ProviderEntry[] = [
         ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
         skipped: result.skipped
       };
+    },
+    async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
+      return arxiv.lookup(nativeId, {
+        timeoutMs,
+        ...(signal ? { signal } : {}),
+        ...(userAgent ? { userAgent } : {}),
+        ...(now ? { now } : {})
+      });
     }
   },
   {
@@ -113,6 +129,15 @@ export const PROVIDERS: ProviderEntry[] = [
         ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
         skipped: result.skipped
       };
+    },
+    async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
+      return ncbi.lookup(nativeId, {
+        timeoutMs,
+        ...(process.env.NCBI_API_KEY ? { apiKey: process.env.NCBI_API_KEY } : {}),
+        ...(signal ? { signal } : {}),
+        ...(userAgent ? { userAgent } : {}),
+        ...(now ? { now } : {})
+      });
     }
   },
   {
@@ -322,6 +347,14 @@ export const PROVIDERS: ProviderEntry[] = [
         ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
         skipped: result.skipped
       };
+    },
+    async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
+      return europepmc.lookup(nativeId, {
+        timeoutMs,
+        ...(signal ? { signal } : {}),
+        ...(userAgent ? { userAgent } : {}),
+        ...(now ? { now } : {})
+      });
     }
   }
 ];

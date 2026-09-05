@@ -25,6 +25,32 @@ function quote(phrase: string): string {
   return `"${phrase.replace(/"/g, ' ').replace(/\s+/g, ' ').trim()}"`;
 }
 
+/**
+ * One search word, scoped to the title, the abstract and the MeSH headings.
+ *
+ * Unscoped, PubMed searches *every* field, and the panel's count said so
+ * without saying so. Measured on `ai`: 287,637 records match unscoped and
+ * 60,399 match in the title or abstract — the other 227,238 are matches on an
+ * author's name (16,910 papers have an author surnamed Ai), an affiliation, a
+ * journal title. Beside OpenAlex and DOAJ in the same list, that number was
+ * answering a different question from theirs.
+ *
+ * `[mh]` is in the scope and `[tiab]` alone is not, because dropping the
+ * subject index would be a real loss rather than a noise cut. Measured on
+ * `crispr`, where the indexing is doing work: 37,290 unscoped, 34,557 in
+ * `[tiab]`, 34,719 with `[mh]` beside it — the MeSH clause costs nothing and
+ * recovers the records indexed under the heading whose abstract never spells
+ * it out. So the trade is 7% on a subject term against 79% of noise on a term
+ * that is also a surname.
+ *
+ * A word that is no MeSH heading is not an error: PubMed reports it in
+ * `phrasesnotfound` and matches nothing on that side of the OR, which is
+ * exactly right when the `[tiab]` side is carrying the query.
+ */
+function scoped(term: string): string {
+  return `(${term}[tiab] OR ${term}[mh])`;
+}
+
 export type TranslateOptions = {
   /** Restrict to the PMC open-access subset. */
   openAccessOnly?: boolean;
@@ -38,8 +64,8 @@ export function translate(query: Query, options: TranslateOptions = {}): string 
     // otherwise try to tokenise.
     clauses.push(`${quote(query.doi)}[DOI]`);
   } else {
-    const terms = query.terms.filter(t => t.trim()).map(t => t.trim());
-    const phrases = query.phrases.filter(p => p.trim()).map(quote);
+    const terms = query.terms.filter(t => t.trim()).map(t => scoped(t.trim()));
+    const phrases = query.phrases.filter(p => p.trim()).map(p => scoped(quote(p)));
 
     if (terms.length > 0) {
       const joined = terms.join(` ${query.join} `);

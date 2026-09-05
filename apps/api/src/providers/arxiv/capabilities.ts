@@ -10,6 +10,10 @@ import type { ProviderCapabilities } from '@open-access-explorer/shared';
  * ends up asserting a filter it never applied.
  */
 export const capabilities: ProviderCapabilities = {
+  /**
+   * Scoped to `ti:` and `abs:` — see `translate.ts`. `all:` was every metadata
+   * field arXiv holds, the authors and the submitter's comments included.
+   */
   keywordSearch: true,
 
   // arXiv has no DOI index. The old connector accepted a DOI lookup and

@@ -1,6 +1,6 @@
 import type { Paper, Query } from '@open-access-explorer/shared';
 import { capabilities } from './capabilities';
-import { translate, type TranslateOptions } from './translate';
+import { translate, translateId, type TranslateOptions } from './translate';
 import { fetchPage, EuropePmcUnavailableError, type FetchOptions } from './fetch';
 import { normalize, type SkippedRecord } from './normalize';
 
@@ -14,7 +14,7 @@ import { normalize, type SkippedRecord } from './normalize';
  * DOI lookup, or a fixture-recording script.
  */
 
-export { capabilities, translate, fetchPage, normalize, EuropePmcUnavailableError };
+export { capabilities, translate, translateId, fetchPage, normalize, EuropePmcUnavailableError };
 export type { TranslateOptions, FetchOptions, SkippedRecord };
 
 export type SearchOptions = TranslateOptions &
@@ -70,4 +70,26 @@ export async function search(
     skipped,
     latency
   };
+}
+
+export type LookupOptions = Omit<FetchOptions, 'pageSize' | 'offset'> & { now?: () => Date };
+
+/**
+ * One paper by its Europe PMC id.
+ *
+ * The search endpoint again, because Europe PMC has no by-id route — but asked
+ * with `translateId`, which is the difference between retrieving the record and
+ * searching the abstracts for a number that is not in them. `lookupPaper`
+ * checks the answer against the id it asked about, so a page of one is all that
+ * is worth reading.
+ */
+export async function lookup(nativeId: string, options: LookupOptions): Promise<Paper | null> {
+  const { now = () => new Date(), ...fetchOptions } = options;
+
+  const started = Date.now();
+  const payload = await fetchPage(translateId(nativeId), { ...fetchOptions, pageSize: 1, offset: 0 });
+  const latency = Date.now() - started;
+
+  const { papers } = normalize(payload, { retrievedAt: now().toISOString(), latency });
+  return papers[0] ?? null;
 }

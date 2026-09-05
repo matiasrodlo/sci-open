@@ -9,6 +9,11 @@ import type { ProviderCapabilities } from '@open-access-explorer/shared';
  * missing when it skips a provider.
  */
 export const capabilities: ProviderCapabilities = {
+  /**
+   * Scoped to `TITLE_ABS`, `MESH` and `KW` — see `translate.ts`. Unscoped it
+   * searched everything indexed and reported 521,177 matches for `ai` where
+   * the title and abstract hold 54,005.
+   */
   keywordSearch: true,
   doiLookup: true,
 

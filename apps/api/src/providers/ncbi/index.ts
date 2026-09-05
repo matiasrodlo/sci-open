@@ -1,7 +1,10 @@
 import type { Paper, Query } from '@open-access-explorer/shared';
 import { capabilities } from './capabilities';
 import { translate, type TranslateOptions } from './translate';
-import { fetchPage, NcbiUnavailableError, type FetchOptions } from './fetch';
+import {
+  fetchPage, fetchRecord, NcbiUnavailableError,
+  type FetchOptions, type RecordFetchOptions
+} from './fetch';
 import { normalize, type SkippedRecord } from './normalize';
 import { readPages } from '../read-pages';
 import { log } from '../../lib/logger';
@@ -11,8 +14,8 @@ import { log } from '../../lib/logger';
  * calls, and a pure normalise.
  */
 
-export { capabilities, translate, fetchPage, normalize, NcbiUnavailableError };
-export type { TranslateOptions, FetchOptions, SkippedRecord };
+export { capabilities, translate, fetchPage, fetchRecord, normalize, NcbiUnavailableError };
+export type { TranslateOptions, FetchOptions, RecordFetchOptions, SkippedRecord };
 
 export type SearchOptions = TranslateOptions &
   Omit<FetchOptions, 'pageSize' | 'offset'> & {
@@ -84,4 +87,18 @@ export async function search(query: Query, options: SearchOptions): Promise<Prov
     skipped,
     latency
   };
+}
+
+export type LookupOptions = RecordFetchOptions & { now?: () => Date };
+
+/** One paper by its PMID. */
+export async function lookup(nativeId: string, options: LookupOptions): Promise<Paper | null> {
+  const { now = () => new Date(), ...fetchOptions } = options;
+
+  const started = Date.now();
+  const { articles } = await fetchRecord(nativeId, fetchOptions);
+  const latency = Date.now() - started;
+
+  const { papers } = normalize(articles, { retrievedAt: now().toISOString(), latency });
+  return papers[0] ?? null;
 }
