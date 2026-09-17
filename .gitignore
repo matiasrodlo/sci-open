@@ -94,7 +94,10 @@ temp/
 # Editor directories and files
 .vscode/
 .idea/
-.claude/
+# .claude/ holds per-machine editor state, except launch.json: the dev-server
+# configuration is the same for everyone and belongs in the repo.
+.claude/*
+!.claude/launch.json
 *.swp
 *.swo
 *~
