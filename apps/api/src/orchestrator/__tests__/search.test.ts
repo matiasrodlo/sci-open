@@ -18,7 +18,7 @@ function stub(id: any, papers: any[], over: Partial<ProviderEntry> = {}): Provid
   return {
     id,
     capabilities: {
-      keywordSearch: true, doiLookup: true, fields: [], yearFilter: true,
+      keywordSearch: true, fieldedSearch: true, doiLookup: true, fields: [], yearFilter: true,
       maxPageSize: 1000, reportsTotal: true, suppliesCitations: false
     },
     translate: () => `native(${id})`,
@@ -64,6 +64,26 @@ describe('orchestrator search', () => {
     expect([first.papers.length, second.papers.length, third.papers.length]).toEqual([10, 10, 5]);
     const ids = new Set([...first.papers, ...second.papers, ...third.papers].map(p => p.id));
     expect(ids.size).toBe(25);
+  });
+
+  /**
+   * The clamp lives in the orchestrator rather than beside the environment
+   * variable that feeds it, so that it holds for every caller — the route, the
+   * offline scripts and the comparison harness alike.
+   */
+  it('clamps depth to the ceiling, whoever asked', async () => {
+    const asked: number[] = [];
+    const provider = stub('europepmc', page('europepmc', 3), {
+      search: async ({ depth }) => {
+        asked.push(depth);
+        return { papers: page('europepmc', 3), totalHits: 30, skipped: [] };
+      }
+    });
+
+    await search(QUERY, { providers: [provider], depth: 50000 });
+    await search(QUERY, { providers: [provider], depth: 0 });
+
+    expect(asked).toEqual([2000, 1]);
   });
 
   it('keeps the reported total stable across pages', async () => {
@@ -174,7 +194,7 @@ describe('orchestrator search', () => {
     // only ever had to be a real provider.
     const doiOnly = stub('datacite', [], {
       capabilities: {
-        keywordSearch: false, doiLookup: true, fields: [], yearFilter: false,
+        keywordSearch: false, fieldedSearch: false, doiLookup: true, fields: [], yearFilter: false,
         maxPageSize: 100, reportsTotal: false, suppliesCitations: true
       }
     });

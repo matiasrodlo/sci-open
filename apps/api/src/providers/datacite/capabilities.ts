@@ -37,6 +37,7 @@ export const capabilities: ProviderCapabilities = {
    * contribution of 600 records to a filter.
    */
   keywordSearch: false,
+  fieldedSearch: false,
 
   // Also not "no keyword index": DataCite's works fine. What it returns is
   // records that cannot be read and overlap nothing, which is a statement

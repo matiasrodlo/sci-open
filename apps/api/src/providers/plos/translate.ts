@@ -1,4 +1,5 @@
-import type { Query } from '@open-access-explorer/shared';
+import type { Query, QueryField } from '@open-access-explorer/shared';
+import { renderExpression, type Dialect } from '../render-query';
 
 /**
  * Query -> the PLOS Solr query string. Pure, and the only place that knows
@@ -55,6 +56,67 @@ function scoped(value: string): string {
   return `(${FIELDS.map(field => `${field}:${value}`).join(' OR ')})`;
 }
 
+/**
+ * Both ends explicit. The old connector defaulted a missing lower bound to the
+ * year 2000 and a missing upper bound to the current year — two invented bounds
+ * that silently excluded anything outside them.
+ */
+function publicationDate({ from, to }: { from?: number; to?: number }): string {
+  const start = from !== undefined ? `${from}-01-01T00:00:00Z` : EARLIEST;
+  const end = to !== undefined ? `${to}-12-31T23:59:59Z` : LATEST;
+  return `publication_date:[${start} TO ${end}]`;
+}
+
+/**
+ * PLOS's Solr fields for the query grammar.
+ *
+ * `topic` keeps the title/abstract/subject spread `FIELDS` already declares.
+ *
+ * `all` and `publisher` are the union of everything named here rather than a
+ * Solr catch-all. PLOS does document an `everything` field, and this code does
+ * not use it: an unverified field name that turns out not to exist is a 400
+ * from the provider, which the orchestrator reports as a failed source and a
+ * lower-bound total. The union is wider than any single clause could need,
+ * costs one more `OR`, and every name in it is already in use above.
+ */
+const QUERY_FIELDS: Partial<Record<QueryField, readonly string[]>> = {
+  topic: FIELDS,
+  title: ['title'],
+  abstract: ['abstract'],
+  author: ['author'],
+  venue: ['journal']
+};
+
+const EVERY_FIELD = ['title', 'abstract', 'subject', 'author', 'journal'] as const;
+
+const DIALECT: Dialect = {
+  fields: field => QUERY_FIELDS[field] ?? [],
+  scope: (field, value) => `${field}:${value}`,
+  term: text => text.trim(),
+  phrase: text => quote(text),
+  years: range => publicationDate(range),
+  // `id`, not `doi` — see the note in `translate`.
+  doi: value => `id:${quote(value)}`,
+  unscoped: value => `(${EVERY_FIELD.map(field => `${field}:${value}`).join(' OR ')})`,
+  supportsNot: true
+};
+
+/** The query as it reached this provider before the grammar existed. */
+function flatClauses(query: Query): string[] {
+  const clauses: string[] = [];
+  const terms = query.terms.filter(t => t.trim()).map(t => scoped(t.trim()));
+  const phrases = query.phrases.filter(p => p.trim()).map(p => scoped(quote(p)));
+
+  if (terms.length > 0) {
+    const joined = terms.join(` ${query.join} `);
+    // Parenthesised so an OR join cannot swallow the date clause beside it.
+    clauses.push(terms.length > 1 ? `(${joined})` : joined);
+  }
+  clauses.push(...phrases);
+
+  return clauses;
+}
+
 export type TranslateOptions = {
   /**
    * Accepted and ignored. Every PLOS journal is fully open access, so there is
@@ -74,25 +136,14 @@ export function translate(query: Query, _options: TranslateOptions = {}): string
     // every PLOS DOI lookup answered with an arbitrary page of the corpus.
     clauses.push(`id:${quote(query.doi)}`);
   } else {
-    const terms = query.terms.filter(t => t.trim()).map(t => scoped(t.trim()));
-    const phrases = query.phrases.filter(p => p.trim()).map(p => scoped(quote(p)));
-
-    if (terms.length > 0) {
-      const joined = terms.join(` ${query.join} `);
-      // Parenthesised so an OR join cannot swallow the date clause beside it.
-      clauses.push(terms.length > 1 ? `(${joined})` : joined);
-    }
-    clauses.push(...phrases);
+    const rendered = query.expression ? renderExpression(query.expression, DIALECT) : undefined;
+    if (rendered) clauses.push(rendered);
+    else clauses.push(...flatClauses(query));
   }
 
   const { from, to } = query.years ?? {};
   if (from !== undefined || to !== undefined) {
-    // Both ends are explicit. The old connector defaulted a missing lower
-    // bound to the year 2000 and a missing upper bound to the current year —
-    // two invented bounds that silently excluded anything outside them.
-    const start = from !== undefined ? `${from}-01-01T00:00:00Z` : EARLIEST;
-    const end = to !== undefined ? `${to}-12-31T23:59:59Z` : LATEST;
-    clauses.push(`publication_date:[${start} TO ${end}]`);
+    clauses.push(publicationDate(query.years!));
   }
 
   return clauses.join(' AND ');

@@ -15,6 +15,7 @@ export const capabilities: ProviderCapabilities = {
    * for `crispr gene editing` where the title and abstract hold 359.
    */
   keywordSearch: true,
+  fieldedSearch: true,
   doiLookup: true,
 
   fields: [

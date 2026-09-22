@@ -24,6 +24,7 @@ export const capabilities: ProviderCapabilities = {
    * requests.
    */
   keywordSearch: false,
+  fieldedSearch: false,
 
   // The one of the three keyword refusals that is actually about an index.
   skipReason: { keywordSearch: 'no keyword index' },

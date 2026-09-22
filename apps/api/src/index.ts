@@ -22,7 +22,7 @@ import { adminOnly, getAdminKey } from './lib/admin-auth';
 import { SingleFlight } from './lib/single-flight';
 import { log, useLogger } from './lib/logger';
 import { searchBodySchema, paperParamsSchema, downloadPdfBodySchema } from './lib/schemas';
-import { clientError } from './lib/client-error';
+import { clientError, clientErrorStatus } from './lib/client-error';
 import { parseTrustProxy, trustProxyWarning, trustsAnyProxy } from './lib/trust-proxy';
 import { ProviderCache, lookupPaper, enrichPage } from './orchestrator';
 import { runOrchestrator } from './orchestrator/from-search-params';
@@ -210,12 +210,18 @@ async function routes(fastify: FastifyInstance) {
 
     } catch (error: any) {
       const responseTime = Date.now() - startTime;
-      fastify.log.error({ 
-        error: error.message, 
+      const status = clientErrorStatus(error);
+
+      // A rejected query is not a service failure, and logging it as one puts
+      // a reader's typo in the error stream beside real outages.
+      const level = status === 400 ? 'info' : 'error';
+      fastify.log[level]({
+        error: error.message,
         query: request.body?.q,
-        responseTime 
-      }, 'Search error');
-      reply.code(500);
+        responseTime
+      }, status === 400 ? 'Search rejected' : 'Search error');
+
+      reply.code(status);
       return clientError(error, request.id);
     }
   });

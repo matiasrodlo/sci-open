@@ -1,5 +1,7 @@
 export * from './types';
 export * from './query';
+export * from './query-grammar';
+export * from './query-match';
 export * from './paper';
 export * from './provider';
 export * from './authority';

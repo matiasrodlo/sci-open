@@ -16,7 +16,7 @@ function stubProvider(
   return {
     id,
     capabilities: {
-      keywordSearch: true, doiLookup: true, fields: [], yearFilter: true,
+      keywordSearch: true, fieldedSearch: true, doiLookup: true, fields: [], yearFilter: true,
       maxPageSize: 100, reportsTotal: true, suppliesCitations: false, ...caps
     },
     translate: () => `native(${id})`,

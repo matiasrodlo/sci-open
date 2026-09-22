@@ -3,37 +3,58 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
+import { QueryParseError, expandSets } from '@open-access-explorer/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { readHistory, rememberLabel, setTexts } from '@/lib/search-history';
 
 interface AdvancedSearchProps {
   initialQuery?: string;
   onSearch?: (query: string, filters: any) => void;
+  /**
+   * Every keystroke, for a parent that needs to know what is in the box.
+   *
+   * `SearchWithHistory` is the one that does: inserting `#2` appends to what
+   * the reader has already typed, and without this the parent would be
+   * appending to whatever it last handed down — silently discarding anything
+   * typed since.
+   */
+  onQueryChange?: (query: string) => void;
 }
 
 /**
- * The search box.
+ * The search box, which is now also the advanced one.
  *
  * There was an "Advanced Search" tab beside it, and phase 11 removed it rather
- * than repairing it. It built fielded queries — `title:CRISPR AND year:2024`,
- * eight fields and three operators over up to ten rows — and nothing on the
- * backend has ever understood one. `parseQuery` recognises quoted phrases,
- * bare terms and DOIs; a `title:` prefix reaches the providers as a literal
- * term, and its own help popover's worked example makes arXiv answer HTTP 400.
+ * than repairing it: it built fielded queries — `title:CRISPR AND year:2024` —
+ * and nothing on the backend understood one. That comment said what repairing
+ * it would take, which was field support in the `Query` AST and in every
+ * provider's `translate`, and both now exist. See `query-grammar.ts`.
  *
- * Making it real is not frontend work: it needs field support in the `Query`
- * AST and in every provider's `translate`, several of which cannot express a
- * field search at all. Leaving a control on screen that quietly does something
- * other than what it says is worse than not offering it, so the tab, the row
- * builder and the help popover are gone together — the popover documented the
- * same syntax and would have outlived the thing it described.
+ * What did not come back is the row builder. The grammar is Web of Science's,
+ * so the thing a reader most often wants to do with a fielded query is paste
+ * one they already have — from a paper's methods section, a colleague, or a
+ * saved WoS search — and a ten-row form is something to be defeated on the way
+ * to that. One box takes both: `crispr gene editing` parses exactly as it
+ * always did, and `TS=(crispr OR cas9) NOT AU=Doudna` parses as itself.
  *
- * The component keeps its name because the route imports it, and keeps the
- * `onSearch` escape hatch it already had.
+ * A query that does not parse is a 400 carrying the parser's message and the
+ * offset it stopped at, which `SearchError` shows. That is the part the old tab
+ * could not do at all — its worked example made arXiv answer HTTP 400 and the
+ * reader was told nothing.
  */
-export function AdvancedSearchBar({ initialQuery = '', onSearch }: AdvancedSearchProps) {
+export function AdvancedSearchBar({ initialQuery = '', onSearch, onQueryChange }: AdvancedSearchProps) {
   const router = useRouter();
   const [query, setQuery] = useState(initialQuery);
+  /**
+   * A reference to a set that is not there.
+   *
+   * Shown here rather than sent, because this is the one query error the
+   * service could not diagnose if it wanted to: `#3` is resolved against a
+   * history that lives in this browser and never leaves it. Everything the
+   * grammar rejects is still the API's to report — see `SearchError`.
+   */
+  const [problem, setProblem] = useState<string>();
 
   useEffect(() => {
     setQuery(initialQuery);
@@ -43,13 +64,35 @@ export function AdvancedSearchBar({ initialQuery = '', onSearch }: AdvancedSearc
     const trimmed = query.trim();
     if (!trimmed) return;
 
+    /**
+     * `#1 AND #2` becomes the two queries it names, here, before the URL is
+     * built. The address then says what was actually asked, which is what lets
+     * it be shared or reopened tomorrow and still mean the same search — see
+     * `lib/search-history.ts`.
+     */
+    let expanded: string;
+    try {
+      expanded = expandSets(trimmed, setTexts(readHistory()));
+    } catch (error) {
+      if (error instanceof QueryParseError) {
+        setProblem(error.message);
+        return;
+      }
+      throw error;
+    }
+    setProblem(undefined);
+
     if (onSearch) {
-      onSearch(trimmed, {});
+      onSearch(expanded, {});
       return;
     }
 
+    // Carried across the navigation so the history can list the search the way
+    // it was written rather than the way it was expanded.
+    if (expanded !== trimmed) rememberLabel(trimmed, expanded);
+
     const params = new URLSearchParams();
-    params.set('q', trimmed);
+    params.set('q', expanded);
     router.push(`/results?${params.toString()}`);
   };
 
@@ -70,13 +113,24 @@ export function AdvancedSearchBar({ initialQuery = '', onSearch }: AdvancedSearc
         <Input
           type="search"
           aria-label="Search open-access papers"
-          placeholder="Search for papers, authors, topics, or DOIs..."
+          placeholder="crispr gene editing — or TS=(crispr OR cas9) NOT AU=Doudna"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            onQueryChange?.(e.target.value);
+          }}
           onKeyDown={handleKeyDown}
           className="pl-12 h-14 text-base"
+          aria-invalid={problem ? true : undefined}
+          aria-describedby={problem ? 'search-set-problem' : undefined}
         />
       </div>
+
+      {problem && (
+        <p id="search-set-problem" role="alert" className="text-sm text-destructive">
+          {problem}
+        </p>
+      )}
 
       <Button
         onClick={handleSearch}

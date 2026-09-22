@@ -1,5 +1,5 @@
 import type { PaperStage, SearchFilters, SearchParams, SearchResponse } from '@open-access-explorer/shared';
-import { search as orchestratorSearch } from './index';
+import { search as orchestratorSearch, DEFAULT_DEPTH, MAX_DEPTH } from './index';
 import { parseQuery } from './parse-query';
 import type { UserFilters } from './policy';
 import type { ProviderCache } from './provider-cache';
@@ -48,6 +48,62 @@ export function toUserFilters(filters: SearchFilters): UserFilters {
     ...(filters.topics !== undefined ? { topics: filters.topics } : {}),
     ...(stage.length > 0 ? { stage } : {})
   };
+}
+
+/**
+ * Warns about a misconfigured setting once per process rather than once per
+ * search.
+ *
+ * A value that is out of range is out of range for every request, so warning
+ * where it is read would put a line in the log for each one. Silence is the
+ * other option and it is the worse one: an operator who sets `SEARCH_DEPTH`
+ * past the ceiling would otherwise get the clamped depth with nothing anywhere
+ * saying their number is not the one in effect — which is the same
+ * self-concealing shape as a knob that has no effect at all.
+ *
+ * Keyed on the message, so a value that later changes is reported again.
+ */
+const warned = new Set<string>();
+
+function warnOnce(message: string): void {
+  if (warned.has(message)) return;
+  warned.add(message);
+  log.warn(message);
+}
+
+/**
+ * How deep each provider is read.
+ *
+ * The setting that decides how much of a corpus a search sees, and the one
+ * behind the header's "N retrieved of M+ matching": the retrieved figure is
+ * `depth x providers that answered`, less duplicates and less what the gates
+ * dropped, while the matching figure is the corpus those were drawn from.
+ * Raising this is the only thing that closes the gap.
+ *
+ * **Raise `SEARCH_RESCUE_BUDGET_MS` alongside it.** Depth multiplies the
+ * candidates the open-access gate would drop, and the rescue budget does not
+ * grow to match, so depth on its own fetches more records and then drops a
+ * larger fraction of them without asking. The search reports `bounded` either
+ * way; the difference is that the extra requests bought less than they look
+ * like they should have.
+ *
+ * `MAX_DEPTH` is the ceiling and the orchestrator applies it. This only warns,
+ * because the clamp belongs where every caller passes and this is one of them.
+ *
+ * Non-positive and unparseable values fall back to the default, as the rescue
+ * budget does and for the same reason: a depth of zero would plan the fan-out,
+ * ask every provider, and read nothing back from any of them.
+ */
+function searchDepth(): number {
+  const raw = process.env.SEARCH_DEPTH;
+  const depth = Number(raw);
+  if (!Number.isFinite(depth) || depth <= 0) return DEFAULT_DEPTH;
+
+  if (depth > MAX_DEPTH) {
+    warnOnce(`SEARCH_DEPTH=${raw} is above the ceiling of ${MAX_DEPTH}; reading ${MAX_DEPTH} deep instead`);
+  }
+
+  return depth;
 }
 
 /**
@@ -139,6 +195,7 @@ export async function runOrchestrator(
   const result = await orchestratorSearch(query, {
     page: params.page ?? 1,
     pageSize: params.pageSize ?? 20,
+    depth: searchDepth(),
     filters: toUserFilters(filters),
     sort: params.sort ?? 'relevance',
     openAccessOnly,

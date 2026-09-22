@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Query } from '@open-access-explorer/shared';
 import { translate } from '../translate';
+import { parseQuery } from '../../../orchestrator/parse-query';
 
 const query = (over: Partial<Query> = {}): Query => ({
   terms: [], phrases: [], join: 'AND', ...over
@@ -112,5 +113,63 @@ describe('translate — the scope of the search', () => {
 
   it('leaves a DOI lookup unscoped, since a DOI is in none of the four', () => {
     expect(translate(query({ doi: '10.1/x' }))).toBe('DOI:"10.1/x"');
+  });
+});
+
+/**
+ * The Web of Science grammar reaching Europe PMC's own syntax.
+ *
+ * Europe PMC is the richest dialect here — it has an index for every concept
+ * the grammar names except `publisher` — so it is where a fielded query should
+ * arrive almost intact, and where a regression would mean the fan-out is
+ * spending its depth budget on records the query already excluded.
+ */
+describe('translate: the fielded grammar', () => {
+  const q = (input: string) => translate(parseQuery(input));
+
+  it('sends an author clause to AUTH rather than to the title', () => {
+    // The flat path scoped every bare word to TITLE_ABS/MESH/KW, so `AU=` used
+    // to reach Europe PMC as a search for the name in the title.
+    expect(q('AU=Doudna')).toBe('AUTH:Doudna');
+  });
+
+  it('maps each tag to its own index', () => {
+    expect(q('TI=crispr')).toBe('TITLE:crispr');
+    expect(q('AB=crispr')).toBe('ABSTRACT:crispr');
+    expect(q('SO=Nature')).toBe('JOURNAL:Nature');
+  });
+
+  it('keeps the measured three-field spread for a topic word', () => {
+    expect(q('crispr')).toBe('(TITLE_ABS:crispr OR MESH:crispr OR KW:crispr)');
+  });
+
+  it('carries AND, OR and NOT into the native query', () => {
+    expect(q('TI=crispr NOT AU=Doudna')).toBe('(TITLE:crispr AND NOT (AUTH:Doudna))');
+    expect(q('AU=(Doudna OR Charpentier)')).toBe('(AUTH:Doudna OR AUTH:Charpentier)');
+  });
+
+  it('writes a PY clause as the range syntax, not as a comparison', () => {
+    // `PUB_YEAR:>=2022` is accepted and then ignored — see the note in
+    // `translate`. Both the clause and the year bound use the range form.
+    //
+    // The bound appears twice on purpose rather than by accident: `parseQuery`
+    // lifts a required `PY` onto `query.years` so every provider can express
+    // it, and the clause also renders where it sits in the tree. AND-ing two
+    // bounds is their intersection, and these two are the same bound, so the
+    // repetition costs query length and nothing else.
+    expect(q('TI=crispr AND PY=2020-2024'))
+      .toBe('(TITLE:crispr AND PUB_YEAR:[2020 TO 2024]) AND PUB_YEAR:[2020 TO 2024]');
+  });
+
+  it('widens a concept Europe PMC has no index for', () => {
+    // No publisher index here, so the term goes to the whole index and
+    // `matchesQuery` holds the record to the publisher field afterwards.
+    expect(q('PU=Elsevier')).toBe('Elsevier');
+  });
+
+  it('still answers a plain query the way it always did', () => {
+    expect(q('crispr "gene editing"')).toBe(
+      '((TITLE_ABS:crispr OR MESH:crispr OR KW:crispr) AND (TITLE_ABS:"gene editing" OR MESH:"gene editing" OR KW:"gene editing"))'
+    );
   });
 });

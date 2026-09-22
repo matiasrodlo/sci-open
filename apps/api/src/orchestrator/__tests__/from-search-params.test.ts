@@ -15,20 +15,20 @@ import { paper, ref } from './helpers';
  * that silently does nothing.
  */
 
-type Recorded = { query: Query; openAccessOnly: boolean };
+type Recorded = { query: Query; openAccessOnly: boolean; depth: number };
 
 function recorder(papers = pageOf(3)): { entry: ProviderEntry; calls: Recorded[] } {
   const calls: Recorded[] = [];
   const entry: ProviderEntry = {
     id: 'europepmc',
     capabilities: {
-      keywordSearch: true, doiLookup: true, fields: [], yearFilter: true,
+      keywordSearch: true, fieldedSearch: true, doiLookup: true, fields: [], yearFilter: true,
       maxPageSize: 1000, reportsTotal: true, suppliesCitations: false
     },
     translate: () => 'native',
     normalizerVersion: 1,
-    search: async ({ query, openAccessOnly }) => {
-      calls.push({ query, openAccessOnly });
+    search: async ({ query, openAccessOnly, depth }) => {
+      calls.push({ query, openAccessOnly, depth });
       return { papers, totalHits: papers.length, skipped: [] };
     }
   };
@@ -317,5 +317,55 @@ describe('runOrchestrator: the response', () => {
         })).bounded).toBe(false);
       });
     });
+  });
+});
+
+/**
+ * How much of a corpus a search reads, and the only setting that moves it.
+ *
+ * `total` is `depth` times the providers that answered, less duplicates and
+ * less what the gates dropped — which is why a query matching 977,761 records
+ * at OpenAlex returned 2,754. The depth was a constant with no way to reach it,
+ * so the answer to "retrieve more" was to edit the source.
+ */
+describe('SEARCH_DEPTH', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  const depthOf = async (): Promise<number> => {
+    const { entry, calls } = recorder();
+    await run({ q: 'crispr' }, [entry]);
+    return calls[0]!.depth;
+  };
+
+  it('reads 600 deep when nothing is set', async () => {
+    expect(await depthOf()).toBe(600);
+  });
+
+  it('reads as deep as it is told to', async () => {
+    vi.stubEnv('SEARCH_DEPTH', '1500');
+    expect(await depthOf()).toBe(1500);
+  });
+
+  // The cost is per provider per page — twenty requests at once to a provider
+  // serving 100 a page — so the setting has a ceiling and it binds here rather
+  // than at whatever the operator typed.
+  it('clamps a value above the ceiling instead of honouring it', async () => {
+    vi.stubEnv('SEARCH_DEPTH', '50000');
+    expect(await depthOf()).toBe(2000);
+  });
+
+  // A depth of zero would plan the fan-out, ask every provider, and read
+  // nothing back — so it falls back rather than being honoured, which is how
+  // SEARCH_RESCUE_BUDGET_MS parses and for the same reason.
+  it('falls back to the default rather than honouring a zero', async () => {
+    vi.stubEnv('SEARCH_DEPTH', '0');
+    expect(await depthOf()).toBe(600);
+  });
+
+  it('ignores a value that is not a number', async () => {
+    vi.stubEnv('SEARCH_DEPTH', 'deeper');
+    expect(await depthOf()).toBe(600);
   });
 });

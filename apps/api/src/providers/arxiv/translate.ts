@@ -1,4 +1,5 @@
-import type { Query } from '@open-access-explorer/shared';
+import type { Query, QueryField } from '@open-access-explorer/shared';
+import { renderExpression, type Dialect } from '../render-query';
 
 /**
  * Query -> the arXiv `search_query` string. Pure, and the only place that
@@ -61,6 +62,20 @@ function quote(phrase: string): string {
   return `"${phrase.replace(/"/g, ' ').replace(/\s+/g, ' ').trim()}"`;
 }
 
+/**
+ * A single range with two real endpoints. The wildcard form the old connector
+ * used — `submittedDate:[202201010000 TO *]`, and both bounds as two AND-ed
+ * clauses — makes arXiv answer **HTTP 500** with an error document in the feed.
+ * The connector caught that and returned an empty array, so arXiv dropped out
+ * of every year-filtered search entirely, and nothing distinguished it from a
+ * query that matched nothing.
+ */
+function submittedDate({ from, to }: { from?: number; to?: number }): string {
+  const start = from !== undefined ? `${from}01010000` : EARLIEST;
+  const end = to !== undefined ? `${to}12312359` : LATEST;
+  return `submittedDate:[${start} TO ${end}]`;
+}
+
 /** One search word or quoted phrase, in the title or the abstract. */
 function scoped(value: string): string {
   return `(${FIELDS.map(field => `${field}:${value}`).join(' OR ')})`;
@@ -77,11 +92,52 @@ export type TranslateOptions = {
   openAccessOnly?: boolean;
 };
 
-export function translate(query: Query, _options: TranslateOptions = {}): string {
+/**
+ * arXiv's prefixes for the query grammar's fields.
+ *
+ * `topic` keeps the `ti`/`abs` pair `FIELDS` already declared. arXiv has no
+ * subject-keyword index to add to it the way Europe PMC has `MESH`, and `cat:`
+ * is its subject taxonomy — a category code, not a word a reader would type.
+ *
+ * `all` is arXiv's own catch-all prefix rather than the union of the others,
+ * because arXiv supplies one and it is wider than any list assembled here.
+ * `publisher` has nothing: arXiv is a preprint server and its records have no
+ * imprint, so a clause on it widens to `all` and the local evaluator settles
+ * the record on the field data it actually holds.
+ */
+const QUERY_FIELDS: Partial<Record<QueryField, readonly string[]>> = {
+  topic: FIELDS,
+  title: ['ti'],
+  abstract: ['abs'],
+  author: ['au'],
+  venue: ['jr'],
+  all: ['all']
+};
+
+const DIALECT: Dialect = {
+  fields: field => QUERY_FIELDS[field] ?? [],
+  scope: (field, value) => `${field}:${value}`,
+  term: text => text.trim(),
+  phrase: text => quote(text),
+  years: range => submittedDate(range),
+  // arXiv has no DOI index — the same fact `capabilities.doiLookup` declares.
+  // A DOI clause inside a larger query is therefore left to the evaluator.
+  doi: () => undefined,
+  unscoped: value => `all:${value}`,
+  /**
+   * arXiv spells negation `ANDNOT`, as an infix operator between two clauses,
+   * where `renderExpression` emits a `NOT` prefix. Rather than assemble a
+   * second shape for one provider, the clause is dropped and `matchesQuery`
+   * applies it over the merged records — which is the documented fallback and
+   * costs only breadth, never correctness.
+   */
+  supportsNot: false
+};
+
+/** The query as it reached this provider before the grammar existed. */
+function flatClauses(query: Query): string[] {
   const clauses: string[] = [];
 
-  // No DOI clause: arXiv has no DOI index, which `capabilities.doiLookup`
-  // declares, so the orchestrator never routes a DOI lookup here.
   const terms = query.terms.filter(t => t.trim()).map(t => scoped(t.trim()));
   const phrases = query.phrases.filter(p => p.trim()).map(p => scoped(quote(p)));
 
@@ -96,17 +152,21 @@ export function translate(query: Query, _options: TranslateOptions = {}): string
   // Phrases are always required, whatever `join` says about the bare terms.
   clauses.push(...phrases);
 
-  // A single range with two real endpoints. The wildcard form the old
-  // connector used — `submittedDate:[202201010000 TO *]`, and both bounds as
-  // two AND-ed clauses — makes arXiv answer **HTTP 500** with an error
-  // document in the feed. The connector caught that and returned an empty
-  // array, so arXiv dropped out of every year-filtered search entirely, and
-  // nothing distinguished it from a query that matched nothing.
+  return clauses;
+}
+
+export function translate(query: Query, _options: TranslateOptions = {}): string {
+  const clauses: string[] = [];
+
+  // No DOI clause: arXiv has no DOI index, which `capabilities.doiLookup`
+  // declares, so the orchestrator never routes a DOI lookup here.
+  const rendered = query.expression ? renderExpression(query.expression, DIALECT) : undefined;
+  if (rendered) clauses.push(rendered);
+  else clauses.push(...flatClauses(query));
+
   const { from, to } = query.years ?? {};
   if (from !== undefined || to !== undefined) {
-    const start = from !== undefined ? `${from}01010000` : EARLIEST;
-    const end = to !== undefined ? `${to}12312359` : LATEST;
-    clauses.push(`submittedDate:[${start} TO ${end}]`);
+    clauses.push(submittedDate(query.years!));
   }
 
   return clauses.join(' AND ');

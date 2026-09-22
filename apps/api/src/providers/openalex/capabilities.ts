@@ -16,6 +16,14 @@ export const capabilities: ProviderCapabilities = {
   keywordSearch: true,
   doiLookup: true,
 
+  // No field search: see `fieldedSearch`. A query that is entirely
+  // field-scoped leaves this provider nothing to search for, so it is
+  // skipped with the reason rather than asked and reported as empty.
+  fieldedSearch: false,
+  skipReason: {
+    fieldedSearch: 'searches by filter, which cannot scope or negate a field'
+  },
+
   fields: [
     'title',
     'abstract',

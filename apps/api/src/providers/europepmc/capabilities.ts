@@ -15,6 +15,7 @@ export const capabilities: ProviderCapabilities = {
    * the title and abstract hold 54,005.
    */
   keywordSearch: true,
+  fieldedSearch: true,
   doiLookup: true,
 
   // Populated on `resultType=core` responses. `publisher` is absent: Europe PMC

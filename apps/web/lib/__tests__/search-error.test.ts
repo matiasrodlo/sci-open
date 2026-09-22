@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { classifySearchError, isRetryable } from '../search-error';
+import { classifySearchError, isRetryable, queryProblem } from '../search-error';
 
 /**
  * `/results` caught every failure and rendered one panel, so the three
@@ -79,9 +79,45 @@ describe('classifySearchError', () => {
   });
 });
 
+/**
+ * A query the grammar rejected is also a 400, and only the body tells it apart
+ * from a malformed address. The difference is the whole point: one is text the
+ * reader wrote and can fix, the other is an address they did not.
+ */
+describe('a query that would not parse', () => {
+  const rejected = (body: unknown) => ({ response: { status: 400, data: body } });
+
+  it('is its own failure, not a bad address', () => {
+    expect(classifySearchError(rejected({ error: 'Unbalanced (', position: 3 }))).toBe('bad-query');
+  });
+
+  it('carries the parser message and position through', () => {
+    expect(queryProblem(rejected({ error: 'Unbalanced (', position: 3 })))
+      .toEqual({ message: 'Unbalanced (', position: 3 });
+  });
+
+  it('carries a message with no position', () => {
+    expect(queryProblem(rejected({ error: 'Empty query' }))).toEqual({ message: 'Empty query' });
+  });
+
+  it('stays a bad address when the 400 says nothing about a query', () => {
+    // The generic body `clientError` sends for anything that is not about the
+    // request. Nothing here is worth showing as a query problem.
+    expect(classifySearchError(answered(400))).toBe('bad-request');
+    expect(queryProblem(rejected({ error: '   ' }))).toBeUndefined();
+    expect(queryProblem(rejected(undefined))).toBeUndefined();
+  });
+
+  it('is not read from any status other than 400', () => {
+    expect(queryProblem({ response: { status: 500, data: { error: 'Unbalanced (' } } })).toBeUndefined();
+  });
+});
+
 describe('isRetryable', () => {
-  it('calls only a rejected request hopeless', () => {
+  it('calls a rejected request and an unparseable query hopeless', () => {
     expect(isRetryable('bad-request')).toBe(false);
+    // Text that will not parse this time will not parse the next time either.
+    expect(isRetryable('bad-query')).toBe(false);
 
     for (const failure of ['rate-limited', 'timeout', 'unavailable', 'server-error'] as const) {
       expect(isRetryable(failure)).toBe(true);

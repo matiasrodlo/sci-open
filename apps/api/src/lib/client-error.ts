@@ -1,3 +1,4 @@
+import { QueryParseError } from '@open-access-explorer/shared';
 import { PdfProxyError } from './pdf-proxy';
 
 /**
@@ -16,9 +17,37 @@ import { PdfProxyError } from './pdf-proxy';
  * request id, which is the thing that lets an operator find the real error in
  * the log without it being published.
  */
-export function clientError(error: unknown, requestId: string): { error: string; requestId: string } {
+export type ClientError = {
+  error: string;
+  requestId: string;
+  /** Offset into the query text, for a parse error a UI can point at. */
+  position?: number;
+};
+
+export function clientError(error: unknown, requestId: string): ClientError {
+  // A query the grammar could not parse is the clearest case of an error about
+  // the request: the message names what is wrong with text the caller typed,
+  // and the position says where. Withholding it would leave a reader with a
+  // rejected search and no way to see why.
+  if (error instanceof QueryParseError) {
+    return { error: error.message, requestId, position: error.position };
+  }
+
   if (error instanceof PdfProxyError) {
     return { error: error.message, requestId };
   }
+
   return { error: 'The request could not be completed', requestId };
+}
+
+/**
+ * The status that goes with it.
+ *
+ * A malformed query is the caller's to fix, so it is a 400 and not the 500 the
+ * route would otherwise return — which would have read as "the service is
+ * broken" for what is a typo, and would have been logged as an error on every
+ * one of them.
+ */
+export function clientErrorStatus(error: unknown): number {
+  return error instanceof QueryParseError ? 400 : 500;
 }

@@ -91,9 +91,35 @@ logging.
 ### Search
 
 ```env
+SEARCH_DEPTH=600                # records read from each provider
 SEARCH_RESCUE_LIMIT=200         # papers the gate may ask about before dropping them
 SEARCH_RESCUE_BUDGET_MS=5000    # how long that whole pass may take
 ```
+
+**`SEARCH_DEPTH` is how much of a corpus a search sees**, and the setting
+behind the header that reads *"2,754 retrieved of 977,761+ matching"*. Those
+are two different quantities, not a discrepancy: the second is what the largest
+source says matches, and the first is `depth x providers that answered`, less
+duplicates and less what the gates below dropped. Six sources answering at a
+depth of 600 is a ceiling of 3,600 records however large the corpus is.
+
+Depth is deliberately independent of which page was requested — a window that
+grew as the reader paged would change `total` underneath them — so every page
+of a search answers from the same read.
+
+It is capped at **2,000**, and a larger value is clamped to that with a warning
+rather than refused. The cost is per provider *per page*, so it multiplies in
+three directions at once: DOAJ and OpenAIRE serve 100 records a page and pay
+`depth / 100` requests each, issued in one burst; OpenAlex serves 200, against a
+daily budget that a 22-query sweep can already exhaust at the default; and the
+fan-out cache charges bytes, where a provider's answer at 2,000 is roughly
+3.6 MB of its 128 MB budget. Non-positive and unparseable values fall back to
+600.
+
+**Raise `SEARCH_RESCUE_BUDGET_MS` when you raise it.** Depth multiplies the
+candidates the gate below would drop, and the rescue budget does not grow to
+match — so depth alone fetches more records and then drops a larger fraction of
+them without asking, and the search still reports itself bounded.
 
 Every search applies two gates the caller did not ask for — a paper needs a
 retrievable copy, and needs to be open — and both read fields the providers

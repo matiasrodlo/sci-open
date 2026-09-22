@@ -1,4 +1,5 @@
-import type { Query } from '@open-access-explorer/shared';
+import type { Query, QueryField, YearRange } from '@open-access-explorer/shared';
+import { renderExpression, type Dialect } from '../render-query';
 
 /**
  * Query -> the Europe PMC query string. Pure, and the only place that knows
@@ -80,23 +81,76 @@ export function translateId(nativeId: string): string {
   return `EXT_ID:${quote(nativeId)}`;
 }
 
+/** A year bound, in the range syntax the comment below explains is the only one that works. */
+function yearRange({ from, to }: YearRange): string {
+  return `PUB_YEAR:[${from ?? '*'} TO ${to ?? '*'}]`;
+}
+
+/**
+ * Europe PMC's vocabulary for the query grammar's fields.
+ *
+ * `topic` keeps the three-field spread `scoped` already used and the header
+ * above already justifies with measurements. The rest are Europe PMC's
+ * documented index names.
+ *
+ * Two concepts get nothing and are deliberately left to widen. `publisher` has
+ * no index here — Europe PMC describes journals, not imprints — and `all` is
+ * the whole index, which is what a bare unscoped value already searches.
+ */
+const FIELDS: Partial<Record<QueryField, readonly string[]>> = {
+  topic: ['TITLE_ABS', 'MESH', 'KW'],
+  title: ['TITLE'],
+  abstract: ['ABSTRACT'],
+  author: ['AUTH'],
+  venue: ['JOURNAL']
+};
+
+const DIALECT: Dialect = {
+  fields: field => FIELDS[field] ?? [],
+  scope: (field, value) => `${field}:${value}`,
+  // Wildcards pass through: Europe PMC supports `*` natively. A bare term
+  // needs no escaping — the tokenizer already refused it the characters that
+  // would need it.
+  term: text => text.trim(),
+  phrase: text => quote(text),
+  years: range => yearRange(range),
+  doi: value => `DOI:${quote(value)}`,
+  unscoped: value => value,
+  supportsNot: true
+};
+
+/** The query as it reached this provider before the grammar existed. */
+function flatClauses(query: Query): string[] {
+  const clauses: string[] = [];
+
+  // Phrases are always required; only bare terms honour `join`.
+  const phrases = query.phrases.filter(p => p.trim()).map(p => scoped(quote(p)));
+  const terms = query.terms.filter(t => t.trim()).map(t => scoped(t.trim()));
+
+  if (terms.length > 0) {
+    const joined = terms.join(` ${query.join} `);
+    // Parenthesised so an OR join cannot swallow the clauses beside it —
+    // `a OR b AND OPEN_ACCESS:y` does not mean what it looks like.
+    clauses.push(terms.length > 1 ? `(${joined})` : joined);
+  }
+  clauses.push(...phrases);
+
+  return clauses;
+}
+
 export function translate(query: Query, options: TranslateOptions = {}): string {
   const clauses: string[] = [];
 
   if (query.doi) {
     clauses.push(`DOI:${quote(query.doi)}`);
   } else {
-    // Phrases are always required; only bare terms honour `join`.
-    const phrases = query.phrases.filter(p => p.trim()).map(p => scoped(quote(p)));
-    const terms = query.terms.filter(t => t.trim()).map(t => scoped(t.trim()));
-
-    if (terms.length > 0) {
-      const joined = terms.join(` ${query.join} `);
-      // Parenthesised so an OR join cannot swallow the clauses beside it —
-      // `a OR b AND OPEN_ACCESS:y` does not mean what it looks like.
-      clauses.push(terms.length > 1 ? `(${joined})` : joined);
-    }
-    clauses.push(...phrases);
+    // The parsed query when there is one, and what this provider used to
+    // receive when there is not. `renderExpression` returning nothing means
+    // none of the query could be expressed here, which the flat form —
+    // deliberately wider than the query — still can.
+    const rendered = query.expression ? renderExpression(query.expression, DIALECT) : undefined;
+    if (rendered) clauses.push(rendered);
+    else clauses.push(...flatClauses(query));
   }
 
   // Range syntax, not comparison operators. Europe PMC accepts
@@ -107,7 +161,7 @@ export function translate(query: Query, options: TranslateOptions = {}): string 
   // them. A year-bounded search returned nothing at all.
   const { from, to } = query.years ?? {};
   if (from !== undefined || to !== undefined) {
-    clauses.push(`PUB_YEAR:[${from ?? '*'} TO ${to ?? '*'}]`);
+    clauses.push(yearRange(query.years!));
   }
 
   if (options.openAccessOnly) clauses.push('OPEN_ACCESS:y');

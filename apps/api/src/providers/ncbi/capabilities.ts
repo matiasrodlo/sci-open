@@ -15,6 +15,7 @@ export const capabilities: ProviderCapabilities = {
    * 287,637 for `ai` against 60,399 in the title or abstract.
    */
   keywordSearch: true,
+  fieldedSearch: true,
 
   // `"10.x/y"[DOI]` resolves to the single record.
   doiLookup: true,

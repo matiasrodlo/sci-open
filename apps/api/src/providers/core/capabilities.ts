@@ -23,6 +23,7 @@ export const capabilities: ProviderCapabilities = {
    * provider costs its neighbours nothing.
    */
   keywordSearch: false,
+  fieldedSearch: false,
 
   // Not "no keyword index" — CORE has one, and the panel used to say otherwise
   // for want of anywhere to put the real reason. Six searches in ten miss the

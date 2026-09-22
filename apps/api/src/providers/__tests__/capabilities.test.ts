@@ -23,6 +23,7 @@ import type { ProviderId } from '@open-access-explorer/shared';
 
 type Expected = {
   keywordSearch: boolean;
+  fieldedSearch: boolean;
   doiLookup: boolean;
   yearFilter: boolean;
   maxPageSize: number;
@@ -36,41 +37,41 @@ const EXPECTED: Record<ProviderId | string, Expected> = {
   // empty result — arXiv left every year-filtered search silently.
   // `doiLookup` is false: arXiv has no DOI endpoint, so a lookup is skipped
   // with the missing capability named rather than answered with an empty set.
-  arxiv: { keywordSearch: true, doiLookup: false, yearFilter: true, maxPageSize: 2000, reportsTotal: true, suppliesCitations: false },
+  arxiv: { keywordSearch: true, fieldedSearch: true, doiLookup: false, yearFilter: true, maxPageSize: 2000, reportsTotal: true, suppliesCitations: false },
 
   // Scans a date window rather than an index, so there is no keyword search and
   // no corpus-wide count to report. 30 is the window it reads.
-  biorxiv: { keywordSearch: false, doiLookup: true, yearFilter: false, maxPageSize: 30, reportsTotal: false, suppliesCitations: false },
+  biorxiv: { keywordSearch: false, fieldedSearch: false, doiLookup: true, yearFilter: false, maxPageSize: 30, reportsTotal: false, suppliesCitations: false },
 
   // Keyword search off on measured latency, not quality: roughly four in ten
   // keyword searches landed inside the 20s budget. A DOI lookup was inside it
   // every time measured. `yearFilter` is true in the query — `filters` was
   // ignored silently. 25 is a latency ceiling; 50 failed and 100 timed out.
   // Citations exist as a field and were 0 on every record measured.
-  core: { keywordSearch: false, doiLookup: true, yearFilter: true, maxPageSize: 25, reportsTotal: true, suppliesCitations: false },
+  core: { keywordSearch: false, fieldedSearch: false, doiLookup: true, yearFilter: true, maxPageSize: 25, reportsTotal: true, suppliesCitations: false },
 
   // Keyword search turned off on evidence — a registry of repository items,
   // returning datasets and software alongside papers.
-  datacite: { keywordSearch: false, doiLookup: true, yearFilter: true, maxPageSize: 1000, reportsTotal: true, suppliesCitations: false },
+  datacite: { keywordSearch: false, fieldedSearch: false, doiLookup: true, yearFilter: true, maxPageSize: 1000, reportsTotal: true, suppliesCitations: false },
 
   // `yearFilter` is TRUE, and this is the correction phase 08 recorded: the
   // runbook expected false. Two concrete endpoints work; the wildcard the old
   // connector sent answered HTTP 400.
-  doaj: { keywordSearch: true, doiLookup: true, yearFilter: true, maxPageSize: 100, reportsTotal: true, suppliesCitations: false },
+  doaj: { keywordSearch: true, fieldedSearch: true, doiLookup: true, yearFilter: true, maxPageSize: 100, reportsTotal: true, suppliesCitations: false },
 
   // The only provider besides OpenAlex that supplies a citation count.
-  europepmc: { keywordSearch: true, doiLookup: true, yearFilter: true, maxPageSize: 1000, reportsTotal: true, suppliesCitations: true },
+  europepmc: { keywordSearch: true, fieldedSearch: true, doiLookup: true, yearFilter: true, maxPageSize: 1000, reportsTotal: true, suppliesCitations: true },
 
-  ncbi: { keywordSearch: true, doiLookup: true, yearFilter: true, maxPageSize: 500, reportsTotal: true, suppliesCitations: false },
+  ncbi: { keywordSearch: true, fieldedSearch: true, doiLookup: true, yearFilter: true, maxPageSize: 500, reportsTotal: true, suppliesCitations: false },
 
-  openaire: { keywordSearch: true, doiLookup: true, yearFilter: true, maxPageSize: 100, reportsTotal: true, suppliesCitations: false },
+  openaire: { keywordSearch: true, fieldedSearch: false, doiLookup: true, yearFilter: true, maxPageSize: 100, reportsTotal: true, suppliesCitations: false },
 
   // 200 is OpenAlex's own per-page cap; the provider paginates internally to
   // reach the requested depth. `publication_year:X-Y` — the `>=`/`<=` form the
   // old path emitted is rejected with HTTP 400.
-  openalex: { keywordSearch: true, doiLookup: true, yearFilter: true, maxPageSize: 200, reportsTotal: true, suppliesCitations: true },
+  openalex: { keywordSearch: true, fieldedSearch: false, doiLookup: true, yearFilter: true, maxPageSize: 200, reportsTotal: true, suppliesCitations: true },
 
-  plos: { keywordSearch: true, doiLookup: true, yearFilter: true, maxPageSize: 1000, reportsTotal: true, suppliesCitations: false }
+  plos: { keywordSearch: true, fieldedSearch: true, doiLookup: true, yearFilter: true, maxPageSize: 1000, reportsTotal: true, suppliesCitations: false }
 };
 
 describe('provider capabilities', () => {
@@ -86,6 +87,7 @@ describe('provider capabilities', () => {
     it('declares the measured values', () => {
       expect({
         keywordSearch: provider.capabilities.keywordSearch,
+        fieldedSearch: provider.capabilities.fieldedSearch,
         doiLookup: provider.capabilities.doiLookup,
         yearFilter: provider.capabilities.yearFilter,
         maxPageSize: provider.capabilities.maxPageSize,
@@ -122,8 +124,18 @@ describe('provider capabilities', () => {
      * because the reason was not written anywhere it could reach.
      */
     it('says why, for each capability it declines', () => {
-      for (const capability of ['keywordSearch', 'doiLookup'] as const) {
+      // `fieldedSearch` joins the list because `plan` skips on it the same way
+      // and `ProviderCoverage` renders its reason the same way — a provider
+      // dropped from a fielded search with no reason beside it is the exact
+      // failure the other two are here to prevent.
+      for (const capability of ['keywordSearch', 'doiLookup', 'fieldedSearch'] as const) {
         if (provider.capabilities[capability]) continue;
+
+        // `fieldedSearch` is only ever reached for a provider that keyword
+        // searches: `plan` returns on `keywordSearch: false` before it looks.
+        // Demanding a reason for a skip that cannot happen would be asking for
+        // a sentence no reader will ever see.
+        if (capability === 'fieldedSearch' && !provider.capabilities.keywordSearch) continue;
 
         const reason = provider.capabilities.skipReason?.[capability];
 

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { AlertTriangle, Clock, Gauge, Link2Off, ServerCrash } from 'lucide-react';
-import type { SearchFailure } from '@/lib/search-error';
+import type { QueryProblem, SearchFailure } from '@/lib/search-error';
 import { isRetryable } from '@/lib/search-error';
 
 /**
@@ -51,6 +51,14 @@ const COPY: Record<SearchFailure, { icon: typeof AlertTriangle; title: string; d
       'Nothing answered the request at all, so the service is stopped or unreachable. This is not ' +
       'something your search can cause and not something you can fix — try again shortly.'
   },
+  'bad-query': {
+    icon: Link2Off,
+    title: 'This search could not be read',
+    detail:
+      'The search box understands field tags like TS=, AU= and PY=, the operators AND, OR and NOT, ' +
+      'and brackets to group them. Something in this query does not fit that, and the service said ' +
+      'what below. Edit the query and run it again.'
+  },
   'server-error': {
     icon: AlertTriangle,
     title: 'The search failed while running',
@@ -61,7 +69,7 @@ const COPY: Record<SearchFailure, { icon: typeof AlertTriangle; title: string; d
   }
 };
 
-export function SearchError({ failure }: { failure: SearchFailure }) {
+export function SearchError({ failure, problem }: { failure: SearchFailure; problem?: QueryProblem }) {
   const { icon: Icon, title, detail } = COPY[failure];
 
   return (
@@ -69,6 +77,23 @@ export function SearchError({ failure }: { failure: SearchFailure }) {
       <Icon className="h-12 w-12 text-muted-foreground mx-auto mb-4" aria-hidden="true" />
       <h3 className="text-lg font-semibold mb-2">{title}</h3>
       <p className="text-muted-foreground mb-4 mx-auto max-w-prose">{detail}</p>
+
+      {/*
+        * The parser's own words, where there are any.
+        *
+        * "Unbalanced (" names the problem in one phrase and no paraphrase here
+        * could do better, so the panel quotes it rather than summarising it.
+        * The position is the offset the parse stopped at — one-based for a
+        * reader, who is counting characters and not array indices.
+        */}
+      {problem && (
+        <p className="mb-4 mx-auto max-w-prose font-mono text-sm text-foreground">
+          {problem.message}
+          {problem.position !== undefined && (
+            <span className="text-muted-foreground"> (at character {problem.position + 1})</span>
+          )}
+        </p>
+      )}
 
       {/*
         * Offered only where a retry is hopeless, so the one case that needs a

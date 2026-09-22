@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { headers } from 'next/headers';
-import { AdvancedSearchBar } from '@/components/AdvancedSearchBar';
+import { SearchWithHistory } from '@/components/SearchWithHistory';
+import { RecordSearch } from '@/components/RecordSearch';
 import { FacetPanel } from '@/components/FacetPanel';
 import { SortBar } from '@/components/SortBar';
 import { PaginatedResults } from '@/components/PaginatedResults';
@@ -11,7 +12,7 @@ import { ProviderCoverage } from '@/components/ProviderCoverage';
 import { SearchError } from '@/components/SearchError';
 import { searchPapers } from '@/lib/fetcher';
 import { toList, toSingle, toPage, toYear, toSort } from '@/lib/search-params';
-import { classifySearchError } from '@/lib/search-error';
+import { classifySearchError, queryProblem } from '@/lib/search-error';
 import { coverageOf, totalLabel } from '@/lib/coverage';
 import { SearchParams } from '@open-access-explorer/shared';
 
@@ -109,6 +110,11 @@ async function ResultsContent({ searchParams }: { searchParams: ResultsSearchPar
 
             return (
               <div className="space-y-8">
+                {/* Adds this search to the session's numbered history. Here
+                    rather than beside the search box because the count is only
+                    known once the search has come back. */}
+                <RecordSearch query={query} total={results.total} />
+
                 {/* Results Header */}
                 <div className="border-b pb-4">
                   <div className="flex items-center justify-between">
@@ -172,13 +178,16 @@ async function ResultsContent({ searchParams }: { searchParams: ResultsSearchPar
      * threw; `SearchError` says what each one means. See `lib/search-error.ts`.
      */
     const failure = classifySearchError(error);
+    // Present only when the query text itself is what the service rejected, in
+    // which case the panel shows the parser's message instead of guessing.
+    const problem = queryProblem(error);
 
-    // Kept, and now says which kind it was. The reader gets one of five
+    // Kept, and now says which kind it was. The reader gets one of six
     // panels; whoever is reading the logs gets the error and the bucket it
     // was put in, which is what makes a miscategorised failure findable.
     console.error('Search error:', failure, error);
 
-    return <SearchError failure={failure} />;
+    return <SearchError failure={failure} {...(problem ? { problem } : {})} />;
   }
 }
 
@@ -192,7 +201,7 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
   return (
     <div className="space-y-8">
       <Suspense fallback={<div className="h-14 bg-muted/20 rounded-lg animate-pulse" />}>
-        <AdvancedSearchBar initialQuery={query} />
+        <SearchWithHistory initialQuery={query} />
       </Suspense>
       
       <Suspense key={searchKey} fallback={<LoadingSkeleton />}>

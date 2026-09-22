@@ -14,7 +14,7 @@ import { paper, ref } from './helpers';
  */
 
 const capabilities = {
-  keywordSearch: true,
+  keywordSearch: true, fieldedSearch: true,
   doiLookup: true,
   fields: [] as const,
   yearFilter: false,

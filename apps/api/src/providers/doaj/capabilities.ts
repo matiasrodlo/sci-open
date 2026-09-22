@@ -12,6 +12,7 @@ import type { ProviderCapabilities } from '@open-access-explorer/shared';
  */
 export const capabilities: ProviderCapabilities = {
   keywordSearch: true,
+  fieldedSearch: true,
 
   // `bibjson.identifier.id:"10.x/y"` resolves to the single article.
   doiLookup: true,

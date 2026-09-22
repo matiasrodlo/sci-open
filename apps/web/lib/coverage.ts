@@ -4,10 +4,11 @@ import type { ProviderTotal } from '@open-access-explorer/shared';
  * What the reported total is a total *of*.
  *
  * `SearchResponse.total` is the length of the filtered set, and the filtered
- * set is built from a fixed number of records per provider — `DEFAULT_DEPTH`,
- * 600 — not from everything that matched. The header called that number
- * "retrievable open-access papers", which reads as a count of the corpus, and
- * it is not one. Measured on `ai`, minutes apart, same query, same day:
+ * set is built from a fixed number of records per provider — `SEARCH_DEPTH`,
+ * 600 by default — not from everything that matched. The header called that
+ * number "retrievable open-access papers", which reads as a count of the
+ * corpus, and it is not one. Measured on `ai`, minutes apart, same query, same
+ * day:
  *
  * | providers that answered | reported total |
  * |---|---|

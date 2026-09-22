@@ -1,4 +1,5 @@
 import type { AuthorityReport, Paper, ProviderReport, Query, SearchSort } from '@open-access-explorer/shared';
+import { matchesQuery } from '@open-access-explorer/shared';
 import type { AuthorityEntry } from '../authorities';
 import { PROVIDERS, type ProviderEntry } from './registry';
 import { plan } from './plan';
@@ -105,7 +106,38 @@ export type OrchestratorResult = {
   duration: number;
 };
 
-const DEFAULT_DEPTH = 600;
+/**
+ * How deep each provider is read, and the ceiling on what that may be set to.
+ *
+ * 600 is the measured default, and the number the comments throughout this
+ * package are written against. It is configurable — `SEARCH_DEPTH`, read at the
+ * request boundary in `from-search-params.ts` — because it is the one setting
+ * that decides how much of a corpus a search actually sees. The header reading
+ * "2,754 retrieved of 977,761+ matching" is reporting this bound and nothing
+ * else: the first figure is `depth x providers that answered`, less duplicates
+ * and less what the gates dropped.
+ *
+ * The ceiling is why the number is clamped here rather than taken on trust.
+ * Depth is not one cost, it is a cost per provider per page:
+ *
+ * - DOAJ and OpenAIRE serve 100 records a page, so each pays `depth / 100`
+ *   requests, and `readPages` issues everything after the first in one burst.
+ *   At 2,000 that is twenty requests arriving at one API at once.
+ * - OpenAlex serves 200, against a daily budget its own header notes a 22-query
+ *   sweep can already exhaust at the default's three requests per query.
+ * - `ProviderCache` charges bytes, and a normalised record measures about
+ *   1.8 KB, so one provider's answer at 2,000 is roughly 3.6 MB against a
+ *   128 MB budget — still cacheable, which an entry larger than the whole
+ *   budget would not be.
+ *
+ * Two thousand is where all three stay tolerable. It clamps rather than
+ * rejects, because a mis-set variable should cost an operator the depth they
+ * asked for and not the service — and `searchDepth` warns when it binds, so the
+ * setting cannot quietly be a number nobody is using.
+ */
+export const DEFAULT_DEPTH = 600;
+export const MAX_DEPTH = 2000;
+
 const DEFAULT_TIMEOUT_MS = 20000;
 
 export async function search(query: Query, options: SearchOptions = {}): Promise<OrchestratorResult> {
@@ -116,7 +148,7 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
     // Deliberately independent of `page`. Letting depth grow with the page
     // would change the reported total as the user walks through the results,
     // so every page answers from the same window.
-    depth = DEFAULT_DEPTH,
+    depth: requestedDepth = DEFAULT_DEPTH,
     timeoutMs = DEFAULT_TIMEOUT_MS,
     filters = {},
     sort = 'relevance',
@@ -132,6 +164,11 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
     now
   } = options;
 
+  // Bounded here rather than where the setting is read, so that every caller
+  // is bounded by it — the route, the offline scripts and the comparison
+  // harness alike. See `MAX_DEPTH`.
+  const depth = Math.min(Math.max(requestedDepth, 1), MAX_DEPTH);
+
   const planned = plan(query, providers);
 
   const { papers: fetched, reports } = await fanOut(planned, {
@@ -142,7 +179,30 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
   });
 
   const merged = mergePapers(fetched);
-  const ranked = rank(merged, { query, ...(now ? { now: now().getTime() } : {}) }).map(s => s.paper);
+
+  /**
+   * The query itself, applied to the records rather than only to the requests.
+   *
+   * `Query.terms` is a deliberate *widening* of what was typed — see `flatten`
+   * — and each provider widens it again by whatever its API cannot express:
+   * arXiv has no `NOT`, OpenAIRE has no query language at all, and no two of
+   * them index the same text under "title". So the fan-out returns a superset
+   * of the answer by construction, and this is where it becomes the answer.
+   *
+   * Before merging would be cheaper and wrong: the fields a clause reads are
+   * merged fields, so a record whose abstract came from one provider and whose
+   * author list came from another can only be judged once it is one record.
+   *
+   * It is subtractive and it keeps anything it cannot positively rule out —
+   * `matchesQuery` answers on three values, not two, and a paper this service
+   * holds no abstract for is not convicted by an `AB=` clause it cannot be
+   * tested against.
+   */
+  const matched = query.expression
+    ? merged.filter(paper => matchesQuery(paper, query.expression!))
+    : merged;
+
+  const ranked = rank(matched, { query, ...(now ? { now: now().getTime() } : {}) }).map(s => s.paper);
 
   // Shared with the rescue below, so a paper that is asked about twice is
   // fetched once.

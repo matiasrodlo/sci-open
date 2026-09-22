@@ -15,6 +15,82 @@ Production: https://api.yourdomain.com
 
 Search for papers across multiple sources.
 
+#### Query syntax
+
+`q` takes the Web of Science grammar. A plain search still works — `crispr gene
+editing` means all three words — and a query copied out of Web of Science means
+here what it meant there.
+
+| Tag | Searches |
+|---|---|
+| `TS=` | Topic: title, abstract and keywords. The default for an untagged word. |
+| `TI=` | Title |
+| `AB=` | Abstract |
+| `AU=` | Author |
+| `SO=` | Publication name |
+| `PU=` | Publisher |
+| `PY=` | Year, as `2020` or a range `2020-2024`, `2020-`, `-2024` |
+| `DO=` | DOI |
+| `ALL=` | Every field |
+
+`AND`, `OR` and `NOT` combine clauses, brackets group them, and a tagged group
+passes its tag to its members. Precedence is Web of Science's: `OR` loosest,
+then `AND`, then `NOT`, then brackets. Two clauses with nothing between them
+mean `AND`.
+
+```
+TS=(crispr OR cas9) NOT AU=Doudna
+AU=(Doudna OR Charpentier) AND PY=2020-2024
+TI="gene editing" AND SO=Nature
+```
+
+Quoted text is a phrase — the same words, adjacent and in order. `*` stands for
+the rest of a word and `?` for one character, both within a single word:
+`gen*` matches "genome", `gen?` matches "gene" but not "genome".
+
+`NEAR` and `SAME` are **rejected**, with a message saying so. They are proximity
+operators, no source here can express one, and no record retains the token
+positions that would be needed to apply one locally — so accepting them would
+mean running a query other than the one written.
+
+A tag this list does not name is an ordinary word, which is what keeps a pasted
+URL or a term like `BRCA1:c.68` searchable rather than a syntax error.
+
+#### Search history and set combining (`#1 AND #2`)
+
+The web app numbers every search of a session and lets you combine the numbers,
+as Web of Science does. It is a *query* algebra rather than a set algebra:
+`#1 AND #2` means "the query that was #1, and the query that was #2", not "the
+records each returned, intersected".
+
+**This endpoint never sees a `#N`.** There are no accounts here and no store to
+keep a history in, so it lives in the browser, and the reference is expanded
+before the request is made — `#1 AND #2` arrives as
+`q=(AU=Doudna) AND (TS=cas9)`. That is deliberate rather than incidental: a URL
+carrying `#1` would mean something different to every reader who opened it and
+nothing at all once the session ended, so a shared link to a search would
+quietly become a different search.
+
+A caller using this API directly therefore composes queries by writing them out,
+which is what the expansion produces anyway. Each substitution is bracketed,
+because `#1` standing for `a OR b` has to mean `(a OR b) AND …`.
+
+#### How the query is applied
+
+Worth knowing, because it explains a result count that looks generous.
+
+No source can run this grammar as written: OpenAIRE has no query language,
+arXiv's negation is a different shape, and no two index the same text under
+"title". So each source is sent as much of the query as it can express — and
+where it cannot express something, it is sent a **wider** query rather than a
+narrower one. The full query is then applied to the merged records.
+
+That last step only ever removes records, and it removes only the ones it can
+positively rule out. A record whose abstract this service never received is not
+excluded by an `AB=` clause it cannot be tested against, and a topic word absent
+from the stored title and abstract is not taken as proof — the source matched it
+against indexes, like MeSH headings and full text, that are not reproduced here.
+
 **Request:**
 ```json
 {
@@ -296,12 +372,29 @@ All errors follow this format:
 
 ```json
 {
-  "error": "Error message"
+  "error": "Error message",
+  "requestId": "req-42"
 }
 ```
 
+A query the grammar could not parse answers `400` and adds the offset it stopped
+at, so a caller can point at the character:
+
+```json
+{
+  "error": "Unbalanced (",
+  "requestId": "req-42",
+  "position": 3
+}
+```
+
+The message is returned in full for this case and for PDF-proxy refusals,
+because both describe the request. Everything else answers with a generic
+message and the request id, which is what lets an operator find the real error
+in the log without publishing it.
+
 **Status Codes:**
 - `200` - Success
-- `400` - Bad Request
+- `400` - Bad Request, including a query that would not parse
 - `500` - Internal Server Error
 

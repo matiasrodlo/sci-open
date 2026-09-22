@@ -1,4 +1,5 @@
-import type { Query } from '@open-access-explorer/shared';
+import type { Query, QueryField } from '@open-access-explorer/shared';
+import { renderExpression, type Dialect } from '../render-query';
 
 /**
  * Query -> a PubMed search term. Pure, and the only place that knows this
@@ -51,6 +52,60 @@ function scoped(term: string): string {
   return `(${term}[tiab] OR ${term}[mh])`;
 }
 
+/**
+ * PubMed's search tags for the query grammar.
+ *
+ * `topic` keeps the `[tiab]`/`[mh]` pair `scoped` already uses.
+ *
+ * `abstract` maps to `[tiab]`, which is title *and* abstract: PubMed has no
+ * abstract-only tag. That is wider than `AB=` asks for, which is the direction
+ * this is allowed to be wrong in — `matchesQuery` holds the record to the
+ * abstract alone afterwards.
+ *
+ * `all` and `publisher` widen to the union below. PubMed's untagged search runs
+ * Automatic Term Mapping, which expands a word into MeSH headings and synonyms
+ * and is emphatically not a literal all-fields search; naming the fields keeps
+ * what is asked for knowable.
+ */
+const QUERY_FIELDS: Partial<Record<QueryField, readonly string[]>> = {
+  topic: ['tiab', 'mh'],
+  title: ['ti'],
+  abstract: ['tiab'],
+  author: ['au'],
+  venue: ['ta']
+};
+
+const EVERY_FIELD = ['tiab', 'mh', 'au', 'ta'] as const;
+
+const DIALECT: Dialect = {
+  fields: field => QUERY_FIELDS[field] ?? [],
+  // The tag follows the value here, where every other provider prefixes it.
+  scope: (field, value) => `${value}[${field}]`,
+  term: text => text.trim(),
+  phrase: text => quote(text),
+  years: ({ from, to }) => `${from ?? EARLIEST}:${to ?? LATEST}[PDAT]`,
+  doi: value => `${quote(value)}[DOI]`,
+  unscoped: value => `(${EVERY_FIELD.map(field => `${value}[${field}]`).join(' OR ')})`,
+  supportsNot: true
+};
+
+/** The query as it reached this provider before the grammar existed. */
+function flatClauses(query: Query): string[] {
+  const clauses: string[] = [];
+  const terms = query.terms.filter(t => t.trim()).map(t => scoped(t.trim()));
+  const phrases = query.phrases.filter(p => p.trim()).map(p => scoped(quote(p)));
+
+  if (terms.length > 0) {
+    const joined = terms.join(` ${query.join} `);
+    // Parenthesised so an OR join cannot swallow the clauses beside it.
+    clauses.push(terms.length > 1 ? `(${joined})` : joined);
+  }
+  // Phrases are always required, whatever `join` says about the bare terms.
+  clauses.push(...phrases);
+
+  return clauses;
+}
+
 export type TranslateOptions = {
   /** Restrict to the PMC open-access subset. */
   openAccessOnly?: boolean;
@@ -64,16 +119,9 @@ export function translate(query: Query, options: TranslateOptions = {}): string 
     // otherwise try to tokenise.
     clauses.push(`${quote(query.doi)}[DOI]`);
   } else {
-    const terms = query.terms.filter(t => t.trim()).map(t => scoped(t.trim()));
-    const phrases = query.phrases.filter(p => p.trim()).map(p => scoped(quote(p)));
-
-    if (terms.length > 0) {
-      const joined = terms.join(` ${query.join} `);
-      // Parenthesised so an OR join cannot swallow the clauses beside it.
-      clauses.push(terms.length > 1 ? `(${joined})` : joined);
-    }
-    // Phrases are always required, whatever `join` says about the bare terms.
-    clauses.push(...phrases);
+    const rendered = query.expression ? renderExpression(query.expression, DIALECT) : undefined;
+    if (rendered) clauses.push(rendered);
+    else clauses.push(...flatClauses(query));
   }
 
   const { from, to } = query.years ?? {};

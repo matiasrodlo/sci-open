@@ -15,6 +15,7 @@ export const capabilities: ProviderCapabilities = {
    * field arXiv holds, the authors and the submitter's comments included.
    */
   keywordSearch: true,
+  fieldedSearch: true,
 
   // arXiv has no DOI index. The old connector accepted a DOI lookup and
   // returned an empty result, which reads exactly like "no such paper";

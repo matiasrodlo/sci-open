@@ -80,7 +80,25 @@ export type ProviderCapabilities = {
   skipReason?: {
     keywordSearch?: string;
     doiLookup?: string;
+    fieldedSearch?: string;
   };
+  /**
+   * Can scope a clause to a field — `AU=`, `SO=`, `TI=` — in its own query
+   * syntax.
+   *
+   * False for the two providers whose API has nowhere to put one: OpenAIRE
+   * takes keywords and no query language at all, and OpenAlex takes filters
+   * whose search keys cannot be combined with `OR` or negated.
+   *
+   * It decides whether the provider is asked, and only for a query that is
+   * *entirely* field-scoped. `AU=Doudna AND TS=crispr` still goes to both of
+   * them, as `crispr`, and the evaluator applies the author clause afterwards;
+   * `AU=Doudna` alone leaves them nothing to search for. Before this existed
+   * they were asked anyway, answered `retrieved: 0`, and the coverage panel
+   * printed `0 · 0` beside their names — which reads as "this source has no
+   * papers by that author" and is a statement nobody made.
+   */
+  fieldedSearch: boolean;
   /** Fields this provider actually populates. */
   fields: readonly ProvenancedField[];
   /** Can express a year bound in the query, rather than us filtering after. */
