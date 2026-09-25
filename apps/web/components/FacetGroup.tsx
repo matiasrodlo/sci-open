@@ -19,7 +19,19 @@ export type FacetOption = {
   /** What the reader sees. Defaults to the value. */
   label?: string;
   count: number;
+  /**
+   * The source whose own count this is, by display name, when it is one.
+   *
+   * Such a count is across everything that source holds, not across what was
+   * read — and it is a floor, since the other sources hold papers it does not.
+   * Shown with a `+`, as the header shows its own floor.
+   */
+  from?: string;
 };
+
+export function sourceCountNote(source: string): string {
+  return `At least this many: ${source}’s own count. The sources overlap, so their counts are not added up — together they hold more.`;
+}
 
 interface FacetGroupProps {
   title: string;
@@ -78,8 +90,12 @@ export function FacetGroup({
               >
                 {option.label ?? option.value}
               </label>
-              <span className="text-xs text-muted-foreground tabular-nums">
+              <span
+                className="text-xs text-muted-foreground tabular-nums"
+                {...(option.from ? { title: sourceCountNote(option.from) } : {})}
+              >
                 {option.count.toLocaleString()}
+                {option.from ? '+' : ''}
               </span>
             </div>
           );

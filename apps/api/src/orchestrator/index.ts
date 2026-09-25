@@ -1,16 +1,17 @@
-import type { AuthorityReport, Paper, ProviderReport, Query, SearchSort } from '@open-access-explorer/shared';
+import type { AuthorityReport, Paper, ProviderId, ProviderReport, Query, SearchSort } from '@open-access-explorer/shared';
 import { matchesQuery } from '@open-access-explorer/shared';
 import type { AuthorityEntry } from '../authorities';
 import { PROVIDERS, type ProviderEntry } from './registry';
 import { plan } from './plan';
-import { fanOut, isComplete } from './fanout';
+import { fanOut, isComplete, type ProviderSettled } from './fanout';
 import { ProviderCache } from './provider-cache';
 import { mergePapers } from './merge';
 import { rank } from './rank';
 import { applyPolicy, partitionByPolicy, type PolicyOptions, type UserFilters } from './policy';
 import { rescueCandidates, type RescueReport } from './rescue';
 import { AuthorityCache } from './authority-cache';
-import { facetBaseSets, generateFacets, type Facets } from './facet';
+import { facetBaseSets, generateFacets, withSourceCounts, type Facets } from './facet';
+import { countSourceFacets, type FacetQueries } from './source-facets';
 import { sortPapers } from './sort';
 import { enrichPage } from './enrich';
 
@@ -18,6 +19,8 @@ export * from './parse-query';
 export * from './lookup';
 export { PROVIDERS, plan, fanOut, isComplete, ProviderCache, mergePapers, rank, applyPolicy, generateFacets, facetBaseSets, sortPapers, enrichPage };
 export { partitionByPolicy } from './policy';
+export { countSourceFacets, yearWindow, YEAR_BUCKETS } from './source-facets';
+export type { FacetQueries } from './source-facets';
 export { rescueCandidates, canRescue, DEFAULT_RESCUE_LIMIT, DEFAULT_RESCUE_BUDGET_MS } from './rescue';
 export type { RescueReport } from './rescue';
 export { AuthorityCache } from './authority-cache';
@@ -67,6 +70,26 @@ export type SearchOptions = {
   rescueBudgetMs?: number;
   /** Passed to providers that support it. Default true, matching prior behaviour. */
   openAccessOnly?: boolean;
+  /**
+   * The facets to count across everything the sources match, each under the
+   * query it is counted under. Absent counts every facet over the read, as
+   * this always did. See `source-facets.ts`.
+   */
+  facetQueries?: FacetQueries;
+  /**
+   * Wall clock for the whole-index counts, from the start of the fan-out.
+   * Defaults to `timeoutMs`, which is what the search itself may take: the
+   * counts run beside the search and the rescue and enrichment after it, so a
+   * budget no longer than the search's own adds nothing to the worst case.
+   */
+  facetBudgetMs?: number;
+  /**
+   * True when every filter the caller ticked was sent to the sources rather
+   * than only applied to what they returned — which, with every planned source
+   * able to express it, is what makes their counts counts of this search. See
+   * `OrchestratorResult.countsFromSources`.
+   */
+  filtersSent?: boolean;
   cache?: ProviderCache;
   providers?: readonly ProviderEntry[];
   userAgent?: string;
@@ -103,6 +126,13 @@ export type OrchestratorResult = {
    * were already going to be returned.
    */
   complete: boolean;
+  /**
+   * True when the sources' own counts describe this search: the filters were
+   * all sent (`filtersSent`), and every source asked could express the
+   * publication type among them. The header's "at least" count is the largest
+   * source's `totalHits` only then.
+   */
+  countsFromSources: boolean;
   duration: number;
 };
 
@@ -158,6 +188,9 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
     rescueLimit,
     rescueBudgetMs,
     openAccessOnly = true,
+    facetQueries,
+    facetBudgetMs,
+    filtersSent = false,
     cache,
     providers = PROVIDERS,
     userAgent,
@@ -171,8 +204,34 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
 
   const planned = plan(query, providers);
 
-  const { papers: fetched, reports } = await fanOut(planned, {
+  // Each planned provider's search, as it settles — which is what a source
+  // counted one bucket at a time waits for before it starts counting.
+  const settling = new Map<ProviderId, { promise: Promise<ProviderSettled>; resolve: (s: ProviderSettled) => void }>();
+  for (const provider of planned.planned) {
+    let resolve!: (s: ProviderSettled) => void;
+    const promise = new Promise<ProviderSettled>(r => { resolve = r; });
+    settling.set(provider.id, { promise, resolve });
+  }
+
+  // Started before the fan-out and awaited only once the page is built: the
+  // counts run beside the search, and then beside the rescue and enrichment,
+  // none of which needs them.
+  const counting = facetQueries && Object.keys(facetQueries).length > 0
+    ? countSourceFacets(providers, {
+        queries: facetQueries,
+        searched: query,
+        settled: id => settling.get(id)?.promise ?? Promise.resolve(undefined),
+        openAccessOnly,
+        budgetMs: facetBudgetMs ?? timeoutMs,
+        ...(cache ? { cache } : {}),
+        ...(userAgent ? { userAgent } : {}),
+        ...(now ? { now } : {})
+      })
+    : Promise.resolve([]);
+
+  const { papers: fetched, reports: searchReports } = await fanOut(planned, {
     query, depth, offset: 0, timeoutMs, openAccessOnly,
+    onSettled: settled => settling.get(settled.report.provider)?.resolve(settled),
     ...(cache ? { cache } : {}),
     ...(userAgent ? { userAgent } : {}),
     ...(now ? { now } : {})
@@ -250,7 +309,7 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
   // added, and the OR semantics these filters already have were unreachable
   // from the UI. `facetBaseSets` rebuilds, per ticked facet, the set the other
   // filters admit. It costs nothing when nothing is ticked. See `facet.ts`.
-  const facets = generateFacets(sorted, facetBaseSets(ranked, filters, policy, admitted));
+  const readFacets = generateFacets(sorted, facetBaseSets(ranked, filters, policy, admitted));
 
   const start = Math.max(page - 1, 0) * pageSize;
 
@@ -286,6 +345,30 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
    */
   const papers = sortPapers(enriched, sort);
 
+  // The whole-index counts, raised into the read's facets for every facet
+  // that could be counted across the sources. See `withSourceCounts`.
+  const sourceCounts = await counting;
+  const facets = facetQueries
+    ? withSourceCounts(readFacets, sourceCounts, Object.keys(facetQueries) as Array<keyof FacetQueries>)
+    : readFacets;
+
+  // A count that went missing is a floor that could have been higher, and says
+  // so on the provider it belongs to — not as a failed search.
+  const facetErrors = new Map(sourceCounts.flatMap(r => (r.error ? [[r.provider, r.error] as const] : [])));
+  const reports = searchReports.map(report => {
+    const facetError = facetErrors.get(report.provider);
+    return facetError ? { ...report, facetError } : report;
+  });
+
+  /**
+   * A publication type every source asked could express. One that holds
+   * several stages and cannot narrow to some of them would answer with its
+   * whole match set, and its count would be of that.
+   */
+  const stagesSent = !query.stages?.length || planned.planned.every(({ capabilities: { stages } }) =>
+    stages.filter || stages.holds.every(stage => query.stages!.includes(stage))
+  );
+
   return {
     papers,
     total: sorted.length,
@@ -296,6 +379,7 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
     authorities: authorityReports,
     rescue: rescueReport,
     complete: isComplete(reports),
+    countsFromSources: filtersSent && stagesSent,
     duration: Date.now() - startedAt
   };
 }

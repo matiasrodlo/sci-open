@@ -74,3 +74,67 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
 
   return payload;
 }
+
+export type FacetFetchOptions = Omit<FetchOptions, 'pageSize' | 'offset'> & {
+  /** Count by journal. */
+  journals?: boolean;
+  /** Count by publication year, for these years. */
+  years?: readonly number[];
+};
+
+export type PlosFacetPayload = {
+  response?: { numFound?: number };
+  facet_counts?: {
+    facet_fields?: { journal?: unknown[] };
+    facet_ranges?: { publication_date?: { counts?: unknown[] } };
+  };
+};
+
+/**
+ * Counts for a query across the whole index, from Solr's own facets — no
+ * records, one request.
+ *
+ * The same `fq` as `fetchPage`, which is what makes the counts describe the
+ * set a search reads from; without it they would include corrections and
+ * issue images. Years are a range facet over `publication_date`, a date field,
+ * one bucket per calendar year.
+ */
+export async function fetchFacets(nativeQuery: string, options: FacetFetchOptions): Promise<PlosFacetPayload> {
+  const { baseUrl = DEFAULT_BASE_URL, timeoutMs, signal, userAgent, journals = false, years = [] } = options;
+
+  const client = getPooledClient(baseUrl, getServiceConfig('plos'));
+
+  const params = new URLSearchParams({ q: nativeQuery, rows: '0', wt: 'json', fq: ARTICLE_TYPES });
+  if (journals || years.length > 0) {
+    params.set('facet', 'true');
+    params.set('facet.mincount', '1');
+  }
+  if (journals) {
+    params.append('facet.field', 'journal');
+    params.set('f.journal.facet.limit', '25');
+  }
+  if (years.length > 0) {
+    params.append('facet.range', 'publication_date');
+    params.set('facet.range.start', `${Math.min(...years)}-01-01T00:00:00Z`);
+    params.set('facet.range.end', `${Math.max(...years) + 1}-01-01T00:00:00Z`);
+    params.set('facet.range.gap', '+1YEAR');
+  }
+
+  const response = await client.get<PlosFacetPayload>('', {
+    params,
+    timeout: timeoutMs,
+    headers: { Accept: 'application/json', ...(userAgent ? { 'User-Agent': userAgent } : {}) },
+    ...(signal ? { signal } : {})
+  });
+
+  if (response.status >= 400) {
+    throw new PlosUnavailableError(`HTTP ${response.status}`);
+  }
+
+  const payload = response.data ?? {};
+  if (typeof payload.response?.numFound !== 'number') {
+    throw new PlosUnavailableError(`a facet response carrying no numFound (HTTP ${response.status})`);
+  }
+
+  return payload;
+}

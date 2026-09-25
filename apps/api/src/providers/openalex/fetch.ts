@@ -72,6 +72,66 @@ export type OpenAlexPayload = {
   meta?: { count?: number };
 };
 
+/** One aggregation bucket, as `group_by` returns it. */
+export type OpenAlexGroup = { key?: unknown; key_display_name?: unknown; count?: unknown };
+
+/** Why a response is not usable, from the error body the pooled client resolved. */
+function failure(response: { status: number; statusText?: string; data?: unknown }): OpenAlexUnavailableError {
+  const body = response.data as Record<string, unknown> | undefined;
+  const detail =
+    typeof body?.message === 'string' ? body.message
+    : typeof body?.error === 'string' ? body.error
+    : response.statusText || 'no message given';
+  const retryAfter = typeof body?.retryAfter === 'number' ? body.retryAfter : undefined;
+  return new OpenAlexUnavailableError(response.status, detail, retryAfter);
+}
+
+/**
+ * The works matching `params`, counted by the values of one field.
+ *
+ * `group_by` counts across the whole match set, which is the point: the list
+ * endpoint can only show what a read reaches. It answers the 200 largest
+ * groups, largest first (verified 2026-09-25 on every field used here), and is
+ * billed as a list query — $0.0001, a tenth of the search the read costs.
+ *
+ * One field per request. The API documents no way to ask for two.
+ */
+export async function fetchGroups(
+  params: OpenAlexParams,
+  groupBy: string,
+  options: Omit<FetchOptions, 'pageSize' | 'offset'>
+): Promise<OpenAlexGroup[]> {
+  const { baseUrl = DEFAULT_BASE_URL, apiKey, timeoutMs, signal, userAgent } = options;
+
+  const client: AxiosInstance = getPooledClient(baseUrl, getServiceConfig('openalex'));
+  const key = usableApiKey(apiKey);
+  const contactEmail = userAgent ? extractContactEmail(userAgent) : undefined;
+
+  const response = await client.get('/works', {
+    params: {
+      ...params,
+      group_by: groupBy,
+      ...(contactEmail ? { mailto: contactEmail } : {})
+    },
+    timeout: timeoutMs,
+    headers: {
+      Accept: 'application/json',
+      ...(userAgent ? { 'User-Agent': userAgent } : {}),
+      ...(key ? { Authorization: `Bearer ${key}` } : {})
+    },
+    ...(signal ? { signal } : {})
+  });
+
+  if (response.status >= 400) throw failure(response);
+
+  const groups = (response.data as { group_by?: unknown } | undefined)?.group_by;
+  if (!Array.isArray(groups)) {
+    throw new OpenAlexUnavailableError(response.status, 'a 2xx response carrying no group_by array');
+  }
+
+  return groups as OpenAlexGroup[];
+}
+
 export async function fetchPage(
   params: OpenAlexParams,
   options: FetchOptions
@@ -121,14 +181,7 @@ export async function fetchPage(
 
   const body = response.data as Record<string, unknown> | undefined;
 
-  if (response.status >= 400) {
-    const detail =
-      typeof body?.message === 'string' ? body.message
-      : typeof body?.error === 'string' ? body.error
-      : response.statusText || 'no message given';
-    const retryAfter = typeof body?.retryAfter === 'number' ? body.retryAfter : undefined;
-    throw new OpenAlexUnavailableError(response.status, detail, retryAfter);
-  }
+  if (response.status >= 400) throw failure(response);
 
   // A 2xx is not enough on its own: the shape is what the caller depends on,
   // and a search that matched nothing still returns an empty `results` array.

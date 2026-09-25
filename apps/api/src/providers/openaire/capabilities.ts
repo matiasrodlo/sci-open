@@ -52,5 +52,9 @@ export const capabilities: ProviderCapabilities = {
   // Published when the instance is refereed, which `isPeerReviewed=true` asks
   // for; everything else is unknown. `normalize` never calls a record a
   // preprint, so a search for preprints skips OpenAIRE.
-  stages: { holds: ['published', 'unknown'], filter: true }
+  stages: { holds: ['published', 'unknown'], filter: true },
+
+  // Counted, one request a year: the Graph API reports `numFound` and has no
+  // facets.
+  facets: ['year', 'stage']
 };

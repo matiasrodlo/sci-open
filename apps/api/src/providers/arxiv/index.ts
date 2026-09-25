@@ -3,6 +3,7 @@ import { capabilities } from './capabilities';
 import { translate, type TranslateOptions } from './translate';
 import { fetchPage, fetchRecord, type FetchOptions, type RecordFetchOptions } from './fetch';
 import { normalize, totalHits, ArxivQueryError, type SkippedRecord } from './normalize';
+import { countFacets, type Pace, type ProviderFacetArgs, type ProviderFacetOutcome } from '../count-facets';
 
 /**
  * arXiv as a provider: capabilities, a pure translate, one I/O call, and a
@@ -88,4 +89,45 @@ export async function lookup(nativeId: string, options: LookupOptions): Promise<
 
   const { papers } = normalize(payload, { retrievedAt: now().toISOString(), latency });
   return papers[0] ?? null;
+}
+
+export type CountOptions = TranslateOptions & Omit<FetchOptions, 'pageSize' | 'offset'>;
+
+/**
+ * arXiv's count for a query, from a one-entry feed's `totalResults`.
+ *
+ * One entry rather than none: `max_results=0` is outside what the API
+ * documents, and a count is not worth finding out whether it is honoured.
+ */
+export async function count(query: Query, options: CountOptions): Promise<number> {
+  const { openAccessOnly, ...fetchOptions } = options;
+  const nativeQuery = translate(query, { openAccessOnly });
+  if (!nativeQuery) return 0;
+  const reported = totalHits(await fetchPage(nativeQuery, { ...fetchOptions, pageSize: 1, offset: 0 }));
+  if (reported === undefined) throw new Error('arXiv answered a count with no totalResults');
+  return reported;
+}
+
+/** arXiv asks for three seconds between requests. */
+const PACE: Pace = { burst: 1, perSecond: 1 / 3 };
+
+/**
+ * The stage, which is arXiv's total: every record is a preprint. Nearly always
+ * answered by `known` — the search already reported it — and a request only
+ * when arXiv was not searched, which is when a reader has ticked peer-reviewed
+ * papers and the stage facet is counted with that lifted.
+ */
+export function facets(args: ProviderFacetArgs): Promise<ProviderFacetOutcome> {
+  return countFacets(args, {
+    holds: capabilities.stages.holds,
+    translate: query => translate(query, { openAccessOnly: args.openAccessOnly }),
+    count: query => count(query, {
+      openAccessOnly: args.openAccessOnly,
+      timeoutMs: args.timeoutMs,
+      ...(args.signal ? { signal: args.signal } : {}),
+      ...(args.userAgent ? { userAgent: args.userAgent } : {})
+    }),
+    pace: PACE,
+    ...(args.signal ? { signal: args.signal } : {})
+  });
 }

@@ -20,7 +20,7 @@ function stub(id: any, papers: any[], over: Partial<ProviderEntry> = {}): Provid
     capabilities: {
       keywordSearch: true, fieldedSearch: true, doiLookup: true, fields: [], yearFilter: true,
       maxPageSize: 1000, reportsTotal: true, suppliesCitations: false,
-      stages: { holds: ['published'], filter: false }
+      stages: { holds: ['published'], filter: false }, facets: []
     },
     translate: () => `native(${id})`,
     normalizerVersion: 1,
@@ -197,7 +197,7 @@ describe('orchestrator search', () => {
       capabilities: {
         keywordSearch: false, fieldedSearch: false, doiLookup: true, fields: [], yearFilter: false,
         maxPageSize: 100, reportsTotal: false, suppliesCitations: true,
-        stages: { holds: ['published'], filter: false }
+        stages: { holds: ['published'], filter: false }, facets: []
       }
     });
     const result = await search(QUERY, { providers: [stub('europepmc', page('europepmc', 3)), doiOnly] });

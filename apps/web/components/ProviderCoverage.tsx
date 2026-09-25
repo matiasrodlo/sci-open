@@ -2,22 +2,7 @@ import { Fragment } from 'react';
 import { ProviderTotal } from '@open-access-explorer/shared';
 import { AlertTriangle } from 'lucide-react';
 import { coverageOf, isFailed, isSkipped, skipsByReason } from '@/lib/coverage';
-
-const PROVIDER_LABELS: Record<string, string> = {
-  openalex: 'OpenAlex',
-  crossref: 'Crossref',
-  unpaywall: 'Unpaywall',
-  opencitations: 'OpenCitations',
-  europepmc: 'Europe PMC',
-  ncbi: 'PubMed',
-  arxiv: 'arXiv',
-  doaj: 'DOAJ',
-  plos: 'PLOS',
-  openaire: 'OpenAIRE',
-  core: 'CORE',
-  datacite: 'DataCite',
-  biorxiv: 'bioRxiv',
-};
+import { PROVIDER_LABELS } from '@/lib/provider-labels';
 
 interface ProviderCoverageProps {
   providers: ProviderTotal[];
@@ -164,7 +149,10 @@ export function ProviderCoverage({ providers, complete, bounded }: ProviderCover
         <p className="mt-2 text-xs text-muted-foreground">
           Each source was read to a fixed depth, so the total above is what those reads held
           after de-duplication
-          <span className="opacity-70"> — not everything that matches.</span>
+          <span className="opacity-70"> — not everything that matches.</span>{' '}
+          {/* The facets are counted by the sources themselves where they can
+              be, and marked with a `+` where they were. See `FacetGroup`. */}
+          A filter count marked + is a source&rsquo;s own count, across everything it holds.
         </p>
       )}
 

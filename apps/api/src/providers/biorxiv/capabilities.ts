@@ -51,5 +51,8 @@ export const capabilities: ProviderCapabilities = {
   suppliesCitations: false,
 
   // A preprint server, and `normalize` marks every record one.
-  stages: { holds: ['preprint'], filter: false }
+  stages: { holds: ['preprint'], filter: false },
+
+  // No keyword search, so no search to count.
+  facets: []
 };

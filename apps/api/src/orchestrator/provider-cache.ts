@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import type { ProviderId } from '@open-access-explorer/shared';
 import { SingleFlight } from '../lib/single-flight';
-import type { ProviderSearchOutcome } from './registry';
+import type { ProviderFacetOutcome, ProviderSearchOutcome } from './registry';
 
 /**
  * Caches what each provider returned, not what the search returned.
@@ -49,7 +49,47 @@ export function providerCacheKey(parts: ProviderCacheKeyParts): string {
   return `provider:${parts.provider}:${createHash('sha256').update(canonical).digest('hex').slice(0, 32)}`;
 }
 
-type Entry = { outcome: ProviderSearchOutcome; bytes: number; expiresAt: number };
+/**
+ * What a provider counted across its whole index, and under which queries.
+ *
+ * Its own key rather than a search key with a marker in it: the facets are
+ * counted under up to three queries at once — a facet is counted with its own
+ * selection lifted — and against a window of years, and every one of those
+ * changes the answer. Prefixed like a search key so `invalidateProvider`
+ * reaches both.
+ */
+export type FacetCacheKeyParts = {
+  provider: ProviderId;
+  requests: ReadonlyArray<{ facet: string; nativeQuery: string }>;
+  years: readonly number[];
+  normalizerVersion: number;
+};
+
+export function facetCacheKey(parts: FacetCacheKeyParts): string {
+  const canonical = [
+    parts.provider,
+    ...parts.requests.map(r => `${r.facet}=${r.nativeQuery}`).sort(),
+    `years=${parts.years.join(',')}`,
+    `v=${parts.normalizerVersion}`
+  ].join('|');
+
+  return `provider:${parts.provider}:facets:${createHash('sha256').update(canonical).digest('hex').slice(0, 32)}`;
+}
+
+/** A bucket is a value and a number; this is generous for both. */
+const BUCKET_OVERHEAD_BYTES = 48;
+
+export function sizeOfFacets(outcome: ProviderFacetOutcome): number {
+  let bytes = 0;
+  for (const buckets of Object.values(outcome.facets)) {
+    for (const bucket of buckets ?? []) bytes += BUCKET_OVERHEAD_BYTES + String(bucket.value).length;
+  }
+  return bytes;
+}
+
+type Cached = ProviderSearchOutcome | ProviderFacetOutcome;
+
+type Entry = { value: Cached; bytes: number; expiresAt: number };
 
 export type ProviderCacheOptions = {
   /** Per-provider time to live, in milliseconds. */
@@ -155,18 +195,45 @@ export class ProviderCache {
     parts: ProviderCacheKeyParts,
     work: () => Promise<ProviderSearchOutcome>
   ): Promise<{ outcome: ProviderSearchOutcome; hit: boolean }> {
-    const key = providerCacheKey(parts);
-    const cached = this.read(key);
+    return this.through(parts.provider, providerCacheKey(parts), work, sizeOf);
+  }
+
+  /**
+   * The same, for a provider's whole-index facet counts.
+   *
+   * An outcome with failures in it is returned and not kept. It is still the
+   * best answer to hand this request, but a rate limit that cost three of ten
+   * years is a passing condition, and caching it would show the gap to every
+   * search for the next ten minutes.
+   */
+  async fetchFacets(
+    parts: FacetCacheKeyParts,
+    work: () => Promise<ProviderFacetOutcome>
+  ): Promise<{ outcome: ProviderFacetOutcome; hit: boolean }> {
+    return this.through(parts.provider, facetCacheKey(parts), work, outcome =>
+      outcome.failures.length === 0 ? sizeOfFacets(outcome) : undefined
+    );
+  }
+
+  /** `size` says what to charge for a result, or `undefined` to not keep it. */
+  private async through<T extends Cached>(
+    provider: ProviderId,
+    key: string,
+    work: () => Promise<T>,
+    size: (value: T) => number | undefined
+  ): Promise<{ outcome: T; hit: boolean }> {
+    const cached = this.read(key) as T | undefined;
     if (cached) return { outcome: cached, hit: true };
 
     const { value } = await this.flights.run(key, async () => {
       // Re-read inside the flight: a leader may have populated the entry
       // between this caller missing and joining.
-      const raced = this.read(key);
+      const raced = this.read(key) as T | undefined;
       if (raced) return raced;
 
       const outcome = await work();
-      this.write(parts.provider, key, outcome);
+      const bytes = size(outcome);
+      if (bytes !== undefined) this.write(provider, key, outcome, bytes);
       return outcome;
     });
 
@@ -175,19 +242,17 @@ export class ProviderCache {
     return { outcome: value, hit: false };
   }
 
-  private read(key: string): ProviderSearchOutcome | undefined {
+  private read(key: string): Cached | undefined {
     const entry = this.entries.get(key);
     if (!entry) return undefined;
     if (entry.expiresAt <= this.now()) {
       this.drop(key);
       return undefined;
     }
-    return entry.outcome;
+    return entry.value;
   }
 
-  private write(provider: ProviderId, key: string, outcome: ProviderSearchOutcome): void {
-    const bytes = sizeOf(outcome);
-
+  private write(provider: ProviderId, key: string, value: Cached, bytes: number): void {
     // One entry larger than the whole budget is not cached at all, rather than
     // admitted and immediately evicting everything else. Same rule as
     // `MemoryCache`, and it is reachable here: at maximum depth a single
@@ -198,7 +263,7 @@ export class ProviderCache {
     const ttl = this.ttlMs[provider] ?? this.defaultTtlMs;
 
     this.drop(key);
-    this.entries.set(key, { outcome, bytes, expiresAt: this.now() + ttl });
+    this.entries.set(key, { value, bytes, expiresAt: this.now() + ttl });
     this.held += bytes;
     this.evictIfNeeded();
   }

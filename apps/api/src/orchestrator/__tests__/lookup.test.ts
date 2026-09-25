@@ -21,7 +21,8 @@ const capabilities = {
   maxPageSize: 100,
   reportsTotal: true,
   suppliesCitations: false,
-  stages: { holds: ['published'] as const, filter: false }
+  stages: { holds: ['published'] as const, filter: false },
+  facets: [] as const
 };
 
 type Fake = ProviderEntry & {
