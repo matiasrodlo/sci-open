@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { facetBaseSets, generateFacets } from '../facet';
+import { facetBaseSets, facetKey, generateFacets } from '../facet';
 import { matchesFilters } from '../policy';
 import { paper, ref } from './helpers';
 
@@ -144,5 +144,34 @@ describe('a facet is not counted over its own selection', () => {
     // unfiltered search takes exactly the path it always did.
     expect(facetBaseSets(corpus, {}, {}, admitted)).toEqual({});
     expect(facetsWith({})).toEqual(generateFacets(corpus));
+  });
+});
+
+describe('facetKey', () => {
+  it('ignores case, accents, punctuation and the spelling of "and"', () => {
+    expect(facetKey('Frontiers in psychology')).toBe(facetKey('Frontiers in Psychology'));
+    expect(facetKey('Taylor & Francis')).toBe(facetKey('Taylor and Francis'));
+    expect(facetKey('Revista Médica de Chile')).toBe(facetKey('Revista medica de chile'));
+    expect(facetKey('PLoS ONE')).toBe(facetKey('PLOS ONE'));
+  });
+
+  it('keeps different names different', () => {
+    expect(facetKey('Nature')).not.toBe(facetKey('Nature Communications'));
+  });
+});
+
+describe('generateFacets — spellings', () => {
+  it('counts every spelling of a venue in one bucket, labelled as most papers spell it', () => {
+    const f = generateFacets([
+      paper({ id: 'a', venue: 'Frontiers in Psychology' }),
+      paper({ id: 'b', venue: 'Frontiers in psychology' }),
+      paper({ id: 'c', venue: 'Frontiers in Psychology' })
+    ]);
+
+    expect(f.venue).toEqual([{ value: 'Frontiers in Psychology', count: 3 }]);
+  });
+
+  it('counts a paper once for a topic it carries in two spellings', () => {
+    expect(generateFacets([paper({ topics: ['CRISPR', 'crispr'] })]).topics).toEqual([{ value: 'CRISPR', count: 1 }]);
   });
 });
