@@ -39,6 +39,15 @@ describe('SearchHistory', () => {
     expect(screen.getByText('194')).toBeTruthy();
   });
 
+  it('marks a count that is a floor, as the results header does', () => {
+    record({ label: 'ai', expanded: 'ai', total: 684999, atLeast: true });
+
+    render(<SearchHistory onInsert={() => {}} />);
+    open();
+
+    expect(screen.getByText('684,999+')).toBeTruthy();
+  });
+
   it('shows the query as it was typed, not as it was expanded', () => {
     record({ label: '#1 AND #2', expanded: '(crispr) AND (AU=Doudna)' });
 
@@ -110,6 +119,22 @@ describe('a search recorded from the results boundary', () => {
     const list = within(screen.getByRole('list'));
     expect(list.getByText('AU=Doudna')).toBeTruthy();
     expect(list.getByText('194')).toBeTruthy();
+  });
+
+  it('leaves the count alone when handed none', () => {
+    // A ticked facet narrows the page but is not part of the set, so the
+    // results page records the search without a count and the set keeps its own.
+    record({ label: 'crispr', expanded: 'crispr', total: 684999, atLeast: true });
+
+    render(
+      <>
+        <SearchHistory onInsert={() => {}} />
+        <RecordSearch query="crispr" />
+      </>
+    );
+    open();
+
+    expect(within(screen.getByRole('list')).getByText('684,999+')).toBeTruthy();
   });
 
   it('does not record an empty query', () => {

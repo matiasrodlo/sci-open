@@ -152,4 +152,15 @@ describe('the results counter', () => {
 
     expect(screen.getByText(/Showing 41 to 45 of 45 results/)).toBeTruthy();
   });
+
+  it('names what matches, while the last page still ends at what is here', () => {
+    // A broad search reads each source to a fixed depth, so there are more
+    // matching papers than pages. The counter says the one; the arithmetic
+    // stays on the other.
+    render(
+      <Pagination currentPage={86} totalPages={86} totalResults={1716} matching="684,999+" pageSize={20} />
+    );
+
+    expect(screen.getByText(/Showing 1,701 to 1,716 of 684,999\+ results/)).toBeTruthy();
+  });
 });

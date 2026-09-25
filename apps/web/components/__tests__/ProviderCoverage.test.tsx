@@ -178,10 +178,10 @@ describe('a total bounded by the rescue rather than by a source', () => {
 });
 
 /**
- * The number in the header is `depth × providers that answered`, less
- * duplicates and less what the gates dropped — measured on `ai` as 1,716 with
- * three sources up and 2,891 with five, minutes apart. The panel is where a
- * reader can see that per source; this line is what connects it to the total.
+ * The list is `depth × providers that answered`, less duplicates and less what
+ * the gates dropped — measured on `ai` as 1,716 with three sources up and 2,891
+ * with five, minutes apart — while the header names what matches. This line is
+ * what tells a reader why the pages run out before the count does.
  *
  * Deliberately not in the amber banner: a truncated read is the normal state of
  * a broad search, and a warning shown on the normal case teaches people to
@@ -231,12 +231,14 @@ describe('what it shows for a provider that answered', () => {
     expect(screen.getByText('newsource')).toBeTruthy();
   });
 
-  it('shows the corpus count beside what this search retrieved', () => {
+  it('shows what the source matched, not what this search read from it', () => {
+    // The read is the depth on every broad search — a fact about this
+    // service's budget, said once below the list rather than on every row.
     render(<ProviderCoverage providers={[answered('europepmc', { totalHits: 5000, retrieved: 600 })]} complete />);
 
     const row = screen.getByText('Europe PMC').closest('li')!;
     expect(within(row).getByText(/5,000/)).toBeTruthy();
-    expect(within(row).getByText(/600/)).toBeTruthy();
+    expect(row.textContent).not.toContain('600');
   });
 
   it('orders providers by how much they matched', () => {

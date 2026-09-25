@@ -17,13 +17,27 @@ import { record, takeLabel } from '@/lib/search-history';
  * and ticking a facet all land on the set that is already there rather than
  * minting another identical number.
  */
-export function RecordSearch({ query, total }: { query: string; total: number }) {
+export function RecordSearch({
+  query,
+  total,
+  atLeast = false
+}: {
+  query: string;
+  /** How many papers match — `Matching.count`. Absent leaves the set's count as it was. */
+  total?: number;
+  /** True when `total` is a floor rather than the whole set. */
+  atLeast?: boolean;
+}) {
   useEffect(() => {
     if (!query.trim()) return;
     // The typed form, when this navigation came from the search box. A reader
     // who opened the URL directly never typed one, and the query stands in.
-    record({ label: takeLabel(query) ?? query, expanded: query, total });
-  }, [query, total]);
+    record({
+      label: takeLabel(query) ?? query,
+      expanded: query,
+      ...(total !== undefined ? { total, atLeast } : {})
+    });
+  }, [query, total, atLeast]);
 
   return null;
 }
