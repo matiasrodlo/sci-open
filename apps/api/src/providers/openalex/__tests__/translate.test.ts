@@ -106,3 +106,31 @@ describe('translate — the cache key', () => {
       .toBe('filter=is_oa:true,publication_year:2022-9999,title_and_abstract.search:crispr');
   });
 });
+
+describe('toParams — the publication type', () => {
+  it('asks for the types `normalize` calls a preprint', () => {
+    expect(toParams(query({ terms: ['x'], stages: ['preprint'] })).filter)
+      .toBe('type:preprint,title_and_abstract.search:x');
+  });
+
+  it('asks for every type `normalize` calls published', () => {
+    // Read from `STAGES`, so a type added there is asked for here without a
+    // second list to keep in step.
+    expect(toParams(query({ terms: ['x'], stages: ['published', 'accepted'] })).filter)
+      .toBe('type:article|book|book-chapter|dissertation|report,title_and_abstract.search:x');
+  });
+
+  it('writes a set including unknown as the types to leave out', () => {
+    // Unknown is every type `STAGES` does not name, which cannot be listed.
+    expect(toParams(query({ terms: ['x'], stages: ['preprint', 'unknown'] })).filter)
+      .toBe('type:!article,type:!book,type:!book-chapter,type:!dissertation,type:!report,title_and_abstract.search:x');
+  });
+
+  it('asks nothing when no type carries the stages asked for', () => {
+    expect(toParams(query({ terms: ['x'], stages: ['accepted'] }))).toEqual({});
+  });
+
+  it('leaves a DOI lookup unnarrowed', () => {
+    expect(toParams(query({ doi: '10.1/x', stages: ['preprint'] })).filter).not.toContain('type:');
+  });
+});

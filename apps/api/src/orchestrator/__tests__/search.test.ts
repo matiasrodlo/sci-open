@@ -19,7 +19,8 @@ function stub(id: any, papers: any[], over: Partial<ProviderEntry> = {}): Provid
     id,
     capabilities: {
       keywordSearch: true, fieldedSearch: true, doiLookup: true, fields: [], yearFilter: true,
-      maxPageSize: 1000, reportsTotal: true, suppliesCitations: false
+      maxPageSize: 1000, reportsTotal: true, suppliesCitations: false,
+      stages: { holds: ['published'], filter: false }
     },
     translate: () => `native(${id})`,
     normalizerVersion: 1,
@@ -195,7 +196,8 @@ describe('orchestrator search', () => {
     const doiOnly = stub('datacite', [], {
       capabilities: {
         keywordSearch: false, fieldedSearch: false, doiLookup: true, fields: [], yearFilter: false,
-        maxPageSize: 100, reportsTotal: false, suppliesCitations: true
+        maxPageSize: 100, reportsTotal: false, suppliesCitations: true,
+        stages: { holds: ['published'], filter: false }
       }
     });
     const result = await search(QUERY, { providers: [stub('europepmc', page('europepmc', 3)), doiOnly] });

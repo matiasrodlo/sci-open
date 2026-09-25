@@ -24,6 +24,7 @@ const caps = (over: Partial<ProviderCapabilities> = {}): ProviderCapabilities =>
   maxPageSize: 100,
   reportsTotal: true,
   suppliesCitations: false,
+  stages: { holds: ['published'], filter: false },
   ...over
 });
 
@@ -102,5 +103,32 @@ describe('a query no keyword-only provider can answer', () => {
   it('leaves a DOI lookup alone, which never reads the flat form', () => {
     expect(ids(plan(parseQuery('10.1038/nature12373'), providers).planned))
       .toEqual(['europepmc', 'openaire']);
+  });
+});
+
+/**
+ * A provider holding none of the publication types asked for is not asked.
+ * Asked anyway, arXiv answers a search for peer-reviewed papers with its whole
+ * match set — it has nothing to narrow — and every record is then dropped by
+ * the stage filter, having cost a full read.
+ */
+describe('a publication type a provider holds none of', () => {
+  const providers = [
+    entry('arxiv', caps({ stages: { holds: ['preprint'], filter: false } })),
+    entry('doaj', caps({ stages: { holds: ['published'], filter: false } })),
+    entry('openalex', caps({ stages: { holds: ['preprint', 'published', 'unknown'], filter: true } }))
+  ];
+
+  it('skips it, saying so from the reader’s side', () => {
+    const result = plan({ ...parseQuery('crispr'), stages: ['preprint'] }, providers);
+    expect(ids(result.planned)).toEqual(['arxiv', 'openalex']);
+    expect(result.skipped).toEqual([{ provider: 'doaj', reason: 'holds no preprints' }]);
+
+    const reviewed = plan({ ...parseQuery('crispr'), stages: ['published', 'accepted'] }, providers);
+    expect(reviewed.skipped).toEqual([{ provider: 'arxiv', reason: 'holds no peer-reviewed papers' }]);
+  });
+
+  it('asks everyone when no type was ticked', () => {
+    expect(plan(parseQuery('crispr'), providers).skipped).toEqual([]);
   });
 });
