@@ -40,5 +40,8 @@ export const capabilities: ProviderCapabilities = {
   reportsTotal: true,
 
   // DOAJ holds no citation counts.
-  suppliesCitations: false
+  suppliesCitations: false,
+
+  // A directory of journals: every article is the published version.
+  stages: { holds: ['published'], filter: false }
 };

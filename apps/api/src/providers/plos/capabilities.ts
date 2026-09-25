@@ -39,5 +39,8 @@ export const capabilities: ProviderCapabilities = {
   maxPageSize: 1000,
 
   reportsTotal: true,
-  suppliesCitations: false
+  suppliesCitations: false,
+
+  // Journals only, and `ARTICLE_TYPES` keeps the read to research articles.
+  stages: { holds: ['published'], filter: false }
 };

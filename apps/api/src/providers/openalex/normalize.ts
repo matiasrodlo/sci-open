@@ -58,8 +58,14 @@ function pickRoute(work: any): OaRoute {
   return ROUTES.has(status as OaRoute) ? (status as OaRoute) : 'unknown';
 }
 
-/** OpenAlex's `type` is the closest thing it reports to a version. */
-const STAGES: Record<string, PaperStage> = {
+/**
+ * OpenAlex's `type` is the closest thing it reports to a version.
+ *
+ * Exported because `translate` narrows by it: a search for preprints is a
+ * `type:` filter over exactly the types this maps to `preprint`, so what is
+ * asked for and what `normalize` then calls it cannot drift apart.
+ */
+export const STAGES: Record<string, PaperStage> = {
   article: 'published',
   preprint: 'preprint',
   'book-chapter': 'published',

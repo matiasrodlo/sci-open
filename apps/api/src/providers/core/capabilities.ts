@@ -76,5 +76,9 @@ export const capabilities: ProviderCapabilities = {
   // The field exists and was 0 on every record measured, across the recorded
   // page and a 25-record sample. Claiming it would put a column of zeros into
   // the citations sort.
-  suppliesCitations: false
+  suppliesCitations: false,
+
+  // `normalize` cannot tell a preprint from a published version in CORE's
+  // records, and says so.
+  stages: { holds: ['unknown'], filter: false }
 };

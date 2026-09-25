@@ -52,5 +52,9 @@ export const capabilities: ProviderCapabilities = {
   reportsTotal: true,
 
   // arXiv holds no citation data.
-  suppliesCitations: false
+  suppliesCitations: false,
+
+  // Every record is a preprint; `normalize` says so of all of them. Nothing to
+  // narrow, so a search for peer-reviewed papers skips arXiv instead.
+  stages: { holds: ['preprint'], filter: false }
 };

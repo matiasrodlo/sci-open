@@ -1,4 +1,4 @@
-import type { ProviderId, Query } from '@open-access-explorer/shared';
+import type { PaperStage, ProviderId, Query } from '@open-access-explorer/shared';
 import type { ProviderEntry } from './registry';
 
 /**
@@ -36,6 +36,21 @@ export type Plan = {
   planned: ProviderEntry[];
   skipped: SkippedProvider[];
 };
+
+/**
+ * Why a provider holds nothing of the stages asked for, as the panel prints it.
+ *
+ * Written from what was asked rather than from what the provider holds,
+ * because that is the reader's side of it: they ticked "Pre-print", and DOAJ
+ * is not searched because it holds no preprints.
+ */
+function holdsNone(stages: readonly PaperStage[]): string {
+  const preprints = stages.includes('preprint');
+  const reviewed = stages.includes('published') || stages.includes('accepted');
+  if (preprints && !reviewed) return 'holds no preprints';
+  if (reviewed && !preprints) return 'holds no peer-reviewed papers';
+  return 'holds no papers of that type';
+}
 
 export function plan(query: Query, providers: readonly ProviderEntry[]): Plan {
   const planned: ProviderEntry[] = [];
@@ -77,6 +92,20 @@ export function plan(query: Query, providers: readonly ProviderEntry[]): Plan {
      */
     if (query.expression && !caps.fieldedSearch && query.terms.length === 0 && query.phrases.length === 0) {
       skipped.push({ provider: id, reason: caps.skipReason?.fieldedSearch ?? 'no fieldedSearch capability' });
+      continue;
+    }
+
+    /**
+     * A publication type the provider holds none of.
+     *
+     * arXiv is all preprints and DOAJ all published articles, so a search for
+     * peer-reviewed papers has nothing to ask arXiv, and one for preprints
+     * nothing to ask DOAJ. Asked anyway, each would answer with its whole
+     * match set — a query neither can narrow — and every record would then be
+     * dropped by the stage filter, having cost a full read to fetch.
+     */
+    if (query.stages?.length && !caps.stages.holds.some(stage => query.stages!.includes(stage))) {
+      skipped.push({ provider: id, reason: holdsNone(query.stages) });
       continue;
     }
 

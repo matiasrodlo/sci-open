@@ -44,6 +44,12 @@ export type OpenAireParams = {
   bestOpenAccessRightLabel?: 'OPEN';
   fromPublicationDate?: string;
   toPublicationDate?: string;
+  /**
+   * Refereed instances only. `normalize` calls a record published exactly when
+   * its instance says `peerReviewed`, so this is the same test asked upstream.
+   * Measured on `ai` with the open filter, 2026-09-25: 437,691 of 694,882.
+   */
+  isPeerReviewed?: 'true';
 };
 
 export type TranslateOptions = {
@@ -72,7 +78,13 @@ export function toParams(query: Query, options: TranslateOptions = {}): OpenAire
   // is a separate decision from which endpoint to ask.
   const search = [...query.terms, ...query.phrases].map(t => t.trim()).filter(Boolean).join(' ');
 
-  return { search, ...bounds };
+  // Published, and not the unknowns beside it, is the one narrowing OpenAIRE
+  // can be asked for. A search for preprints never gets here: `normalize`
+  // never produces one, so `plan` skips this provider for it.
+  const stages = query.stages;
+  const peerReviewed = !!stages?.length && stages.includes('published') && !stages.includes('unknown');
+
+  return { search, ...bounds, ...(peerReviewed ? { isPeerReviewed: 'true' as const } : {}) };
 }
 
 export function translate(query: Query, options: TranslateOptions = {}): string {

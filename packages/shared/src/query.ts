@@ -1,3 +1,5 @@
+import type { PaperStage } from './paper';
+
 /**
  * The structured form of a search, and the only thing a provider translates
  * from.
@@ -92,6 +94,22 @@ export type Query = {
   join: QueryJoin;
   /** Inclusive at both ends. Providers that cannot express it say so. */
   years?: YearRange;
+  /**
+   * Which versions of a work to ask for — set when the reader ticks a
+   * publication type, and absent otherwise.
+   *
+   * It is sent rather than only applied to what comes back, for the reason
+   * `years` is: a filter applied after the fan-out narrows a read of the top
+   * of every source, so ticking "Pre-print" used to leave the few hundred
+   * preprints that happened to be in that read, while the sources held a
+   * hundred thousand. Sent, each source spends its read on the slice asked
+   * for, and its count is a count of that slice.
+   *
+   * A provider whose records are all one stage has nothing to add to its query
+   * and is simply not asked when that stage is excluded — see
+   * `ProviderCapabilities.stages` and `plan`.
+   */
+  stages?: PaperStage[];
   /** Set when the query is a DOI lookup rather than a keyword search. */
   doi?: string;
   /**

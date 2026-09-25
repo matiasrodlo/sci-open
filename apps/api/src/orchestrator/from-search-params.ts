@@ -1,4 +1,4 @@
-import type { PaperStage, SearchFilters, SearchParams, SearchResponse } from '@open-access-explorer/shared';
+import type { PaperStage, Query, SearchFilters, SearchParams, SearchResponse, YearRange } from '@open-access-explorer/shared';
 import { search as orchestratorSearch, DEFAULT_DEPTH, MAX_DEPTH } from './index';
 import { parseQuery } from './parse-query';
 import type { UserFilters } from './policy';
@@ -145,6 +145,28 @@ function rescueBudgetMs(): number {
   return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_RESCUE_BUDGET_MS;
 }
 
+/** The years ticked in the year facet, as numbers, once each, oldest first. */
+function tickedYears(filters: SearchFilters): number[] {
+  const years = (filters.year ?? []).map(Number).filter(Number.isInteger);
+  return [...new Set(years)].sort((a, b) => a - b);
+}
+
+/**
+ * The ticked years as a bound the sources can be sent: from the first to the
+ * last, inside `yearFrom`/`yearTo` when those are set too.
+ *
+ * Exact when the ticked years run without a gap, which one year always does.
+ * With a gap it is wider than what was ticked, and the year filter the
+ * pipeline applies to what comes back does the rest — the sources still spend
+ * their read on the right decade, but their counts are of the whole span.
+ */
+function yearsToSend(bound: YearRange | undefined, ticked: readonly number[]): YearRange | undefined {
+  if (ticked.length === 0) return bound;
+  const from = Math.max(ticked[0]!, bound?.from ?? Number.NEGATIVE_INFINITY);
+  const to = Math.min(ticked[ticked.length - 1]!, bound?.to ?? Number.POSITIVE_INFINITY);
+  return { from, to };
+}
+
 export type RunOptions = {
   /** Shared across requests, which is the only way caching a fan-out pays. */
   cache?: ProviderCache;
@@ -177,18 +199,39 @@ export async function runOrchestrator(
   // stay in the policy filter too: a provider that cannot express one still
   // returns records outside it, and `capabilities.yearFilter` is what says
   // which case a provider is in.
-  const years = yearFrom !== undefined || yearTo !== undefined
+  const bound = yearFrom !== undefined || yearTo !== undefined
     ? {
         ...(yearFrom !== undefined ? { from: yearFrom } : {}),
         ...(yearTo !== undefined ? { to: yearTo } : {})
       }
     : undefined;
 
+  /**
+   * The year and publication-type facets are sent too, for the same reason.
+   *
+   * They used to be applied only to what came back, so ticking "2024" narrowed
+   * a read of the top of every source's whole answer — a few hundred papers
+   * from 2024, out of the hundred thousand the sources held. Sent, each source
+   * spends its read on 2024, its count is a count of 2024, and the list is the
+   * top of what the reader asked for. Both stay in the pipeline's own filter,
+   * which is a no-op where the source applied them and does the rest where it
+   * could not.
+   */
+  const ticked = tickedYears(filters);
+  const userFilters = toUserFilters(filters);
+  const stages = userFilters.stage as PaperStage[] | undefined;
+
   // `doi` wins over `q` when both are set: it is the more specific statement
   // of what the caller wants. The old path never read the field at all, so a
   // DOI only worked when it was typed into `q` — which `parseQuery` still
   // detects.
-  const query = parseQuery(params.doi ?? params.q ?? '', { ...(years ? { years } : {}) });
+  const text = params.doi ?? params.q ?? '';
+  const ask = (years: YearRange | undefined, withStages: boolean): Query => {
+    const parsed = parseQuery(text, { ...(years ? { years } : {}) });
+    return withStages && stages?.length && !parsed.doi ? { ...parsed, stages: [...stages] } : parsed;
+  };
+
+  const query = ask(yearsToSend(bound, ticked), true);
 
   const openAccessOnly = filters.openAccessOnly ?? true;
 
@@ -196,7 +239,7 @@ export async function runOrchestrator(
     page: params.page ?? 1,
     pageSize: params.pageSize ?? 20,
     depth: searchDepth(),
-    filters: toUserFilters(filters),
+    filters: userFilters,
     sort: params.sort ?? 'relevance',
     openAccessOnly,
     policy: { requireOpenAccess: openAccessOnly },

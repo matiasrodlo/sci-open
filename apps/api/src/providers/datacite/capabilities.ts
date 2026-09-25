@@ -59,5 +59,9 @@ export const capabilities: ProviderCapabilities = {
 
   maxPageSize: 1000,
   reportsTotal: true,
-  suppliesCitations: false
+  suppliesCitations: false,
+
+  // Read from `resourceTypeGeneral`, so a record can be any of the three.
+  // There is no call to narrow by it: DataCite is not asked keyword queries.
+  stages: { holds: ['preprint', 'published', 'unknown'], filter: false }
 };

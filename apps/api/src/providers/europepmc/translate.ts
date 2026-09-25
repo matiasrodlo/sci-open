@@ -1,4 +1,4 @@
-import type { Query, QueryField, YearRange } from '@open-access-explorer/shared';
+import type { PaperStage, Query, QueryField, YearRange } from '@open-access-explorer/shared';
 import { renderExpression, type Dialect } from '../render-query';
 
 /**
@@ -150,6 +150,23 @@ function flatClauses(query: Query): string[] {
   return clauses;
 }
 
+/**
+ * The stages asked for, as a clause on the record's source.
+ *
+ * `normalize` calls a record a preprint exactly when its source is `PPR`, so
+ * the clause is that test and its negation. Nothing when both are asked for,
+ * or neither can be expressed — `unknown` is a record with no date, which no
+ * clause selects — and the orchestrator's own filter settles the rest.
+ */
+function stageClause(stages: readonly PaperStage[] | undefined): string | undefined {
+  if (!stages?.length) return undefined;
+  const preprints = stages.includes('preprint');
+  const published = stages.includes('published');
+  if (preprints && !published) return 'SRC:PPR';
+  if (published && !preprints) return 'NOT SRC:PPR';
+  return undefined;
+}
+
 export function translate(query: Query, options: TranslateOptions = {}): string {
   const clauses: string[] = [];
 
@@ -175,6 +192,11 @@ export function translate(query: Query, options: TranslateOptions = {}): string 
   if (from !== undefined || to !== undefined) {
     clauses.push(yearRange(query.years!));
   }
+
+  // Measured on `ai` with the open-access filter, 2026-09-25: 814 with
+  // `SRC:PPR` and 59,979 with `NOT SRC:PPR`, against 60,793 without either.
+  const stage = query.doi ? undefined : stageClause(query.stages);
+  if (stage) clauses.push(stage);
 
   if (options.openAccessOnly) clauses.push('OPEN_ACCESS:y');
 

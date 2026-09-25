@@ -1,4 +1,4 @@
-import type { ProviderId, ProvenancedField } from './paper';
+import type { PaperStage, ProviderId, ProvenancedField } from './paper';
 
 /**
  * What happened when the orchestrator asked one provider, and what that
@@ -109,6 +109,20 @@ export type ProviderCapabilities = {
   reportsTotal: boolean;
   /** Supplies a citation count. */
   suppliesCitations: boolean;
+  /**
+   * The versions of a work this provider's records can be — what `normalize`
+   * sets `Paper.stage` to — and whether a query can ask for only some of them.
+   *
+   * `holds` is what lets `plan` skip a provider rather than ask it something it
+   * cannot answer: arXiv holds only preprints, so a search for peer-reviewed
+   * papers has nothing to send it. `filter` is whether the provider can narrow
+   * to a stage when it holds more than one; a provider that holds one stage
+   * never needs to, since asking it at all is the whole of the narrowing.
+   */
+  stages: {
+    holds: readonly PaperStage[];
+    filter: boolean;
+  };
 };
 
 /** True when the provider can serve this query at all. */

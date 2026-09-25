@@ -47,5 +47,10 @@ export const capabilities: ProviderCapabilities = {
   maxPageSize: 100,
 
   reportsTotal: true,
-  suppliesCitations: false
+  suppliesCitations: false,
+
+  // Published when the instance is refereed, which `isPeerReviewed=true` asks
+  // for; everything else is unknown. `normalize` never calls a record a
+  // preprint, so a search for preprints skips OpenAIRE.
+  stages: { holds: ['published', 'unknown'], filter: true }
 };

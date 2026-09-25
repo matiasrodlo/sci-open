@@ -1,4 +1,5 @@
-import type { Query } from '@open-access-explorer/shared';
+import type { PaperStage, Query } from '@open-access-explorer/shared';
+import { STAGES } from './normalize';
 
 /**
  * Query -> OpenAlex's request parameters.
@@ -55,6 +56,25 @@ function quote(phrase: string): string {
   return inner ? `"${inner}"` : '';
 }
 
+/**
+ * A `type:` filter selecting the works `normalize` gives one of these stages.
+ *
+ * `unknown` is every type `STAGES` does not name — `dataset`, `review`,
+ * `conference-paper` and the rest — so a set that includes it is written as
+ * the types to leave out rather than the ones to keep. Empty when no type can
+ * carry any of the stages asked for; the caller asks nothing then.
+ */
+function typeFilters(stages: readonly PaperStage[]): string[] | undefined {
+  const types = Object.keys(STAGES).sort();
+
+  if (stages.includes('unknown')) {
+    return types.filter(type => !stages.includes(STAGES[type]!)).map(type => `type:!${type}`);
+  }
+
+  const kept = types.filter(type => stages.includes(STAGES[type]!));
+  return kept.length > 0 ? [`type:${kept.join('|')}`] : undefined;
+}
+
 export type TranslateOptions = {
   /** Adds `is_oa:true`, which OpenAlex applies upstream. */
   openAccessOnly?: boolean;
@@ -68,6 +88,14 @@ export function toParams(query: Query, options: TranslateOptions = {}): OpenAlex
   const { from, to } = query.years ?? {};
   if (from !== undefined || to !== undefined) {
     filters.push(`publication_year:${from ?? EARLIEST}-${to ?? LATEST}`);
+  }
+
+  if (query.stages?.length && !query.doi) {
+    const types = typeFilters(query.stages);
+    // Nothing this provider holds is what was asked for. `plan` skips a
+    // provider on the same condition, so this is the backstop.
+    if (!types) return {};
+    filters.push(...types);
   }
 
   if (query.doi) {

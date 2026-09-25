@@ -42,5 +42,8 @@ export const capabilities: ProviderCapabilities = {
 
   // `citedByCount` is on every core record. The old connector never read it,
   // which is why Europe PMC contributed nothing to the citations sort.
-  suppliesCitations: true
+  suppliesCitations: true,
+
+  // `SRC:PPR` is the preprint source, and `normalize` reads it the same way.
+  stages: { holds: ['preprint', 'published', 'unknown'], filter: true }
 };

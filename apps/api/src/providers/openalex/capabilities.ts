@@ -54,5 +54,8 @@ export const capabilities: ProviderCapabilities = {
 
   // `cited_by_count`, on every record. OpenAlex was the only provider feeding
   // the citations sort before Europe PMC was migrated.
-  suppliesCitations: true
+  suppliesCitations: true,
+
+  // Read from `type`, which a `type:` filter narrows to the same values.
+  stages: { holds: ['preprint', 'published', 'unknown'], filter: true }
 };

@@ -129,6 +129,18 @@ export function translate(query: Query, options: TranslateOptions = {}): string 
     clauses.push(`${from ?? EARLIEST}:${to ?? LATEST}[PDAT]`);
   }
 
+  // `normalize` calls a record published when it has a PMC id, which is what
+  // `pubmed pmc[sb]` selects. The open-access subset is inside PMC already, so
+  // under that filter the clause would change nothing and is left off — which
+  // keeps the query, and the cache key, identical to the unnarrowed one.
+  const stages = query.stages;
+  if (
+    stages?.length && !query.doi && !options.openAccessOnly &&
+    stages.includes('published') && !stages.includes('unknown')
+  ) {
+    clauses.push('pubmed pmc[sb]');
+  }
+
   if (options.openAccessOnly) clauses.push(OPEN_ACCESS);
 
   return clauses.join(' AND ');

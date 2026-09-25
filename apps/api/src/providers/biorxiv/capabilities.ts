@@ -48,5 +48,8 @@ export const capabilities: ProviderCapabilities = {
   // A DOI lookup has no corpus-wide count to report.
   reportsTotal: false,
 
-  suppliesCitations: false
+  suppliesCitations: false,
+
+  // A preprint server, and `normalize` marks every record one.
+  stages: { holds: ['preprint'], filter: false }
 };

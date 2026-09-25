@@ -45,5 +45,9 @@ export const capabilities: ProviderCapabilities = {
   reportsTotal: true,
 
   // PubMed holds no citation counts.
-  suppliesCitations: false
+  suppliesCitations: false,
+
+  // Published when PubMed Central holds it, which `pubmed pmc[sb]` asks for.
+  // Under the open-access filter every record is in PMC already.
+  stages: { holds: ['published', 'unknown'], filter: true }
 };
