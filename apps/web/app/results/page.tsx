@@ -13,7 +13,7 @@ import { SearchError } from '@/components/SearchError';
 import { searchPapers } from '@/lib/fetcher';
 import { toList, toSingle, toPage, toYear, toSort } from '@/lib/search-params';
 import { classifySearchError, queryProblem } from '@/lib/search-error';
-import { coverageOf, totalLabel } from '@/lib/coverage';
+import { coverageOf, countLabel, filtersNarrow, matchingNote, matchingOf, sourceCountsApply, totalLabel } from '@/lib/coverage';
 import { SearchParams } from '@open-access-explorer/shared';
 
 // Force dynamic rendering
@@ -99,21 +99,38 @@ async function ResultsContent({ searchParams }: { searchParams: ResultsSearchPar
     }
 
     /**
-     * What `results.total` is a total of.
+     * How many papers match, which is the count shown everywhere below.
      *
-     * It used to be labelled "retrievable open-access papers", which reads as
-     * a count of the literature and is not one: it is the survivors of a fixed
-     * read depth per provider, so the same query answers 1,716 with three
-     * sources up and 2,891 with five. See `lib/coverage.ts`.
+     * Not `results.total`. That is the survivors of a fixed read depth per
+     * provider, so the same query answers 1,716 with three sources up and 2,891
+     * with five — it is what pagination walks, and nothing a reader should be
+     * told is the size of their search. See `Matching` in `lib/coverage.ts`.
      */
     const coverage = coverageOf(results.providerTotals ?? []);
+    // The API says whether its sources were asked exactly this search. The
+    // local guess is for a response from before it did.
+    const matching = matchingOf(
+      results.total,
+      coverage,
+      results.countsFromSources ?? sourceCountsApply(query, searchParamsObj.filters ?? {})
+    );
 
             return (
               <div className="space-y-8">
                 {/* Adds this search to the session's numbered history. Here
                     rather than beside the search box because the count is only
-                    known once the search has come back. */}
-                <RecordSearch query={query} total={results.total} />
+                    known once the search has come back.
+
+                    Without a count while a facet is ticked: a set is the query
+                    it expands to, and the facet is not part of it, so a count
+                    narrowed by one is not the set's. The count it already has
+                    stands. */}
+                <RecordSearch
+                  query={query}
+                  {...(filtersNarrow(searchParamsObj.filters ?? {})
+                    ? {}
+                    : { total: matching.count, atLeast: matching.basis !== 'exact' })}
+                />
 
                 {/* Results Header */}
                 <div className="border-b pb-4">
@@ -122,13 +139,9 @@ async function ResultsContent({ searchParams }: { searchParams: ResultsSearchPar
                       <h1 className="text-xl font-semibold">{query}</h1>
                       <span
                         className="text-sm text-muted-foreground"
-                        title={
-                          coverage.truncated
-                            ? 'Each source is read to a fixed depth, so this is what those reads held after de-duplication — not everything that matches.'
-                            : undefined
-                        }
+                        title={matchingNote(matching)}
                       >
-                        {totalLabel(results.total, coverage)}
+                        {totalLabel(matching)}
                       </span>
                     </div>
                     <ExportButton 
@@ -161,6 +174,7 @@ async function ResultsContent({ searchParams }: { searchParams: ResultsSearchPar
                     <PaginatedResults
                       results={results.hits}
                       total={results.total}
+                      matching={countLabel(matching)}
                       page={currentPage}
                       pageSize={pageSize}
                     />

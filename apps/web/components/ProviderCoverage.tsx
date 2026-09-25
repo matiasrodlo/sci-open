@@ -2,22 +2,7 @@ import { Fragment } from 'react';
 import { ProviderTotal } from '@open-access-explorer/shared';
 import { AlertTriangle } from 'lucide-react';
 import { coverageOf, isFailed, isSkipped, skipsByReason } from '@/lib/coverage';
-
-const PROVIDER_LABELS: Record<string, string> = {
-  openalex: 'OpenAlex',
-  crossref: 'Crossref',
-  unpaywall: 'Unpaywall',
-  opencitations: 'OpenCitations',
-  europepmc: 'Europe PMC',
-  ncbi: 'PubMed',
-  arxiv: 'arXiv',
-  doaj: 'DOAJ',
-  plos: 'PLOS',
-  openaire: 'OpenAIRE',
-  core: 'CORE',
-  datacite: 'DataCite',
-  biorxiv: 'bioRxiv',
-};
+import { PROVIDER_LABELS } from '@/lib/provider-labels';
 
 interface ProviderCoverageProps {
   providers: ProviderTotal[];
@@ -40,8 +25,14 @@ interface ProviderCoverageProps {
 }
 
 /**
- * What each provider reports for this query, next to how much of it this search
- * actually pulled back — and which of them did not answer.
+ * What each provider reports matching this query — and which of them did not
+ * answer.
+ *
+ * Matching only. The row used to add how many records this search read from the
+ * source, `684,999 · 600`, and the second figure is the read depth on every
+ * broad search: it describes this service's budget, not the source, and the
+ * page no longer shows a read count anywhere else. The depth is said once, in
+ * words, below the list.
  *
  * The counts are shown per provider and never added together: the corpora
  * overlap heavily, so the same paper is in several of them and a combined
@@ -87,7 +78,7 @@ export function ProviderCoverage({ providers, complete, bounded }: ProviderCover
           Sources searched
         </h2>
         <span className="text-xs text-muted-foreground">
-          matching in each source · retrieved here
+          matching in each source
         </span>
       </div>
 
@@ -101,7 +92,6 @@ export function ProviderCoverage({ providers, complete, bounded }: ProviderCover
               {typeof provider.totalHits === 'number'
                 ? provider.totalHits.toLocaleString()
                 : '—'}
-              <span className="opacity-60"> · {provider.retrieved.toLocaleString()}</span>
             </span>
           </li>
         ))}
@@ -157,14 +147,18 @@ export function ProviderCoverage({ providers, complete, bounded }: ProviderCover
         query normally does — it is true of nearly every search here — and
         putting a warning on the normal case is how a reader learns to stop
         reading warnings. The banner stays for the two things that actually went
-        wrong. This is the fact that explains the number above it, and it sits
-        beside the "not searched" line as a fact of the same kind.
+        wrong. This is the fact that explains why the list pages through fewer
+        papers than the count above names, and it sits beside the "not searched"
+        line as a fact of the same kind.
       */}
       {coverageOf(providers).truncated && (
         <p className="mt-2 text-xs text-muted-foreground">
-          Each source was read to a fixed depth, so the total above is what those reads held
-          after de-duplication
-          <span className="opacity-70"> — not everything that matches.</span>
+          Each source was read to a fixed depth, so the results listed come from the top of each
+          source&rsquo;s answer
+          <span className="opacity-70"> — not everything that matches.</span>{' '}
+          {/* The facets are counted by the sources themselves where they can
+              be, and marked with a `+` where they were. See `FacetGroup`. */}
+          A filter count marked + is a source&rsquo;s own count, across everything it holds.
         </p>
       )}
 

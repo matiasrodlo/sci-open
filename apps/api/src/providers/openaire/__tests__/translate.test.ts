@@ -81,3 +81,17 @@ describe('toParams — a DOI is not free text', () => {
     expect(params.fromPublicationDate).toBe('2022-01-01');
   });
 });
+
+describe('toParams — the publication type', () => {
+  it('asks for refereed instances when only published papers are wanted', () => {
+    expect(toParams(query({ terms: ['ai'], stages: ['published', 'accepted'] })).isPeerReviewed).toBe('true');
+  });
+
+  it('asks nothing extra when unknown papers are wanted too', () => {
+    expect(toParams(query({ terms: ['ai'], stages: ['published', 'unknown'] }))).not.toHaveProperty('isPeerReviewed');
+  });
+
+  it('leaves a DOI lookup unnarrowed', () => {
+    expect(toParams(query({ doi: '10.1/x', stages: ['published'] }))).not.toHaveProperty('isPeerReviewed');
+  });
+});

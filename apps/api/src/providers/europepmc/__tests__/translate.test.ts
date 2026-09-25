@@ -184,3 +184,22 @@ describe('translateIds', () => {
     expect(translateIds(['a"b', 'c'])).toBe('EXT_ID:"a\\"b" OR EXT_ID:"c"');
   });
 });
+
+describe('translate — the publication type', () => {
+  const base = '(TITLE_ABS:ai OR MESH:ai OR KW:ai)';
+
+  it('selects the preprint source for preprints, and everything else for published', () => {
+    // `normalize` calls a record a preprint exactly when its source is PPR.
+    expect(translate(query({ terms: ['ai'], stages: ['preprint'] }))).toBe(`${base} AND SRC:PPR`);
+    expect(translate(query({ terms: ['ai'], stages: ['published', 'accepted'] }))).toBe(`${base} AND NOT SRC:PPR`);
+  });
+
+  it('adds nothing when both are asked for', () => {
+    expect(translate(query({ terms: ['ai'], stages: ['preprint', 'published'] }))).toBe(base);
+  });
+
+  it('keeps the open-access clause last', () => {
+    expect(translate(query({ terms: ['ai'], stages: ['preprint'] }), { openAccessOnly: true }))
+      .toBe(`${base} AND SRC:PPR AND OPEN_ACCESS:y`);
+  });
+});

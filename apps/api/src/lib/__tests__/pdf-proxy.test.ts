@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import axios from 'axios';
+import { Readable } from 'stream';
 
 // pdf-proxy binds `promisify(dns.lookup)` at import time, so the resolver has
 // to be replaced at module level rather than spied on afterwards. The same stub
@@ -22,6 +23,7 @@ import {
   guardedLookup,
   ssrfRefusalIn,
   fetchPdfStream,
+  servesPdf,
   statusForUpstream,
   PdfProxyError,
   SSRF_REFUSED
@@ -390,5 +392,68 @@ describe('fetchPdfStream wiring', () => {
       .toThrow(PdfProxyError);
     expect(() => config.beforeRedirect({ protocol: 'file:', hostname: 'example.com' }))
       .toThrow(PdfProxyError);
+  });
+});
+
+/**
+ * `servesPdf` is what lets the preprints authority set `verified: true`, so it
+ * has to judge by the bytes and nothing else: OSF serves PDFs and Word
+ * documents alike as `application/octet-stream`, and a bot wall answers 200
+ * with an HTML page as readily as 403.
+ */
+describe('servesPdf', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const answer = (status: number, body: string | Buffer) => {
+    const data = Readable.from([Buffer.isBuffer(body) ? body : Buffer.from(body)]);
+    const destroy = vi.spyOn(data, 'destroy');
+    const get = vi.spyOn(axios, 'get').mockResolvedValue({ status, headers: {}, data });
+    return { get, destroy };
+  };
+
+  const url = new URL('https://www.researchsquare.com/article/rs-1/v1.pdf');
+  const ask = () => servesPdf(url, 'ua', { timeoutMs: 1000 });
+
+  it('is true when the first bytes are a PDF’s', async () => {
+    answer(206, '%PDF-1.7\n%âã');
+    expect(await ask()).toBe(true);
+  });
+
+  it('is false for a file that is not a PDF, whatever it is called', async () => {
+    answer(206, Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x14]));
+    expect(await ask()).toBe(false);
+  });
+
+  it('is false for a page', async () => {
+    answer(200, '<!DOCTYPE html><title>Just a moment...</title>');
+    expect(await ask()).toBe(false);
+  });
+
+  it('is false for a refusal, and does not read it', async () => {
+    const { destroy } = answer(403, '<html>blocked</html>');
+    expect(await ask()).toBe(false);
+    expect(destroy).toHaveBeenCalled();
+  });
+
+  it('throws for a server error, which is no answer at all', async () => {
+    answer(503, 'unavailable');
+    await expect(ask()).rejects.toThrow('HTTP 503');
+  });
+
+  it('asks for the first kilobyte, through the guarded agents', async () => {
+    const { get } = answer(206, '%PDF-1.4');
+    await ask();
+    const config = get.mock.calls[0]![1] as any;
+
+    expect(config.headers.Range).toBe('bytes=0-1023');
+    expect(config.httpsAgent.options.lookup).toBe(guardedLookup);
+    expect(config.httpAgent.options.lookup).toBe(guardedLookup);
+  });
+
+  it('stops reading once it has the signature', async () => {
+    // A server ignoring the range would otherwise send the whole file.
+    const { destroy } = answer(200, Buffer.alloc(64 * 1024, '%PDF-'));
+    expect(await ask()).toBe(true);
+    expect(destroy).toHaveBeenCalled();
   });
 });

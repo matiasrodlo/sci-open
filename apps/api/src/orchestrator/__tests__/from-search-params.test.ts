@@ -23,7 +23,8 @@ function recorder(papers = pageOf(3)): { entry: ProviderEntry; calls: Recorded[]
     id: 'europepmc',
     capabilities: {
       keywordSearch: true, fieldedSearch: true, doiLookup: true, fields: [], yearFilter: true,
-      maxPageSize: 1000, reportsTotal: true, suppliesCitations: false
+      maxPageSize: 1000, reportsTotal: true, suppliesCitations: false,
+      stages: { holds: ['published'], filter: false }, facets: []
     },
     translate: () => 'native',
     normalizerVersion: 1,
@@ -240,6 +241,20 @@ describe('runOrchestrator: the response', () => {
       expect(response.bounded).toBe(true);
     });
 
+    it('reads an empty limit as unset, not as off', async () => {
+      // `Number('')` is 0. Empty is what the sample env file and docker-compose
+      // hand the service, and it switched the step off everywhere.
+      vi.stubEnv('SEARCH_RESCUE_LIMIT', '');
+      const { entry } = recorder([gated(1), gated(2)]);
+
+      const response = await runOrchestrator({ q: 'crispr' }, {
+        providers: [entry],
+        authorities: [rescuer]
+      });
+
+      expect(response.bounded).toBe(false);
+    });
+
     it('is false when every candidate was asked about', async () => {
       vi.stubEnv('SEARCH_RESCUE_LIMIT', '50');
       const { entry } = recorder([gated(1), gated(2)]);
@@ -367,5 +382,120 @@ describe('SEARCH_DEPTH', () => {
   it('ignores a value that is not a number', async () => {
     vi.stubEnv('SEARCH_DEPTH', 'deeper');
     expect(await depthOf()).toBe(600);
+  });
+});
+
+/**
+ * The year and publication-type facets are sent to the sources, so that
+ * ticking 2024 reads 2024 from each of them and counts 2024 across all they
+ * hold — rather than narrowing a read of the top of their whole answer. And
+ * each facet is counted across the sources under the query with its own
+ * selection lifted, so ticking one year leaves the others countable.
+ */
+describe('facets sent to the sources, and counted by them', () => {
+  type Counted = { facet: string; query: Query };
+
+  function counter(): { entry: ProviderEntry; searched: Query[]; counted: Counted[] } {
+    const searched: Query[] = [];
+    const counted: Counted[] = [];
+    const entry: ProviderEntry = {
+      id: 'openalex',
+      capabilities: {
+        keywordSearch: true, fieldedSearch: false, doiLookup: true, fields: [], yearFilter: true,
+        maxPageSize: 200, reportsTotal: true, suppliesCitations: false,
+        stages: { holds: ['preprint', 'published', 'unknown'], filter: true },
+        facets: ['year', 'stage', 'venue', 'publisher', 'topics']
+      },
+      translate: () => 'native',
+      normalizerVersion: 1,
+      search: async ({ query }) => {
+        searched.push(query);
+        return { papers: pageOf(3), totalHits: 5000, skipped: [] };
+      },
+      facets: async ({ requests }) => {
+        counted.push(...requests);
+        return { facets: { year: [{ value: 2021, count: 999 }] }, failures: [] };
+      },
+      facetsAggregate: true
+    };
+    return { entry, searched, counted };
+  }
+
+  const queryFor = (counted: Counted[], facet: string) => counted.find(c => c.facet === facet)?.query;
+
+  afterEach(() => { vi.unstubAllEnvs(); });
+
+  it('sends a ticked year as a bound, and a ticked type as stages', async () => {
+    const { entry, searched } = counter();
+    await run({ q: 'crispr', filters: { year: ['2024'], publicationType: ['preprint'] } }, [entry]);
+
+    expect(searched[0]!.years).toEqual({ from: 2024, to: 2024 });
+    expect(searched[0]!.stages).toEqual(['preprint']);
+  });
+
+  it('counts each facet with its own selection lifted', async () => {
+    const { entry, counted } = counter();
+    await run({ q: 'crispr', filters: { year: ['2024'], publicationType: ['preprint'] } }, [entry]);
+
+    // The year facet: every year, still only preprints.
+    expect(queryFor(counted, 'year')!.years).toBeUndefined();
+    expect(queryFor(counted, 'year')!.stages).toEqual(['preprint']);
+    // The type facet: every type, still only 2024.
+    expect(queryFor(counted, 'stage')!.years).toEqual({ from: 2024, to: 2024 });
+    expect(queryFor(counted, 'stage')!.stages).toBeUndefined();
+    // Everything else: the search as sent.
+    expect(queryFor(counted, 'venue')).toEqual(queryFor(counted, 'topics'));
+    expect(queryFor(counted, 'venue')!.stages).toEqual(['preprint']);
+  });
+
+  it('keeps a year range the reader typed while lifting the ticked years', async () => {
+    const { entry, counted } = counter();
+    await run({ q: 'crispr', filters: { yearFrom: 2020, yearTo: 2025, year: ['2024'] } }, [entry]);
+
+    expect(queryFor(counted, 'year')!.years).toEqual({ from: 2020, to: 2025 });
+  });
+
+  it('raises the facets to the sources’ counts and says the counts describe this search', async () => {
+    const { entry } = counter();
+    const response = await run({ q: 'crispr', filters: { year: ['2024'] } }, [entry]);
+
+    expect(response.countsFromSources).toBe(true);
+    expect(response.facets.year).toContainEqual({ value: 2021, count: 999, from: 'openalex' });
+  });
+
+  it('counts only the ticked facet’s own group when a filter no source can be sent is ticked', async () => {
+    // A source's count of 2024 knows nothing about the venue ticked.
+    const { entry, counted } = counter();
+    const response = await run({ q: 'crispr', filters: { venue: ['Journal 1'] } }, [entry]);
+
+    expect(counted.map(c => c.facet)).toEqual(['venue']);
+    expect(response.countsFromSources).toBe(false);
+  });
+
+  it('does not claim the counts describe ticked years with a gap between them', async () => {
+    // Sent as the span 2020–2024, so a source's count is of all five years.
+    const { entry, searched, counted } = counter();
+    const response = await run({ q: 'crispr', filters: { year: ['2020', '2024'] } }, [entry]);
+
+    expect(searched[0]!.years).toEqual({ from: 2020, to: 2024 });
+    expect(counted.map(c => c.facet)).toEqual(['year']);
+    expect(response.countsFromSources).toBe(false);
+  });
+
+  it('counts nothing across the sources for a structured query', async () => {
+    const { entry, counted } = counter();
+    const response = await run({ q: 'AU=Doudna AND crispr' }, [entry]);
+
+    expect(counted).toEqual([]);
+    expect(response.countsFromSources).toBe(false);
+  });
+
+  it('can be turned off', async () => {
+    vi.stubEnv('SEARCH_FACET_COUNTS', 'off');
+    const { entry, counted } = counter();
+    const response = await run({ q: 'crispr' }, [entry]);
+
+    expect(counted).toEqual([]);
+    expect(response.countsFromSources).toBe(true);
   });
 });

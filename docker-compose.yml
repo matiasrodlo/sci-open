@@ -78,6 +78,9 @@ services:
       # broad query — see docs/configuration.md.
       - SEARCH_RESCUE_LIMIT=${SEARCH_RESCUE_LIMIT:-}
       - SEARCH_RESCUE_BUDGET_MS=${SEARCH_RESCUE_BUDGET_MS:-}
+      # `off` counts every facet over what was read, as before the sources were
+      # asked for their own counts. Empty asks them — see docs/env.example.
+      - SEARCH_FACET_COUNTS=${SEARCH_FACET_COUNTS:-}
       # Budgets for the two in-process caches, in bytes. Both count serialised
       # size, so a container memory limit wants to be comfortably more than
       # their sum. Empty uses the defaults: 256 MB of responses, 128 MB of

@@ -38,12 +38,15 @@ import { RefreshCw } from 'lucide-react';
 
 interface PaginatedResultsProps {
   results: OARecord[];
+  /** What pagination walks: the papers this search read and kept. */
   total: number;
+  /** What the counter names as the size of the search. See `Matching`. */
+  matching?: string;
   page: number;
   pageSize: number;
 }
 
-export function PaginatedResults({ results, total, page, pageSize }: PaginatedResultsProps) {
+export function PaginatedResults({ results, total, matching, page, pageSize }: PaginatedResultsProps) {
   const router = useRouter();
   // `useTransition` rather than a `loading` flag: the pending state belongs to
   // the server render this starts, so React owns when it ends. A hand-rolled
@@ -65,6 +68,7 @@ export function PaginatedResults({ results, total, page, pageSize }: PaginatedRe
         currentPage={page}
         totalPages={totalPages}
         totalResults={total}
+        {...(matching !== undefined ? { matching } : {})}
         pageSize={pageSize}
       />
 

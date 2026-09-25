@@ -151,3 +151,26 @@ describe('partitionByPolicy — what is settled and what is still a question', (
     expect(candidates.map(p => p.id)).toEqual(['a', 'b']);
   });
 });
+
+/**
+ * The facet counts a venue by `facetKey`, so one bucket holds every spelling
+ * the providers used. Ticking it has to find all of them, or the count beside
+ * the box overstates what it returns.
+ */
+describe('a ticked name', () => {
+  it('selects every spelling of it', () => {
+    const lower = paper({ id: 'a', venue: 'Frontiers in psychology' });
+    const upper = paper({ id: 'b', venue: 'Frontiers in Psychology' });
+    const other = paper({ id: 'c', venue: 'Psychology' });
+
+    expect(applyPolicy([lower, upper, other], { venue: ['Frontiers in Psychology'] }).map(p => p.id))
+      .toEqual(['a', 'b']);
+  });
+
+  it('reads a publisher and a topic the same way', () => {
+    const p = paper({ publisher: 'Taylor & Francis', topics: ['Gene Editing'] });
+
+    expect(applyPolicy([p], { publisher: ['Taylor and Francis'] })).toHaveLength(1);
+    expect(applyPolicy([p], { topics: ['gene editing'] })).toHaveLength(1);
+  });
+});

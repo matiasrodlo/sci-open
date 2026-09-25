@@ -102,7 +102,9 @@ export function SearchHistory({ onInsert }: { onInsert: (reference: string) => v
                 </code>
 
                 <span className="shrink-0 tabular-nums text-xs text-muted-foreground">
-                  {set.total === undefined ? '—' : set.total.toLocaleString()}
+                  {set.total === undefined
+                    ? '—'
+                    : `${set.total.toLocaleString()}${set.atLeast === true ? '+' : ''}`}
                 </span>
               </li>
             ))}

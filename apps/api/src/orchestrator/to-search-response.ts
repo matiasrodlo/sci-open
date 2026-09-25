@@ -54,6 +54,10 @@ export function toSearchResponse(
     // was shown a bounded count with nothing to indicate it was one. The rest of
     // `RescueReport` — how many candidates there were, how many were examined —
     // stays internal: it describes the work, and this describes the answer.
-    bounded: result.rescue.bounded
+    bounded: result.rescue.bounded,
+    // Whether `providerTotals[].totalHits` counts this search or a larger one.
+    // The facets need no flag beside them: each bucket names the source its
+    // count came from, and one taken from the read names none.
+    countsFromSources: result.countsFromSources
   };
 }

@@ -63,5 +63,8 @@ export const capabilities: ProviderCapabilities = {
 
   // Read from `resourceTypeGeneral`, so a record can be any of the three.
   // There is no call to narrow by it: DataCite is not asked keyword queries.
-  stages: { holds: ['preprint', 'published', 'unknown'], filter: false }
+  stages: { holds: ['preprint', 'published', 'unknown'], filter: false },
+
+  // Not asked a keyword query, so not asked to count one.
+  facets: []
 };

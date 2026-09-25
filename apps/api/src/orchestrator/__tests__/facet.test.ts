@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { facetBaseSets, generateFacets } from '../facet';
+import { facetBaseSets, facetKey, generateFacets, withSourceCounts } from '../facet';
 import { matchesFilters } from '../policy';
 import { paper, ref } from './helpers';
 
@@ -70,6 +70,13 @@ describe('generateFacets', () => {
 
   it('orders years newest first', () => {
     expect(generateFacets(papers).year.map(b => b.value)).toEqual([2021, 2020]);
+  });
+
+  it('drops years after the current one, and lists the paper still', () => {
+    const dated = [...papers, paper({ id: 'd', year: 2035 }), paper({ id: 'e', year: 2027 }), paper({ id: 'f', year: 2026 })];
+    const f = generateFacets(dated, {}, new Date('2026-09-25T00:00:00Z'));
+    expect(f.year.map(b => b.value)).toEqual([2026, 2021, 2020]);
+    expect(f.source[0]!.count).toBe(dated.length);
   });
 
   it('caps open-ended facets at 25 without rescaling the survivors', () => {
@@ -144,5 +151,97 @@ describe('a facet is not counted over its own selection', () => {
     // unfiltered search takes exactly the path it always did.
     expect(facetBaseSets(corpus, {}, {}, admitted)).toEqual({});
     expect(facetsWith({})).toEqual(generateFacets(corpus));
+  });
+});
+
+describe('facetKey', () => {
+  it('ignores case, accents, punctuation and the spelling of "and"', () => {
+    expect(facetKey('Frontiers in psychology')).toBe(facetKey('Frontiers in Psychology'));
+    expect(facetKey('Taylor & Francis')).toBe(facetKey('Taylor and Francis'));
+    expect(facetKey('Revista Médica de Chile')).toBe(facetKey('Revista medica de chile'));
+    expect(facetKey('PLoS ONE')).toBe(facetKey('PLOS ONE'));
+  });
+
+  it('keeps different names different', () => {
+    expect(facetKey('Nature')).not.toBe(facetKey('Nature Communications'));
+  });
+});
+
+describe('generateFacets — spellings', () => {
+  it('counts every spelling of a venue in one bucket, labelled as most papers spell it', () => {
+    const f = generateFacets([
+      paper({ id: 'a', venue: 'Frontiers in Psychology' }),
+      paper({ id: 'b', venue: 'Frontiers in psychology' }),
+      paper({ id: 'c', venue: 'Frontiers in Psychology' })
+    ]);
+
+    expect(f.venue).toEqual([{ value: 'Frontiers in Psychology', count: 3 }]);
+  });
+
+  it('counts a paper once for a topic it carries in two spellings', () => {
+    expect(generateFacets([paper({ topics: ['CRISPR', 'crispr'] })]).topics).toEqual([{ value: 'CRISPR', count: 1 }]);
+  });
+});
+
+/**
+ * The read counts the top of each source's answer; the sources count all of
+ * it. The two meet here, and the rule is the largest single count — never the
+ * sum, because the sources hold the same papers several times over.
+ */
+describe('withSourceCounts', () => {
+  const read = generateFacets([
+    paper({ id: 'a', year: 2024, venue: 'Frontiers in psychology' }),
+    paper({ id: 'b', year: 2023, venue: 'Nature' })
+  ]);
+
+  it('takes the largest single source’s count, and names it', () => {
+    const f = withSourceCounts(read, [
+      { provider: 'openalex', facets: { year: [{ value: 2024, count: 900 }] } },
+      { provider: 'europepmc', facets: { year: [{ value: 2024, count: 400 }, { value: 2023, count: 50 }] } }
+    ], ['year']);
+
+    expect(f.year).toEqual([
+      { value: 2024, count: 900, from: 'openalex' },
+      { value: 2023, count: 50, from: 'europepmc' }
+    ]);
+  });
+
+  it('drops a future year a source reports', () => {
+    // OpenAlex's `group_by` answers every year it holds, whatever was asked.
+    const f = withSourceCounts(read, [
+      { provider: 'openalex', facets: { year: [{ value: 2035, count: 2 }, { value: 2024, count: 900 }] } }
+    ], ['year'], new Date('2026-09-25T00:00:00Z'));
+
+    expect(f.year.map(b => b.value)).toEqual([2024, 2023]);
+  });
+
+  it('keeps the read’s count where it is larger', () => {
+    const f = withSourceCounts(read, [{ provider: 'plos', facets: { year: [{ value: 2023, count: 0 }] } }], ['year']);
+    expect(f.year.find(b => b.value === 2023)).toEqual({ value: 2023, count: 1 });
+  });
+
+  it('meets a source’s spelling with the read’s, and keeps the read’s', () => {
+    // So ticking it finds the papers the list holds.
+    const f = withSourceCounts(read, [
+      { provider: 'openalex', facets: { venue: [{ value: 'Frontiers in Psychology', count: 210 }] } }
+    ], ['venue']);
+
+    expect(f.venue[0]).toEqual({ value: 'Frontiers in psychology', count: 210, from: 'openalex' });
+  });
+
+  it('adds a value only a source holds', () => {
+    const f = withSourceCounts(read, [
+      { provider: 'openalex', facets: { venue: [{ value: 'Malaria Journal', count: 608 }] } }
+    ], ['venue']);
+
+    expect(f.venue.map(b => b.value)).toEqual(['Malaria Journal', 'Frontiers in psychology', 'Nature']);
+  });
+
+  it('leaves a facet it was not told to count as the read counted it', () => {
+    const f = withSourceCounts(read, [
+      { provider: 'openalex', facets: { venue: [{ value: 'Nature', count: 5000 }] } }
+    ], ['year']);
+
+    expect(f.venue).toEqual(read.venue);
   });
 });

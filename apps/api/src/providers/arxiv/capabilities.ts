@@ -56,5 +56,9 @@ export const capabilities: ProviderCapabilities = {
 
   // Every record is a preprint; `normalize` says so of all of them. Nothing to
   // narrow, so a search for peer-reviewed papers skips arXiv instead.
-  stages: { holds: ['preprint'], filter: false }
+  stages: { holds: ['preprint'], filter: false },
+
+  // The stage alone, which is its total. A year facet would be a request per
+  // year against an API that asks for three seconds between requests.
+  facets: ['stage']
 };

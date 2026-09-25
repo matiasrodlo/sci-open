@@ -292,14 +292,22 @@ export function statusForUpstream(status: number): number {
   return 502;
 }
 
+type GuardedGetOptions = {
+  timeoutMs: number;
+  signal?: AbortSignal;
+  headers?: Record<string, string>;
+  validateStatus: (status: number) => boolean;
+};
+
 /**
- * Streams the PDF rather than buffering it, so a large file does not sit in
- * memory on its way to the browser.
+ * A streamed GET under the SSRF rules, shared by the proxy and `servesPdf` so
+ * that checking a copy and serving it cannot drift apart in what they will
+ * follow.
  */
-export async function fetchPdfStream(url: URL, userAgent: string): Promise<PdfStream> {
-  const response = await axios.get<Readable>(url.href, {
+function guardedGet(url: URL, userAgent: string, options: GuardedGetOptions) {
+  return axios.get<Readable>(url.href, {
     responseType: 'stream',
-    timeout: DOWNLOAD_TIMEOUT_MS,
+    timeout: options.timeoutMs,
     maxRedirects: MAX_REDIRECTS,
     // The guard that actually holds. Both are set because follow-redirects
     // picks the agent per hop by scheme, so a chain that crosses from https to
@@ -308,7 +316,8 @@ export async function fetchPdfStream(url: URL, userAgent: string): Promise<PdfSt
     httpsAgent: guardedHttpsAgent,
     headers: {
       'User-Agent': userAgent,
-      Accept: 'application/pdf,*/*'
+      Accept: 'application/pdf,*/*',
+      ...options.headers
     },
     // Each redirect hop is a fresh chance to be pointed somewhere internal.
     // This rejects the obvious form of that — a private literal, a non-http
@@ -320,6 +329,18 @@ export async function fetchPdfStream(url: URL, userAgent: string): Promise<PdfSt
       }
       assertRoutableHostSync(String(options.hostname || options.host || ''));
     },
+    validateStatus: options.validateStatus,
+    ...(options.signal ? { signal: options.signal } : {})
+  });
+}
+
+/**
+ * Streams the PDF rather than buffering it, so a large file does not sit in
+ * memory on its way to the browser.
+ */
+export async function fetchPdfStream(url: URL, userAgent: string): Promise<PdfStream> {
+  const response = await guardedGet(url, userAgent, {
+    timeoutMs: DOWNLOAD_TIMEOUT_MS,
     validateStatus: (status: number) => status >= 200 && status < 400
   }).catch((error: any) => {
     if (error instanceof PdfProxyError) {
@@ -369,4 +390,80 @@ export async function fetchPdfStream(url: URL, userAgent: string): Promise<PdfSt
     contentLength: Number.isFinite(declaredLength) ? declaredLength : undefined,
     filename: filenameFor(url)
   };
+}
+
+/** The first bytes of every PDF: the header comment, `%PDF-1.7` and so on. */
+const PDF_MAGIC = '%PDF-';
+
+/**
+ * Whether `url` serves a PDF, judged by what comes back rather than by what it
+ * is called.
+ *
+ * Asks for the first kilobyte and reads only as far as the file's signature,
+ * then hangs up — so a server that ignores the range costs one chunk, not the
+ * file. The content type is not trusted either way: OSF serves its PDFs as
+ * `application/octet-stream`, and serves a Word document the same way, which
+ * only the first bytes tell apart (`%PDF-` against `PK`).
+ *
+ * False for an answer that is not a PDF — a 403 from bot protection, a 404, an
+ * HTML page. Throws when there was no answer to judge: a network failure, a
+ * timeout, a 5xx, a refused redirect.
+ */
+export async function servesPdf(
+  url: URL,
+  userAgent: string,
+  options: { timeoutMs: number; signal?: AbortSignal }
+): Promise<boolean> {
+  const response = await guardedGet(url, userAgent, {
+    timeoutMs: options.timeoutMs,
+    headers: { Range: `bytes=0-1023` },
+    validateStatus: () => true,
+    ...(options.signal ? { signal: options.signal } : {})
+  });
+
+  const body = response.data;
+  if (response.status >= 500) {
+    body.destroy();
+    throw new Error(`HTTP ${response.status} for ${url.hostname}`);
+  }
+  if (response.status >= 300) {
+    body.destroy();
+    return false;
+  }
+
+  const prefix = await new Promise<Buffer>((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let length = 0;
+    const finish = () => {
+      clearTimeout(timer);
+      options.signal?.removeEventListener('abort', abort);
+      body.destroy();
+      resolve(Buffer.concat(chunks, length));
+    };
+    const fail = (error: Error) => {
+      clearTimeout(timer);
+      options.signal?.removeEventListener('abort', abort);
+      body.destroy();
+      reject(error);
+    };
+    // The response headers arriving is all `timeout` covers; a server that
+    // then sends nothing would hold this open without its own deadline.
+    const timer = setTimeout(() => {
+      const error = new Error(`no body from ${url.hostname} within ${options.timeoutMs}ms`);
+      error.name = 'TimeoutError';
+      fail(error);
+    }, options.timeoutMs);
+    const abort = () => fail(new Error('aborted'));
+    options.signal?.addEventListener('abort', abort, { once: true });
+
+    body.on('data', (chunk: Buffer) => {
+      chunks.push(chunk);
+      length += chunk.length;
+      if (length >= PDF_MAGIC.length) finish();
+    });
+    body.on('end', finish);
+    body.on('error', fail);
+  });
+
+  return prefix.subarray(0, PDF_MAGIC.length).toString('latin1') === PDF_MAGIC;
 }

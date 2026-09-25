@@ -42,5 +42,10 @@ export const capabilities: ProviderCapabilities = {
   suppliesCitations: false,
 
   // Journals only, and `ARTICLE_TYPES` keeps the read to research articles.
-  stages: { holds: ['published'], filter: false }
+  stages: { holds: ['published'], filter: false },
+
+  // Solr facets, all in one request. Not topics: `subject` is a set of
+  // hierarchical paths, and `normalize` keeps only the leaf of each, so a count
+  // of paths would not be a count of what the topic facet shows.
+  facets: ['year', 'stage', 'venue', 'publisher']
 };

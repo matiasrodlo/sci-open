@@ -1,4 +1,5 @@
-import type { ProviderTotal } from '@open-access-explorer/shared';
+import { isStructured, parseExpression } from '@open-access-explorer/shared';
+import type { ProviderTotal, SearchFilters } from '@open-access-explorer/shared';
 
 /**
  * What the reported total is a total *of*.
@@ -22,8 +23,8 @@ import type { ProviderTotal } from '@open-access-explorer/shared';
  * provider fails, so its absence read as "this count is complete", when a
  * healthy search is bounded by depth in exactly the same way.
  *
- * So the header says what the number is, and it needs two facts from the
- * per-provider reports to do it.
+ * So the page shows what matches rather than what was read — see `Matching` —
+ * and it needs two facts from the per-provider reports to do it.
  */
 export type Coverage = {
   /**
@@ -53,28 +54,126 @@ export type Coverage = {
 };
 
 /**
- * The count, said in words that are true of it.
+ * The one count the page shows for a search — in the header, in the search
+ * history and in the pagination line alike.
  *
- * Two readings, and which one applies is `coverage.truncated`. When a source
- * held more than was read, the number is what came back and the corpus figure
- * is a separate, larger thing, so both are named. When every source was read to
- * the end, the number really is the set and gets said plainly.
- *
- * A string rather than markup because it is one phrase either way, and because
- * a phrase is testable — including the singular, which the old wording got
- * wrong in a way nobody would notice until a DOI lookup matched one paper and
- * the header said "1 retrievable open-access papers".
+ * It used to be what this search read, and the header named the matching
+ * figure beside it: "1,716 retrieved of 684,999+ matching". The retrieved half
+ * is the number that moves with how many sources happened to answer, so it is
+ * the one a reader should not be handed as the size of their search. What
+ * matches is shown instead, everywhere, and the read depth is explained once,
+ * in `ProviderCoverage`, where it bears on what the list and facets can hold.
  */
-export function totalLabel(total: number, coverage: Coverage): string {
-  const count = total.toLocaleString();
+export type Matching = {
+  count: number;
+  /**
+   * Where `count` came from, which decides whether it is a floor and how the
+   * page explains it.
+   *
+   * - `exact` — every source was read to the end, so the count is the set.
+   * - `source` — the largest single source's own count. A floor: see
+   *   `Coverage.matching`.
+   * - `read` — what this search read and kept. Also a floor, since every paper
+   *   in it matches. Used when the sources' own counts do not describe the
+   *   question (see `sourceCountsApply`), and when the reads outnumber the
+   *   largest of them — several sources each read to depth can hold more
+   *   between them than the biggest one reports.
+   */
+  basis: 'exact' | 'source' | 'read';
+};
 
-  if (!coverage.truncated) {
-    return `${count} open-access ${total === 1 ? 'paper' : 'papers'}`;
+export function matchingOf(total: number, coverage: Coverage, sourceCountsApply: boolean): Matching {
+  if (!coverage.truncated) return { count: total, basis: 'exact' };
+
+  if (sourceCountsApply && coverage.matching !== undefined && coverage.matching > total) {
+    return { count: coverage.matching, basis: 'source' };
   }
 
-  return coverage.matching === undefined
-    ? `${count} retrieved`
-    : `${count} retrieved of ${coverage.matching.toLocaleString()}+ matching`;
+  return { count: total, basis: 'read' };
+}
+
+/**
+ * Filters the API applies to what the sources returned, rather than sending to
+ * them.
+ *
+ * `yearFrom` and `yearTo` are not here: they go into the query, and every
+ * provider that reports a count expresses them upstream, so its count already
+ * describes the range. Everything else is a facet, applied by the orchestrator
+ * after the fan-out — no source's count knows about it.
+ */
+const LOCAL_FILTERS = ['source', 'year', 'oaStatus', 'venue', 'publisher', 'topics', 'publicationType'] as const;
+
+/** True when a facet narrows the set after the sources have answered. */
+export function filtersNarrow(filters: SearchFilters): boolean {
+  return LOCAL_FILTERS.some(key => (filters[key]?.length ?? 0) > 0);
+}
+
+/**
+ * Whether the sources' own counts are counts of what was asked.
+ *
+ * Two things narrow a search after the sources answer, and a source's count
+ * knows about neither. A ticked facet is applied to the read, not sent. And a
+ * structured query — a field tag, `OR`, `NOT` — is *widened* for every source
+ * that cannot express it: OpenAIRE is asked `crispr` for `AU=Doudna AND
+ * crispr`, and its count is then of every paper about CRISPR. Shown as the
+ * size of that search, it would claim hundreds of thousands for a query that
+ * matches a few hundred, and `#1 NOT #3` would read as the same size as `#1` —
+ * a narrowing that did nothing, which is exactly what the search history's
+ * counts exist to reveal.
+ *
+ * In either case the only count that is true of the question is the one taken
+ * after the narrowing, which is the read.
+ */
+export function sourceCountsApply(query: string, filters: SearchFilters): boolean {
+  if (filtersNarrow(filters)) return false;
+
+  try {
+    // Parsed as the API parses it, so "structured" means the same thing here
+    // as it does to the providers that widen it.
+    return !isStructured(parseExpression(query));
+  } catch {
+    // The API accepted this query or there would be no count to label, so a
+    // parse failure here is a disagreement between the two; the read is the
+    // number that cannot overstate.
+    return false;
+  }
+}
+
+/** The count as a figure: `684,999+`, or `53` when it is the whole set. */
+export function countLabel(matching: Matching): string {
+  return `${matching.count.toLocaleString()}${matching.basis === 'exact' ? '' : '+'}`;
+}
+
+/**
+ * The count, said in words that are true of it, for the header.
+ *
+ * A string rather than markup because it is one phrase either way, and because
+ * a phrase is testable — including the singular, which an older wording got
+ * wrong in a way nobody would notice until a DOI lookup matched one paper and
+ * the header said "1 retrievable open-access papers".
+ *
+ * "Open-access" only for the exact count. That one is the set this service
+ * holds, after the open-access gate; a floor from a source's own count is of
+ * everything that source matched, readable or not.
+ */
+export function totalLabel(matching: Matching): string {
+  const noun = matching.count === 1 ? 'paper' : 'papers';
+
+  return matching.basis === 'exact'
+    ? `${countLabel(matching)} open-access ${noun}`
+    : `${countLabel(matching)} matching ${noun}`;
+}
+
+/** What the `+` means, for whoever hovers over it. */
+export function matchingNote(matching: Matching): string | undefined {
+  switch (matching.basis) {
+    case 'exact':
+      return undefined;
+    case 'source':
+      return 'At least this many: the largest single source’s own count. The sources overlap, so they are not added up — together they hold more.';
+    case 'read':
+      return 'At least this many: the papers read from each source that match. Each source is read only to a fixed depth, so more match than this.';
+  }
 }
 
 /**

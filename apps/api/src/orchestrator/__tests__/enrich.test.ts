@@ -322,6 +322,52 @@ describe('enrichPage', () => {
 
       expect(examined).toBe(0);
     });
+
+    it('does not count a paper one of its two lookups failed for', async () => {
+      // The rescue asks Unpaywall and the preprint servers together. A null
+      // from one and a timeout from the other is half an answer, and counted
+      // whole the rescue called itself complete with that paper dropped.
+      const answers = authority('unpaywall', null);
+      const fails = authority('preprints', null, { lookup: async () => { throw new Error('timeout of 4500ms exceeded'); } });
+
+      const { examined } = await enrichPage([withDoi()], { authorities: [answers, fails] });
+
+      expect(examined).toBe(0);
+    });
+  });
+
+  describe('the order questions are put in', () => {
+    it('asks every authority about one paper before moving to the next', async () => {
+      // So a budget that runs out leaves the best-ranked papers fully judged,
+      // rather than every paper asked by the first authority and none by the
+      // second.
+      const calls: string[] = [];
+      const recording = (id: any) => authority(id, null, {
+        lookup: async ({ doi }) => { calls.push(`${id}:${doi}`); return null; }
+      });
+
+      await enrichPage(
+        [withDoi({ id: 'a', doi: '10.1/a' }), withDoi({ id: 'b', doi: '10.1/b' })],
+        { authorities: [recording('unpaywall'), recording('preprints')], concurrency: 1 }
+      );
+
+      expect(calls).toEqual(['unpaywall:10.1/a', 'preprints:10.1/a', 'unpaywall:10.1/b', 'preprints:10.1/b']);
+    });
+
+    it('gives an authority its own lookup timeout when it has one', async () => {
+      const seen: number[] = [];
+      const slow = authority('preprints', null, {
+        timeoutMs: 4500,
+        lookup: async ({ timeoutMs }) => { seen.push(timeoutMs); return null; }
+      });
+      const fast = authority('unpaywall', null, {
+        lookup: async ({ timeoutMs }) => { seen.push(timeoutMs); return null; }
+      });
+
+      await enrichPage([withDoi()], { authorities: [fast, slow], timeoutMs: 2500 });
+
+      expect(seen).toEqual([2500, 4500]);
+    });
   });
 });
 

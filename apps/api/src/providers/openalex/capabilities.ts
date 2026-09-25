@@ -57,5 +57,9 @@ export const capabilities: ProviderCapabilities = {
   suppliesCitations: true,
 
   // Read from `type`, which a `type:` filter narrows to the same values.
-  stages: { holds: ['preprint', 'published', 'unknown'], filter: true }
+  stages: { holds: ['preprint', 'published', 'unknown'], filter: true },
+
+  // All five, from `group_by` — one request each, billed as a list query
+  // rather than a search ($0.0001 against $0.001, measured 2026-09-25).
+  facets: ['year', 'stage', 'venue', 'publisher', 'topics']
 };

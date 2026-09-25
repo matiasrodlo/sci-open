@@ -1,4 +1,4 @@
-import type { Paper } from '@open-access-explorer/shared';
+import type { CountedFacet, Paper, ProviderId, SourceFacets } from '@open-access-explorer/shared';
 import { matchesFilters, passesPolicy, type PolicyOptions, type UserFilters } from './policy';
 import { facetKey } from './facet-key';
 
@@ -27,7 +27,17 @@ export { facetKey };
  * in given everything else they have chosen. That is what this now counts.
  */
 
-export type FacetBucket = { value: string | number; count: number };
+export type FacetBucket = {
+  value: string | number;
+  count: number;
+  /**
+   * The source whose own count this is, when it is one — the largest single
+   * source's count across everything it matches, which beat what this search
+   * read. Absent when the count was taken from the read. See
+   * `withSourceCounts`.
+   */
+  from?: ProviderId;
+};
 export type Facets = Record<string, FacetBucket[]>;
 
 /** The facets this module produces, and the filter each one's checkboxes write to. */
@@ -138,7 +148,7 @@ export function facetBaseSets(
   return bases;
 }
 
-export function generateFacets(papers: readonly Paper[], bases: FacetBases = {}): Facets {
+export function generateFacets(papers: readonly Paper[], bases: FacetBases = {}, now: Date = new Date()): Facets {
   const over = (facet: FacetKey): readonly Paper[] => bases[facet] ?? papers;
 
   return {
@@ -153,12 +163,96 @@ export function generateFacets(papers: readonly Paper[], bases: FacetBases = {})
     // returns. Measured on "alzheimer amyloid": Europe PMC retrieved 600
     // records that merged into 584 papers, and the bucket read 600 against a
     // total of 584 in the same response.
-    source: count(over('source'), p => [...new Set(p.sources.map(s => s.provider))]).sort(byCount),
-    oaStatus: count(over('oaStatus'), p => p.oaStatus).sort(byCount),
-    stage: count(over('stage'), p => p.stage).sort(byCount),
-    year: count(over('year'), p => p.year).sort((a, b) => Number(b.value) - Number(a.value)).slice(0, 25),
-    venue: truncate(count(over('venue'), p => p.venue).sort(byCount)),
-    publisher: truncate(count(over('publisher'), p => p.publisher).sort(byCount)),
-    topics: truncate(count(over('topics'), p => p.topics).sort(byCount))
+    source: arrange('source', count(over('source'), p => [...new Set(p.sources.map(s => s.provider))]), now),
+    oaStatus: arrange('oaStatus', count(over('oaStatus'), p => p.oaStatus), now),
+    stage: arrange('stage', count(over('stage'), p => p.stage), now),
+    year: arrange('year', count(over('year'), p => p.year), now),
+    venue: arrange('venue', count(over('venue'), p => p.venue), now),
+    publisher: arrange('publisher', count(over('publisher'), p => p.publisher), now),
+    topics: arrange('topics', count(over('topics'), p => p.topics), now)
   };
+}
+
+/**
+ * How each facet is ordered and cut, shared by the read's counts and the merged ones.
+ *
+ * A year after the current one is dropped. No paper is from 2035; a bucket for
+ * it is a source's bad date, and on "crispr gene editing" the panel offered
+ * 2035 and 2027 at the top of the year list. Both routes carry them — a paper
+ * read with that year, and OpenAlex's `group_by`, which answers every year it
+ * holds rather than the window asked for — so the cut is here, where they
+ * meet. The papers themselves are still listed; only the bucket is not offered.
+ */
+function arrange(facet: FacetKey, buckets: FacetBucket[], now: Date): FacetBucket[] {
+  if (facet === 'year') {
+    const current = now.getUTCFullYear();
+    return buckets
+      .filter(b => Number(b.value) <= current)
+      .sort((a, b) => Number(b.value) - Number(a.value))
+      .slice(0, MAX_BUCKETS);
+  }
+  const sorted = buckets.sort(byCount);
+  return facet === 'venue' || facet === 'publisher' || facet === 'topics' ? truncate(sorted) : sorted;
+}
+
+/** One provider's whole-index counts, as `countSourceFacets` returns them. */
+export type SourceCounts = { provider: ProviderId; facets: SourceFacets };
+
+/**
+ * The read's facets, with each bucket raised to the largest single source's
+ * count for that value where that is larger — for the facets in `countable`.
+ *
+ * The read is the top of each source's answer, so a bucket counted over it
+ * says how much of the top is from 2024, not how much from 2024 there is. On
+ * `ai` the year facet said 964 for 2026, where OpenAlex alone holds 424,757.
+ * The sources can say the second thing, so they are asked to (see
+ * `source-facets.ts`), and this is where their answers meet the read's.
+ *
+ * **The largest, never the sum.** The sources overlap heavily — OpenAlex holds
+ * most of what PubMed, arXiv and DOAJ do — so adding their counts would count
+ * the same paper several times. The largest single count is the one figure
+ * certain not to overstate: the papers from 2024, across all of them, are at
+ * least as many as any one of them holds. It is the rule the header already
+ * uses for the whole search, applied to each bucket. The read's own count is
+ * in the comparison too, since it is also a floor — every paper in it matches.
+ *
+ * A facet outside `countable` is returned as the read counted it. That is the
+ * facet whose count some filter no source could be sent would have to narrow:
+ * a source's count of IEEE Access says nothing about how many of those are
+ * also in the venue the reader ticked. See `FacetQueries`.
+ *
+ * A value only a source reports — a journal outside everything read — is
+ * added, which is the point: those are the buckets the read could not see.
+ * Labelled in the read's spelling where the read has one, so ticking it finds
+ * the papers the list holds.
+ */
+export function withSourceCounts(
+  read: Facets,
+  sources: readonly SourceCounts[],
+  countable: Iterable<CountedFacet>,
+  now: Date = new Date()
+): Facets {
+  const merged: Facets = { ...read };
+
+  for (const facet of countable) {
+    const buckets = new Map<string, FacetBucket>();
+
+    for (const bucket of read[facet] ?? []) {
+      buckets.set(facetKey(bucket.value), { value: bucket.value, count: bucket.count });
+    }
+
+    for (const { provider, facets } of sources) {
+      for (const bucket of facets[facet] ?? []) {
+        const key = facetKey(bucket.value);
+        if (key === '') continue;
+        const held = buckets.get(key);
+        if (!held) buckets.set(key, { value: bucket.value, count: bucket.count, from: provider });
+        else if (bucket.count > held.count) buckets.set(key, { value: held.value, count: bucket.count, from: provider });
+      }
+    }
+
+    merged[facet] = arrange(facet, [...buckets.values()], now);
+  }
+
+  return merged;
 }
