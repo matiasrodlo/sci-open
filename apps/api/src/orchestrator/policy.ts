@@ -1,4 +1,5 @@
 import type { OaRoute, Paper, PaperStage } from '@open-access-explorer/shared';
+import { facetKey } from './facet-key';
 
 /**
  * What the caller asked to see, and what the service will serve.
@@ -64,6 +65,18 @@ function matches(values: string[] | undefined, candidate: string | undefined): b
 }
 
 /**
+ * The same, for a name: a ticked venue selects every paper carrying that
+ * venue however its provider spelled it. The facet counts by `facetKey`, so a
+ * bucket holds every spelling, and ticking it has to find all of them or the
+ * count beside the box overstates what it returns.
+ */
+function matchesName(values: string[] | undefined, candidates: ReadonlyArray<string | undefined>): boolean {
+  if (!values || values.length === 0) return true;
+  const wanted = new Set(values.map(facetKey));
+  return candidates.some(candidate => candidate !== undefined && wanted.has(facetKey(candidate)));
+}
+
+/**
  * The filters the caller ticked.
  *
  * Every one of these reads a field the providers supplied, so the answer does
@@ -97,12 +110,9 @@ export function matchesFilters(paper: Paper, filters: UserFilters = {}): boolean
 
   if (!matches(filters.oaStatus, paper.oaStatus)) return false;
   if (!matches(filters.stage, paper.stage)) return false;
-  if (!matches(filters.venue, paper.venue)) return false;
-  if (!matches(filters.publisher, paper.publisher)) return false;
-
-  if (filters.topics?.length) {
-    if (!paper.topics.some(t => filters.topics!.includes(t))) return false;
-  }
+  if (!matchesName(filters.venue, [paper.venue])) return false;
+  if (!matchesName(filters.publisher, [paper.publisher])) return false;
+  if (!matchesName(filters.topics, paper.topics)) return false;
 
   return true;
 }

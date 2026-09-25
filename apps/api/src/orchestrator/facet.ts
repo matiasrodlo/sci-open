@@ -1,5 +1,8 @@
 import type { Paper } from '@open-access-explorer/shared';
 import { matchesFilters, passesPolicy, type PolicyOptions, type UserFilters } from './policy';
+import { facetKey } from './facet-key';
+
+export { facetKey };
 
 /**
  * Facets over the set that produced the hits.
@@ -46,22 +49,45 @@ export type FacetBases = Partial<Record<FacetKey, readonly Paper[]>>;
 /** Open-ended facets are capped; bounded ones are sent whole. See phase 03. */
 const MAX_BUCKETS = 25;
 
+/**
+ * Counts papers per value, one bucket per `facetKey`, labelled with the
+ * spelling most of its papers carry — the first seen, on a tie, which in a
+ * ranked set is the better-ranked paper's.
+ */
 function count<T extends string | number>(
   papers: readonly Paper[],
   pick: (paper: Paper) => T | T[] | undefined
 ): FacetBucket[] {
-  const counts = new Map<T, number>();
+  const buckets = new Map<string, { count: number; spellings: Map<T, number> }>();
 
   for (const paper of papers) {
     const value = pick(paper);
     if (value === undefined) continue;
+    // A paper carrying two spellings of one topic counts once for it.
+    const seen = new Set<string>();
     for (const v of Array.isArray(value) ? value : [value]) {
       if (v === undefined || v === '') continue;
-      counts.set(v, (counts.get(v) ?? 0) + 1);
+      const key = facetKey(v);
+      if (key === '' || seen.has(key)) continue;
+      seen.add(key);
+      const bucket = buckets.get(key) ?? { count: 0, spellings: new Map<T, number>() };
+      bucket.count += 1;
+      bucket.spellings.set(v, (bucket.spellings.get(v) ?? 0) + 1);
+      buckets.set(key, bucket);
     }
   }
 
-  return [...counts.entries()].map(([value, n]) => ({ value, count: n }));
+  return [...buckets.values()].map(({ count: n, spellings }) => {
+    let label: T | undefined;
+    let most = 0;
+    for (const [spelling, times] of spellings) {
+      if (times > most) {
+        label = spelling;
+        most = times;
+      }
+    }
+    return { value: label!, count: n };
+  });
 }
 
 const byCount = (a: FacetBucket, b: FacetBucket) => b.count - a.count;
