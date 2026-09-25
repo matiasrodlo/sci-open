@@ -3,6 +3,7 @@ import * as crossref from './crossref';
 import * as openalex from './openalex';
 import * as unpaywall from './unpaywall';
 import * as opencitations from './opencitations';
+import * as preprints from './preprints';
 
 /**
  * Every authority, and how to drive it.
@@ -32,6 +33,13 @@ export type AuthorityEntry = {
    * request, so a pass-1 authority sees the enriched paper.
    */
   wants?(paper: Paper): boolean;
+  /**
+   * How long one lookup may take, when it is not what the caller allows every
+   * lookup. For an authority whose answer is slower by nature than an API's —
+   * the preprint servers', which is a file at the end of redirects. The
+   * caller's budget still bounds it.
+   */
+  timeoutMs?: number;
 };
 
 /**
@@ -87,6 +95,30 @@ export const AUTHORITIES: AuthorityEntry[] = [
     wants: paper => paper.citationCount === undefined,
     lookup: ({ doi, timeoutMs, signal, userAgent }) =>
       opencitations.lookup(doi, {
+        timeoutMs,
+        ...(signal ? { signal } : {}),
+        ...(userAgent ? { userAgent } : {})
+      })
+  },
+  {
+    id: 'preprints',
+    capabilities: preprints.capabilities,
+    // Only for a paper with no copy whose DOI is on a server with a known
+    // address. Each question is a request to that server, so a paper that
+    // already has a copy — every paper on a page the gate let through — is
+    // never asked about.
+    wants: paper => !paper.fullText && preprints.locate(paper.doi) !== undefined,
+    // Beside Unpaywall rather than after it, and with longer than an API call.
+    // The answer is a file at the end of redirects: measured 2026-09-25,
+    // Research Square in about 0.75s, bioRxiv 1.2–2s, OSF 2–5s. In a second
+    // pass with the rescue's 2.5s a lookup, it had half the rescue's budget
+    // and the bioRxiv and OSF papers timed out every time. The price of the
+    // first pass is asking about a paper Unpaywall would also have found a
+    // copy of — and `enrich` keeps the verified one either way.
+    pass: 0,
+    timeoutMs: 4500,
+    lookup: ({ doi, timeoutMs, signal, userAgent }) =>
+      preprints.lookup(doi, {
         timeoutMs,
         ...(signal ? { signal } : {}),
         ...(userAgent ? { userAgent } : {})

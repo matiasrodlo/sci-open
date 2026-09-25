@@ -3,7 +3,7 @@
 // records from directly.
 export type OASource =
   | "arxiv" | "core" | "europepmc" | "ncbi" | "openaire" | "biorxiv" | "medrxiv" | "doaj" | "plos" | "opencitations" | "datacite"
-  | "openalex" | "crossref" | "unpaywall";
+  | "openalex" | "crossref" | "unpaywall" | "preprints";
 
 // Provenance attached by the pipeline when a record comes from an aggregator
 export type SourceMetadata = {
