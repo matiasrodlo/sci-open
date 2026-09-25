@@ -55,8 +55,11 @@ const PINNED: Record<string, { version: number; normalizer: string }> = {
   datacite: { version: 2, normalizer: 'e25ea42d0c08' },
   doaj: { version: 2, normalizer: '52ed78538ef1' },
   europepmc: { version: 2, normalizer: 'e464db8efb04' },
-  openaire: { version: 2, normalizer: '6fdb80e907b4' },
-  openalex: { version: 2, normalizer: '0e9a57defe1e' }
+  openalex: { version: 2, normalizer: '0e9a57defe1e' },
+  // Version 3: moved from the legacy search endpoint to the Graph API, a
+  // different payload read by a rewritten normaliser. A version-2 entry holds
+  // papers built from the legacy shape and must not be served as this one's.
+  openaire: { version: 3, normalizer: 'a1cfaaa7793d' }
 };
 
 const PROVIDER_DIR = join(__dirname, '..');

@@ -16,28 +16,17 @@ import { search } from '../index';
 const query = (over: Partial<Query>): Query => ({ terms: [], phrases: [], join: 'AND', ...over });
 
 const result = (n: number) => ({
-  header: { 'dri:objIdentifier': { $: `od______1234::${n}` } },
-  metadata: {
-    'oaf:entity': {
-      'oaf:result': {
-        title: { $: `Paper ${n}` },
-        creator: [{ $: 'Lovelace, A.' }],
-        dateofacceptance: { $: '2022-01-01' },
-        children: { instance: [{ webresource: [{ url: { $: `https://example.org/${n}.pdf` } }] }] }
-      }
-    }
-  }
+  id: `od______1234::${n}`,
+  mainTitle: `Paper ${n}`,
+  authors: [{ fullName: 'Lovelace, A.' }],
+  publicationDate: '2022-01-01',
+  instances: [{ urls: [`https://example.org/${n}.pdf`] }]
 });
 
-/** Wrapped as OpenAIRE wraps it: `response.results.result`, with a header total. */
+/** As the Graph API sends it: a header with `numFound`, and `results`. */
 const payload = (records: unknown[], total: number) => ({
-  response: {
-    header: { total: { $: total } },
-    // A single-element list comes back as a bare object, not an array — the
-    // quirk `asArray` exists for, and the one a page-concatenating read has to
-    // survive on the way *out* of a payload as well as into one.
-    results: { result: records.length === 1 ? records[0] : records }
-  }
+  header: { numFound: total },
+  results: records
 });
 
 const corpus = (size: number) =>
@@ -115,10 +104,7 @@ describe('search — pagination across the 100-record cap', () => {
     expect(fetchPage).toHaveBeenCalledTimes(3);
   });
 
-  it('handles a page that carries one record as a bare object', async () => {
-    // 201 records across pages of 100 makes the third page a single record,
-    // which OpenAIRE serves unwrapped. Concatenating that without `asArray`
-    // spreads the object's own keys instead of appending the record.
+  it('reads a last page that holds fewer than the cap', async () => {
     corpus(201);
 
     const { papers } = await run(600);

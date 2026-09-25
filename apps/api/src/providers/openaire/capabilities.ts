@@ -4,8 +4,8 @@ import type { ProviderCapabilities } from '@open-access-explorer/shared';
  * What the OpenAIRE search API can actually do.
  *
  * OpenAIRE is the only provider so far that reports an open-access *route* in
- * the same vocabulary `oaStatus` uses — `openaccesscolor` holds `hybrid`,
- * `gold`, `bronze`, and `isgreen` covers the rest. Everywhere else that field
+ * the same vocabulary `oaStatus` uses — `openAccessColor` holds `hybrid`,
+ * `gold`, `bronze`, and `isGreen` covers the rest. Everywhere else that field
  * waits for Unpaywall.
  */
 export const capabilities: ProviderCapabilities = {
@@ -25,11 +25,11 @@ export const capabilities: ProviderCapabilities = {
     'abstract',
     'authors',
     'year',
-    // The journal, from `journal`. The old connector used `publisher` for
-    // both, so every record's venue was the publishing house.
+    // The journal, from `container.name`. The old connector used `publisher`
+    // for both, so every record's venue was the publishing house.
     'venue',
     'publisher',
-    // From `subject`, which the old connector never read — it wrote an empty
+    // From `subjects`, which the old connector never read — it wrote an empty
     // array on every record.
     'topics',
     'language',
@@ -39,11 +39,11 @@ export const capabilities: ProviderCapabilities = {
     'landingPage'
   ],
 
-  // `fromDateAccepted` / `toDateAccepted` are request parameters rather than
-  // query terms, so the bound is applied upstream.
+  // `fromPublicationDate` / `toPublicationDate` are request parameters rather
+  // than query terms, so the bound is applied upstream.
   yearFilter: true,
 
-  // OpenAIRE serves at most 100 results per page.
+  // OpenAIRE serves at most 100 results per page; more is HTTP 400.
   maxPageSize: 100,
 
   reportsTotal: true,

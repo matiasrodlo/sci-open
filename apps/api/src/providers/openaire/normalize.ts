@@ -3,14 +3,13 @@ import { fullTextAt, httpUrl, stripMarkup } from '@open-access-explorer/shared';
 import type { OpenAirePayload } from './fetch';
 
 /**
- * OpenAIRE payload -> Paper[]. Pure, and isolated per record.
+ * OpenAIRE Graph API payload -> Paper[]. Pure, and isolated per record.
  *
- * Every field in this API is either a bare value or an object carrying its
- * text under `$` and its attributes under `@`-prefixed keys. The old connector
- * reached for the xml2js spelling of that — `$.classid` and `_` — which is the
- * shape the XML endpoint produces, not the JSON one. It had already been
- * corrected for `bestaccessright` and nowhere else, so several fields read
- * from keys that are never present.
+ * A research product from `/graph/v1/researchProducts` is plain JSON: values
+ * are bare strings, lists are always lists, and nothing is wrapped in the
+ * `{ $: … }` / `@attr` shape the legacy search endpoint used. What remains
+ * awkward is below — optional fields arrive as `null` rather than absent, and
+ * some lists carry entries that are not what their name says.
  */
 
 export type NormalizeOptions = { retrievedAt: string; rankOffset?: number; latency?: number };
@@ -22,84 +21,67 @@ function asArray<T>(value: T | T[] | undefined | null): T[] {
   return Array.isArray(value) ? value : [value];
 }
 
-/** The text of a node, whether it is bare or wrapped in `{ $: ... }`. */
-function value(node: any): string | undefined {
-  if (node === undefined || node === null) return undefined;
-  if (typeof node === 'string') return node.trim() || undefined;
-  if (typeof node === 'number') return String(node);
-  if (typeof node === 'object' && node.$ !== undefined && node.$ !== null) {
-    // `pmid` arrives as a number, so this cannot assume a string.
-    return typeof node.$ === 'string' ? node.$.trim() || undefined : String(node.$);
-  }
-  return undefined;
+/** A non-empty trimmed string, or nothing. Numbers are not text here. */
+function text(value: unknown): string | undefined {
+  return typeof value === 'string' ? value.trim() || undefined : undefined;
 }
 
-/** An `@`-prefixed attribute. */
-function attr(node: any, name: string): string | undefined {
-  const raw = node?.[`@${name}`];
-  return typeof raw === 'string' ? raw.trim() || undefined : undefined;
-}
-
-/**
- * The DOI, from `pid[]`.
- *
- * The identifier is under `@classid` and `$`; the old connector read
- * `$.classid` and `_`, so it never matched and no OpenAIRE record carried a
- * DOI — which meant none of them could deduplicate against any other provider.
- * Exactly the fix already applied to `bestaccessright`, in the place it was
- * missed.
- */
-function pickDoi(result: any): string | undefined {
-  const pids = asArray(result?.pid);
-  const doi = pids.find(p => attr(p, 'classid') === 'doi');
-  return value(doi);
+/** The DOI, from `pids[]`, which also carries PMIDs and PMC ids. */
+function pickDoi(record: any): string | undefined {
+  return text(asArray(record?.pids).find((p: any) => text(p?.scheme)?.toLowerCase() === 'doi')?.value);
 }
 
 /**
  * The open-access route, which OpenAIRE actually reports.
  *
- * `openaccesscolor` holds `gold`, `hybrid` or `bronze` — the same vocabulary
- * `oaStatus` uses — and `isgreen` covers the repository case. Everywhere else
+ * `openAccessColor` holds `gold`, `hybrid` or `bronze` — the same vocabulary
+ * `oaStatus` uses — and `isGreen` covers the repository case. Everywhere else
  * this field waits for Unpaywall; here it is data.
  */
 const ROUTES: readonly OaRoute[] = ['gold', 'green', 'hybrid', 'bronze'];
 
-function pickRoute(result: any): OaRoute {
-  const access = (attr(result?.bestaccessright, 'classid') ?? '').toLowerCase();
+function pickRoute(record: any): OaRoute {
+  // `OPEN`, `OPEN SOURCE`, `CLOSED`, `RESTRICTED`, `EMBARGO` — COAR's access
+  // rights, by label.
+  const access = (text(record?.bestAccessRight?.label) ?? '').toLowerCase();
   const isOpen = access.includes('open');
   if (!isOpen && access) return 'closed';
 
-  const colour = value(result?.openaccesscolor)?.toLowerCase() as OaRoute | undefined;
+  const colour = text(record?.openAccessColor)?.toLowerCase() as OaRoute | undefined;
   if (colour && ROUTES.includes(colour)) return colour;
 
-  if (value(result?.isgreen) === 'true') return 'green';
+  if (record?.isGreen === true) return 'green';
 
   return isOpen ? 'unknown' : 'closed';
 }
 
-function pickFullText(result: any): FullText | undefined {
-  const instances = asArray(result?.children?.instance);
-  const urls = instances.flatMap(instance =>
-    asArray(instance?.webresource).map(w => httpUrl(value(w?.url))).filter(Boolean)
+/** Every URL any instance lists, in the order OpenAIRE gives them. */
+function instanceUrls(record: any): string[] {
+  return asArray(record?.instances).flatMap((instance: any) =>
+    asArray(instance?.urls).map(u => httpUrl(text(u))).filter(Boolean)
   ) as string[];
+}
+
+function pickFullText(record: any): FullText | undefined {
+  const urls = instanceUrls(record);
 
   const pdf = urls.find(u => u.toLowerCase().endsWith('.pdf'));
   const fromPdf = fullTextAt(pdf, 'pdf');
   if (fromPdf) return fromPdf;
 
-  // `urls[0]` is whatever web resource the deposit listed first, and for an
-  // OpenAIRE record that is very often the DOI it is also filed under — the
-  // same string this normaliser writes to `landingPage` a few lines below.
-  // `fullTextAt` is what stops the landing page being counted twice, once as
-  // the address and once as the copy.
+  // `urls[0]` is whatever the first instance listed, and for an OpenAIRE
+  // record that is very often the DOI it is also filed under — the same string
+  // this normaliser writes to `landingPage` a few lines below. `fullTextAt` is
+  // what stops the landing page being counted twice, once as the address and
+  // once as the copy.
   return urls.map(u => fullTextAt(u, 'html')).find(Boolean);
 }
 
 /** Subject terms: FOS classifications and author keywords alike. */
-function pickTopics(result: any): string[] {
+function pickTopics(record: any): string[] {
   const seen = new Set<string>();
-  return asArray(result?.subject)
-    .map(value)
+  return asArray(record?.subjects)
+    .map((s: any) => text(s?.subject?.value))
     .filter((t): t is string => Boolean(t))
     .filter(term => {
       const key = term.toLowerCase();
@@ -110,83 +92,68 @@ function pickTopics(result: any): string[] {
 }
 
 /**
- * The abstract, out of however many `description` entries there are.
+ * The abstract, out of however many `descriptions` there are.
  *
- * Not `description[0]`. OpenAIRE puts stray values in that list: one record for
- * `alzheimer amyloid beta` carries `[{"$": 75}, {"$": "Alzheimer's disease
- * is…"}]`, where 75 is presumably a page count and the abstract is second.
- * Taking the first entry made the old connector throw — `75.replace` is not a
- * function — which cost it the whole page, and made this provider report an
- * abstract of `"75"`.
- *
- * A value that is nothing but digits is not a description, so it is skipped
- * and OpenAIRE's own ordering decides among the rest.
+ * Not `descriptions[0]`. OpenAIRE puts stray values in that list: one record
+ * for `alzheimer amyloid beta` carried a bare `75` — presumably a page count —
+ * ahead of the abstract. Taking the first entry made the old connector throw,
+ * which cost it the whole page, and made this provider report an abstract of
+ * `"75"`. A value that is nothing but digits is not a description, so it is
+ * skipped and OpenAIRE's own ordering decides among the rest.
  */
-function pickAbstract(result: any): string | undefined {
-  for (const entry of asArray(result?.description)) {
-    const text = value(entry);
-    if (text && !/^\d+$/.test(text)) return text;
+function pickAbstract(record: any): string | undefined {
+  for (const entry of asArray(record?.descriptions)) {
+    const value = typeof entry === 'number' ? String(entry) : text(entry);
+    if (value && !/^\d+$/.test(value)) return value;
   }
   return undefined;
 }
 
-/**
- * The main title.
- *
- * 77 of 100 records in that same page carry more than one `title`, tagged
- * `main title` or `subtitle`. `title[0]` was the main title on all 100, but
- * that is OpenAIRE's ordering rather than a guarantee — and trusting the
- * position of a list entry is precisely what went wrong one field above.
- */
-function pickTitle(result: any): string | undefined {
-  const titles = asArray(result?.title);
-  const main = titles.find(t => attr(t, 'classid') === 'main title');
-  return value(main) ?? value(titles[0]);
-}
+function normalizeOne(record: any, ref: SourceRef): Paper {
+  if (!record || typeof record !== 'object') throw new Error('record is not an object');
 
-function normalizeOne(raw: any, ref: SourceRef): Paper {
-  const result = raw?.metadata?.['oaf:entity']?.['oaf:result'];
-  if (!result) throw new Error('record has no oaf:result');
-
-  // Stripped before the emptiness check, not after: a title that is nothing
-  // but markup is a record with no title, and reporting it as one is what
-  // keeps an empty string out of the field.
-  const title = stripMarkup(pickTitle(result));
+  // `mainTitle`, which the Graph API separates from `subTitle` itself. The
+  // legacy endpoint mixed both into one `title` list and they had to be told
+  // apart by tag. Stripped before the emptiness check, not after: a title that
+  // is nothing but markup is a record with no title.
+  const title = stripMarkup(text(record.mainTitle));
   if (!title) throw new Error('record has no title');
 
   const nativeId = ref.nativeId;
-  if (!nativeId) throw new Error('record has no objIdentifier');
+  if (!nativeId) throw new Error('record has no id');
 
-  const doi = pickDoi(result);
-  const abstract = stripMarkup(pickAbstract(result));
-  const accepted = value(result.dateofacceptance);
-  const year = Number.parseInt(accepted?.slice(0, 4) ?? '', 10);
-  const fullText = pickFullText(result);
+  const doi = pickDoi(record);
+  const abstract = stripMarkup(pickAbstract(record));
+  const year = Number.parseInt(text(record.publicationDate)?.slice(0, 4) ?? '', 10);
+  const fullText = pickFullText(record);
+  const firstInstance = asArray(record.instances)[0] as any;
+  const venue = text(record.container?.name);
+  const publisher = text(record.publisher);
+  const language = text(record.language?.code);
 
   return {
     id: `openaire:${nativeId}`,
     ...(doi ? { doi } : {}),
     title,
-    authors: asArray(result.creator).map(value).filter((a): a is string => Boolean(a)),
+    authors: asArray(record.authors)
+      .map((a: any) => text(a?.fullName))
+      .filter((a): a is string => Boolean(a)),
     ...(Number.isFinite(year) ? { year } : {}),
     // The journal, not the publishing house. The old connector assigned
     // `publisher` to both, so every venue read "Elsevier BV" and the like.
-    ...(value(result.journal) ? { venue: value(result.journal)! } : {}),
-    ...(value(result.publisher) ? { publisher: value(result.publisher)! } : {}),
+    ...(venue ? { venue } : {}),
+    ...(publisher ? { publisher } : {}),
     ...(abstract ? { abstract } : {}),
-    topics: pickTopics(result),
-    // `@classid` — the old connector read `$`, which is the language *name*
-    // slot and absent here, so every record fell back to 'en'.
-    ...(attr(result.language, 'classid') ? { language: attr(result.language, 'classid')! } : {}),
+    topics: pickTopics(record),
+    // The code (`eng`), not the label (`English`).
+    ...(language ? { language } : {}),
 
-    oaStatus: pickRoute(result),
+    oaStatus: pickRoute(record),
     // `refereed: peerReviewed` is the only version signal OpenAIRE gives.
-    stage: attr(asArray(result.children?.instance)[0]?.refereed, 'classname') === 'peerReviewed'
-      ? 'published'
-      : 'unknown',
+    stage: text(firstInstance?.refereed) === 'peerReviewed' ? 'published' : 'unknown',
     ...(fullText ? { fullText } : {}),
     landingPage:
-      httpUrl(value(asArray(asArray(result.children?.instance)[0]?.webresource)[0]?.url)) ??
+      httpUrl(text(asArray(firstInstance?.urls)[0])) ??
       (doi
         ? `https://doi.org/${doi}`
         : `https://explore.openaire.eu/search/publication?articleId=${nativeId}`),
@@ -197,19 +164,23 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
   };
 }
 
+/** One record the way `normalize` reads a page's worth — for the by-id lookup. */
+export function normalizeRecord(record: unknown, options: NormalizeOptions): NormalizeOutcome {
+  return normalize({ results: [record] }, options);
+}
+
 export function normalize(payload: OpenAirePayload, options: NormalizeOptions): NormalizeOutcome {
   const { retrievedAt, rankOffset = 0, latency } = options;
-  const results = asArray(payload?.response?.results?.result);
+  const results = asArray(payload?.results as unknown[] | undefined);
 
   const papers: Paper[] = [];
   const skipped: SkippedRecord[] = [];
 
   results.forEach((raw: any, index) => {
-    // `dri:objIdentifier` — one key with a prefix in its name, not a `dri`
-    // object with an `objIdentifier` inside it. The old connector read the
-    // latter, found nothing, and fell back to a 50-character slug of the
-    // title as the record's identifier.
-    const nativeId = value(raw?.header?.['dri:objIdentifier']) ?? '';
+    // The same identifier the legacy endpoint carried as `dri:objIdentifier`
+    // — `doi_dedup___::…` and the like — so ids handed out before the switch
+    // still resolve.
+    const nativeId = text(raw?.id) ?? '';
 
     const ref: SourceRef = {
       provider: 'openaire',
@@ -222,8 +193,8 @@ export function normalize(payload: OpenAirePayload, options: NormalizeOptions): 
     try {
       papers.push(normalizeOne(raw, ref));
     } catch (error) {
-      // Per record. The old normaliser threw on a missing `oaf:result` and
-      // nothing caught it, so one malformed record discarded the whole page.
+      // Per record. The old normaliser threw on a malformed record and nothing
+      // caught it, so one bad record discarded the whole page.
       skipped.push({
         index: rankOffset + index,
         ...(nativeId ? { nativeId } : {}),
@@ -237,6 +208,8 @@ export function normalize(payload: OpenAirePayload, options: NormalizeOptions): 
 
 /** OpenAIRE's own count for this query. */
 export function totalHits(payload: OpenAirePayload): number | undefined {
-  const reported = Number(value(payload?.response?.header?.total));
-  return Number.isFinite(reported) ? reported : undefined;
+  const reported = payload?.header?.numFound;
+  if (reported === undefined || reported === null) return undefined;
+  const count = Number(reported);
+  return Number.isFinite(count) ? count : undefined;
 }

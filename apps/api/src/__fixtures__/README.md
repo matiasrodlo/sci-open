@@ -26,7 +26,7 @@ handful of records each — they exist to pin field mapping, not to be a corpus.
 | `europepmc.json` | Europe PMC | `resultType=core` |
 | `ncbi-esearch.json` | PubMed | The id list. Recorded, but no suite reads it — `esearch` returns ids and the normaliser is only given the `efetch` payload. Kept so a re-record produces both halves of the two-step call. |
 | `ncbi-efetch.xml` | PubMed | Abstract XML for those ids |
-| `openaire.json` | OpenAIRE | One record; the payload is ~200 KB per result |
+| `openaire.json` | OpenAIRE | Graph API, `/graph/v1/researchProducts`. Re-recorded 2026-09-25 when the provider moved off the legacy search endpoint, whose ~200 KB records meant this file held one |
 | `plos.json` | PLOS | Solr response |
 
 CORE is missing because it needs an API key; set `CORE_API_KEY` and re-record
@@ -40,7 +40,8 @@ pnpm --filter @open-access-explorer/api exec tsx scripts/record-fixtures.ts
 
 Do this only when a provider changes its response shape, and read the diff:
 a fixture is the contract its suite asserts against, so a change here is a
-change to what the connector is expected to handle.
+change to what the connector is expected to handle. Name the provider to
+re-record only its file — `… record-fixtures.ts openaire`.
 
 ## Known upstream oddities
 
@@ -49,12 +50,11 @@ in place, they are the kind of input the normalisers have to survive:
 
 - `datacite.json` contains `Universit� degli Studi di Siena`. DataCite
   serves that replacement character itself; it is not a decoding bug here.
-- OpenAIRE records carry the DOI under `pid[]` with an `@classid` key. The old
-  connector read the xml2js spelling, `$.classid` and `_`, so no OpenAIRE
-  record carried a DOI and none could deduplicate against any other provider.
-  **Fixed** — `providers/openaire/__tests__/normalize.test.ts:28` now asserts
-  the DOI is read, and passes. Kept here because the shape is still the odd
-  one, and it is what the normaliser has to survive.
+- OpenAIRE's legacy search endpoint carried the DOI under `pid[]` with an
+  `@classid` key, and the old connector read the xml2js spelling, `$.classid`
+  and `_`, so no OpenAIRE record carried a DOI. The provider now reads the
+  Graph API, where it is `pids[]` of `{ scheme, value }`;
+  `providers/openaire/__tests__/normalize.test.ts` asserts the DOI is read.
 - Titles and abstracts arrive with the publisher's own markup in them.
   `plos.json` carries `<i>unc-58</i>` in a `title_display`, `europepmc.json`
   carries `atring1<sup>ko</sup>` in an `abstractText`, and `datacite.json`

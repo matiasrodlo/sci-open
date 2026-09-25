@@ -1,565 +1,628 @@
 {
-  "response": {
-    "header": {
-      "query": {
-        "$": "(oaftype exact result) and (resulttypeid exact publication) and ( crispr and gene and editing) and (resultbestaccessright exact \"Open Access\")"
-      },
-      "locale": {
-        "$": "en_US"
-      },
-      "size": {
-        "$": 3
-      },
-      "page": {
-        "$": 1
-      },
-      "total": {
-        "$": 17473
-      },
-      "fields": null
-    },
-    "results": {
-      "result": [
+  "header": {
+    "numFound": 17644,
+    "maxScore": 16.32268,
+    "queryTime": 245,
+    "page": 1,
+    "pageSize": 3
+  },
+  "results": [
+    {
+      "authors": [
         {
-          "header": {
-            "dri:objIdentifier": {
-              "$": "doi_dedup___::469542ac104a1a2aa4c8c8a76e46bf9c"
+          "fullName": "Youmin Zhu",
+          "name": "Youmin",
+          "surname": "Zhu",
+          "rank": 1,
+          "pid": {
+            "id": {
+              "scheme": "orcid",
+              "value": "0000-0001-8164-5713"
             },
-            "dri:dateOfCollection": {
-              "$": "2026-07-23T09:45:24.486764222"
-            },
-            "dri:dateOfTransformation": null
-          },
-          "metadata": {
-            "oaf:entity": {
-              "@xsi:schemaLocation": "http://namespace.openaire.eu/oaf https://www.openaire.eu/schema/1.0/oaf-1.0.xsd",
-              "oaf:result": {
-                "collectedfrom": [
-                  {
-                    "@name": "Crossref",
-                    "@id": "openaire____::081b82f96300b6a6e3d282bad31cb6e2"
-                  },
-                  {
-                    "@name": "Europe PubMed Central",
-                    "@id": "opendoar____::8b6dd7db9af49e67306feb59a8bdc52c"
-                  }
-                ],
-                "originalId": [
-                  {
-                    "$": "S0141022925002194"
-                  },
-                  {
-                    "$": "10.1016/j.enzmictec.2025.110799"
-                  },
-                  {
-                    "$": "50|doiboost____|469542ac104a1a2aa4c8c8a76e46bf9c"
-                  },
-                  {
-                    "$": "41442816"
-                  }
-                ],
-                "pid": [
-                  {
-                    "@classid": "doi",
-                    "@classname": "Digital Object Identifier",
-                    "@schemeid": "dnet:pid_types",
-                    "@schemename": "dnet:pid_types",
-                    "$": "10.1016/j.enzmictec.2025.110799"
-                  },
-                  {
-                    "@classid": "pmid",
-                    "@classname": "PubMed ID",
-                    "@schemeid": "dnet:pid_types",
-                    "@schemename": "dnet:pid_types",
-                    "@inferred": false,
-                    "@provenanceaction": "sysimport:actionset",
-                    "@trust": "0.9",
-                    "$": 41442816
-                  }
-                ],
-                "measure": [
-                  {
-                    "@id": "influence",
-                    "@score": "2.1921431E-9",
-                    "@class": "C5"
-                  },
-                  {
-                    "@id": "popularity",
-                    "@score": "2.6569356E-9",
-                    "@class": "C5"
-                  },
-                  {
-                    "@id": "influence_alt",
-                    "@score": "0",
-                    "@class": "C5"
-                  },
-                  {
-                    "@id": "citationCount",
-                    "@score": "0",
-                    "@class": "C5"
-                  },
-                  {
-                    "@id": "popularity_alt",
-                    "@score": "0.0",
-                    "@class": "C5"
-                  },
-                  {
-                    "@id": "impulse",
-                    "@score": "0",
-                    "@class": "C5"
-                  }
-                ],
-                "title": [
-                  {
-                    "@classid": "main title",
-                    "@classname": "main title",
-                    "@schemeid": "dnet:dataCite_title",
-                    "@schemename": "dnet:dataCite_title",
-                    "$": "The potential and innovative applications of CRISPR gene editing technology in enzyme gene development"
-                  },
-                  {
-                    "@classid": "main title",
-                    "@classname": "main title",
-                    "@schemeid": "dnet:dataCite_title",
-                    "@schemename": "dnet:dataCite_title",
-                    "@inferred": false,
-                    "@provenanceaction": "sysimport:actionset",
-                    "@trust": "0.9",
-                    "$": "The potential and innovative applications of CRISPR gene editing technology in enzyme gene development."
-                  }
-                ],
-                "bestaccessright": {
-                  "@classid": "OPEN",
-                  "@classname": "Open Access",
-                  "@schemeid": "dnet:access_modes",
-                  "@schemename": "dnet:access_modes"
-                },
-                "creator": {
-                  "@rank": "1",
-                  "@name": "Youmin",
-                  "@surname": "Zhu",
-                  "@orcid": "0000-0001-8164-5713",
-                  "$": "Youmin Zhu"
-                },
-                "dateofacceptance": {
-                  "$": "2026-04-01"
-                },
-                "description": {
-                  "$": "The CRISPR gene editing technology is simple in design and highly efficient, making it the most widely used gene editing tool today. At present, CRISPR gene editing technology has shown a certain application value in enzyme development, but its application potential has not been fully developed. CRISPR gene editing technology can not only be used to knockin enzyme genes and knockout genes that are not conducive to enzyme expression, but can also be applied to single-base editing of enzyme genes, tandem sgRNA for multi-enzyme gene editing, sgRNA library for enzyme screening, endogenous enzyme gene modification, transcriptional activation or inhibition of enzyme gene expression, and fluorescence imaging of enzyme genes. Especially, this review innovatively proposes for the first time that CRISPR gene editing technology can be used for site specific fusion of enzyme genes, cell surface display of endogenous enzymes, and knockin of super long DNA for simultaneous expression of multiple enzymes, providing new ideas for maximizing the value of CRISPR gene editing technology in enzyme development in the future."
-                },
-                "subject": [
-                  {
-                    "@classid": "FOS",
-                    "@classname": "Fields of Science and Technology classification",
-                    "@schemeid": "dnet:subject_classification_typologies",
-                    "@schemename": "dnet:subject_classification_typologies",
-                    "@inferred": true,
-                    "@inferenceprovenance": "update",
-                    "@provenanceaction": "subject:fos",
-                    "$": "0106 biological sciences"
-                  },
-                  {
-                    "@classid": "keyword",
-                    "@classname": "keyword",
-                    "@schemeid": "dnet:subject_classification_typologies",
-                    "@schemename": "dnet:subject_classification_typologies",
-                    "@inferred": false,
-                    "@provenanceaction": "sysimport:actionset",
-                    "@trust": "0.9",
-                    "$": "Gene Editing"
-                  },
-                  {
-                    "@classid": "keyword",
-                    "@classname": "keyword",
-                    "@schemeid": "dnet:subject_classification_typologies",
-                    "@schemename": "dnet:subject_classification_typologies",
-                    "@inferred": false,
-                    "@provenanceaction": "sysimport:actionset",
-                    "@trust": "0.9",
-                    "$": "Humans"
-                  },
-                  {
-                    "@classid": "keyword",
-                    "@classname": "keyword",
-                    "@schemeid": "dnet:subject_classification_typologies",
-                    "@schemename": "dnet:subject_classification_typologies",
-                    "@inferred": false,
-                    "@provenanceaction": "sysimport:actionset",
-                    "@trust": "0.9",
-                    "$": "Clustered Regularly Interspaced Short Palindromic Repeats"
-                  },
-                  {
-                    "@classid": "keyword",
-                    "@classname": "keyword",
-                    "@schemeid": "dnet:subject_classification_typologies",
-                    "@schemename": "dnet:subject_classification_typologies",
-                    "@inferred": false,
-                    "@provenanceaction": "sysimport:actionset",
-                    "@trust": "0.9",
-                    "$": "CRISPR-Cas Systems"
-                  },
-                  {
-                    "@classid": "FOS",
-                    "@classname": "Fields of Science and Technology classification",
-                    "@schemeid": "dnet:subject_classification_typologies",
-                    "@schemename": "dnet:subject_classification_typologies",
-                    "@inferred": true,
-                    "@inferenceprovenance": "update",
-                    "@provenanceaction": "subject:fos",
-                    "$": "01 natural sciences"
-                  },
-                  {
-                    "@classid": "keyword",
-                    "@classname": "keyword",
-                    "@schemeid": "dnet:subject_classification_typologies",
-                    "@schemename": "dnet:subject_classification_typologies",
-                    "@inferred": false,
-                    "@provenanceaction": "sysimport:actionset",
-                    "@trust": "0.9",
-                    "$": "Enzymes"
-                  }
-                ],
-                "language": {
-                  "@classid": "eng",
-                  "@classname": "English",
-                  "@schemeid": "dnet:languages",
-                  "@schemename": "dnet:languages"
-                },
-                "relevantdate": [
-                  {
-                    "@classid": "created",
-                    "@classname": "created",
-                    "@schemeid": "dnet:dataCite_date",
-                    "@schemename": "dnet:dataCite_date",
-                    "$": "2025-12-20"
-                  },
-                  {
-                    "@classid": "published-print",
-                    "@classname": "published-print",
-                    "@schemeid": "dnet:dataCite_date",
-                    "@schemename": "dnet:dataCite_date",
-                    "$": "2026-04-01"
-                  }
-                ],
-                "publisher": {
-                  "$": "Elsevier BV"
-                },
-                "source": {
-                  "$": "Crossref"
-                },
-                "resulttype": {
-                  "@classid": "publication",
-                  "@classname": "publication",
-                  "@schemeid": "dnet:result_typologies",
-                  "@schemename": "dnet:result_typologies"
-                },
-                "resourcetype": {
-                  "@classid": "publication",
-                  "@classname": "publication",
-                  "@schemeid": "dnet:result_typologies",
-                  "@schemename": "dnet:result_typologies"
-                },
-                "isgreen": {
-                  "$": false
-                },
-                "openaccesscolor": {
-                  "$": "hybrid"
-                },
-                "isindiamondjournal": {
-                  "$": false
-                },
-                "publiclyfunded": {
-                  "$": false
-                },
-                "journal": {
-                  "@issn": "0141-0229",
-                  "@sp": "110799",
-                  "@vol": "195",
-                  "$": "Enzyme and Microbial Technology"
-                },
-                "datainfo": {
-                  "inferred": {
-                    "$": true
-                  },
-                  "deletedbyinference": {
-                    "$": false
-                  },
-                  "trust": {
-                    "$": "0.8"
-                  },
-                  "inferenceprovenance": {
-                    "$": "dedup-result-decisiontree-v4"
-                  },
-                  "provenanceaction": {
-                    "@classid": "sysimport:dedup",
-                    "@classname": "Inferred by OpenAIRE",
-                    "@schemeid": "dnet:provenanceActions",
-                    "@schemename": "dnet:provenanceActions"
-                  }
-                },
-                "rels": null,
-                "children": {
-                  "result": [
-                    {
-                      "@objidentifier": "pmid________::a4b2ccd14d44c4884454aba65ae40047",
-                      "creator": {
-                        "$": "Youmin, Zhu"
-                      },
-                      "title": {
-                        "@classid": "main title",
-                        "@classname": "main title",
-                        "@schemeid": "dnet:dataCite_title",
-                        "@schemename": "dnet:dataCite_title",
-                        "@inferred": false,
-                        "@provenanceaction": "sysimport:actionset",
-                        "@trust": "0.9",
-                        "$": "The potential and innovative applications of CRISPR gene editing technology in enzyme gene development."
-                      },
-                      "instance": {
-                        "accessright": {
-                          "@classid": "UNKNOWN",
-                          "@classname": "unspecified",
-                          "@schemeid": "dnet:access_modes",
-                          "@schemename": "dnet:access_modes"
-                        },
-                        "hostedby": {
-                          "@name": "Unknown Repository",
-                          "@id": "openaire____::55045bd2a65019fd8e6741a755395c8c"
-                        },
-                        "dateofacceptance": {
-                          "$": "2026-02-04"
-                        },
-                        "instancetype": {
-                          "@classid": "0001",
-                          "@classname": "Article",
-                          "@schemeid": "dnet:publication_resource",
-                          "@schemename": "dnet:publication_resource"
-                        },
-                        "refereed": {
-                          "@classid": "0002",
-                          "@classname": "nonPeerReviewed",
-                          "@schemeid": "dnet:review_levels",
-                          "@schemename": "dnet:review_levels"
-                        },
-                        "url": {
-                          "$": "https://pubmed.ncbi.nlm.nih.gov/41442816"
-                        },
-                        "webresource": {
-                          "url": {
-                            "$": "https://pubmed.ncbi.nlm.nih.gov/41442816"
-                          }
-                        }
-                      },
-                      "description": {
-                        "$": "The CRISPR gene editing technology is simple in design and highly efficient, making it the most widely used gene editing tool today. At present, CRISPR gene editing technology has shown a certain application value in enzyme development, but its application potential has not been fully developed. CRISPR gene editing technology can not only be used to knockin enzyme genes and knockout genes that are not conducive to enzyme expression, but can also be applied to single-base editing of enzyme genes,"
-                      },
-                      "resulttype": {
-                        "@classid": "publication",
-                        "@classname": "publication",
-                        "@schemeid": "dnet:result_typologies",
-                        "@schemename": "dnet:result_typologies"
-                      },
-                      "collectedfrom": {
-                        "@name": "Europe PubMed Central",
-                        "@id": "opendoar____::8b6dd7db9af49e67306feb59a8bdc52c"
-                      },
-                      "dateofacceptance": {
-                        "$": "2026-02-04"
-                      },
-                      "pid": {
-                        "@classid": "pmid",
-                        "@classname": "PubMed ID",
-                        "@schemeid": "dnet:pid_types",
-                        "@schemename": "dnet:pid_types",
-                        "@inferred": false,
-                        "@provenanceaction": "sysimport:actionset",
-                        "@trust": "0.9",
-                        "$": 41442816
-                      }
-                    },
-                    {
-                      "@objidentifier": "doi_________::469542ac104a1a2aa4c8c8a76e46bf9c",
-                      "instance": {
-                        "accessright": {
-                          "@classid": "OPEN",
-                          "@classname": "Open Access",
-                          "@schemeid": "dnet:access_modes",
-                          "@schemename": "dnet:access_modes"
-                        },
-                        "hostedby": {
-                          "@name": "Enzyme and Microbial Technology",
-                          "@id": "issn___print::51e3722b8da8bf091bbf4b766b7552c9"
-                        },
-                        "dateofacceptance": {
-                          "$": "2026-04-01"
-                        },
-                        "instancetype": {
-                          "@classid": "0001",
-                          "@classname": "Article",
-                          "@schemeid": "dnet:publication_resource",
-                          "@schemename": "dnet:publication_resource"
-                        },
-                        "refereed": {
-                          "@classid": "0001",
-                          "@classname": "peerReviewed",
-                          "@schemeid": "dnet:review_levels",
-                          "@schemename": "dnet:review_levels"
-                        },
-                        "license": {
-                          "$": "CC BY NC ND"
-                        },
-                        "url": {
-                          "$": "https://doi.org/10.1016/j.enzmictec.2025.110799"
-                        },
-                        "webresource": {
-                          "url": {
-                            "$": "https://doi.org/10.1016/j.enzmictec.2025.110799"
-                          }
-                        }
-                      },
-                      "dateofacceptance": {
-                        "$": "2026-04-01"
-                      },
-                      "title": {
-                        "@classid": "main title",
-                        "@classname": "main title",
-                        "@schemeid": "dnet:dataCite_title",
-                        "@schemename": "dnet:dataCite_title",
-                        "$": "The potential and innovative applications of CRISPR gene editing technology in enzyme gene development"
-                      },
-                      "creator": {
-                        "$": "Youmin Zhu"
-                      },
-                      "resulttype": {
-                        "@classid": "publication",
-                        "@classname": "publication",
-                        "@schemeid": "dnet:result_typologies",
-                        "@schemename": "dnet:result_typologies"
-                      },
-                      "collectedfrom": {
-                        "@name": "Crossref",
-                        "@id": "openaire____::081b82f96300b6a6e3d282bad31cb6e2"
-                      },
-                      "pid": {
-                        "@classid": "doi",
-                        "@classname": "Digital Object Identifier",
-                        "@schemeid": "dnet:pid_types",
-                        "@schemename": "dnet:pid_types",
-                        "$": "10.1016/j.enzmictec.2025.110799"
-                      },
-                      "publisher": {
-                        "$": "Elsevier BV"
-                      }
-                    }
-                  ],
-                  "instance": [
-                    {
-                      "accessright": {
-                        "@classid": "OPEN",
-                        "@classname": "Open Access",
-                        "@schemeid": "dnet:access_modes",
-                        "@schemename": "dnet:access_modes"
-                      },
-                      "collectedfrom": {
-                        "@name": "Crossref",
-                        "@id": "openaire____::081b82f96300b6a6e3d282bad31cb6e2"
-                      },
-                      "hostedby": {
-                        "@name": "Enzyme and Microbial Technology",
-                        "@id": "issn___print::51e3722b8da8bf091bbf4b766b7552c9"
-                      },
-                      "dateofacceptance": {
-                        "$": "2026-04-01"
-                      },
-                      "instancetype": {
-                        "@classid": "0001",
-                        "@classname": "Article",
-                        "@schemeid": "dnet:publication_resource",
-                        "@schemename": "dnet:publication_resource"
-                      },
-                      "pid": {
-                        "@classid": "doi",
-                        "@classname": "Digital Object Identifier",
-                        "@schemeid": "dnet:pid_types",
-                        "@schemename": "dnet:pid_types",
-                        "$": "10.1016/j.enzmictec.2025.110799"
-                      },
-                      "refereed": {
-                        "@classid": "0001",
-                        "@classname": "peerReviewed",
-                        "@schemeid": "dnet:review_levels",
-                        "@schemename": "dnet:review_levels"
-                      },
-                      "license": {
-                        "$": "CC BY NC ND"
-                      },
-                      "webresource": {
-                        "url": {
-                          "$": "https://doi.org/10.1016/j.enzmictec.2025.110799"
-                        }
-                      }
-                    },
-                    {
-                      "accessright": {
-                        "@classid": "UNKNOWN",
-                        "@classname": "unspecified",
-                        "@schemeid": "dnet:access_modes",
-                        "@schemename": "dnet:access_modes"
-                      },
-                      "collectedfrom": {
-                        "@name": "Europe PubMed Central",
-                        "@id": "opendoar____::8b6dd7db9af49e67306feb59a8bdc52c"
-                      },
-                      "hostedby": {
-                        "@name": "Unknown Repository",
-                        "@id": "openaire____::55045bd2a65019fd8e6741a755395c8c"
-                      },
-                      "dateofacceptance": {
-                        "$": "2026-02-04"
-                      },
-                      "instancetype": {
-                        "@classid": "0001",
-                        "@classname": "Article",
-                        "@schemeid": "dnet:publication_resource",
-                        "@schemename": "dnet:publication_resource"
-                      },
-                      "pid": {
-                        "@classid": "pmid",
-                        "@classname": "PubMed ID",
-                        "@schemeid": "dnet:pid_types",
-                        "@schemename": "dnet:pid_types",
-                        "@inferred": false,
-                        "@provenanceaction": "sysimport:actionset",
-                        "@trust": "0.9",
-                        "$": 41442816
-                      },
-                      "alternateidentifier": {
-                        "@classid": "doi",
-                        "@classname": "Digital Object Identifier",
-                        "@schemeid": "dnet:pid_types",
-                        "@schemename": "dnet:pid_types",
-                        "$": "10.1016/j.enzmictec.2025.110799"
-                      },
-                      "refereed": {
-                        "@classid": "0002",
-                        "@classname": "nonPeerReviewed",
-                        "@schemeid": "dnet:review_levels",
-                        "@schemename": "dnet:review_levels"
-                      },
-                      "webresource": {
-                        "url": {
-                          "$": "https://pubmed.ncbi.nlm.nih.gov/41442816"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
+            "provenance": null
           }
         }
-      ]
+      ],
+      "openAccessColor": "hybrid",
+      "publiclyFunded": false,
+      "type": "publication",
+      "language": {
+        "code": "eng",
+        "label": "English"
+      },
+      "countries": null,
+      "subjects": [
+        {
+          "subject": {
+            "scheme": "FOS",
+            "value": "0106 biological sciences"
+          },
+          "provenance": null
+        },
+        {
+          "subject": {
+            "scheme": "keyword",
+            "value": "Gene Editing"
+          },
+          "provenance": null
+        },
+        {
+          "subject": {
+            "scheme": "keyword",
+            "value": "Humans"
+          },
+          "provenance": null
+        },
+        {
+          "subject": {
+            "scheme": "keyword",
+            "value": "Clustered Regularly Interspaced Short Palindromic Repeats"
+          },
+          "provenance": null
+        },
+        {
+          "subject": {
+            "scheme": "keyword",
+            "value": "CRISPR-Cas Systems"
+          },
+          "provenance": null
+        },
+        {
+          "subject": {
+            "scheme": "FOS",
+            "value": "01 natural sciences"
+          },
+          "provenance": null
+        },
+        {
+          "subject": {
+            "scheme": "keyword",
+            "value": "Enzymes"
+          },
+          "provenance": null
+        }
+      ],
+      "mainTitle": "The potential and innovative applications of CRISPR gene editing technology in enzyme gene development",
+      "subTitle": null,
+      "descriptions": [
+        "The CRISPR gene editing technology is simple in design and highly efficient, making it the most widely used gene editing tool today. At present, CRISPR gene editing technology has shown a certain application value in enzyme development, but its application potential has not been fully developed. CRISPR gene editing technology can not only be used to knockin enzyme genes and knockout genes that are not conducive to enzyme expression, but can also be applied to single-base editing of enzyme genes, tandem sgRNA for multi-enzyme gene editing, sgRNA library for enzyme screening, endogenous enzyme gene modification, transcriptional activation or inhibition of enzyme gene expression, and fluorescence imaging of enzyme genes. Especially, this review innovatively proposes for the first time that CRISPR gene editing technology can be used for site specific fusion of enzyme genes, cell surface display of endogenous enzymes, and knockin of super long DNA for simultaneous expression of multiple enzymes, providing new ideas for maximizing the value of CRISPR gene editing technology in enzyme development in the future."
+      ],
+      "publicationDate": "2026-04-01",
+      "publisher": "Elsevier BV",
+      "embargoEndDate": null,
+      "sources": [
+        "Crossref"
+      ],
+      "formats": null,
+      "contributors": null,
+      "coverages": null,
+      "bestAccessRight": {
+        "code": "c_abf2",
+        "label": "OPEN",
+        "scheme": "http://vocabularies.coar-repositories.org/documentation/access_rights/"
+      },
+      "container": {
+        "name": "Enzyme and Microbial Technology",
+        "issnPrinted": "0141-0229",
+        "issnOnline": null,
+        "issnLinking": null,
+        "ep": null,
+        "iss": null,
+        "sp": "110799",
+        "vol": "195",
+        "edition": null,
+        "conferencePlace": null,
+        "conferenceDate": null
+      },
+      "documentationUrls": null,
+      "codeRepositoryUrl": null,
+      "programmingLanguage": null,
+      "contactPeople": null,
+      "contactGroups": null,
+      "tools": null,
+      "size": null,
+      "version": null,
+      "geoLocations": null,
+      "id": "doi_dedup___::469542ac104a1a2aa4c8c8a76e46bf9c",
+      "originalIds": [
+        "S0141022925002194",
+        "10.1016/j.enzmictec.2025.110799",
+        "50|doiboost____|469542ac104a1a2aa4c8c8a76e46bf9c",
+        "41442816"
+      ],
+      "pids": [
+        {
+          "scheme": "doi",
+          "value": "10.1016/j.enzmictec.2025.110799"
+        },
+        {
+          "scheme": "pmid",
+          "value": "41442816"
+        }
+      ],
+      "dateOfCollection": null,
+      "lastUpdateTimeStamp": null,
+      "indicators": {
+        "citationImpact": {
+          "citationCount": 0,
+          "influence": 2.1746283e-9,
+          "popularity": 2.6085654e-9,
+          "impulse": 0,
+          "citationClass": "C5",
+          "influenceClass": "C5",
+          "impulseClass": "C5",
+          "popularityClass": "C5"
+        }
+      },
+      "instances": [
+        {
+          "pids": [
+            {
+              "scheme": "doi",
+              "value": "10.1016/j.enzmictec.2025.110799"
+            }
+          ],
+          "license": "CC BY NC ND",
+          "type": "Article",
+          "urls": [
+            "https://doi.org/10.1016/j.enzmictec.2025.110799"
+          ],
+          "publicationDate": "2026-04-01",
+          "refereed": "peerReviewed"
+        },
+        {
+          "pids": [
+            {
+              "scheme": "pmid",
+              "value": "41442816"
+            }
+          ],
+          "alternateIdentifiers": [
+            {
+              "scheme": "doi",
+              "value": "10.1016/j.enzmictec.2025.110799"
+            }
+          ],
+          "type": "Article",
+          "urls": [
+            "https://pubmed.ncbi.nlm.nih.gov/41442816"
+          ],
+          "publicationDate": "2026-02-04",
+          "refereed": "nonPeerReviewed"
+        }
+      ],
+      "isGreen": false,
+      "isInDiamondJournal": false
     },
-    "browseResults": null
-  }
+    {
+      "authors": [
+        {
+          "fullName": "Junwei Wei",
+          "name": null,
+          "surname": null,
+          "rank": 1,
+          "pid": null
+        },
+        {
+          "fullName": "Yingjun Li",
+          "name": null,
+          "surname": null,
+          "rank": 2,
+          "pid": null
+        }
+      ],
+      "openAccessColor": "gold",
+      "publiclyFunded": false,
+      "type": "publication",
+      "language": {
+        "code": "eng",
+        "label": "English"
+      },
+      "countries": null,
+      "subjects": [
+        {
+          "subject": {
+            "scheme": "FOS",
+            "value": "0301 basic medicine"
+          },
+          "provenance": null
+        },
+        {
+          "subject": {
+            "scheme": "FOS",
+            "value": "0303 health sciences"
+          },
+          "provenance": null
+        },
+        {
+          "subject": {
+            "scheme": "FOS",
+            "value": "03 medical and health sciences"
+          },
+          "provenance": null
+        },
+        {
+          "subject": {
+            "scheme": "keyword",
+            "value": "Industrial microorganisms"
+          },
+          "provenance": null
+        },
+        {
+          "subject": {
+            "scheme": "keyword",
+            "value": "Probiotics"
+          },
+          "provenance": null
+        },
+        {
+          "subject": {
+            "scheme": "keyword",
+            "value": "CRISPR-Cas system"
+          },
+          "provenance": null
+        },
+        {
+          "subject": {
+            "scheme": "keyword",
+            "value": "Review"
+          },
+          "provenance": null
+        },
+        {
+          "subject": {
+            "scheme": "keyword",
+            "value": "Gene editing"
+          },
+          "provenance": null
+        },
+        {
+          "subject": {
+            "scheme": "keyword",
+            "value": "Microbiology"
+          },
+          "provenance": null
+        },
+        {
+          "subject": {
+            "scheme": "keyword",
+            "value": "TP248.13-248.65"
+          },
+          "provenance": null
+        },
+        {
+          "subject": {
+            "scheme": "keyword",
+            "value": "QR1-502"
+          },
+          "provenance": null
+        },
+        {
+          "subject": {
+            "scheme": "keyword",
+            "value": "Biotechnology"
+          },
+          "provenance": null
+        }
+      ],
+      "mainTitle": "CRISPR-based gene editing technology and its application in microbial engineering",
+      "subTitle": null,
+      "descriptions": [
+        "Gene editing technology involves the modification of a specific target gene to obtain a new function or phenotype. Recent advances in clustered regularly interspaced short palindromic repeats (CRISPR)-Cas-mediated technologies have provided an efficient tool for genetic engineering of cells and organisms. Here, we review the three emerging gene editing tools (ZFNs, TALENs, and CRISPR-Cas) and briefly introduce the principle, classification, and mechanisms of the CRISPR-Cas systems. Strategies for gene editing based on endogenous and exogenous CRISPR-Cas systems, as well as the novel base editor (BE), prime editor (PE), and CRISPR-associated transposase (CAST) technologies, are described in detail. In addition, we summarize recent developments in the application of CRISPR-based gene editing tools for industrial microorganism and probiotics modifications. Finally, the potential challenges and future perspectives of CRISPR-based gene editing tools are discussed."
+      ],
+      "publicationDate": "2023-12-01",
+      "publisher": "Elsevier BV",
+      "embargoEndDate": null,
+      "sources": [
+        "Crossref",
+        "Eng Microbiol",
+        "Engineering Microbiology, Vol 3, Iss 4, Pp 100101- (2023)"
+      ],
+      "formats": null,
+      "contributors": null,
+      "coverages": null,
+      "bestAccessRight": {
+        "code": "c_abf2",
+        "label": "OPEN",
+        "scheme": "http://vocabularies.coar-repositories.org/documentation/access_rights/"
+      },
+      "container": {
+        "name": "Engineering Microbiology",
+        "issnPrinted": "2667-3703",
+        "issnOnline": null,
+        "issnLinking": null,
+        "ep": null,
+        "iss": null,
+        "sp": "100101",
+        "vol": "3",
+        "edition": null,
+        "conferencePlace": null,
+        "conferenceDate": null
+      },
+      "documentationUrls": null,
+      "codeRepositoryUrl": null,
+      "programmingLanguage": null,
+      "contactPeople": null,
+      "contactGroups": null,
+      "tools": null,
+      "size": null,
+      "version": null,
+      "geoLocations": null,
+      "id": "doi_dedup___::4262c9a25e0f56fe6151d78e1042e94b",
+      "originalIds": [
+        "S2667370323000334",
+        "10.1016/j.engmic.2023.100101",
+        "50|doiboost____|4262c9a25e0f56fe6151d78e1042e94b",
+        "od_______267::e86f4cd1bbc02c04bd24f31de586645e",
+        "39628916",
+        "PMC11610974",
+        "oai:pubmedcentral.nih.gov:11610974",
+        "50|od_______267::e86f4cd1bbc02c04bd24f31de586645e",
+        "oai:doaj.org/article:0e4f17e2c3d742a080c9c2af1b74342b",
+        "50|doajarticles::f7635783a79612cacaab25756be3dc4e"
+      ],
+      "pids": [
+        {
+          "scheme": "doi",
+          "value": "10.1016/j.engmic.2023.100101"
+        },
+        {
+          "scheme": "pmid",
+          "value": "39628916"
+        },
+        {
+          "scheme": "pmc",
+          "value": "PMC11610974"
+        }
+      ],
+      "dateOfCollection": null,
+      "lastUpdateTimeStamp": null,
+      "indicators": {
+        "citationImpact": {
+          "citationCount": 83,
+          "influence": 3.1281742e-9,
+          "popularity": 5.492818e-8,
+          "impulse": 83,
+          "citationClass": "C4",
+          "influenceClass": "C4",
+          "impulseClass": "C3",
+          "popularityClass": "C3"
+        }
+      },
+      "instances": [
+        {
+          "pids": [
+            {
+              "scheme": "doi",
+              "value": "10.1016/j.engmic.2023.100101"
+            }
+          ],
+          "license": "CC BY",
+          "type": "Article",
+          "urls": [
+            "https://doi.org/10.1016/j.engmic.2023.100101"
+          ],
+          "publicationDate": "2023-12-01",
+          "refereed": "peerReviewed"
+        },
+        {
+          "pids": [
+            {
+              "scheme": "pmid",
+              "value": "39628916"
+            },
+            {
+              "scheme": "pmc",
+              "value": "PMC11610974"
+            }
+          ],
+          "alternateIdentifiers": [
+            {
+              "scheme": "doi",
+              "value": "10.1016/j.engmic.2023.100101"
+            }
+          ],
+          "type": "Article",
+          "urls": [
+            "https://pubmed.ncbi.nlm.nih.gov/39628916"
+          ],
+          "refereed": "nonPeerReviewed"
+        },
+        {
+          "alternateIdentifiers": [
+            {
+              "scheme": "doi",
+              "value": "10.1016/j.engmic.2023.100101"
+            }
+          ],
+          "license": "CC BY",
+          "type": "Conference object",
+          "urls": [
+            "http://dx.doi.org/10.1016/j.engmic.2023.100101"
+          ],
+          "publicationDate": "2023-06-20",
+          "refereed": "nonPeerReviewed"
+        },
+        {
+          "alternateIdentifiers": [
+            {
+              "scheme": "doi",
+              "value": "10.1016/j.engmic.2023.100101"
+            }
+          ],
+          "type": "Article",
+          "urls": [
+            "https://doaj.org/article/0e4f17e2c3d742a080c9c2af1b74342b"
+          ],
+          "publicationDate": "2023-12-01",
+          "refereed": "nonPeerReviewed"
+        }
+      ],
+      "isGreen": true,
+      "isInDiamondJournal": false
+    },
+    {
+      "authors": [
+        {
+          "fullName": "Chongzhi Gong",
+          "name": "Chongzhi",
+          "surname": "Gong",
+          "rank": 1,
+          "pid": null
+        },
+        {
+          "fullName": "Shengchan Huang",
+          "name": "Shengchan",
+          "surname": "Huang",
+          "rank": 2,
+          "pid": null
+        },
+        {
+          "fullName": "Rentao Song",
+          "name": "Rentao",
+          "surname": "Song",
+          "rank": 3,
+          "pid": null
+        },
+        {
+          "fullName": "Weiwei Qi",
+          "name": "Weiwei",
+          "surname": "Qi",
+          "rank": 4,
+          "pid": {
+            "id": {
+              "scheme": "orcid_pending",
+              "value": "0000-0002-6329-4072"
+            },
+            "provenance": null
+          }
+        }
+      ],
+      "openAccessColor": "hybrid",
+      "publiclyFunded": false,
+      "type": "publication",
+      "language": {
+        "code": "und",
+        "label": "Undetermined"
+      },
+      "countries": null,
+      "subjects": [
+        {
+          "subject": {
+            "scheme": "FOS",
+            "value": "0301 basic medicine"
+          },
+          "provenance": null
+        },
+        {
+          "subject": {
+            "scheme": "SDG",
+            "value": "2. Zero hunger"
+          },
+          "provenance": null
+        },
+        {
+          "subject": {
+            "scheme": "FOS",
+            "value": "0303 health sciences"
+          },
+          "provenance": null
+        },
+        {
+          "subject": {
+            "scheme": "FOS",
+            "value": "03 medical and health sciences"
+          },
+          "provenance": null
+        }
+      ],
+      "mainTitle": "Comparative Study Between the CRISPR/Cpf1 and CRISPR/Cas9 systems for Multiplex Gene Editing in Maize",
+      "subTitle": null,
+      "descriptions": [
+        "<title>Abstract</title>         <p><bold>Background:</bold> The clustered regularly interspaced short palindromic repeats (CRISPR)/CRISPR-associated protein (Cas) system<bold> </bold>has been successfully used for multiplex gene editing in crops. Although CRISPR/Cas9 system has been proved to be an efficient multiplex gene editing system in crops, it was still unclear how CRISPR/Cpf1, a natural direct repeat (DR)-based multiplex gene editing system, performed in crops. To this end, this study compared the CRISPR/Cpf1 system and CRISPR/Cas9 system for multiplex gene editing in maize. <bold>Results:</bold> The bZIP transcription factor <italic>Opaque2 </italic>(<italic>O2</italic>) was used as the target gene to evaluate the editing efficient of both systems. We found that in the T0 generation, the CRISPR/Cpf1 system showed low editing efficiency with only one mutation, while the CRISPR/Cas9 system generated many different types of on-target mutations. In the T1 generation, the CRISPR/Cpf1 system still showed lower editing efficiency than the CRISPR/Cas9 system. However, in the T2 generation, the CRISPR/Cpf1 system generated more types of new mutations. While the CRISPR/Cas9 system tended to edit within the on-target range, the CRISPR/Cpf1 system preferred to edit in between the targets. We also found that in the CRISPR/Cpf1 system, the editing efficiency positively correlated with the expression level of Cpf1. <bold>Conclusions:</bold> In conclusion, the CRISPR/Cpf1 system offers alternative choices for target-site selection for multiplex gene editing and has acceptable editing efficiency in maize. Thus, the CRISPR/Cpf1 system is a valuable alternative choice for gene editing in crops.</p>"
+      ],
+      "publicationDate": "2021-02-19",
+      "publisher": "Springer Science and Business Media LLC",
+      "embargoEndDate": null,
+      "sources": [
+        "Crossref"
+      ],
+      "formats": null,
+      "contributors": null,
+      "coverages": null,
+      "bestAccessRight": {
+        "code": "c_abf2",
+        "label": "OPEN",
+        "scheme": "http://vocabularies.coar-repositories.org/documentation/access_rights/"
+      },
+      "container": null,
+      "documentationUrls": null,
+      "codeRepositoryUrl": null,
+      "programmingLanguage": null,
+      "contactPeople": null,
+      "contactGroups": null,
+      "tools": null,
+      "size": null,
+      "version": null,
+      "geoLocations": null,
+      "id": "doi_________::29366535cfe80543a21d970bd7f620f8",
+      "originalIds": [
+        "10.21203/rs.3.rs-244759/v1",
+        "50|doiboost____|29366535cfe80543a21d970bd7f620f8"
+      ],
+      "pids": [
+        {
+          "scheme": "doi",
+          "value": "10.21203/rs.3.rs-244759/v1"
+        }
+      ],
+      "dateOfCollection": null,
+      "lastUpdateTimeStamp": null,
+      "indicators": {
+        "citationImpact": {
+          "citationCount": 1,
+          "influence": 2.1931639e-9,
+          "popularity": 1.9668536e-9,
+          "impulse": 1,
+          "citationClass": "C5",
+          "influenceClass": "C5",
+          "impulseClass": "C5",
+          "popularityClass": "C5"
+        }
+      },
+      "instances": [
+        {
+          "pids": [
+            {
+              "scheme": "doi",
+              "value": "10.21203/rs.3.rs-244759/v1"
+            }
+          ],
+          "license": "CC BY",
+          "type": "Article",
+          "urls": [
+            "https://doi.org/10.21203/rs.3.rs-244759/v1"
+          ],
+          "publicationDate": "2021-02-19",
+          "refereed": "peerReviewed"
+        },
+        {
+          "pids": [
+            {
+              "scheme": "doi",
+              "value": "10.21203/rs.3.rs-244759/v1"
+            }
+          ],
+          "license": "CC BY",
+          "type": "Article",
+          "urls": [
+            "https://www.researchsquare.com/article/rs-244759/v1.pdf?c=1613714721000"
+          ],
+          "refereed": "nonPeerReviewed"
+        }
+      ],
+      "isGreen": false,
+      "isInDiamondJournal": false
+    }
+  ]
 }

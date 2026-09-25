@@ -8,6 +8,10 @@
  *
  *   pnpm --filter @open-access-explorer/api exec tsx scripts/record-fixtures.ts
  *
+ * Name providers to record only those — `… record-fixtures.ts openaire` — so
+ * re-recording the one whose shape changed leaves the other fixtures, and the
+ * assertions pinned to them, alone.
+ *
  * Responses are trimmed to a handful of records. They exist to pin field
  * mapping, not to be a corpus.
  */
@@ -26,7 +30,10 @@ function write(name: string, data: unknown) {
   console.log(`${name.padEnd(28)} ${(Buffer.byteLength(body) / 1024).toFixed(1)} KB`);
 }
 
+const ONLY = new Set(process.argv.slice(2));
+
 async function record(name: string, fn: () => Promise<void>) {
+  if (ONLY.size > 0 && !ONLY.has(name)) return;
   try {
     await fn();
   } catch (error: any) {
@@ -88,14 +95,11 @@ async function main() {
   });
 
   await record('openaire', async () => {
-    const r = await axios.get('https://api.openaire.eu/search/publications', {
-      params: { keywords: QUERY, format: 'json', size: 3, page: 1, OA: 'true' },
+    const r = await axios.get('https://api.openaire.eu/graph/v1/researchProducts', {
+      params: { search: QUERY, type: 'publication', bestOpenAccessRightLabel: 'OPEN', pageSize: 3, page: 1 },
       headers: { 'User-Agent': UA }, timeout: 30000
     });
-    const results = r.data?.response?.results?.result;
-    write('openaire.json', {
-      response: { ...r.data.response, results: { result: (Array.isArray(results) ? results : [results]).slice(0, 3) } }
-    });
+    write('openaire.json', { ...r.data, results: r.data.results.slice(0, 3) });
   });
 
   await record('datacite', async () => {

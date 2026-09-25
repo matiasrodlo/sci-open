@@ -3,45 +3,51 @@ import type { Query } from '@open-access-explorer/shared';
 /**
  * Query -> OpenAIRE's request parameters.
  *
- * OpenAIRE has no query language: a search is a set of parameters, and the
- * date bounds are two of them rather than clauses in a string. So `translate`
- * returns a canonical serialisation of those parameters rather than a query —
- * which is exactly what the caller needs it for. The orchestrator uses the
- * returned string as part of the provider cache key, and a key that left the
- * year bounds out would serve a 2022–2023 search from an unbounded one.
+ * OpenAIRE's search is a set of parameters, and the date bounds are two of them
+ * rather than clauses in a string. So `translate` returns a canonical
+ * serialisation of those parameters rather than a query — which is exactly
+ * what the caller needs it for. The orchestrator uses the returned string as
+ * part of the provider cache key, and a key that left the year bounds out would
+ * serve a 2022–2023 search from an unbounded one.
+ *
+ * These are the Graph API's names (`/graph/v1/researchProducts`), not the
+ * legacy search endpoint's: `search` for `keywords`, `pid` for `doi`,
+ * `bestOpenAccessRightLabel` for `OA`, `*PublicationDate` for `*DateAccepted`.
+ * See `fetch.ts` for why the endpoint changed.
  */
 
 export type OpenAireParams = {
-  /** Free text. Absent for a DOI lookup, which uses `doi` instead. */
-  keywords?: string;
   /**
-   * OpenAIRE's own DOI parameter.
+   * Free text. Absent for a DOI lookup, which uses `pid` instead.
    *
-   * Not `keywords`. A DOI sent as free text makes the query parser fail —
-   * `HTTP 409`, `"Syntax errors. expected boolean, got '/'"` — because the
-   * slash is an operator to it. The old connector assigned the DOI to
-   * `keywords`, so every OpenAIRE DOI lookup has been answering 409.
+   * Words separated by spaces are all required — `crispr cas9` and
+   * `crispr AND cas9` both matched 66,318 on 2026-09-25 — which is the same
+   * reading the legacy `keywords` parameter gave. The parameter does have a
+   * syntax of its own, and an unbalanced `(` or `"` answers HTTP 400, but the
+   * legacy one refused those too (HTTP 409), and it refused a bare slash as
+   * well, which this one accepts.
    */
-  doi?: string;
+  search?: string;
   /**
-   * Exact match on `dri:objIdentifier`, for the paper endpoint rather than for
-   * a search — `toParams` never produces it.
+   * A persistent identifier, matched exactly — here always a DOI.
    *
-   * It is the only parameter OpenAIRE offers for the id it hands out.
-   * `objIdentifier` is rejected outright: HTTP 400, *"Parameter objIdentifier
-   * is not supported"*. The old paper endpoint sent the id as `keywords`,
-   * which matched nothing, so every "details" click on an OpenAIRE result
-   * answered 404 — a third of a measured result set.
+   * Not `search`, which would treat it as words and match every record that
+   * mentions the prefix.
    */
-  openairePublicationID?: string;
-  format: 'json';
-  OA?: 'true';
-  fromDateAccepted?: string;
-  toDateAccepted?: string;
+  pid?: string;
+  /**
+   * `researchProducts` also holds datasets, software and "other" results. The
+   * legacy `/publications` endpoint held only these, so leaving this out would
+   * widen what the provider returns rather than just where it asks.
+   */
+  type: 'publication';
+  bestOpenAccessRightLabel?: 'OPEN';
+  fromPublicationDate?: string;
+  toPublicationDate?: string;
 };
 
 export type TranslateOptions = {
-  /** OpenAIRE takes this as a request parameter, `OA=true`. */
+  /** OpenAIRE takes this as a request parameter, `bestOpenAccessRightLabel=OPEN`. */
   openAccessOnly?: boolean;
 };
 
@@ -52,20 +58,21 @@ export function toParams(query: Query, options: TranslateOptions = {}): OpenAire
   const { from, to } = query.years ?? {};
 
   const bounds = {
-    format: 'json' as const,
-    ...(options.openAccessOnly ? { OA: 'true' as const } : {}),
-    ...(from !== undefined ? { fromDateAccepted: `${from}-01-01` } : {}),
-    ...(to !== undefined ? { toDateAccepted: `${to}-12-31` } : {})
+    type: 'publication' as const,
+    ...(options.openAccessOnly ? { bestOpenAccessRightLabel: 'OPEN' as const } : {}),
+    ...(from !== undefined ? { fromPublicationDate: `${from}-01-01` } : {}),
+    ...(to !== undefined ? { toPublicationDate: `${to}-12-31` } : {})
   };
 
-  if (query.doi) return { doi: query.doi, ...bounds };
+  if (query.doi) return { pid: query.doi, ...bounds };
 
-  // No query language means phrases cannot be marked as adjacent and terms
-  // cannot be marked as required; OpenAIRE decides. Joining them with spaces
-  // is the whole of what can be expressed.
-  const keywords = [...query.terms, ...query.phrases].map(t => t.trim()).filter(Boolean).join(' ');
+  // Terms and phrases are sent as bare words, as they were to the legacy
+  // endpoint. Quoting a phrase would be expressible here, but it would narrow
+  // what this provider returns relative to what it returned before, and that
+  // is a separate decision from which endpoint to ask.
+  const search = [...query.terms, ...query.phrases].map(t => t.trim()).filter(Boolean).join(' ');
 
-  return { keywords, ...bounds };
+  return { search, ...bounds };
 }
 
 export function translate(query: Query, options: TranslateOptions = {}): string {
@@ -73,9 +80,10 @@ export function translate(query: Query, options: TranslateOptions = {}): string 
   // Sorted so the same search always serialises identically, which is what
   // makes this usable as a cache key. The comparison is a plain one rather
   // than `localeCompare`, whose ordering depends on the runtime's locale — a
-  // key that sorts differently on two machines is not a key.
+  // key that sorts differently on two machines is not a key. `type` is left
+  // out because it never varies.
   return Object.entries(params)
-    .filter(([key]) => key !== 'format')
+    .filter(([key]) => key !== 'type')
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     .map(([key, value]) => `${key}=${value}`)
     .join('&');

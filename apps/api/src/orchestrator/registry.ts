@@ -198,7 +198,7 @@ export const PROVIDERS: ProviderEntry[] = [
     id: 'openaire',
     capabilities: openaire.capabilities,
     translate: (query, options) => openaire.translate(query, options),
-    normalizerVersion: 2,
+    normalizerVersion: 3,
     async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
       return openaire.lookup(nativeId, {
         timeoutMs,

@@ -12,20 +12,10 @@ import { lookup } from '../index';
 const options = { timeoutMs: 1000 };
 const ID = 'doi_dedup___::e102f905c7609789b70634cf0ecde7cd';
 
-const record = (objIdentifier: string) => ({
-  header: { 'dri:objIdentifier': { $: objIdentifier } },
-  metadata: {
-    'oaf:entity': {
-      'oaf:result': {
-        title: { $: 'A study of things' },
-        dateofacceptance: { $: '2022-01-01' }
-      }
-    }
-  }
-});
-
-const payload = (objIdentifier: string) => ({
-  response: { header: { total: { $: 1 } }, results: { result: record(objIdentifier) } }
+const record = (id: string) => ({
+  id,
+  mainTitle: 'A study of things',
+  publicationDate: '2022-01-01'
 });
 
 beforeEach(() => {
@@ -33,35 +23,43 @@ beforeEach(() => {
 });
 
 describe('lookup', () => {
-  it('asks by openairePublicationID, the only parameter OpenAIRE offers for its own id', async () => {
-    // `objIdentifier` is rejected outright — HTTP 400, "Parameter
-    // objIdentifier is not supported". The old route sent the id as
-    // `keywords`, which matched nothing.
-    get.mockResolvedValue({ status: 200, data: payload(ID) });
+  it('asks for the product by path, with the id encoded', async () => {
+    // `::` is in every OpenAIRE id. Encoded or not, the Graph API answers the
+    // same record — checked live on 2026-09-25 — so it is encoded, as a path
+    // segment should be.
+    get.mockResolvedValue({ status: 200, data: record(ID) });
 
     await lookup(ID, options);
 
-    expect(get.mock.calls[0]![1].params.openairePublicationID).toBe(ID);
-    expect(get.mock.calls[0]![1].params.keywords).toBeUndefined();
+    expect(get.mock.calls[0]![0]).toBe(`/researchProducts/${encodeURIComponent(ID)}`);
   });
 
-  it('returns the record when its own objIdentifier is the one asked for', async () => {
-    get.mockResolvedValue({ status: 200, data: payload(ID) });
+  it('returns the record when its own id is the one asked for', async () => {
+    get.mockResolvedValue({ status: 200, data: record(ID) });
 
     expect((await lookup(ID, options))?.id).toBe(`openaire:${ID}`);
   });
 
-  it('rejects a deduplicated sibling, which the parameter also matches', async () => {
-    // The parameter expands to `objidentifier exact … or resultdupid exact …`,
-    // so a different record can come back. A different record is not this one.
-    get.mockResolvedValue({ status: 200, data: payload('doi_dedup___::other') });
+  it('rejects a different record, whichever route returned it', async () => {
+    get.mockResolvedValue({ status: 200, data: record('doi_dedup___::other') });
 
     expect(await lookup(ID, options)).toBeNull();
   });
 
-  it('answers null for an id nobody has', async () => {
-    get.mockResolvedValue({ status: 200, data: { response: { header: { total: { $: 0 } } } } });
+  it('answers null for an id nobody has, which the Graph API answers with a 404', async () => {
+    get.mockResolvedValue({
+      status: 404,
+      data: { message: `Research product with id: ${ID} not found`, error: 'Not Found', code: 404 }
+    });
 
     expect(await lookup(ID, options)).toBeNull();
+  });
+
+  it('fails rather than answering null when OpenAIRE refuses the request', async () => {
+    // A 429 is not "no such paper", and reporting it as one would turn a rate
+    // limit into a 404 on the details page.
+    get.mockResolvedValue({ status: 429, data: {} });
+
+    await expect(lookup(ID, options)).rejects.toThrow('HTTP 429');
   });
 });
