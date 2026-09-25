@@ -119,7 +119,15 @@ function searchDepth(): number {
  * where a paper with no advertised copy is dropped without anyone being asked.
  */
 function rescueLimit(): number {
-  const raw = Number(process.env.SEARCH_RESCUE_LIMIT);
+  // Empty is unset, and has to be said so before `Number` reads it: `Number('')`
+  // is 0, the one value this setting takes to mean "off". Empty is what
+  // `docs/env.example` ships and what docker-compose passes for an unset
+  // variable, so every deployment configured the documented way had the rescue
+  // switched off — on "malaria vaccine", 2024 preprints, three papers with a
+  // PubMed Central copy Unpaywall knew of were dropped without being asked about.
+  const value = process.env.SEARCH_RESCUE_LIMIT?.trim();
+  if (!value) return DEFAULT_RESCUE_LIMIT;
+  const raw = Number(value);
   return Number.isFinite(raw) && raw >= 0 ? raw : DEFAULT_RESCUE_LIMIT;
 }
 

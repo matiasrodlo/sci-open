@@ -241,6 +241,20 @@ describe('runOrchestrator: the response', () => {
       expect(response.bounded).toBe(true);
     });
 
+    it('reads an empty limit as unset, not as off', async () => {
+      // `Number('')` is 0. Empty is what the sample env file and docker-compose
+      // hand the service, and it switched the step off everywhere.
+      vi.stubEnv('SEARCH_RESCUE_LIMIT', '');
+      const { entry } = recorder([gated(1), gated(2)]);
+
+      const response = await runOrchestrator({ q: 'crispr' }, {
+        providers: [entry],
+        authorities: [rescuer]
+      });
+
+      expect(response.bounded).toBe(false);
+    });
+
     it('is false when every candidate was asked about', async () => {
       vi.stubEnv('SEARCH_RESCUE_LIMIT', '50');
       const { entry } = recorder([gated(1), gated(2)]);
