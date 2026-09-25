@@ -309,7 +309,7 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
   // added, and the OR semantics these filters already have were unreachable
   // from the UI. `facetBaseSets` rebuilds, per ticked facet, the set the other
   // filters admit. It costs nothing when nothing is ticked. See `facet.ts`.
-  const readFacets = generateFacets(sorted, facetBaseSets(ranked, filters, policy, admitted));
+  const readFacets = generateFacets(sorted, facetBaseSets(ranked, filters, policy, admitted), now?.());
 
   const start = Math.max(page - 1, 0) * pageSize;
 
@@ -349,7 +349,7 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
   // that could be counted across the sources. See `withSourceCounts`.
   const sourceCounts = await counting;
   const facets = facetQueries
-    ? withSourceCounts(readFacets, sourceCounts, Object.keys(facetQueries) as Array<keyof FacetQueries>)
+    ? withSourceCounts(readFacets, sourceCounts, Object.keys(facetQueries) as Array<keyof FacetQueries>, now?.())
     : readFacets;
 
   // A count that went missing is a floor that could have been higher, and says

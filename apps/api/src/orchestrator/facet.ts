@@ -148,7 +148,7 @@ export function facetBaseSets(
   return bases;
 }
 
-export function generateFacets(papers: readonly Paper[], bases: FacetBases = {}): Facets {
+export function generateFacets(papers: readonly Paper[], bases: FacetBases = {}, now: Date = new Date()): Facets {
   const over = (facet: FacetKey): readonly Paper[] => bases[facet] ?? papers;
 
   return {
@@ -163,19 +163,34 @@ export function generateFacets(papers: readonly Paper[], bases: FacetBases = {})
     // returns. Measured on "alzheimer amyloid": Europe PMC retrieved 600
     // records that merged into 584 papers, and the bucket read 600 against a
     // total of 584 in the same response.
-    source: arrange('source', count(over('source'), p => [...new Set(p.sources.map(s => s.provider))])),
-    oaStatus: arrange('oaStatus', count(over('oaStatus'), p => p.oaStatus)),
-    stage: arrange('stage', count(over('stage'), p => p.stage)),
-    year: arrange('year', count(over('year'), p => p.year)),
-    venue: arrange('venue', count(over('venue'), p => p.venue)),
-    publisher: arrange('publisher', count(over('publisher'), p => p.publisher)),
-    topics: arrange('topics', count(over('topics'), p => p.topics))
+    source: arrange('source', count(over('source'), p => [...new Set(p.sources.map(s => s.provider))]), now),
+    oaStatus: arrange('oaStatus', count(over('oaStatus'), p => p.oaStatus), now),
+    stage: arrange('stage', count(over('stage'), p => p.stage), now),
+    year: arrange('year', count(over('year'), p => p.year), now),
+    venue: arrange('venue', count(over('venue'), p => p.venue), now),
+    publisher: arrange('publisher', count(over('publisher'), p => p.publisher), now),
+    topics: arrange('topics', count(over('topics'), p => p.topics), now)
   };
 }
 
-/** How each facet is ordered and cut, shared by the read's counts and the merged ones. */
-function arrange(facet: FacetKey, buckets: FacetBucket[]): FacetBucket[] {
-  if (facet === 'year') return buckets.sort((a, b) => Number(b.value) - Number(a.value)).slice(0, MAX_BUCKETS);
+/**
+ * How each facet is ordered and cut, shared by the read's counts and the merged ones.
+ *
+ * A year after the current one is dropped. No paper is from 2035; a bucket for
+ * it is a source's bad date, and on "crispr gene editing" the panel offered
+ * 2035 and 2027 at the top of the year list. Both routes carry them — a paper
+ * read with that year, and OpenAlex's `group_by`, which answers every year it
+ * holds rather than the window asked for — so the cut is here, where they
+ * meet. The papers themselves are still listed; only the bucket is not offered.
+ */
+function arrange(facet: FacetKey, buckets: FacetBucket[], now: Date): FacetBucket[] {
+  if (facet === 'year') {
+    const current = now.getUTCFullYear();
+    return buckets
+      .filter(b => Number(b.value) <= current)
+      .sort((a, b) => Number(b.value) - Number(a.value))
+      .slice(0, MAX_BUCKETS);
+  }
   const sorted = buckets.sort(byCount);
   return facet === 'venue' || facet === 'publisher' || facet === 'topics' ? truncate(sorted) : sorted;
 }
@@ -214,7 +229,8 @@ export type SourceCounts = { provider: ProviderId; facets: SourceFacets };
 export function withSourceCounts(
   read: Facets,
   sources: readonly SourceCounts[],
-  countable: Iterable<CountedFacet>
+  countable: Iterable<CountedFacet>,
+  now: Date = new Date()
 ): Facets {
   const merged: Facets = { ...read };
 
@@ -235,7 +251,7 @@ export function withSourceCounts(
       }
     }
 
-    merged[facet] = arrange(facet, [...buckets.values()]);
+    merged[facet] = arrange(facet, [...buckets.values()], now);
   }
 
   return merged;

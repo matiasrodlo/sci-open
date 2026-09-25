@@ -72,6 +72,13 @@ describe('generateFacets', () => {
     expect(generateFacets(papers).year.map(b => b.value)).toEqual([2021, 2020]);
   });
 
+  it('drops years after the current one, and lists the paper still', () => {
+    const dated = [...papers, paper({ id: 'd', year: 2035 }), paper({ id: 'e', year: 2027 }), paper({ id: 'f', year: 2026 })];
+    const f = generateFacets(dated, {}, new Date('2026-09-25T00:00:00Z'));
+    expect(f.year.map(b => b.value)).toEqual([2026, 2021, 2020]);
+    expect(f.source[0]!.count).toBe(dated.length);
+  });
+
   it('caps open-ended facets at 25 without rescaling the survivors', () => {
     const wide = Array.from({ length: 200 }, (_, i) =>
       paper({ id: `p${i}`, venue: `Journal ${i}`, topics: [`t${i}`] }));
@@ -197,6 +204,15 @@ describe('withSourceCounts', () => {
       { value: 2024, count: 900, from: 'openalex' },
       { value: 2023, count: 50, from: 'europepmc' }
     ]);
+  });
+
+  it('drops a future year a source reports', () => {
+    // OpenAlex's `group_by` answers every year it holds, whatever was asked.
+    const f = withSourceCounts(read, [
+      { provider: 'openalex', facets: { year: [{ value: 2035, count: 2 }, { value: 2024, count: 900 }] } }
+    ], ['year'], new Date('2026-09-25T00:00:00Z'));
+
+    expect(f.year.map(b => b.value)).toEqual([2024, 2023]);
   });
 
   it('keeps the read’s count where it is larger', () => {
