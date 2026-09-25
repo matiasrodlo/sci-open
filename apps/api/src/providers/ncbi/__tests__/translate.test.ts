@@ -90,3 +90,21 @@ describe('translate — year bounds', () => {
     expect(translate(query({ terms: ['x'], years: {} }))).toBe('(x[tiab] OR x[mh])');
   });
 });
+
+describe('translate — the publication type', () => {
+  const base = '(ai[tiab] OR ai[mh])';
+
+  it('asks for PubMed Central when only published papers are wanted', () => {
+    expect(translate(query({ terms: ['ai'], stages: ['published', 'accepted'] }))).toBe(`${base} AND pubmed pmc[sb]`);
+  });
+
+  it('adds nothing under the open-access filter, whose subset is inside PMC already', () => {
+    // Which keeps the query — and the cache key — the same as the unnarrowed one.
+    expect(translate(query({ terms: ['ai'], stages: ['published'] }), { openAccessOnly: true }))
+      .toBe(translate(query({ terms: ['ai'] }), { openAccessOnly: true }));
+  });
+
+  it('adds nothing when unknown papers are wanted too', () => {
+    expect(translate(query({ terms: ['ai'], stages: ['published', 'unknown'] }))).toBe(base);
+  });
+});

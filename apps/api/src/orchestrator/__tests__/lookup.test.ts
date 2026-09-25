@@ -20,7 +20,8 @@ const capabilities = {
   yearFilter: false,
   maxPageSize: 100,
   reportsTotal: true,
-  suppliesCitations: false
+  suppliesCitations: false,
+  stages: { holds: ['published'] as const, filter: false }
 };
 
 type Fake = ProviderEntry & {

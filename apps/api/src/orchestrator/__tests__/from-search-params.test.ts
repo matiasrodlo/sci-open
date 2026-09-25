@@ -23,7 +23,8 @@ function recorder(papers = pageOf(3)): { entry: ProviderEntry; calls: Recorded[]
     id: 'europepmc',
     capabilities: {
       keywordSearch: true, fieldedSearch: true, doiLookup: true, fields: [], yearFilter: true,
-      maxPageSize: 1000, reportsTotal: true, suppliesCitations: false
+      maxPageSize: 1000, reportsTotal: true, suppliesCitations: false,
+      stages: { holds: ['published'], filter: false }
     },
     translate: () => 'native',
     normalizerVersion: 1,

@@ -197,3 +197,32 @@ describe('provider capabilities', () => {
     });
   });
 });
+
+/**
+ * Which publication types each provider holds, and whether it can be asked for
+ * one.
+ *
+ * `plan` skips a provider holding none of the types ticked, so a wrong `holds`
+ * silently drops a source from a search; and `filter` decides whether its
+ * counts can be trusted under a ticked type. The reasons are in each
+ * provider's `capabilities.ts`.
+ */
+const STAGES: Record<string, { holds: string[]; filter: boolean }> = {
+  arxiv: { holds: ['preprint'], filter: false },
+  biorxiv: { holds: ['preprint'], filter: false },
+  core: { holds: ['unknown'], filter: false },
+  datacite: { holds: ['preprint', 'published', 'unknown'], filter: false },
+  doaj: { holds: ['published'], filter: false },
+  europepmc: { holds: ['preprint', 'published', 'unknown'], filter: true },
+  ncbi: { holds: ['published', 'unknown'], filter: true },
+  openaire: { holds: ['published', 'unknown'], filter: true },
+  openalex: { holds: ['preprint', 'published', 'unknown'], filter: true },
+  plos: { holds: ['published'], filter: false }
+};
+
+describe('publication types', () => {
+  it.each(PROVIDERS.map(p => [p.id, p] as const))('%s', (id, provider) => {
+    const { stages } = provider.capabilities;
+    expect({ holds: [...stages.holds], filter: stages.filter }).toEqual(STAGES[id]);
+  });
+});
