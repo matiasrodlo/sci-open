@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Query } from '@open-access-explorer/shared';
-import { translate } from '../translate';
+import { translate, translateIds } from '../translate';
 import { parseQuery } from '../../../orchestrator/parse-query';
 
 const query = (over: Partial<Query> = {}): Query => ({
@@ -171,5 +171,16 @@ describe('translate: the fielded grammar', () => {
     expect(q('crispr "gene editing"')).toBe(
       '((TITLE_ABS:crispr OR MESH:crispr OR KW:crispr) AND (TITLE_ABS:"gene editing" OR MESH:"gene editing" OR KW:"gene editing"))'
     );
+  });
+});
+
+describe('translateIds', () => {
+  it('asks for each id the way a lookup does, joined with OR', () => {
+    expect(translateIds(['37494408', 'PMC13322439', 'PPR1309569']))
+      .toBe('EXT_ID:"37494408" OR EXT_ID:"PMC13322439" OR EXT_ID:"PPR1309569"');
+  });
+
+  it('escapes a quote in any one of them', () => {
+    expect(translateIds(['a"b', 'c'])).toBe('EXT_ID:"a\\"b" OR EXT_ID:"c"');
   });
 });

@@ -81,6 +81,18 @@ export function translateId(nativeId: string): string {
   return `EXT_ID:${quote(nativeId)}`;
 }
 
+/**
+ * Several records by id, in one query — the second half of a search read. See
+ * `search` in `index.ts` for why a search is an id list and then this.
+ *
+ * `translateId` for each, joined with `OR`. Measured live on 2026-09-25: 125
+ * ids is a URL of about 6,000 characters, and answered HTTP 200 with all 125
+ * records.
+ */
+export function translateIds(nativeIds: readonly string[]): string {
+  return nativeIds.map(translateId).join(' OR ');
+}
+
 /** A year bound, in the range syntax the comment below explains is the only one that works. */
 function yearRange({ from, to }: YearRange): string {
   return `PUB_YEAR:[${from ?? '*'} TO ${to ?? '*'}]`;

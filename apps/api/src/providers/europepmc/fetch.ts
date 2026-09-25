@@ -21,12 +21,28 @@ export type FetchOptions = {
   baseUrl?: string;
   /** Records per request. Capped by the caller against `capabilities.maxPageSize`. */
   pageSize: number;
-  /** Record offset. Europe PMC pages by 1-based page number, so this lands exactly only on a page boundary. */
-  offset: number;
+  /**
+   * `core` carries abstracts, keywords, citation counts and the full-text URL
+   * list; `lite` omits all of them. `idlist` is ids and sources only — about
+   * 17 bytes a record on the wire — for the first half of a search read.
+   */
+  resultType?: 'core' | 'idlist';
   timeoutMs: number;
   signal?: AbortSignal;
   userAgent?: string;
 };
+
+/**
+ * There is no offset here, because Europe PMC does not take one.
+ *
+ * This used to send `page`, computed from an offset, and `sortBy=RELEVANCE`.
+ * Neither is a parameter the search endpoint reads: checked live on
+ * 2026-09-25, `page=2` returns the same records as `page=1`, and the request
+ * echo reports `sort: ""` either way — relevance is simply the default. The
+ * only way past the first page is `cursorMark`, which is sequential. A caller
+ * that wants records from an offset asks the id list for more and slices it;
+ * see `search` in `index.ts`.
+ */
 
 /** The shape we rely on. Everything else in the payload is passed through untouched. */
 export type EuropePmcPayload = {
@@ -77,7 +93,7 @@ export async function fetchPage(
   nativeQuery: string,
   options: FetchOptions
 ): Promise<EuropePmcPayload> {
-  const { baseUrl = DEFAULT_BASE_URL, pageSize, offset, timeoutMs, signal, userAgent } = options;
+  const { baseUrl = DEFAULT_BASE_URL, pageSize, resultType = 'core', timeoutMs, signal, userAgent } = options;
 
   const client = getPooledClient(baseUrl, getServiceConfig('europepmc'));
 
@@ -86,11 +102,7 @@ export async function fetchPage(
       query: nativeQuery,
       format: 'json',
       pageSize,
-      page: Math.floor(Math.max(offset, 0) / Math.max(pageSize, 1)) + 1,
-      // `core` is what carries abstracts, keywords, citation counts and the
-      // full-text URL list. `lite` omits all of them.
-      resultType: 'core',
-      sortBy: 'RELEVANCE'
+      resultType
     },
     timeout: timeoutMs,
     ...(signal ? { signal } : {}),
