@@ -1,4 +1,5 @@
 import type { Paper, Query } from '@open-access-explorer/shared';
+import { facetKey } from './facet-key';
 
 /**
  * Ordering the merged set.
@@ -52,27 +53,28 @@ export function fusionScore(paper: Paper): number {
   return paper.sources.reduce((total, ref) => total + RRF_K / (RRF_K + ref.rank + 1), 0);
 }
 
-function tokenize(text: string): string[] {
-  return text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
-}
-
 /**
  * Fraction of the query present in the paper's text.
  *
  * Phrases must appear intact to count; terms only have to appear. A phrase is
  * worth more than a term because the user went to the trouble of quoting it.
+ *
+ * Query and text are folded alike — see `facetKey` — so words in any script
+ * match, `détection` matches `detection`, and `covid-19` matches `COVID 19`.
+ * Splitting on `[^a-z0-9]` threw away every accented and non-Latin letter,
+ * so those terms could never count. The padding makes a term match whole
+ * words only, as the token set it replaces did.
  */
 export function overlapScore(paper: Paper, query: Query): number {
-  const terms = query.terms.map(t => t.toLowerCase()).filter(Boolean);
-  const phrases = query.phrases.map(p => p.toLowerCase()).filter(Boolean);
+  const terms = query.terms.map(facetKey).filter(Boolean);
+  const phrases = query.phrases.map(facetKey).filter(Boolean);
   const wanted = terms.length + phrases.length * 2;
   if (wanted === 0) return 0;
 
   const score = (text: string): number => {
     if (!text) return 0;
-    const haystack = text.toLowerCase();
-    const tokens = new Set(tokenize(text));
-    const matchedTerms = terms.filter(t => tokens.has(t)).length;
+    const haystack = ` ${facetKey(text)} `;
+    const matchedTerms = terms.filter(t => haystack.includes(` ${t} `)).length;
     const matchedPhrases = phrases.filter(p => haystack.includes(p)).length;
     return (matchedTerms + matchedPhrases * 2) / wanted;
   };

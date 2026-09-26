@@ -47,6 +47,22 @@ describe('overlapScore', () => {
   it('does not match a term inside a longer word', () => {
     expect(overlapScore(paper({ title: 'genetics' }), query({ terms: ['gene'] }))).toBe(0);
   });
+
+  it('matches terms in any script, ignoring accents', () => {
+    const exact = (title: string, terms: string[]) => overlapScore(paper({ title }), query({ terms }));
+    // An exact title match scores the same whatever alphabet it is written in.
+    const ascii = exact('cancer detection', ['cancer', 'detection']);
+    expect(exact('Détection cancer', ['détection', 'cancer'])).toBe(ascii);
+    expect(exact('Detection cancer', ['détection', 'cancer'])).toBe(ascii);
+    expect(exact('Лечение детей', ['лечение', 'детей'])).toBe(ascii);
+  });
+
+  it('matches a hyphenated term however the text punctuates it', () => {
+    expect(overlapScore(paper({ title: 'COVID 19 in children' }), query({ terms: ['covid-19'] })))
+      .toBeGreaterThan(0);
+    expect(overlapScore(paper({ title: 'covid-19 in children' }), query({ terms: ['covid-19'] })))
+      .toBeGreaterThan(0);
+  });
 });
 
 describe('rank', () => {

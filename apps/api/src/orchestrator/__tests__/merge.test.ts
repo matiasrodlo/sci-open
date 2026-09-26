@@ -13,6 +13,13 @@ describe('identity', () => {
     expect(identityKey(paper({ doi: undefined, title: 'Attention Is All You Need!', year: 2017 })))
       .toBe('title:attention is all you need|2017');
   });
+
+  it('keeps letters outside a-z in the title key', () => {
+    // Folding to `a-z0-9` left `covid 19` of titles like this one, so they
+    // merged. Accents still fold, as facet values do, so `й` reads `и`.
+    expect(identityKey(paper({ doi: undefined, title: 'Лечение COVID-19 у детей', year: 2021 })))
+      .toBe('title:лечение covid 19 у детеи|2021');
+  });
 });
 
 describe('mergePapers', () => {
@@ -33,6 +40,26 @@ describe('mergePapers', () => {
     const merged = mergePapers([
       paper({ id: 'a', doi: undefined, title: 'Same Paper', year: 2020, sources: [ref('arxiv')] }),
       paper({ id: 'b', doi: undefined, title: 'same paper!', year: 2020, sources: [ref('openaire')] })
+    ]);
+    expect(merged).toHaveLength(1);
+  });
+
+  it('keeps distinct papers apart when their titles are not in Latin script', () => {
+    const merged = mergePapers([
+      paper({ id: 'a', doi: undefined, title: 'Лечение COVID-19 у детей', year: 2021, sources: [ref('europepmc')] }),
+      paper({ id: 'b', doi: undefined, title: 'Эпидемиология COVID-19 в Москве', year: 2021, sources: [ref('openaire')] }),
+      paper({ id: 'c', doi: undefined, title: '新型冠状病毒肺炎的临床特征', year: 2021, sources: [ref('core')] }),
+      paper({ id: 'd', doi: undefined, title: '新型冠状病毒肺炎的临床特征', year: 2021, sources: [ref('doaj')] })
+    ]);
+    expect(merged.map(p => p.title).sort()).toEqual([
+      'Лечение COVID-19 у детей', 'Эпидемиология COVID-19 в Москве', '新型冠状病毒肺炎的临床特征'
+    ].sort());
+  });
+
+  it('groups titles that differ only by accents, case and punctuation', () => {
+    const merged = mergePapers([
+      paper({ id: 'a', doi: undefined, title: 'Détection précoce du cancer', year: 2019, sources: [ref('openaire')] }),
+      paper({ id: 'b', doi: undefined, title: 'Detection precoce du cancer.', year: 2019, sources: [ref('core')] })
     ]);
     expect(merged).toHaveLength(1);
   });

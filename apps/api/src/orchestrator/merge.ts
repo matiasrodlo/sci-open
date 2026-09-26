@@ -1,4 +1,5 @@
 import type { FieldSources, Paper, ProvenancedField, ProviderId } from '@open-access-explorer/shared';
+import { facetKey } from './facet-key';
 
 /**
  * One work per paper, assembled from everything the providers said about it.
@@ -64,11 +65,17 @@ function priorityOf(paper: Paper): number {
  * from Europe PMC with one. The fix is to give PubMed its DOI (phase 08)
  * rather than to match across the two kinds of key, which would merge on title
  * alone and is how unrelated papers with generic titles get combined.
+ *
+ * The title is folded the way facet values are — letters and digits in any
+ * script, accents and case dropped — so `Café` and `Cafe` are one work and
+ * `Лечение COVID-19 у детей` and `Эпидемиология COVID-19` are two. Keeping
+ * only `a-z0-9` reduced both of those to `covid 19`, and the second paper
+ * vanished into the first with its fields mixed in.
  */
 export function identityKey(paper: Paper): string {
   if (paper.doi) return `doi:${normalizeDoi(paper.doi)}`;
 
-  const title = paper.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const title = facetKey(paper.title);
   if (title) return `title:${title}|${paper.year ?? ''}`;
 
   const primary = paper.sources[0];
