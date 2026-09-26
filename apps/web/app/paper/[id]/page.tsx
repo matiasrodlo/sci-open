@@ -103,7 +103,8 @@ function PaperContent() {
           <PaperAbstract abstract={paper.abstract} />
 
           {/* Citations Section */}
-          {paper.citationCount && paper.citationCount > 0 && (
+          {/* Compared rather than tested for truth: `0 && …` renders the 0. */}
+          {paper.citationCount !== undefined && paper.citationCount > 0 && (
             <PaperCitations 
               citationCount={paper.citationCount}
               doi={paper.doi}
