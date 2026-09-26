@@ -12,7 +12,7 @@ import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
-import { SearchParams, toOARecord } from '@open-access-explorer/shared';
+import { SearchParams, toOARecord, type Paper } from '@open-access-explorer/shared';
 import { searchCacheManager, paperCacheManager, cacheManager } from './lib/cache';
 import { worthCaching } from './lib/search-cache-manager';
 import { httpPerformanceMonitor } from './lib/http-performance-monitor';
@@ -23,7 +23,7 @@ import { SingleFlight } from './lib/single-flight';
 import { gracefulShutdown } from './lib/shutdown';
 import { log, useLogger } from './lib/logger';
 import { searchBodySchema, paperParamsSchema, downloadPdfBodySchema } from './lib/schemas';
-import { clientError, clientErrorStatus } from './lib/client-error';
+import { clientError, clientErrorStatus, lookupErrorStatus } from './lib/client-error';
 import { parseTrustProxy, trustProxyWarning, trustsAnyProxy } from './lib/trust-proxy';
 import { ProviderCache, lookupPaper, enrichPage } from './orchestrator';
 import { runOrchestrator } from './orchestrator/from-search-params';
@@ -273,7 +273,21 @@ async function routes(fastify: FastifyInstance) {
       // provider's own index — is the registry's business rather than the
       // route's, which is why a hundred lines of per-connector branching
       // could go.
-      const found = await lookupPaper(id, { userAgent });
+      //
+      // Its failures are the provider's, and are answered as such: a timeout
+      // is a 504 and a provider that is down a 502 — see `lookupErrorStatus`.
+      let found: Paper | null;
+      try {
+        found = await lookupPaper(id, { userAgent });
+      } catch (error: any) {
+        const status = lookupErrorStatus(error);
+        fastify.log[status === 500 ? 'error' : 'warn'](
+          { id, status, error: error?.message },
+          'Could not fetch paper details from its provider'
+        );
+        reply.code(status);
+        return clientError(error, request.id);
+      }
 
       // If no paper found, return 404
       if (!found) {

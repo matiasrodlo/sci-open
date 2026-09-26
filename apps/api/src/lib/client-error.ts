@@ -51,3 +51,28 @@ export function clientError(error: unknown, requestId: string): ClientError {
 export function clientErrorStatus(error: unknown): number {
   return error instanceof QueryParseError ? 400 : 500;
 }
+
+/** Codes axios and the socket give a request that ran out of time. */
+const TIMEOUT_CODES = new Set(['ECONNABORTED', 'ETIMEDOUT', 'ESOCKETTIMEDOUT']);
+
+/**
+ * The status for a failure while asking a provider for one record.
+ *
+ * `/api/paper/:id` answered 500 for all of them, which says this service is
+ * broken when what happened is that the provider holding the record was slow
+ * or down — and those call for different things from whoever is reading the
+ * status: a 504 or a 502 is worth retrying later, a 500 is worth a bug report.
+ *
+ * A mistake in this service's own code still reads as one. The providers
+ * throw their own `…UnavailableError`s, axios errors or plain `Error`s; a
+ * `TypeError` or `ReferenceError` is not something any of them answers with.
+ */
+export function lookupErrorStatus(error: unknown): number {
+  if (error instanceof QueryParseError) return 400;
+
+  const { code, name } = (error ?? {}) as { code?: unknown; name?: unknown };
+  if (name === 'TimeoutError' || (typeof code === 'string' && TIMEOUT_CODES.has(code))) return 504;
+
+  if (error instanceof TypeError || error instanceof ReferenceError) return 500;
+  return 502;
+}
