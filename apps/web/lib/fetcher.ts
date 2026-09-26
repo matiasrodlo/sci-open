@@ -58,9 +58,23 @@ function callerHeaders(caller: Caller): Record<string, string> {
   return caller.forwardedFor ? { 'x-forwarded-for': caller.forwardedFor } : {};
 }
 
+/**
+ * How long a search may take to answer before the page gives up on it.
+ *
+ * Above the API's own worst case rather than at it: twenty seconds for the
+ * fan-out, five for the rescue and six for enrichment is about thirty-one, so
+ * reaching this means the API is hung rather than slow. Without it axios waits
+ * forever — the browser path has the route handler's thirty-second budget, but
+ * a server-rendered search does not go through that handler, so a stuck API
+ * held `/results` open indefinitely. The error it raises is `ECONNABORTED`,
+ * which `classifySearchError` already reads as a timeout.
+ */
+export const SEARCH_TIMEOUT_MS = 45000;
+
 export async function searchPapers(params: SearchParams, caller: Caller = {}): Promise<SearchResponse> {
   const response = await axios.post<SearchResponse>(apiUrl('/api/search'), params, {
-    headers: callerHeaders(caller)
+    headers: callerHeaders(caller),
+    timeout: SEARCH_TIMEOUT_MS
   });
   return response.data;
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import axios from 'axios';
-import { searchPapers } from '../fetcher';
+import { searchPapers, SEARCH_TIMEOUT_MS } from '../fetcher';
 import type { SearchParams } from '@open-access-explorer/shared';
 
 /**
@@ -28,7 +28,7 @@ const post = vi.mocked(axios.post);
 /** What `axios.post` was handed, as body plus config. */
 const called = () => ({
   body: post.mock.calls[0]![1] as SearchParams,
-  config: post.mock.calls[0]![2] as { headers: Record<string, string> }
+  config: post.mock.calls[0]![2] as { headers: Record<string, string>; timeout?: number }
 });
 
 const params: SearchParams = { q: 'crispr', page: 1, pageSize: 20 };
@@ -59,5 +59,16 @@ describe('searchPapers', () => {
     await searchPapers(params, { forwardedFor: '203.0.113.7' });
 
     expect(called().body).toEqual(params);
+  });
+
+  it('gives up on an API that never answers', async () => {
+    // A server-rendered search bypasses the route handler and its budget, so
+    // without its own the page waited on a hung API for as long as it hung.
+    await searchPapers(params);
+
+    expect(called().config.timeout).toBe(SEARCH_TIMEOUT_MS);
+    // Above the API's own worst case — fan-out, rescue and enrichment budgets —
+    // so a slow search is never cut off, only a stuck one.
+    expect(SEARCH_TIMEOUT_MS).toBeGreaterThan(20000 + 5000 + 6000);
   });
 });
