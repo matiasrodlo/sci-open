@@ -151,11 +151,11 @@ NODE_ENV=production   # Info logs only
 ### Cache Inspection
 
 ```bash
-# Check Redis. Keys are `namespace:hash(subject)` plus a variant hash, over
-# the `search`, `facets` and `partial` namespaces. Prefer SCAN to KEYS, which
-# blocks the server for the length of the keyspace.
+# Check Redis. Keys are `oae:namespace:hash(subject)` plus a variant hash,
+# over the `search` and `paper` namespaces. Prefer SCAN to KEYS, which blocks
+# the server for the length of the keyspace.
 redis-cli
-> SCAN 0 MATCH 'search:*' COUNT 100
+> SCAN 0 MATCH 'oae:search:*' COUNT 100
 
 # Clear cache via API. Administrative routes need a bearer token, and are
 # disabled outright when ADMIN_API_KEY is unset — see ./configuration.md.

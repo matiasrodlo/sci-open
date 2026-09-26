@@ -120,7 +120,9 @@ derives:
   default), least-recently-used, spending expired entries before live ones. It
   stores serialised values and parses on read, so a caller cannot mutate what
   the next reader gets.
-- **L2, Redis** — walked with `SCAN`, never `KEYS`.
+- **L2, Redis** — walked with `SCAN`, never `KEYS`, and every key carries an
+  `oae:` prefix, so clearing the cache removes this service's entries and not
+  whatever else shares the database.
 
 `invalidate(namespace, subject)` returns how many entries it removed.
 

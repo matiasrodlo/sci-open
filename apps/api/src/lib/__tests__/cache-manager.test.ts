@@ -36,7 +36,7 @@ vi.mock('ioredis', () => {
   return { default: FakeRedis };
 });
 
-import { CacheManager, CacheStrategy } from '../cache-manager';
+import { CacheManager, CacheStrategy, L2_KEY_PREFIX } from '../cache-manager';
 
 let cache: CacheManager;
 beforeEach(() => {
@@ -126,6 +126,30 @@ describe('CacheManager subject invalidation', () => {
 
   it('reports nothing removed when there was nothing to remove', async () => {
     expect(await cache.invalidate('search', 'never-cached')).toBe(0);
+  });
+});
+
+describe('CacheManager.clear', () => {
+  it('removes this service\'s entries and nothing else in a shared Redis', async () => {
+    // It ran FLUSHDB, which empties the database for every process using it.
+    const redis = (cache as any).l2.store as Map<string, string>;
+    redis.set('sessions:user-42', 'someone else\'s');
+    const key = cache.generateKey('search', 'crispr', 'page=1');
+    await cache.set(key, { hit: true }, CacheStrategy.SEARCH_RESULTS);
+    expect(redis.has(`${L2_KEY_PREFIX}${key}`)).toBe(true);
+
+    await cache.clear();
+
+    expect(await cache.get(key, CacheStrategy.SEARCH_RESULTS)).toBeNull();
+    expect([...redis.keys()]).toEqual(['sessions:user-42']);
+  });
+
+  it('clears more entries than one DEL is sent', async () => {
+    for (let i = 0; i < 1200; i++) {
+      await cache.set(cache.generateKey('paper', `p${i}`), { i }, CacheStrategy.PAPER_DETAILS);
+    }
+    await cache.clear();
+    expect(((cache as any).l2.store as Map<string, string>).size).toBe(0);
   });
 });
 

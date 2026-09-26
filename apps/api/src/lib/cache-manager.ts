@@ -108,6 +108,20 @@ const CONNECT_TIMEOUT_MS = 2000;
 /** The slowest the background reconnect backs off to. */
 const RECONNECT_MAX_DELAY_MS = 5000;
 
+/**
+ * Where this service's entries live in Redis.
+ *
+ * Every key it writes there starts with this, which is what lets `clear` and
+ * `invalidate` remove this service's entries and nothing else — `clear` used
+ * to run `FLUSHDB`, which empties the whole database, including anything some
+ * other process keeps in a Redis this one shares. Applied at the Redis
+ * boundary only: L1 is this process's own and needs no namespace.
+ */
+export const L2_KEY_PREFIX = 'oae:';
+
+/** How many keys go in one `DEL` when clearing. */
+const DELETE_BATCH = 500;
+
 function configuredCooldownMs(): number {
   const raw = Number(process.env.CACHE_REDIS_COOLDOWN_MS);
   return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_L2_COOLDOWN_MS;
@@ -180,7 +194,7 @@ export class CacheManager {
 
       if (this.l2Usable()) {
         try {
-          const l2Value = await this.l2.get(key);
+          const l2Value = await this.l2.get(L2_KEY_PREFIX + key);
           this.resetL2();
           if (l2Value !== null) {
             // Promoted as the string Redis returned, so L1 holds exactly the
@@ -219,7 +233,7 @@ export class CacheManager {
 
       if (this.l2Usable()) {
         try {
-          await this.l2.setex(key, config.l2, serialized);
+          await this.l2.setex(L2_KEY_PREFIX + key, config.l2, serialized);
           this.resetL2();
         } catch (redisError) {
           this.reportL2Failure('Redis write failed; the entry is cached in memory only:', redisError);
@@ -233,7 +247,7 @@ export class CacheManager {
   async delete(key: string): Promise<void> {
     this.l1.delete(key);
     try {
-      await this.l2.del(key);
+      await this.l2.del(L2_KEY_PREFIX + key);
       this.resetL2();
     } catch (redisError) {
       this.tripL2();
@@ -264,7 +278,7 @@ export class CacheManager {
     let removed = this.l1.deleteByPrefix(prefix);
 
     try {
-      const keys = await this.scanKeys(`${prefix}*`);
+      const keys = await this.scanKeys(`${L2_KEY_PREFIX}${prefix}*`);
       if (keys.length > 0) {
         await this.l2.del(...keys);
         removed += keys.length;
@@ -283,10 +297,14 @@ export class CacheManager {
     return { ...this.metrics, keys, bytes, maxBytes, evictions, l2Available: !this.l2Down };
   }
 
+  /** Everything this service cached, at both levels — and only that. See `L2_KEY_PREFIX`. */
   async clear(): Promise<void> {
     this.l1.clear();
     try {
-      await this.l2.flushdb();
+      const keys = await this.scanKeys(`${L2_KEY_PREFIX}*`);
+      for (let at = 0; at < keys.length; at += DELETE_BATCH) {
+        await this.l2.del(...keys.slice(at, at + DELETE_BATCH));
+      }
       this.resetL2();
     } catch (redisError) {
       this.tripL2();
