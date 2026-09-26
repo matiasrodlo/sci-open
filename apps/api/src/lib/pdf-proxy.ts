@@ -54,24 +54,91 @@ function isBlockedIpv4(ip: string): boolean {
   if (a === 172 && b >= 16 && b <= 31) return true;            // private
   if (a === 192 && b === 168) return true;                     // private
   if (a === 100 && b >= 64 && b <= 127) return true;           // carrier NAT
-  if (a === 192 && b === 0) return true;                       // protocol assignments
+  if (a === 192 && b === 0) return true;                       // protocol assignments, TEST-NET-1
+  if (a === 192 && b === 88 && parts[2] === 99) return true;   // 6to4 relay anycast
   if (a === 198 && (b === 18 || b === 19)) return true;        // benchmarking
+  if (a === 198 && b === 51 && parts[2] === 100) return true;  // TEST-NET-2
+  if (a === 203 && b === 0 && parts[2] === 113) return true;   // TEST-NET-3
   if (a >= 224) return true;                                   // multicast and reserved
   return false;
 }
 
-function isBlockedIpv6(ip: string): boolean {
-  const lower = ip.toLowerCase();
-  if (lower === '::1' || lower === '::') return true;
+/**
+ * The eight 16-bit groups of an IPv6 address, or `undefined` if it does not
+ * parse — which the caller treats as blocked.
+ *
+ * Parsed rather than matched as text because the same address has many
+ * spellings, and the URL parser picks a different one from the one a caller
+ * typed: `http://[::ffff:127.0.0.1]/` reaches this module as `::ffff:7f00:1`.
+ * A check written against the dotted spelling never saw the hex one, so an
+ * IPv4-mapped literal walked straight past it to loopback — and an IP literal
+ * is never handed to `guardedLookup`, because Node skips DNS for one.
+ */
+function ipv6Groups(ip: string): number[] | undefined {
+  let text = ip.toLowerCase().replace(/%.*$/, '');
 
-  const mapped = lower.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-  if (mapped) {
-    return isBlockedIpv4(mapped[1]);
+  // A trailing dotted quad is the last two groups written in decimal.
+  const dotted = text.match(/:(\d{1,3}(?:\.\d{1,3}){3})$/);
+  if (dotted) {
+    const [a, b, c, d] = dotted[1].split('.').map(Number);
+    if ([a, b, c, d].some(n => n > 255)) return undefined;
+    text = `${text.slice(0, text.length - dotted[1].length)}${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`;
   }
 
-  const head = parseInt(lower.split(':')[0] || '0', 16);
+  const halves = text.split('::');
+  if (halves.length > 2) return undefined;
+
+  const left = halves[0] ? halves[0].split(':') : [];
+  const right = halves.length === 2 && halves[1] ? halves[1].split(':') : [];
+  const missing = 8 - left.length - right.length;
+  if (halves.length === 1 ? missing !== 0 : missing < 0) return undefined;
+
+  const groups = [...left, ...Array<string>(missing).fill('0'), ...right].map(group =>
+    /^[0-9a-f]{1,4}$/.test(group) ? parseInt(group, 16) : NaN
+  );
+  return groups.every(Number.isInteger) ? groups : undefined;
+}
+
+/**
+ * The IPv4 address an IPv6 one delivers to, for the forms that carry one in
+ * their last 32 bits: IPv4-mapped (`::ffff:0:0/96`), IPv4-compatible
+ * (`::/96`, which also covers `::` and `::1`), IPv4-translated
+ * (`::ffff:0:0:0/96`) and the NAT64 well-known prefix (`64:ff9b::/96`).
+ *
+ * Judged by the IPv4 rules rather than refused outright, so a public address
+ * written this way — which is what DNS64 hands out on an IPv6-only host —
+ * still downloads.
+ */
+function embeddedIpv4(groups: readonly number[]): string | undefined {
+  const zero = (from: number, to: number) => groups.slice(from, to).every(group => group === 0);
+
+  const carries =
+    (zero(0, 5) && (groups[5] === 0xffff || groups[5] === 0)) ||
+    (zero(0, 4) && groups[4] === 0xffff && groups[5] === 0) ||
+    (groups[0] === 0x64 && groups[1] === 0xff9b && zero(2, 6));
+  if (!carries) return undefined;
+
+  const [high, low] = [groups[6], groups[7]];
+  return `${high >> 8}.${high & 0xff}.${low >> 8}.${low & 0xff}`;
+}
+
+function isBlockedIpv6(ip: string): boolean {
+  const groups = ipv6Groups(ip);
+  if (!groups) return true;
+
+  const embedded = embeddedIpv4(groups);
+  if (embedded) return isBlockedIpv4(embedded);
+
+  const [head, second, third] = groups;
   if ((head & 0xfe00) === 0xfc00) return true;                 // fc00::/7 unique local
   if ((head & 0xffc0) === 0xfe80) return true;                 // fe80::/10 link-local
+  if ((head & 0xffc0) === 0xfec0) return true;                 // fec0::/10 site-local
+  if ((head & 0xff00) === 0xff00) return true;                 // ff00::/8 multicast
+  if (head === 0x64 && second === 0xff9b && third === 1) return true; // 64:ff9b:1::/48 local NAT64
+  if (head === 0x100 && second === 0 && third === 0 && groups[3] === 0) return true; // 100::/64 discard
+  if (head === 0x2001 && second === 0) return true;            // 2001::/32 Teredo
+  if (head === 0x2001 && second === 0xdb8) return true;        // 2001:db8::/32 documentation
+  if (head === 0x2002) return true;                            // 2002::/16 6to4
   return false;
 }
 

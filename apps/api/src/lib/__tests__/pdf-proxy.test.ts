@@ -78,13 +78,37 @@ describe('assertRoutableHostSync — IPv6', () => {
     ['fe80::1', 'link-local'],
     ['febf::1', 'link-local, high end of /10'],
     ['::ffff:127.0.0.1', 'IPv4-mapped loopback'],
-    ['::ffff:169.254.169.254', 'IPv4-mapped metadata address']
+    ['::ffff:169.254.169.254', 'IPv4-mapped metadata address'],
+    // The spelling the URL parser actually produces for the two above.
+    ['::ffff:7f00:1', 'IPv4-mapped loopback, hex'],
+    ['::ffff:a9fe:a9fe', 'IPv4-mapped metadata address, hex'],
+    ['0:0:0:0:0:ffff:7f00:1', 'IPv4-mapped loopback, uncompressed'],
+    ['::127.0.0.1', 'IPv4-compatible loopback'],
+    ['::7f00:1', 'IPv4-compatible loopback, hex'],
+    ['::ffff:0:7f00:1', 'IPv4-translated loopback'],
+    ['64:ff9b::7f00:1', 'NAT64 loopback'],
+    ['64:ff9b::a9fe:a9fe', 'NAT64 metadata address'],
+    ['64:ff9b:1::1', 'local-use NAT64'],
+    ['fec0::1', 'site-local'],
+    ['ff02::1', 'multicast'],
+    ['100::1', 'discard'],
+    ['2001::1', 'Teredo'],
+    ['2001:db8::1', 'documentation'],
+    ['2002:7f00:1::1', '6to4']
   ])('blocks %s (%s)', ip => {
     expect(blocked(ip)).toThrow(PdfProxyError);
   });
 
   it('allows a public IPv6 address', () => {
     expect(blocked('2606:4700:4700::1111')).not.toThrow();
+  });
+
+  it.each([
+    ['::ffff:8.8.8.8', 'IPv4-mapped'],
+    ['::ffff:808:808', 'IPv4-mapped, hex'],
+    ['64:ff9b::808:808', 'NAT64, as DNS64 hands it out']
+  ])('allows a public IPv4 address embedded as %s (%s)', ip => {
+    expect(blocked(ip)).not.toThrow();
   });
 
   it('unwraps bracketed IPv6 literals before checking them', () => {
@@ -128,6 +152,23 @@ describe('assertPublicHttpUrl', () => {
     await expect(assertPublicHttpUrl('http://169.254.169.254/latest/meta-data/')).rejects.toThrow(
       PdfProxyError
     );
+  });
+
+  /**
+   * Through the URL parser, which is where the hole was. `new URL` rewrites
+   * `[::ffff:127.0.0.1]` as `[::ffff:7f00:1]`, and a literal never reaches
+   * DNS — so a check that knew only the dotted spelling let every one of these
+   * through, and the proxy streamed back what a loopback-only server said.
+   */
+  it.each([
+    'http://[::ffff:127.0.0.1]:4000/x?x=.pdf',
+    'http://[::ffff:169.254.169.254]/latest/meta-data/?x=.pdf',
+    'http://[::ffff:7f00:1]/x.pdf',
+    'http://[::127.0.0.1]/x.pdf',
+    'http://[64:ff9b::7f00:1]/x.pdf',
+    'http://[0:0:0:0:0:ffff:a00:1]/x.pdf'
+  ])('rejects the IPv6 literal %s', async url => {
+    await expect(assertPublicHttpUrl(url)).rejects.toMatchObject({ statusCode: 403, code: SSRF_REFUSED });
   });
 
   it('accepts a public IP literal without touching DNS', async () => {
@@ -206,6 +247,11 @@ describe('guardedLookup', () => {
     // Connecting to whichever address happened to be public would be the whole
     // hole again, one DNS answer later.
     resolver.addresses = [{ address: '93.184.216.34' }, { address: '127.0.0.1' }];
+    expect((await lookup()).err).toBeInstanceOf(PdfProxyError);
+  });
+
+  it('refuses an answer that spells a private address as IPv4-mapped hex', async () => {
+    resolver.addresses = [{ address: '::ffff:a00:5' }];
     expect((await lookup()).err).toBeInstanceOf(PdfProxyError);
   });
 
