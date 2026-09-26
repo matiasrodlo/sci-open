@@ -20,6 +20,7 @@ import { httpClientFactory } from './lib/http-client-factory';
 import { assertPublicHttpUrl, fetchPdfStream, PdfProxyError } from './lib/pdf-proxy';
 import { adminOnly, getAdminKey } from './lib/admin-auth';
 import { SingleFlight } from './lib/single-flight';
+import { gracefulShutdown } from './lib/shutdown';
 import { log, useLogger } from './lib/logger';
 import { searchBodySchema, paperParamsSchema, downloadPdfBodySchema } from './lib/schemas';
 import { clientError, clientErrorStatus } from './lib/client-error';
@@ -507,26 +508,22 @@ const start = async () => {
 
     log.info('HTTP performance monitoring started');
     httpPerformanceMonitor.startMonitoring(30000); // 30 second intervals
-    
-    // Graceful shutdown
-    process.on('SIGINT', async () => {
-      log.info('Shutting down gracefully');
-      httpPerformanceMonitor.stopMonitoring();
-      await httpClientFactory.closeAllConnections();
-      await cacheManager.close();
-      await fastify.close();
-      process.exit(0);
-    });
-    
-    process.on('SIGTERM', async () => {
-      log.info('Shutting down gracefully');
-      httpPerformanceMonitor.stopMonitoring();
-      await httpClientFactory.closeAllConnections();
-      await cacheManager.close();
-      await fastify.close();
-      process.exit(0);
-    });
-    
+
+    // The server drains before anything it uses is released. See `lib/shutdown.ts`.
+    const stop = gracefulShutdown(fastify, [
+      { name: 'performance monitor', close: () => httpPerformanceMonitor.stopMonitoring() },
+      { name: 'upstream connections', close: () => httpClientFactory.closeAllConnections() },
+      { name: 'cache', close: () => cacheManager.close() }
+    ]);
+
+    for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+      process.on(signal, async () => {
+        log.info('Shutting down gracefully', { signal });
+        await stop();
+        process.exit(0);
+      });
+    }
+
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
