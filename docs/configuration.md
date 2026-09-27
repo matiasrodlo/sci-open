@@ -29,6 +29,7 @@ LOG_LEVEL=debug
 RATE_LIMIT_MAX=120
 RATE_LIMIT_WINDOW=1 minute
 RATE_LIMIT_DOWNLOAD_MAX=20
+RATE_LIMIT_NEW_SEARCH_MAX=30
 TRUST_PROXY=
 ```
 
@@ -46,6 +47,19 @@ Twenty a minute is more PDFs than a person opens and fewer than a scraper wants.
 It is a starting point rather than a measured figure — the worst case is still a
 gigabyte a minute per caller — so expect to move it once there is real traffic to
 look at. Both limits share `RATE_LIMIT_WINDOW`.
+
+Searches are priced a second time, by `RATE_LIMIT_NEW_SEARCH_MAX`, and only the
+ones that cost the sources something. A search that resolves a result set of
+its own — a new query, or a new filter on one — is a fan-out to ten providers,
+their facet counts, up to two hundred Unpaywall lookups in the rescue and the
+page's enrichment: some three hundred upstream requests, against quotas every
+reader shares. Paging or re-sorting a set already held, or joining one another
+reader is resolving, costs a slice and twenty enrichments. At `RATE_LIMIT_MAX`
+alone, one script sending distinct queries could spend tens of thousands of
+upstream requests a minute; this caps that at thirty new sets per window, and a
+search over it answers `429` with `Retry-After` before anything is asked of a
+source. Like the other two, it counts per caller only as far as `TRUST_PROXY`
+lets it tell callers apart.
 
 `RATE_LIMIT_WINDOW` is a duration — `30 seconds`, `2m`, `1 hour` — and a bare
 number is milliseconds. It is checked at startup like every other setting: one

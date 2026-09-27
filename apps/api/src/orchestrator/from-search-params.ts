@@ -186,6 +186,8 @@ export type RunOptions = {
   authorityFacts?: AuthorityFactsCache;
   /** Tallies each source's reports across searches. */
   stats?: UpstreamStats;
+  /** See `SearchOptions.admit`. */
+  admit?: () => Promise<void>;
   userAgent?: string;
   /** Defaults to the whole registry. A subset is how this is driven offline. */
   providers?: readonly ProviderEntry[];
@@ -282,6 +284,7 @@ export async function runSearch(
     ...(options.resultSets ? { resultSets: options.resultSets } : {}),
     ...(options.authorityFacts ? { authorityFacts: options.authorityFacts } : {}),
     ...(options.stats ? { stats: options.stats } : {}),
+    ...(options.admit ? { admit: options.admit } : {}),
     ...(options.userAgent ? { userAgent: options.userAgent } : {}),
     ...(options.providers ? { providers: options.providers } : {}),
     ...(options.authorities ? { authorities: options.authorities } : {})

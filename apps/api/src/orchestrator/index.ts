@@ -111,6 +111,13 @@ export type SearchOptions = {
   authorityFacts?: AuthorityFactsCache;
   /** Where each source's reports are tallied across searches. See `UpstreamStats`. */
   stats?: UpstreamStats;
+  /**
+   * Asked once before this search resolves a set of its own — not when the set
+   * is held, or is being resolved by another search — and may throw to refuse
+   * it. How the route charges a caller for the searches that cost the sources
+   * something. See `ResultSetCache.resolve`.
+   */
+  admit?: () => Promise<void>;
   providers?: readonly ProviderEntry[];
   userAgent?: string;
   now?: () => Date;
@@ -412,8 +419,11 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
 
   const resolve = () => resolveResultSet(settled, authorityCache);
   const { set, cached } = resultSets
-    ? await resultSets.resolve(keyOf(settled), resolve)
-    : { set: await resolve(), cached: false };
+    ? await resultSets.resolve(keyOf(settled), resolve, options.admit)
+    : await (async () => {
+        await options.admit?.();
+        return { set: await resolve(), cached: false };
+      })();
 
   // After filtering so it only orders what will be returned, and before
   // pagination so a page is a slice of the sorted set.

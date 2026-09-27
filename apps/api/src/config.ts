@@ -43,6 +43,8 @@ export type Config = {
     window: number;
     /** The download's own bucket. See the route in `app.ts`. */
     downloadMax: number;
+    /** Searches per window that resolve a set of their own, per caller. See the search route. */
+    newSearchMax: number;
   };
   redisUrl: string;
   cache: {
@@ -79,7 +81,7 @@ const poolSetting = (service: PooledService) => `${service.toUpperCase()}_POOL_C
  */
 export const SETTINGS = [
   'PORT', 'NODE_ENV', 'LOG_LEVEL', 'TRUST_PROXY', 'ADMIN_API_KEY', 'UNPAYWALL_EMAIL',
-  'RATE_LIMIT_MAX', 'RATE_LIMIT_WINDOW', 'RATE_LIMIT_DOWNLOAD_MAX',
+  'RATE_LIMIT_MAX', 'RATE_LIMIT_WINDOW', 'RATE_LIMIT_DOWNLOAD_MAX', 'RATE_LIMIT_NEW_SEARCH_MAX',
   'REDIS_URL', 'CACHE_MAX_BYTES', 'CACHE_REDIS_COOLDOWN_MS', 'PROVIDER_CACHE_MAX_BYTES',
   'SEARCH_DEPTH', 'SEARCH_RESCUE_LIMIT', 'SEARCH_RESCUE_BUDGET_MS', 'SEARCH_FACET_COUNTS',
   'HTTP_POOL_KEEP_ALIVE_TIMEOUT', 'HTTP_POOL_MAX_SOCKETS', 'HTTP_POOL_TIMEOUT',
@@ -301,7 +303,8 @@ export function loadConfig(env: Env = process.env): LoadedConfig {
     rateLimit: {
       max: number('RATE_LIMIT_MAX', 120),
       window: rateLimitWindow(),
-      downloadMax: number('RATE_LIMIT_DOWNLOAD_MAX', 20)
+      downloadMax: number('RATE_LIMIT_DOWNLOAD_MAX', 20),
+      newSearchMax: number('RATE_LIMIT_NEW_SEARCH_MAX', 30)
     },
     redisUrl: text('REDIS_URL') ?? 'redis://localhost:6379',
     cache: {

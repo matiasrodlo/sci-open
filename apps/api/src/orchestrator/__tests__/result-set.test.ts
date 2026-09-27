@@ -75,6 +75,33 @@ describe('ResultSetCache', () => {
     expect(b.cached).toBe(true);
   });
 
+  it('asks admission only of a caller who would start the work', async () => {
+    const cache = new ResultSetCache();
+    const admit = vi.fn(async () => {});
+    let finish!: (s: ResultSet) => void;
+    const slow = () => new Promise<ResultSet>(resolve => { finish = resolve; });
+
+    const leader = cache.resolve('k', slow, admit);
+    await Promise.resolve();
+    // Joining a resolution already running costs the sources nothing more.
+    const follower = cache.resolve('k', slow, admit);
+    finish(set());
+    await Promise.all([leader, follower]);
+    // Nor does a set already held.
+    await cache.resolve('k', slow, admit);
+
+    expect(admit).toHaveBeenCalledOnce();
+  });
+
+  it('resolves nothing when admission is refused', async () => {
+    const cache = new ResultSetCache();
+    const work = vi.fn(async () => set());
+
+    await expect(cache.resolve('k', work, async () => { throw new Error('over budget'); })).rejects.toThrow('over budget');
+    expect(work).not.toHaveBeenCalled();
+    expect((await cache.resolve('k', work)).cached).toBe(false);
+  });
+
   it('does not hold a set a provider failed to contribute to', async () => {
     const cache = new ResultSetCache();
     const work = vi.fn(async () => set({ complete: false }));

@@ -146,6 +146,13 @@ against indexes, like MeSH headings and full text, that are not reproduced here.
 - `X-Response-Time`: milliseconds
 - `Cache-Control`: `public, max-age=300`
 
+**429** comes from either of two budgets, both per window and per caller:
+`RATE_LIMIT_MAX` for every request, and `RATE_LIMIT_NEW_SEARCH_MAX` for a
+search that resolves a result set of its own — a new query or a new filter,
+where paging, re-sorting or joining an identical search already running does
+not count. The second answers with `Retry-After` and an `error` beginning "Too
+many new searches". See `docs/configuration.md`.
+
 ---
 
 ### Search, version 2

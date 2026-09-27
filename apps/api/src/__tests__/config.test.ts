@@ -28,7 +28,7 @@ describe('loadConfig', () => {
     expect(config.port).toBe(4000);
     expect(config.logLevel).toBe('debug');
     expect(config.production).toBe(false);
-    expect(config.rateLimit).toEqual({ max: 120, window: 60_000, downloadMax: 20 });
+    expect(config.rateLimit).toEqual({ max: 120, window: 60_000, downloadMax: 20, newSearchMax: 30 });
     expect(config.redisUrl).toBe('redis://localhost:6379');
     expect(config.search).toEqual(DEFAULT_SEARCH_SETTINGS);
     expect(config.httpPool).toEqual({ defaults: DEFAULT_HTTP_POOL, services: {} });

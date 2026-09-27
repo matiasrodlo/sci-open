@@ -144,10 +144,21 @@ export class ResultSetCache {
   /**
    * The held set for `key`, or `work`'s — run once however many callers ask
    * while it runs. `cached` is true when this caller did not resolve it.
+   *
+   * `admit` is asked first when this caller would start the work — the set is
+   * neither held nor being resolved — and may throw to refuse; nothing is
+   * resolved then. Joining a resolution already running costs the sources
+   * nothing more, so it is not asked.
    */
-  async resolve(key: string, work: () => Promise<ResultSet>): Promise<{ set: ResultSet; cached: boolean }> {
+  async resolve(
+    key: string,
+    work: () => Promise<ResultSet>,
+    admit?: () => Promise<void>
+  ): Promise<{ set: ResultSet; cached: boolean }> {
     const held = this.read(key);
     if (held) return { set: held, cached: true };
+
+    if (admit && !this.flights.running(key)) await admit();
 
     const { value, coalesced } = await this.flights.run(key, async () => {
       const set = await work();

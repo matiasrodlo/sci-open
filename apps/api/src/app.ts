@@ -13,7 +13,7 @@ import { adminOnly } from './lib/admin-auth';
 import { withLogger } from './lib/logger';
 import { SingleFlight } from './lib/single-flight';
 import { searchBodySchema, paperParamsSchema } from './lib/schemas';
-import { clientError, clientErrorStatus, lookupErrorStatus } from './lib/client-error';
+import { clientError, clientErrorStatus, lookupErrorStatus, SearchBudgetError } from './lib/client-error';
 import { AuthorityCache, AuthorityFactsCache, ProviderCache, ResultSetCache, UpstreamStats, lookupPaper, enrichPage } from './orchestrator';
 import { runSearch } from './orchestrator/from-search-params';
 import type { ProviderEntry } from './orchestrator/registry';
@@ -183,6 +183,28 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
   const lookupFrom = context.providers ? { providers: context.providers } : {};
   const enrichWith = context.authorities ? { authorities: context.authorities } : {};
 
+  /**
+   * A second budget for searches, spent only by one that resolves a set of its
+   * own.
+   *
+   * `RATE_LIMIT_MAX` prices every search the same, and they are not: a page of
+   * a set already held is a slice and twenty enrichments, while a set resolved
+   * afresh is a fan-out to ten providers, their facet counts, up to two
+   * hundred Unpaywall lookups in the rescue and the page's enrichment — some
+   * three hundred upstream requests, against quotas every other reader shares.
+   * At 120 a minute, one script sending distinct queries could spend tens of
+   * thousands of those a minute. This caps that part and leaves paging,
+   * sorting and a search someone else just ran untouched.
+   *
+   * Charged to whoever starts the resolution. A caller joining an identical
+   * search already running shares its outcome — including this refusal, in
+   * the rare case its leader was over budget.
+   */
+  const newSearchLimit = fastify.createRateLimit({
+    max: config.rateLimit.newSearchMax,
+    timeWindow: config.rateLimit.window
+  });
+
   // Search endpoint with advanced caching
   /**
    * A search, answered in either version of the response. Both come from one
@@ -198,6 +220,11 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
     try {
       const params = request.body;
 
+      const admit = async () => {
+        const verdict = await newSearchLimit(request);
+        if (!verdict.isAllowed && verdict.isExceeded) throw new SearchBudgetError(verdict.ttlInSeconds);
+      };
+
       // Collapses concurrent identical requests onto one run. The set behind
       // them is held by `resultSets`, so a new page of a search already
       // resolved is a slice and twenty enrichments, not a fan-out.
@@ -208,6 +235,7 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
           resultSets,
           authorityFacts,
           stats,
+          admit,
           userAgent,
           settings: config.search,
           ...upstream
@@ -269,14 +297,16 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
       const status = clientErrorStatus(error);
 
       // A rejected query is not a service failure, and logging it as one puts
-      // a reader's typo in the error stream beside real outages.
-      const level = status === 400 ? 'info' : 'error';
-      fastify.log[level]({
+      // a reader's typo in the error stream beside real outages. Nor is a
+      // caller over their budget.
+      const refused = status === 400 || status === 429;
+      fastify.log[refused ? 'info' : 'error']({
         error: error.message,
         query: request.body?.q,
         responseTime
-      }, status === 400 ? 'Search rejected' : 'Search error');
+      }, refused ? 'Search rejected' : 'Search error');
 
+      if (error instanceof SearchBudgetError) reply.header('Retry-After', String(error.retryAfterSeconds));
       reply.code(status);
       return clientError(error, request.id);
     }

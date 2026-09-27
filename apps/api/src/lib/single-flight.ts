@@ -44,6 +44,11 @@ export class SingleFlight {
     }
   }
 
+  /** Whether work for `key` is running now, so a caller would join it rather than start it. */
+  running(key: string): boolean {
+    return this.inFlight.has(key);
+  }
+
   /** Number of keys currently in flight. For tests and diagnostics. */
   get pending(): number {
     return this.inFlight.size;

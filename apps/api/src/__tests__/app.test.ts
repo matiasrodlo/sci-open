@@ -180,6 +180,24 @@ describe('rate limiting', () => {
     expect((await from('203.0.113.2')).statusCode).toBe(429);
   });
 
+  it('counts a separate, smaller budget for searches that resolve a set of their own', async () => {
+    // A new set is some three hundred upstream requests; a page of a held one
+    // is a slice. Only the first spends this budget.
+    const { entry, searches } = provider();
+    build({ RATE_LIMIT_NEW_SEARCH_MAX: '1' }, entry);
+
+    expect((await search({ q: 'crispr' })).statusCode).toBe(200);
+    expect((await search({ q: 'crispr', page: 2, pageSize: 1 })).statusCode).toBe(200);
+    expect((await search({ q: 'crispr', sort: 'date' })).statusCode).toBe(200);
+
+    const refused = await search({ q: 'malaria' });
+    expect(refused.statusCode).toBe(429);
+    expect(Number(refused.headers['retry-after'])).toBeGreaterThan(0);
+    expect(refused.json().error).toMatch(/^Too many new searches/);
+    // Refused before anything was asked of a source.
+    expect(searches).toEqual(['crispr']);
+  });
+
   it('keeps answering under a window it cannot read, and still limits', async () => {
     // Passed through as a string, `one minute` answered every route but
     // /health with a 500, and `60` was a sixty-millisecond window.

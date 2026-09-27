@@ -80,6 +80,10 @@ services:
       # The PDF proxy's own budget, separate because it streams up to 50 MB per
       # call and search does not. Empty uses 20 per window.
       - RATE_LIMIT_DOWNLOAD_MAX=${RATE_LIMIT_DOWNLOAD_MAX:-}
+      # Searches that resolve a result set of their own — a new query or a new
+      # filter, not a page or a sort of one already run. Each is some three
+      # hundred upstream requests. Empty uses 30 per window.
+      - RATE_LIMIT_NEW_SEARCH_MAX=${RATE_LIMIT_NEW_SEARCH_MAX:-}
       # Records read from each provider. Empty uses 600; the cap is 2000, and
       # the cost is per provider per page, so raising it multiplies upstream
       # requests. Raise SEARCH_RESCUE_BUDGET_MS with it.

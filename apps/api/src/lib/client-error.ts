@@ -17,6 +17,18 @@ import { PdfProxyError } from './pdf-proxy';
  * request id, which is the thing that lets an operator find the real error in
  * the log without it being published.
  */
+/**
+ * A caller who has spent their budget of new searches. See the search route in
+ * `app.ts`: it is counted apart from `RATE_LIMIT_MAX`, and only for a search
+ * that resolves a set of its own.
+ */
+export class SearchBudgetError extends Error {
+  constructor(readonly retryAfterSeconds: number) {
+    super(`Too many new searches. Retry in ${retryAfterSeconds} seconds, or page through a search already run.`);
+    this.name = 'SearchBudgetError';
+  }
+}
+
 export type ClientError = {
   error: string;
   requestId: string;
@@ -33,7 +45,7 @@ export function clientError(error: unknown, requestId: string): ClientError {
     return { error: error.message, requestId, position: error.position };
   }
 
-  if (error instanceof PdfProxyError) {
+  if (error instanceof PdfProxyError || error instanceof SearchBudgetError) {
     return { error: error.message, requestId };
   }
 
@@ -49,7 +61,9 @@ export function clientError(error: unknown, requestId: string): ClientError {
  * one of them.
  */
 export function clientErrorStatus(error: unknown): number {
-  return error instanceof QueryParseError ? 400 : 500;
+  if (error instanceof QueryParseError) return 400;
+  if (error instanceof SearchBudgetError) return 429;
+  return 500;
 }
 
 /** Codes axios and the socket give a request that ran out of time. */
