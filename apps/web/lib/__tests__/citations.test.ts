@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Paper } from '@open-access-explorer/shared';
 import {
-  generateCitation, generateCitationsBatch, getFileExtension, bareDoi, escapeBibTeX, citeKey
+  generateCitation, generateCitationsBatch, getFileExtension, bareDoi, escapeBibTeX, citeKey, verbatimBibTeX
 } from '../citations';
 
 function record(over: Partial<Paper> = {}): Paper {
@@ -81,6 +81,22 @@ describe('DOIs', () => {
 
   it('puts a bare DOI in the RIS DO tag', () => {
     expect(ris(record())).toContain('DO  - 10.1234/example');
+  });
+
+  it('writes the doi and url as they are, which biblatex reads verbatim', () => {
+    // Escaped as LaTeX, `%20` became `\%20` and `_` became `\_` inside the
+    // address, and the bibliography's links were broken.
+    const copy = { url: 'https://example.org/my_paper%20v2.pdf', kind: 'pdf' as const, verified: false };
+    const out = bibtex(record({ doi: '10.1234/abc_def#1', landingPage: undefined, fullText: copy }));
+    expect(out).toContain('doi = {10.1234/abc_def#1}');
+    expect(out).toContain('url = {https://doi.org/10.1234/abc_def#1}');
+
+    const noDoi = bibtex(record({ doi: undefined, landingPage: undefined, fullText: copy }));
+    expect(noDoi).toContain('url = {https://example.org/my_paper%20v2.pdf}');
+  });
+
+  it('percent-encodes only what would unbalance the entry in a verbatim field', () => {
+    expect(verbatimBibTeX('https://x.org/a{b}\\c')).toBe('https://x.org/a%7Bb%7D%5Cc');
   });
 
   it('still offers the resolver as the url', () => {

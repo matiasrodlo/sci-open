@@ -161,10 +161,27 @@ function bibtexEntryType(data: CitationData): string {
   return data.venue ? 'article' : 'misc';
 }
 
+/**
+ * A value for a field biblatex reads verbatim — `doi` and `url`.
+ *
+ * Those two are not LaTeX: biblatex hands them to `\url` as they stand, so
+ * `escapeBibTeX` there wrote its escapes into the address itself. A URL with a
+ * `%20` in it came out as `\%20`, one with an underscore as `\_`, and both
+ * links were broken in the bibliography. Only what would unbalance the entry is
+ * changed, and it is percent-encoded, which leaves the address meaning what it
+ * meant.
+ */
+export function verbatimBibTeX(value: string): string {
+  return value.replace(/[{}\\]/g, char => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
 function generateBibTeXEntry(data: CitationData, options: Required<CitationOptions>): string {
   const fields: Array<[string, string]> = [];
   const add = (name: string, value: string | undefined) => {
     if (value && value.trim()) fields.push([name, escapeBibTeX(value.trim())]);
+  };
+  const addVerbatim = (name: string, value: string | undefined) => {
+    if (value && value.trim()) fields.push([name, verbatimBibTeX(value.trim())]);
   };
 
   const { shown, truncated } = cappedAuthors(data.authors, options.maxAuthors);
@@ -178,8 +195,8 @@ function generateBibTeXEntry(data: CitationData, options: Required<CitationOptio
   add(data.venue && !data.isPreprint ? 'journal' : 'howpublished', data.venue);
   add('publisher', data.publisher);
   add('language', data.language);
-  if (options.includeDOI) add('doi', data.doi);
-  if (options.includeURL) add('url', data.url);
+  if (options.includeDOI) addVerbatim('doi', data.doi);
+  if (options.includeURL) addVerbatim('url', data.url);
   if (options.includeAbstract) add('abstract', data.abstract);
   if (options.includeKeywords && data.keywords.length > 0) add('keywords', data.keywords.join(', '));
 
