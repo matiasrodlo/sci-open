@@ -18,7 +18,8 @@ import { NextRequest } from 'next/server';
  * phase 11 moved it onto.
  *
  * Not a general proxy: the origin comes from the environment and only the path
- * comes from the caller, so there is no URL a request can name.
+ * comes from the caller, so there is no URL a request can name — and only the
+ * paths in `isPublic` are forwarded at all.
  */
 
 export const dynamic = 'force-dynamic';
@@ -88,6 +89,35 @@ function walksOut(segment: string): boolean {
 }
 
 /**
+ * The API routes a browser has any business reaching, by the shape of their
+ * path: `search`, `paper/:id`, and a paper's PDF.
+ *
+ * Everything under `/api/` used to be forwarded, so the cache and performance
+ * routes were published on the site's own origin, one bearer token away from
+ * anyone who found them — and the token check was all that stood between a
+ * visitor and `POST /api/cache/clear`. Those routes are for operators, who can
+ * reach the API directly; nothing the frontend does needs them.
+ *
+ * The shape, not the method: the API answers a wrong method itself, and what
+ * this decides is which routes are public at all. A route added to the API is
+ * private until it is added here, which is the direction to be wrong in.
+ */
+function isPublic(path: readonly string[]): boolean {
+  const [route, ...rest] = path;
+  switch (route) {
+    case 'search':
+    case 'download-pdf':
+      return rest.length === 0;
+    case 'paper':
+      return rest.length === 1;
+    case 'papers':
+      return rest.length === 2 && rest[1] === 'pdf';
+    default:
+      return false;
+  }
+}
+
+/**
  * How long the API may take to *answer*, not to finish sending.
  *
  * Every other hop in this system owns a budget — twenty seconds per provider,
@@ -104,7 +134,7 @@ function walksOut(segment: string): boolean {
 const UPSTREAM_TIMEOUT_MS = 30000;
 
 async function proxy(request: NextRequest, path: string[]): Promise<Response> {
-  if (path.some(walksOut)) {
+  if (path.some(walksOut) || !isPublic(path)) {
     return Response.json({ error: 'Not found' }, { status: 404 });
   }
 

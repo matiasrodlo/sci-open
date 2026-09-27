@@ -326,8 +326,9 @@ API_ORIGIN=https://api.yourdomain.com
 
 - **`ADMIN_API_KEY`** — set it, or `/api/cache/*` and `/api/performance/*` stay
   disabled. They are not served unauthenticated when it is missing; the gate
-  fails closed. `apps/web` proxies `/api/*` straight through, so an open one
-  would be reachable from any browser that can load the site.
+  fails closed. They are also not on the public edge: `apps/web` forwards only
+  `search`, `paper/:id` and a paper's PDF, and compose publishes the API's port
+  on loopback only, so an operator reaches them on the API directly.
 - **`TRUST_PROXY`** — name the proxy in front of **`apps/web`** by address or
   CIDR, not the web tier itself. Unset, the rate limit is keyed on the
   connecting address, which behind the web tier is one shared bucket for every

@@ -102,9 +102,9 @@ describe('where the request goes', () => {
 
   it('escapes a segment that looks like a host, rather than naming one', async () => {
     // Only the path is the caller's; the origin comes from the environment.
-    await GET(request('http://localhost:3000/api/x'), context('evil.com/path'));
+    await GET(request('http://localhost:3000/api/x'), context('paper', 'evil.com/path'));
 
-    expect(called().target).toBe(`${ORIGIN}/api/evil.com%2Fpath`);
+    expect(called().target).toBe(`${ORIGIN}/api/paper/evil.com%2Fpath`);
   });
 
   it('refuses a path that would walk out of /api', async () => {
@@ -119,7 +119,7 @@ describe('where the request goes', () => {
   });
 
   it.each([['.'], ['..']])('refuses %s as a segment anywhere in the path', async segment => {
-    const response = await GET(request('http://localhost:3000/api/x'), context('paper', segment, 'x'));
+    const response = await GET(request('http://localhost:3000/api/x'), context('paper', segment));
 
     expect(response.status).toBe(404);
     expect(fetchMock).not.toHaveBeenCalled();
@@ -178,12 +178,10 @@ describe('which headers travel', () => {
     expect(sentHeaders().get(header)).toBeNull();
   });
 
-  it('forwards authorization, which is how the admin routes are reachable', async () => {
+  it('forwards authorization on a route it forwards at all', async () => {
     await GET(
-      request('http://localhost:3000/api/cache/metrics', {
-        headers: { authorization: 'Bearer secret' }
-      }),
-      context('cache', 'metrics')
+      request('http://localhost:3000/api/paper/x', { headers: { authorization: 'Bearer secret' } }),
+      context('paper', 'x')
     );
 
     expect(sentHeaders().get('authorization')).toBe('Bearer secret');
@@ -330,5 +328,36 @@ describe('how long the API is given to answer', () => {
     await vi.advanceTimersByTimeAsync(600000);
 
     expect(called().init.signal!.aborted).toBe(false);
+  });
+});
+
+/**
+ * Which API routes are public. Everything under `/api/` used to be forwarded,
+ * which put the operators' cache and performance routes on the site's origin.
+ */
+describe('which routes are reachable', () => {
+  it.each([
+    [['search']],
+    [['paper', 'plos:10.1371/journal.pone.0265114']],
+    [['papers', 'arxiv:2310.12345', 'pdf']],
+    [['download-pdf']]
+  ])('forwards %j', async path => {
+    await POST(request('http://localhost:3000/api/x', { method: 'POST', body: '{}' }), context(...path));
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    [['cache', 'metrics']],
+    [['cache', 'clear']],
+    [['performance', 'report']],
+    [['performance', 'metrics', 'openalex']],
+    [['paper']],
+    [['paper', 'a', 'b']],
+    [['search', 'extra']],
+    [['papers', 'x', 'pdf', 'more']]
+  ])('refuses %j without asking the API', async path => {
+    const response = await POST(request('http://localhost:3000/api/x', { method: 'POST', body: '{}' }), context(...path));
+    expect(response.status).toBe(404);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

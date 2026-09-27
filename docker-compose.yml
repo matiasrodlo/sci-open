@@ -25,8 +25,17 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    # Published on loopback only, like Redis. Browsers reach the API through
+    # `web`, which forwards only the public routes; published on every
+    # interface, the API — admin routes included — was reachable from anywhere
+    # that could reach the host, around the web tier entirely. Operators on the
+    # host still have it at localhost:4000.
     ports:
-      - "4000:4000"
+      - "127.0.0.1:4000:4000"
+    # A search can take about thirty seconds end to end, and on SIGTERM the
+    # server finishes the ones running before it exits. Docker's default ten
+    # seconds would kill it mid-drain.
+    stop_grace_period: 40s
     environment:
       - NODE_ENV=production
       - PORT=4000
@@ -59,9 +68,9 @@ services:
       # Every browser request arrives via `web`, so without this the rate limit
       # is one bucket for all visitors rather than one each. Left empty by
       # default because the safe value depends on who can reach port 4000: the
-      # compose file publishes it on the host, so trusting the bridge network
-      # would also trust anything on the host. Set it once that port is closed
-      # or the deployment is behind a known proxy.
+      # compose file publishes it on the host's loopback, so trusting the bridge
+      # network would also trust any process on the host. Set it once that is
+      # acceptable, or the deployment is behind a known proxy.
       - TRUST_PROXY=${TRUST_PROXY:-}
       # What that trust setting is counting. Empty uses 120 per minute.
       - RATE_LIMIT_MAX=${RATE_LIMIT_MAX:-}

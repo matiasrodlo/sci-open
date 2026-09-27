@@ -267,7 +267,8 @@ Returns server status.
 
 > Requires `Authorization: Bearer $ADMIN_API_KEY`. Returns `401` without a
 > valid key, or `503` when `ADMIN_API_KEY` is unset. See
-> [Configuration](./configuration.md#administrative-access).
+> [Configuration](./configuration.md#administrative-access). Served by the API
+> only — the web app does not forward these routes, so call the API directly.
 
 
 **POST** `/api/cache/clear`
