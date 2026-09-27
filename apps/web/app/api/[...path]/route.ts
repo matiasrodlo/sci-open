@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { SEARCH_TIMEOUT_MS } from '@/lib/fetcher';
 
 /**
  * Forwards `/api/*` to the API service, resolving where it lives at request
@@ -129,14 +130,26 @@ function isPublic(path: readonly string[]): boolean {
  * that accepted the connection and then hung held a request here for five
  * minutes, and the reader saw a spinner for all of it.
  *
- * Thirty seconds is above anything the two routes that reach the API through
- * here can legitimately take. `/api/paper/:id` is a 15s lookup plus a 6s
- * enrichment budget; `/api/papers/:id/pdf` answers as soon as the publisher's
- * headers arrive, after the same lookup — which the paper page the reader is
- * on has almost always cached already. A slower answer than this is a hung
- * upstream, not a slow one.
+ * Thirty seconds is above anything the paper routes can legitimately take.
+ * `/api/paper/:id` is a 15s lookup plus a 6s enrichment budget;
+ * `/api/papers/:id/pdf` answers as soon as the publisher's headers arrive,
+ * after the same lookup — which the paper page the reader is on has almost
+ * always cached already. A slower answer than this is a hung upstream, not a
+ * slow one.
+ *
+ * **Not for a search**, which gets `SEARCH_TIMEOUT_MS` — the budget the
+ * server-rendered search already has, for the reason its comment gives: twenty
+ * seconds of fan-out, five of rescue and six of enrichment is about thirty-one.
+ * No page sends a search through here, but a client can, and at thirty seconds
+ * the one search that took its full budget was answered 504 while the API was
+ * still finishing it.
  */
 const UPSTREAM_TIMEOUT_MS = 30000;
+
+function budgetFor(path: readonly string[]): number {
+  const route = path[0] === 'v2' ? path[1] : path[0];
+  return route === 'search' ? SEARCH_TIMEOUT_MS : UPSTREAM_TIMEOUT_MS;
+}
 
 async function proxy(request: NextRequest, path: string[]): Promise<Response> {
   if (path.some(walksOut) || !isPublic(path)) {
@@ -157,8 +170,9 @@ async function proxy(request: NextRequest, path: string[]): Promise<Response> {
    * resolves once the headers arrive, so clearing the timer there bounds the
    * part that can hang without putting a clock on the part that is merely long.
    */
+  const budget = budgetFor(path);
   const controller = new AbortController();
-  const expiry = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+  const expiry = setTimeout(() => controller.abort(), budget);
 
   let upstream: Response;
   try {
@@ -178,7 +192,7 @@ async function proxy(request: NextRequest, path: string[]): Promise<Response> {
     // could not be reached at all.
     if (controller.signal.aborted) {
       return Response.json(
-        { error: 'The API did not answer', detail: `no response within ${UPSTREAM_TIMEOUT_MS}ms` },
+        { error: 'The API did not answer', detail: `no response within ${budget}ms` },
         { status: 504 }
       );
     }

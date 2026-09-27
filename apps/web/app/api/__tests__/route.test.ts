@@ -293,7 +293,7 @@ describe('how long the API is given to answer', () => {
         })
     );
 
-    const pending = GET(request('http://localhost:3000/api/search'), context('search'));
+    const pending = GET(request('http://localhost:3000/api/paper/x'), context('paper', 'x'));
     await vi.advanceTimersByTimeAsync(30000);
     const response = await pending;
 
@@ -302,6 +302,32 @@ describe('how long the API is given to answer', () => {
       error: 'The API did not answer',
       detail: 'no response within 30000ms'
     });
+  });
+
+  it('gives a search the budget a server-rendered search has, not the paper routes’', async () => {
+    // A search can legitimately take about thirty-one seconds, and at thirty
+    // the proxy answered 504 while the API was still finishing it.
+    vi.useFakeTimers();
+    const hang = (_target: string, init: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        init.signal!.addEventListener('abort', () =>
+          reject(new DOMException('The operation was aborted.', 'AbortError'))
+        );
+      });
+
+    for (const path of [['search'], ['v2', 'search']]) {
+      fetchMock.mockImplementation(hang);
+      let settled = false;
+      const pending = POST(
+        request(`http://localhost:3000/api/${path.join('/')}`, { method: 'POST', body: '{}' }),
+        context(...path)
+      ).finally(() => { settled = true; });
+
+      await vi.advanceTimersByTimeAsync(31000);
+      expect(settled, path.join('/')).toBe(false);
+      await vi.advanceTimersByTimeAsync(14000);
+      expect((await pending).status).toBe(504);
+    }
   });
 
   it('does not time out an answer that arrives inside the budget', async () => {

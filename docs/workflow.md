@@ -50,7 +50,7 @@ flowchart LR
 
   G --> G1{"a path segment of . or .. ?"}
   G1 -- yes --> G2["404 — refused, not silently rewritten"]
-  G1 -- no --> G3["drop hop-by-hop headers<br/>forward x-forwarded-for intact<br/>fetch API_ORIGIN + /api/…<br/>30s budget on the wait for an answer, not the transfer"]
+  G1 -- no --> G3["drop hop-by-hop headers<br/>forward x-forwarded-for intact<br/>fetch API_ORIGIN + /api/…<br/>30s budget on the wait for an answer, 45s for a search,<br/>not on the transfer"]
 
   F --> H
   G3 --> H["POST /api/v2/search — Fastify<br/>/api/search answers the same run as OARecords"]
