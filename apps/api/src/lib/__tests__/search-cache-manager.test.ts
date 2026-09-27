@@ -157,7 +157,7 @@ describe('worthCaching', () => {
 
 describe('cacheSearchResults — refusing a degraded answer', () => {
   it('does not store an incomplete result, and says it did not', async () => {
-    const manager = new SearchCacheManager(new CacheManager());
+    const manager = new SearchCacheManager(new CacheManager('redis://stub'));
     const params: SearchParams = { q: 'crispr' };
 
     const stored = await manager.cacheSearchResults(params, response({ complete: false, total: 3 }));
@@ -167,7 +167,7 @@ describe('cacheSearchResults — refusing a degraded answer', () => {
   });
 
   it('stores a complete one', async () => {
-    const manager = new SearchCacheManager(new CacheManager());
+    const manager = new SearchCacheManager(new CacheManager('redis://stub'));
     const params: SearchParams = { q: 'crispr' };
 
     const stored = await manager.cacheSearchResults(params, response({ complete: true }));
@@ -179,7 +179,7 @@ describe('cacheSearchResults — refusing a degraded answer', () => {
   it('leaves an earlier complete answer in place when a later read is degraded', async () => {
     // The refusal must not become a deletion: a good answer already cached is
     // better than none, and a provider failing now says nothing about it.
-    const manager = new SearchCacheManager(new CacheManager());
+    const manager = new SearchCacheManager(new CacheManager('redis://stub'));
     const params: SearchParams = { q: 'crispr' };
 
     await manager.cacheSearchResults(params, response({ complete: true, total: 42 }));

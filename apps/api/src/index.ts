@@ -13,32 +13,31 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import { SearchParams, toOARecord, type Paper } from '@open-access-explorer/shared';
-import { searchCacheManager, paperCacheManager, cacheManager } from './lib/cache';
-import { worthCaching } from './lib/search-cache-manager';
+import { loadConfig, useConfig } from './config';
+import { CacheManager } from './lib/cache-manager';
+import { SearchCacheManager, worthCaching } from './lib/search-cache-manager';
+import { PaperCacheManager } from './lib/paper-cache-manager';
 import { httpPerformanceMonitor } from './lib/http-performance-monitor';
 import { httpClientFactory } from './lib/http-client-factory';
 import { assertPublicHttpUrl, fetchPdfStream, PdfProxyError } from './lib/pdf-proxy';
-import { adminOnly, getAdminKey } from './lib/admin-auth';
+import { adminOnly } from './lib/admin-auth';
 import { SingleFlight } from './lib/single-flight';
 import { gracefulShutdown } from './lib/shutdown';
 import { log, useLogger } from './lib/logger';
 import { searchBodySchema, paperParamsSchema, downloadPdfBodySchema } from './lib/schemas';
 import { clientError, clientErrorStatus, lookupErrorStatus } from './lib/client-error';
-import { parseTrustProxy, trustProxyWarning, trustsAnyProxy } from './lib/trust-proxy';
 import { ProviderCache, lookupPaper, enrichPage } from './orchestrator';
 import { runOrchestrator } from './orchestrator/from-search-params';
 
-// See `lib/trust-proxy.ts`. This is what decides whether `request.ip` — and so
-// the rate limiter's key — is the caller or the proxy in front of them. Read
-// once and handed to both, so the parse and the warning cannot disagree.
-const trustProxySetting = process.env.TRUST_PROXY;
-const trustProxy = parseTrustProxy(trustProxySetting);
+// Every setting, parsed once. See `config.ts`.
+const { config, warnings } = loadConfig();
+useConfig(config);
 
 const fastify = Fastify({
-  logger: {
-    level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug')
-  },
-  trustProxy
+  logger: { level: config.logLevel },
+  // See `lib/trust-proxy.ts`. This is what decides whether `request.ip` — and
+  // so the rate limiter's key — is the caller or the proxy in front of them.
+  trustProxy: config.trustProxy
 });
 
 // Connectors and pipeline code log through lib/logger, which forwards here.
@@ -46,9 +45,15 @@ const fastify = Fastify({
 // during module load escapes the configured level.
 useLogger(fastify.log);
 
+for (const warning of warnings) fastify.log.warn(warning);
+
+const cacheManager = new CacheManager(config.redisUrl, config.cache.maxBytes, config.cache.redisCooldownMs);
+const searchCacheManager = new SearchCacheManager(cacheManager);
+const paperCacheManager = new PaperCacheManager(cacheManager);
+
 // Register plugins
 fastify.register(cors, {
-  origin: process.env.NODE_ENV === 'production' ? false : true,
+  origin: config.production ? false : true,
   credentials: true
 });
 
@@ -71,8 +76,8 @@ fastify.register(helmet);
  * needed and missing.
  */
 fastify.register(rateLimit, {
-  max: Number(process.env.RATE_LIMIT_MAX) || 120,
-  timeWindow: process.env.RATE_LIMIT_WINDOW || '1 minute',
+  max: config.rateLimit.max,
+  timeWindow: config.rateLimit.window,
   allowList: (request) => request.url === '/health',
   addHeadersOnExceeding: { 'x-ratelimit-remaining': true },
   errorResponseBuilder: (_request, context) => ({
@@ -82,10 +87,8 @@ fastify.register(rateLimit, {
   })
 });
 
-// Who we say we are to every provider. OpenAlex and Unpaywall both route a
-// caller who identifies themselves into a faster pool, and read the address
-// out of this string.
-const userAgent = `OpenAccessExplorer/1.0 (mailto:${process.env.UNPAYWALL_EMAIL || 'your-email@example.com'})`;
+// Who we say we are to every provider. See `UNPAYWALL_EMAIL` in `config.ts`.
+const userAgent = config.userAgent;
 
 // Collapses concurrent identical searches onto one fan-out. A miss costs tens
 // of seconds across every provider, which is a wide window for duplicates.
@@ -95,7 +98,9 @@ const searchFlights = new SingleFlight();
 // only pays across requests — it is what makes a page-2 click reuse the
 // fan-out instead of repeating it. Built either way; an unused one is an
 // empty Map.
-const providerCache = new ProviderCache();
+const providerCache = new ProviderCache({ maxBytes: config.cache.providerMaxBytes });
+
+const admin = adminOnly(config.adminKey);
 
 /**
  * Every route, registered as a plugin rather than on the root instance.
@@ -153,7 +158,7 @@ async function routes(fastify: FastifyInstance) {
       const { value: searchResult, coalesced } = await searchFlights.run(
         searchCacheManager.keyFor(params),
         async () => {
-          const result = await runOrchestrator(params, { cache: providerCache, userAgent });
+          const result = await runOrchestrator(params, { cache: providerCache, userAgent, settings: config.search });
 
           // A degraded answer is returned but not remembered — see
           // `worthCaching`. The result is still worth having; `complete` is in
@@ -379,8 +384,8 @@ async function routes(fastify: FastifyInstance) {
     schema: { body: downloadPdfBodySchema },
     config: {
       rateLimit: {
-        max: Number(process.env.RATE_LIMIT_DOWNLOAD_MAX) || 20,
-        timeWindow: process.env.RATE_LIMIT_WINDOW || '1 minute'
+        max: config.rateLimit.downloadMax,
+        timeWindow: config.rateLimit.window
       }
     }
   }, async (request, reply) => {
@@ -420,7 +425,7 @@ async function routes(fastify: FastifyInstance) {
   });
 
   // Cache metrics endpoint
-  fastify.get('/api/cache/metrics', adminOnly, async (request, reply) => {
+  fastify.get('/api/cache/metrics', admin, async (request, reply) => {
     try {
       return {
         cache: cacheManager.getMetrics(),
@@ -433,7 +438,7 @@ async function routes(fastify: FastifyInstance) {
   });
 
   // Cache clear endpoint
-  fastify.post('/api/cache/clear', adminOnly, async (request, reply) => {
+  fastify.post('/api/cache/clear', admin, async (request, reply) => {
     try {
       await cacheManager.clear();
       return { 
@@ -447,7 +452,7 @@ async function routes(fastify: FastifyInstance) {
   });
 
   // HTTP Performance Monitoring Endpoints
-  fastify.get('/api/performance/metrics', adminOnly, async (request, reply) => {
+  fastify.get('/api/performance/metrics', admin, async (request, reply) => {
     try {
       const overall = httpPerformanceMonitor.getOverallPerformance();
       return {
@@ -461,7 +466,7 @@ async function routes(fastify: FastifyInstance) {
     }
   });
 
-  fastify.get('/api/performance/metrics/:service', adminOnly, async (request, reply) => {
+  fastify.get('/api/performance/metrics/:service', admin, async (request, reply) => {
     try {
       const { service } = request.params as { service: string };
       const metrics = httpPerformanceMonitor.getCurrentMetrics(service);
@@ -482,7 +487,7 @@ async function routes(fastify: FastifyInstance) {
     }
   });
 
-  fastify.get('/api/performance/report', adminOnly, async (request, reply) => {
+  fastify.get('/api/performance/report', admin, async (request, reply) => {
     try {
       const report = httpPerformanceMonitor.generateReport();
       return {
@@ -501,24 +506,7 @@ fastify.register(routes);
 
 const start = async () => {
   try {
-    const port = parseInt(process.env.PORT || '4000');
-    await fastify.listen({ port, host: '0.0.0.0' });
-
-    if (!getAdminKey()) {
-      fastify.log.warn(
-        'ADMIN_API_KEY is not set: the cache and performance endpoints are disabled'
-      );
-    }
-
-    const trustProxyProblem = trustProxyWarning(trustProxySetting);
-    if (trustProxyProblem) {
-      fastify.log.warn(trustProxyProblem);
-    } else if (!trustsAnyProxy(trustProxy)) {
-      fastify.log.warn(
-        'TRUST_PROXY is not set: the rate limit is keyed on the connecting address. ' +
-        'Behind the web tier that is one shared bucket for every visitor, not one each.'
-      );
-    }
+    await fastify.listen({ port: config.port, host: '0.0.0.0' });
 
     log.info('HTTP performance monitoring started');
     httpPerformanceMonitor.startMonitoring(30000); // 30 second intervals

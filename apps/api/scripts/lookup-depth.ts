@@ -44,6 +44,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 import type { Paper } from '@open-access-explorer/shared';
 import { parseQuery, PROVIDERS } from '../src/orchestrator';
 import type { ProviderEntry } from '../src/orchestrator/registry';
+import { loadConfig, useConfig } from '../src/config';
 
 const QUERIES = [
   'crispr gene editing',
@@ -63,7 +64,11 @@ const RECORDS = arg('records', 15);
 const DEPTH = arg('depth', 100);
 const TIMEOUT_MS = arg('timeout', 20000);
 
-const USER_AGENT = `OpenAccessExplorer/1.0 (mailto:${process.env.UNPAYWALL_EMAIL || 'your-email@example.com'})`;
+// The settings the server would run with, provider keys included — the
+// registries read those from `useConfig`, not from the environment.
+const { config } = loadConfig();
+useConfig(config);
+const USER_AGENT = config.userAgent;
 
 /**
  * The providers this actually concerns: no by-id route, so `lookup` searches.

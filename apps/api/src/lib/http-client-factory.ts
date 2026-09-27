@@ -15,13 +15,11 @@ declare module 'axios' {
 }
 
 export interface HttpPoolConfig {
-  maxConnections?: number;
   keepAliveTimeout?: number;
   maxSockets?: number;
   timeout?: number;
   retryAttempts?: number;
   retryDelay?: number;
-  enableHttp2?: boolean;
 }
 
 export interface HttpPoolMetrics {
@@ -41,13 +39,11 @@ export class HttpClientFactory {
 
   constructor(config: HttpPoolConfig = {}) {
     this.defaultConfig = {
-      maxConnections: 20,
       keepAliveTimeout: 30000,
       maxSockets: 50,
       timeout: 10000,
       retryAttempts: 3,
       retryDelay: 1000,
-      enableHttp2: true,
       ...config
     };
   }
@@ -99,9 +95,6 @@ export class HttpClientFactory {
         'Connection': 'keep-alive',
         'Keep-Alive': `timeout=${config.keepAliveTimeout! / 1000}, max=1000`,
       },
-      // NOTE: axios has no `httpVersion` option; HTTP/2 negotiation is left to
-      // the underlying agent, so `config.enableHttp2` is not applied here.
-      // Connection pooling configuration
       maxRedirects: 5,
       validateStatus: (status) => status < 500, // Don't throw on 4xx errors
     });

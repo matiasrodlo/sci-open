@@ -32,6 +32,7 @@ import axios from 'axios';
 import type { Paper } from '@open-access-explorer/shared';
 import { search, parseQuery, ProviderCache } from '../src/orchestrator';
 import { AUTHORITIES } from '../src/authorities';
+import { loadConfig, useConfig } from '../src/config';
 
 const QUERIES = [
   'crispr gene editing',
@@ -46,7 +47,11 @@ const arg = (name: string, fallback: number) => {
   return found ? Number(found.split('=')[1]) : fallback;
 };
 
-const USER_AGENT = `OpenAccessExplorer/1.0 (mailto:${process.env.UNPAYWALL_EMAIL ?? 'your-email@example.com'})`;
+// The settings the server would run with, provider keys included — the
+// registries read those from `useConfig`, not from the environment.
+const { config } = loadConfig();
+useConfig(config);
+const USER_AGENT = config.userAgent;
 
 const FIELDS = ['title', 'abstract', 'authors', 'year', 'venue', 'publisher',
   'topics', 'language', 'citationCount', 'oaStatus', 'fullText', 'landingPage'] as const;

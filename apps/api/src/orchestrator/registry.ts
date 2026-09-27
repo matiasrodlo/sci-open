@@ -1,4 +1,5 @@
 import type { Paper, ProviderCapabilities, ProviderId, Query } from '@open-access-explorer/shared';
+import { apiKeyFor } from '../lib/api-key';
 import * as arxiv from '../providers/arxiv';
 import * as biorxiv from '../providers/biorxiv';
 import * as core from '../providers/core';
@@ -119,7 +120,7 @@ export const PROVIDERS: ProviderEntry[] = [
         offset,
         timeoutMs,
         openAccessOnly,
-        ...(process.env.NCBI_API_KEY ? { apiKey: process.env.NCBI_API_KEY } : {}),
+        ...apiKeyFor('ncbi'),
         ...(signal ? { signal } : {}),
         ...(userAgent ? { userAgent } : {}),
         ...(now ? { now } : {})
@@ -133,7 +134,7 @@ export const PROVIDERS: ProviderEntry[] = [
     async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
       return ncbi.lookup(nativeId, {
         timeoutMs,
-        ...(process.env.NCBI_API_KEY ? { apiKey: process.env.NCBI_API_KEY } : {}),
+        ...apiKeyFor('ncbi'),
         ...(signal ? { signal } : {}),
         ...(userAgent ? { userAgent } : {}),
         ...(now ? { now } : {})
@@ -148,7 +149,7 @@ export const PROVIDERS: ProviderEntry[] = [
     async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
       return doaj.lookup(nativeId, {
         timeoutMs,
-        ...(process.env.DOAJ_API_KEY ? { apiKey: process.env.DOAJ_API_KEY } : {}),
+        ...apiKeyFor('doaj'),
         ...(signal ? { signal } : {}),
         ...(userAgent ? { userAgent } : {}),
         ...(now ? { now } : {})
@@ -160,7 +161,7 @@ export const PROVIDERS: ProviderEntry[] = [
         offset,
         timeoutMs,
         openAccessOnly,
-        ...(process.env.DOAJ_API_KEY ? { apiKey: process.env.DOAJ_API_KEY } : {}),
+        ...apiKeyFor('doaj'),
         ...(signal ? { signal } : {}),
         ...(userAgent ? { userAgent } : {}),
         ...(now ? { now } : {})
@@ -235,7 +236,7 @@ export const PROVIDERS: ProviderEntry[] = [
         offset,
         timeoutMs,
         openAccessOnly,
-        ...(process.env.DATACITE_API_KEY ? { apiKey: process.env.DATACITE_API_KEY } : {}),
+        ...apiKeyFor('datacite'),
         ...(signal ? { signal } : {}),
         ...(userAgent ? { userAgent } : {}),
         ...(now ? { now } : {})
@@ -271,7 +272,7 @@ export const PROVIDERS: ProviderEntry[] = [
     async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
       return openalex.lookup(nativeId, {
         timeoutMs,
-        ...(process.env.OPENALEX_API_KEY ? { apiKey: process.env.OPENALEX_API_KEY } : {}),
+        ...apiKeyFor('openalex'),
         ...(signal ? { signal } : {}),
         ...(userAgent ? { userAgent } : {}),
         ...(now ? { now } : {})
@@ -283,7 +284,7 @@ export const PROVIDERS: ProviderEntry[] = [
         offset,
         timeoutMs,
         openAccessOnly,
-        ...(process.env.OPENALEX_API_KEY ? { apiKey: process.env.OPENALEX_API_KEY } : {}),
+        ...apiKeyFor('openalex'),
         ...(signal ? { signal } : {}),
         ...(userAgent ? { userAgent } : {}),
         ...(now ? { now } : {})
@@ -303,7 +304,7 @@ export const PROVIDERS: ProviderEntry[] = [
     async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
       return core.lookup(nativeId, {
         timeoutMs,
-        ...(process.env.CORE_API_KEY ? { apiKey: process.env.CORE_API_KEY } : {}),
+        ...apiKeyFor('core'),
         ...(signal ? { signal } : {}),
         ...(userAgent ? { userAgent } : {}),
         ...(now ? { now } : {})
@@ -315,7 +316,7 @@ export const PROVIDERS: ProviderEntry[] = [
         offset,
         timeoutMs,
         openAccessOnly,
-        ...(process.env.CORE_API_KEY ? { apiKey: process.env.CORE_API_KEY } : {}),
+        ...apiKeyFor('core'),
         ...(signal ? { signal } : {}),
         ...(userAgent ? { userAgent } : {}),
         ...(now ? { now } : {})

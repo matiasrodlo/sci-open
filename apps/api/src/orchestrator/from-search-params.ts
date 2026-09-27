@@ -1,5 +1,5 @@
 import type { PaperStage, Query, SearchFilters, SearchParams, SearchResponse, YearRange } from '@open-access-explorer/shared';
-import { search as orchestratorSearch, DEFAULT_DEPTH, MAX_DEPTH } from './index';
+import { search as orchestratorSearch, DEFAULT_DEPTH } from './index';
 import { parseQuery } from './parse-query';
 import type { UserFilters } from './policy';
 import type { ProviderCache } from './provider-cache';
@@ -50,101 +50,6 @@ export function toUserFilters(filters: SearchFilters): UserFilters {
   };
 }
 
-/**
- * Warns about a misconfigured setting once per process rather than once per
- * search.
- *
- * A value that is out of range is out of range for every request, so warning
- * where it is read would put a line in the log for each one. Silence is the
- * other option and it is the worse one: an operator who sets `SEARCH_DEPTH`
- * past the ceiling would otherwise get the clamped depth with nothing anywhere
- * saying their number is not the one in effect — which is the same
- * self-concealing shape as a knob that has no effect at all.
- *
- * Keyed on the message, so a value that later changes is reported again.
- */
-const warned = new Set<string>();
-
-function warnOnce(message: string): void {
-  if (warned.has(message)) return;
-  warned.add(message);
-  log.warn(message);
-}
-
-/**
- * How deep each provider is read.
- *
- * The setting that decides how much of a corpus a search sees, and the one
- * behind the header's "N retrieved of M+ matching": the retrieved figure is
- * `depth x providers that answered`, less duplicates and less what the gates
- * dropped, while the matching figure is the corpus those were drawn from.
- * Raising this is the only thing that closes the gap.
- *
- * **Raise `SEARCH_RESCUE_BUDGET_MS` alongside it.** Depth multiplies the
- * candidates the open-access gate would drop, and the rescue budget does not
- * grow to match, so depth on its own fetches more records and then drops a
- * larger fraction of them without asking. The search reports `bounded` either
- * way; the difference is that the extra requests bought less than they look
- * like they should have.
- *
- * `MAX_DEPTH` is the ceiling and the orchestrator applies it. This only warns,
- * because the clamp belongs where every caller passes and this is one of them.
- *
- * Non-positive and unparseable values fall back to the default, as the rescue
- * budget does and for the same reason: a depth of zero would plan the fan-out,
- * ask every provider, and read nothing back from any of them.
- */
-function searchDepth(): number {
-  const raw = process.env.SEARCH_DEPTH;
-  const depth = Number(raw);
-  if (!Number.isFinite(depth) || depth <= 0) return DEFAULT_DEPTH;
-
-  if (depth > MAX_DEPTH) {
-    warnOnce(`SEARCH_DEPTH=${raw} is above the ceiling of ${MAX_DEPTH}; reading ${MAX_DEPTH} deep instead`);
-  }
-
-  return depth;
-}
-
-/**
- * How many papers the policy gate may ask about before dropping them.
- *
- * Read here rather than in the orchestrator because this is the boundary where
- * a request becomes orchestrator options, and the orchestrator itself takes
- * the number as an argument like every other budget it owns.
- *
- * The cost is one request per candidate to each authority that is
- * authoritative on the gated fields — today that is Unpaywall alone, so one
- * request per candidate. Zero turns the step off and restores the behaviour
- * where a paper with no advertised copy is dropped without anyone being asked.
- */
-function rescueLimit(): number {
-  const raw = Number(process.env.SEARCH_RESCUE_LIMIT);
-  return Number.isFinite(raw) && raw >= 0 ? raw : DEFAULT_RESCUE_LIMIT;
-}
-
-/**
- * How long the whole rescue pass may take, and the setting that actually
- * decides how many candidates are reached.
- *
- * `SEARCH_RESCUE_LIMIT` was the only knob for a long time, and it is the wrong
- * one to reach for first: the two defaults cannot both bind, and on a broad
- * query it is always this budget that expires while the limit sits unreached.
- * An operator raising the limit to rescue more papers was changing a number
- * with no effect. See `DEFAULT_RESCUE_BUDGET_MS`.
- *
- * Zero is refused rather than honoured, which is the one place this parses
- * differently from the limit. A limit of zero is a coherent instruction — do
- * not run the step — and already has that meaning; a budget of zero would mean
- * "run the step, and abort it before the first lookup can return", which spends
- * the setup to guarantee nothing. Anyone who wants the step off wants
- * `SEARCH_RESCUE_LIMIT=0`.
- */
-function rescueBudgetMs(): number {
-  const raw = Number(process.env.SEARCH_RESCUE_BUDGET_MS);
-  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_RESCUE_BUDGET_MS;
-}
-
 /** The years ticked in the year facet, as numbers, once each, oldest first. */
 function tickedYears(filters: SearchFilters): number[] {
   const years = (filters.year ?? []).map(Number).filter(Number.isInteger);
@@ -167,7 +72,29 @@ function yearsToSend(bound: YearRange | undefined, ticked: readonly number[]): Y
   return { from, to };
 }
 
+/**
+ * The three settings that decide how much work a search does. Parsed and
+ * explained in `config.ts`, where `SEARCH_DEPTH`, `SEARCH_RESCUE_LIMIT` and
+ * `SEARCH_RESCUE_BUDGET_MS` are read; this only applies them.
+ */
+export type SearchSettings = {
+  /** How deep each provider is read. The orchestrator clamps it to `MAX_DEPTH`. */
+  depth: number;
+  /** How many papers the gate would drop may be asked about first. Zero turns the rescue off. */
+  rescueLimit: number;
+  /** Wall clock for the whole rescue pass. */
+  rescueBudgetMs: number;
+};
+
+export const DEFAULT_SEARCH_SETTINGS: SearchSettings = {
+  depth: DEFAULT_DEPTH,
+  rescueLimit: DEFAULT_RESCUE_LIMIT,
+  rescueBudgetMs: DEFAULT_RESCUE_BUDGET_MS
+};
+
 export type RunOptions = {
+  /** Defaults to `DEFAULT_SEARCH_SETTINGS`. */
+  settings?: SearchSettings;
   /** Shared across requests, which is the only way caching a fan-out pays. */
   cache?: ProviderCache;
   userAgent?: string;
@@ -192,6 +119,7 @@ export async function runOrchestrator(
   options: RunOptions = {}
 ): Promise<SearchResponse> {
   const filters = params.filters ?? {};
+  const settings = options.settings ?? DEFAULT_SEARCH_SETTINGS;
   const { yearFrom, yearTo } = filters;
 
   // The bounds go into the Query so a provider that can express a year filter
@@ -238,13 +166,13 @@ export async function runOrchestrator(
   const result = await orchestratorSearch(query, {
     page: params.page ?? 1,
     pageSize: params.pageSize ?? 20,
-    depth: searchDepth(),
+    depth: settings.depth,
     filters: userFilters,
     sort: params.sort ?? 'relevance',
     openAccessOnly,
     policy: { requireOpenAccess: openAccessOnly },
-    rescueLimit: rescueLimit(),
-    rescueBudgetMs: rescueBudgetMs(),
+    rescueLimit: settings.rescueLimit,
+    rescueBudgetMs: settings.rescueBudgetMs,
     ...(options.cache ? { cache: options.cache } : {}),
     ...(options.userAgent ? { userAgent: options.userAgent } : {}),
     ...(options.providers ? { providers: options.providers } : {}),

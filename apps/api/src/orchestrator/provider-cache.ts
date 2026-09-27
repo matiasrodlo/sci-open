@@ -85,12 +85,7 @@ const DEFAULT_TTL_MS = 10 * 60 * 1000;
  * realistic ones, which is the working set this cache exists to serve — a
  * page-2 click reusing the fan-out it was paged from.
  */
-const DEFAULT_MAX_BYTES = 128 * 1024 * 1024;
-
-function configuredMaxBytes(): number {
-  const raw = Number(process.env.PROVIDER_CACHE_MAX_BYTES);
-  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_MAX_BYTES;
-}
+export const DEFAULT_MAX_BYTES = 128 * 1024 * 1024;
 
 /**
  * A flat charge per record, on top of the text it carries.
@@ -143,7 +138,7 @@ export class ProviderCache {
   constructor(options: ProviderCacheOptions = {}) {
     this.ttlMs = options.ttlMs ?? {};
     this.defaultTtlMs = options.defaultTtlMs ?? DEFAULT_TTL_MS;
-    this.maxBytes = options.maxBytes ?? configuredMaxBytes();
+    this.maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
     this.now = options.now ?? Date.now;
   }
 

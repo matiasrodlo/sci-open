@@ -1,9 +1,10 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import type { Query, SearchParams } from '@open-access-explorer/shared';
 import type { AuthorityEntry } from '../../authorities';
 import type { ProviderEntry } from '../registry';
 import { runOrchestrator, toUserFilters } from '../from-search-params';
 import { paper, ref } from './helpers';
+import { loadConfig } from '../../config';
 
 /**
  * The conversion at the edge of the new path: what a request means once it
@@ -50,6 +51,13 @@ const pageOf = (n: number) =>
 // Offline: the authorities are real I/O and nothing here is about them.
 const run = (params: SearchParams, providers: ProviderEntry[]) =>
   runOrchestrator(params, { providers, authorities: [] });
+
+/**
+ * The search settings a server started with this environment would run with.
+ * Parsed by `config.ts`, so these tests still go from the text an operator
+ * writes to what the search does with it.
+ */
+const settingsFrom = (env: Record<string, string>) => loadConfig(env).config.search;
 
 describe('toUserFilters', () => {
   it('carries every filter the orchestrator can act on', () => {
@@ -209,17 +217,13 @@ describe('runOrchestrator: the response', () => {
         fullText: undefined
       });
 
-    afterEach(() => {
-      vi.unstubAllEnvs();
-    });
-
     it('says so when the limit cut the candidate list short', async () => {
-      vi.stubEnv('SEARCH_RESCUE_LIMIT', '1');
       const { entry } = recorder([gated(1), gated(2)]);
 
       const response = await runOrchestrator({ q: 'crispr' }, {
         providers: [entry],
-        authorities: [rescuer]
+        authorities: [rescuer],
+        settings: settingsFrom({ SEARCH_RESCUE_LIMIT: '1' })
       });
 
       expect(response.bounded).toBe(true);
@@ -230,24 +234,24 @@ describe('runOrchestrator: the response', () => {
     it('says so when the step was turned off entirely', async () => {
       // A limit of zero is an operator's decision, but the count is a lower
       // bound for exactly the same reason.
-      vi.stubEnv('SEARCH_RESCUE_LIMIT', '0');
       const { entry } = recorder([gated(1)]);
 
       const response = await runOrchestrator({ q: 'crispr' }, {
         providers: [entry],
-        authorities: [rescuer]
+        authorities: [rescuer],
+        settings: settingsFrom({ SEARCH_RESCUE_LIMIT: '0' })
       });
 
       expect(response.bounded).toBe(true);
     });
 
     it('is false when every candidate was asked about', async () => {
-      vi.stubEnv('SEARCH_RESCUE_LIMIT', '50');
       const { entry } = recorder([gated(1), gated(2)]);
 
       const response = await runOrchestrator({ q: 'crispr' }, {
         providers: [entry],
-        authorities: [rescuer]
+        authorities: [rescuer],
+        settings: settingsFrom({ SEARCH_RESCUE_LIMIT: '50' })
       });
 
       expect(response.bounded).toBe(false);
@@ -276,14 +280,13 @@ describe('runOrchestrator: the response', () => {
       };
 
       it('cuts the pass short, with the limit nowhere near reached', async () => {
-        vi.stubEnv('SEARCH_RESCUE_LIMIT', '500');
-        vi.stubEnv('SEARCH_RESCUE_BUDGET_MS', '20');
         const { entry } = recorder([gated(1), gated(2)]);
 
         const started = Date.now();
         const response = await runOrchestrator({ q: 'crispr' }, {
           providers: [entry],
-          authorities: [slowRescuer]
+          authorities: [slowRescuer],
+          settings: settingsFrom({ SEARCH_RESCUE_LIMIT: '500', SEARCH_RESCUE_BUDGET_MS: '20' })
         });
 
         // Held for the budget rather than for the lookup, which is the whole
@@ -297,24 +300,24 @@ describe('runOrchestrator: the response', () => {
         // A limit of zero means "do not run the step" and is honoured. A budget
         // of zero would mean "run it and abort before anything can return",
         // which spends the setup to guarantee nothing, so it is refused.
-        vi.stubEnv('SEARCH_RESCUE_BUDGET_MS', '0');
         const { entry } = recorder([gated(1)]);
 
         const response = await runOrchestrator({ q: 'crispr' }, {
           providers: [entry],
-          authorities: [rescuer]
+          authorities: [rescuer],
+          settings: settingsFrom({ SEARCH_RESCUE_BUDGET_MS: '0' })
         });
 
         expect(response.bounded).toBe(false);
       });
 
       it('ignores a value that is not a number', async () => {
-        vi.stubEnv('SEARCH_RESCUE_BUDGET_MS', 'soon');
         const { entry } = recorder([gated(1)]);
 
         expect((await runOrchestrator({ q: 'crispr' }, {
           providers: [entry],
-          authorities: [rescuer]
+          authorities: [rescuer],
+          settings: settingsFrom({ SEARCH_RESCUE_BUDGET_MS: 'soon' })
         })).bounded).toBe(false);
       });
     });
@@ -330,13 +333,9 @@ describe('runOrchestrator: the response', () => {
  * so the answer to "retrieve more" was to edit the source.
  */
 describe('SEARCH_DEPTH', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  const depthOf = async (): Promise<number> => {
+  const depthOf = async (env: Record<string, string> = {}): Promise<number> => {
     const { entry, calls } = recorder();
-    await run({ q: 'crispr' }, [entry]);
+    await runOrchestrator({ q: 'crispr' }, { providers: [entry], authorities: [], settings: settingsFrom(env) });
     return calls[0]!.depth;
   };
 
@@ -345,28 +344,24 @@ describe('SEARCH_DEPTH', () => {
   });
 
   it('reads as deep as it is told to', async () => {
-    vi.stubEnv('SEARCH_DEPTH', '1500');
-    expect(await depthOf()).toBe(1500);
+    expect(await depthOf({ SEARCH_DEPTH: '1500' })).toBe(1500);
   });
 
   // The cost is per provider per page — twenty requests at once to a provider
   // serving 100 a page — so the setting has a ceiling and it binds here rather
   // than at whatever the operator typed.
   it('clamps a value above the ceiling instead of honouring it', async () => {
-    vi.stubEnv('SEARCH_DEPTH', '50000');
-    expect(await depthOf()).toBe(2000);
+    expect(await depthOf({ SEARCH_DEPTH: '50000' })).toBe(2000);
   });
 
   // A depth of zero would plan the fan-out, ask every provider, and read
   // nothing back — so it falls back rather than being honoured, which is how
   // SEARCH_RESCUE_BUDGET_MS parses and for the same reason.
   it('falls back to the default rather than honouring a zero', async () => {
-    vi.stubEnv('SEARCH_DEPTH', '0');
-    expect(await depthOf()).toBe(600);
+    expect(await depthOf({ SEARCH_DEPTH: '0' })).toBe(600);
   });
 
   it('ignores a value that is not a number', async () => {
-    vi.stubEnv('SEARCH_DEPTH', 'deeper');
-    expect(await depthOf()).toBe(600);
+    expect(await depthOf({ SEARCH_DEPTH: 'deeper' })).toBe(600);
   });
 });

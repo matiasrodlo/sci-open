@@ -20,3 +20,25 @@ export function usableApiKey(value?: string): string | undefined {
   if (trimmed.startsWith('your_')) return undefined;
   return trimmed;
 }
+
+/** The providers that take a key. */
+export type KeyedProvider = 'core' | 'ncbi' | 'doaj' | 'datacite' | 'openalex';
+
+export type ApiKeys = Partial<Record<KeyedProvider, string>>;
+
+/**
+ * The keys `config.ts` parsed, set once at startup by `useConfig`. The
+ * registries used to read `process.env` on every call, which is why a key
+ * could only be found by grepping for it.
+ */
+let configured: ApiKeys = {};
+
+export function useApiKeys(keys: ApiKeys): void {
+  configured = { ...keys };
+}
+
+/** `{ apiKey }` when this provider has a key, and nothing when it does not — for spreading into its options. */
+export function apiKeyFor(provider: KeyedProvider): { apiKey?: string } {
+  const key = configured[provider];
+  return key ? { apiKey: key } : {};
+}

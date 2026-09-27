@@ -53,7 +53,7 @@ const HOP_COUNT = /^\d+$/;
  * `trustProxyWarning` says so at startup, rather than being handed to Fastify to
  * be ignored in silence.
  */
-export function parseTrustProxy(value = process.env.TRUST_PROXY): TrustProxySetting {
+export function parseTrustProxy(value: string | undefined): TrustProxySetting {
   const raw = value?.trim();
   if (!raw) return false;
 
@@ -75,7 +75,7 @@ export function parseTrustProxy(value = process.env.TRUST_PROXY): TrustProxySett
  * environment once. Returns nothing when the value is usable, including when it
  * is legitimately unset — the caller has its own line for that case.
  */
-export function trustProxyWarning(value = process.env.TRUST_PROXY): string | undefined {
+export function trustProxyWarning(value: string | undefined): string | undefined {
   const raw = value?.trim();
   if (!raw || !HOP_COUNT.test(raw)) return undefined;
 

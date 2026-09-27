@@ -90,12 +90,26 @@ services:
       # is documented and none of them reached the container, which is exactly
       # the kind of setting whose absence looks like the tuning not helping.
       - HTTP_POOL_MAX_SOCKETS=${HTTP_POOL_MAX_SOCKETS:-}
-      - HTTP_POOL_MAX_CONNECTIONS=${HTTP_POOL_MAX_CONNECTIONS:-}
       - HTTP_POOL_KEEP_ALIVE_TIMEOUT=${HTTP_POOL_KEEP_ALIVE_TIMEOUT:-}
       - HTTP_POOL_TIMEOUT=${HTTP_POOL_TIMEOUT:-}
       - HTTP_POOL_RETRY_ATTEMPTS=${HTTP_POOL_RETRY_ATTEMPTS:-}
       - HTTP_POOL_RETRY_DELAY=${HTTP_POOL_RETRY_DELAY:-}
-      - HTTP_POOL_ENABLE_HTTP2=${HTTP_POOL_ENABLE_HTTP2:-}
+      # The same, per upstream, as a JSON object over the settings above. Read
+      # under computed names, so the check that keeps this list whole could not
+      # see them, and none of the thirteen reached the container.
+      - OPENALEX_POOL_CONFIG=${OPENALEX_POOL_CONFIG:-}
+      - CROSSREF_POOL_CONFIG=${CROSSREF_POOL_CONFIG:-}
+      - UNPAYWALL_POOL_CONFIG=${UNPAYWALL_POOL_CONFIG:-}
+      - DATACITE_POOL_CONFIG=${DATACITE_POOL_CONFIG:-}
+      - NCBI_POOL_CONFIG=${NCBI_POOL_CONFIG:-}
+      - ARXIV_POOL_CONFIG=${ARXIV_POOL_CONFIG:-}
+      - BIORXIV_POOL_CONFIG=${BIORXIV_POOL_CONFIG:-}
+      - CORE_POOL_CONFIG=${CORE_POOL_CONFIG:-}
+      - DOAJ_POOL_CONFIG=${DOAJ_POOL_CONFIG:-}
+      - EUROPEPMC_POOL_CONFIG=${EUROPEPMC_POOL_CONFIG:-}
+      - OPENAIRE_POOL_CONFIG=${OPENAIRE_POOL_CONFIG:-}
+      - OPENCITATIONS_POOL_CONFIG=${OPENCITATIONS_POOL_CONFIG:-}
+      - PLOS_POOL_CONFIG=${PLOS_POOL_CONFIG:-}
     restart: unless-stopped
     depends_on:
       redis:

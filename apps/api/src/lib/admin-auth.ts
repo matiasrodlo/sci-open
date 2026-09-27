@@ -16,11 +16,6 @@ import { FastifyReply, FastifyRequest } from 'fastify';
  * safety boundary is how these endpoints end up public.
  */
 
-export function getAdminKey(): string | undefined {
-  const key = process.env.ADMIN_API_KEY;
-  return key && key.length > 0 ? key : undefined;
-}
-
 function extractPresentedKey(request: FastifyRequest): string | undefined {
   const header = request.headers.authorization;
   if (typeof header === 'string') {
@@ -44,31 +39,34 @@ function matchesAdminKey(presented: string, expected: string): boolean {
   return crypto.timingSafeEqual(a, b);
 }
 
-export async function requireAdmin(request: FastifyRequest, reply: FastifyReply) {
-  const expected = getAdminKey();
+/** A guard for the key `ADMIN_API_KEY` configured, or for none — which refuses everything. */
+export function requireAdmin(expected: string | undefined) {
+  return async (request: FastifyRequest, reply: FastifyReply) => {
+    if (!expected) {
+      request.log.warn(
+        { url: request.url },
+        'Blocked an administrative request: ADMIN_API_KEY is not configured'
+      );
+      reply.code(503).send({
+        error: 'Administrative endpoints are disabled. Set ADMIN_API_KEY to enable them.'
+      });
+      return reply;
+    }
 
-  if (!expected) {
-    request.log.warn(
-      { url: request.url },
-      'Blocked an administrative request: ADMIN_API_KEY is not configured'
-    );
-    reply.code(503).send({
-      error: 'Administrative endpoints are disabled. Set ADMIN_API_KEY to enable them.'
-    });
-    return reply;
-  }
+    const presented = extractPresentedKey(request);
 
-  const presented = extractPresentedKey(request);
-
-  if (!presented || !matchesAdminKey(presented, expected)) {
-    request.log.warn(
-      { url: request.url, ip: request.ip },
-      'Rejected an administrative request with a missing or invalid key'
-    );
-    reply.code(401).send({ error: 'Unauthorized' });
-    return reply;
-  }
+    if (!presented || !matchesAdminKey(presented, expected)) {
+      request.log.warn(
+        { url: request.url, ip: request.ip },
+        'Rejected an administrative request with a missing or invalid key'
+      );
+      reply.code(401).send({ error: 'Unauthorized' });
+      return reply;
+    }
+  };
 }
 
 /** Route options shorthand, so each protected route reads as one line. */
-export const adminOnly = { preHandler: requireAdmin };
+export function adminOnly(expected: string | undefined) {
+  return { preHandler: requireAdmin(expected) };
+}

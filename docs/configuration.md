@@ -2,6 +2,13 @@
 
 ## Environment Variables
 
+The API reads every setting once, at startup, in `apps/api/src/config.ts`, and
+one rule holds for all of them: unset or empty means the default, and a value
+that does not parse or is out of range also means the default — or the nearest
+value in range, where there is a ceiling — with a warning logged before the
+server starts listening. A mistyped setting costs that setting, never the
+service, and never silently.
+
 ### Frontend
 
 ```env
@@ -238,20 +245,18 @@ Point a provider somewhere else by changing its `DEFAULT_BASE_URL`.
 
 ```env
 # HTTP Connection Pooling
-HTTP_POOL_MAX_CONNECTIONS=20
 HTTP_POOL_KEEP_ALIVE_TIMEOUT=30000
 HTTP_POOL_MAX_SOCKETS=50
 HTTP_POOL_TIMEOUT=10000
 HTTP_POOL_RETRY_ATTEMPTS=3
 HTTP_POOL_RETRY_DELAY=1000
-HTTP_POOL_ENABLE_HTTP2=true
 
 # Service-specific pools (JSON), merged over the global settings above.
 # One per upstream: arxiv, biorxiv, core, crossref, datacite, doaj, europepmc,
 # ncbi, openaire, opencitations, openalex, plos, unpaywall.
-OPENALEX_POOL_CONFIG={"maxConnections": 30, "maxSockets": 100}
-EUROPEPMC_POOL_CONFIG={"maxConnections": 30, "maxSockets": 100}
-CORE_POOL_CONFIG={"maxConnections": 20, "maxSockets": 60}
+OPENALEX_POOL_CONFIG={"maxSockets": 100}
+EUROPEPMC_POOL_CONFIG={"maxSockets": 100}
+CORE_POOL_CONFIG={"maxSockets": 60}
 ```
 
 Every upstream fetches through the pooled client, so every upstream has a knob.
@@ -386,7 +391,11 @@ shut after Redis has failed.
 Increase for high-traffic scenarios:
 
 ```env
-HTTP_POOL_MAX_CONNECTIONS=50
 HTTP_POOL_MAX_SOCKETS=200
 ```
+
+`HTTP_POOL_MAX_CONNECTIONS` and `HTTP_POOL_ENABLE_HTTP2` are gone. Nothing ever
+applied either — `HTTP_POOL_MAX_SOCKETS` is the connection cap, and the
+upstream clients speak HTTP/1.1 — and the API says so at startup if one is
+still set.
 

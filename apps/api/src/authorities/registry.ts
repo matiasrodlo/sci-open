@@ -1,4 +1,5 @@
 import type { AuthorityCapabilities, AuthorityFacts, AuthorityId, Paper } from '@open-access-explorer/shared';
+import { apiKeyFor } from '../lib/api-key';
 import * as crossref from './crossref';
 import * as openalex from './openalex';
 import * as unpaywall from './unpaywall';
@@ -60,7 +61,7 @@ export const AUTHORITIES: AuthorityEntry[] = [
     lookup: ({ doi, timeoutMs, signal, userAgent }) =>
       openalex.lookup(doi, {
         timeoutMs,
-        ...(process.env.OPENALEX_API_KEY ? { apiKey: process.env.OPENALEX_API_KEY } : {}),
+        ...apiKeyFor('openalex'),
         ...(signal ? { signal } : {}),
         ...(userAgent ? { userAgent } : {})
       })

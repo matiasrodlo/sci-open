@@ -86,12 +86,7 @@ const STRATEGY_CONFIGS: Record<CacheStrategy, CacheConfig> = {
  * How much heap L1 may hold. At the ~158 KB per cached page phase 01 measured
  * this is roughly 1,600 entries, against the 10,000 the entry count allowed.
  */
-const DEFAULT_MAX_BYTES = 256 * 1024 * 1024;
-
-function configuredMaxBytes(): number {
-  const raw = Number(process.env.CACHE_MAX_BYTES);
-  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_MAX_BYTES;
-}
+export const DEFAULT_MAX_BYTES = 256 * 1024 * 1024;
 
 /**
  * How long L2 stays skipped after Redis has failed.
@@ -100,7 +95,7 @@ function configuredMaxBytes(): number {
  * cache operation, short enough that a Redis which comes back is picked up
  * within a request or two of doing so.
  */
-const DEFAULT_L2_COOLDOWN_MS = 5000;
+export const DEFAULT_L2_COOLDOWN_MS = 5000;
 
 /** A connection that has not landed by here is not landing. */
 const CONNECT_TIMEOUT_MS = 2000;
@@ -122,11 +117,6 @@ export const L2_KEY_PREFIX = 'oae:';
 /** How many keys go in one `DEL` when clearing. */
 const DELETE_BATCH = 500;
 
-function configuredCooldownMs(): number {
-  const raw = Number(process.env.CACHE_REDIS_COOLDOWN_MS);
-  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_L2_COOLDOWN_MS;
-}
-
 export class CacheManager {
   private readonly l1: MemoryCache;
   private readonly l2: Redis;
@@ -140,13 +130,13 @@ export class CacheManager {
   private l2RetryAt = 0;
 
   constructor(
-    redisUrl?: string,
-    maxBytes = configuredMaxBytes(),
-    private readonly l2CooldownMs = configuredCooldownMs()
+    redisUrl: string,
+    maxBytes = DEFAULT_MAX_BYTES,
+    private readonly l2CooldownMs = DEFAULT_L2_COOLDOWN_MS
   ) {
     this.l1 = new MemoryCache(maxBytes);
 
-    this.l2 = new Redis(redisUrl || process.env.REDIS_URL || 'redis://localhost:6379', {
+    this.l2 = new Redis(redisUrl, {
       // A command issued while the client is not connected is rejected rather
       // than parked until it reconnects. Parking it is what made an
       // unreachable Redis expensive: the command waited out four connection
@@ -164,7 +154,7 @@ export class CacheManager {
       // the socket is ready is rejected outright once the offline queue is
       // gone, so a lazy client would spend the first cache operation of every
       // boot discovering a Redis that is in fact fine — and would say so in
-      // the log. Nothing but the server constructs this.
+      // the log. Nothing but the server's entry point constructs this.
       lazyConnect: false,
       keepAlive: 30000
     });
@@ -418,5 +408,3 @@ export class CacheManager {
     }
   }
 }
-
-export const cacheManager = new CacheManager();

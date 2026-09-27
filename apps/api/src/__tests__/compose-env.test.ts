@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { SETTINGS } from '../config';
 
 /**
  * Every setting this service reads has to reach the container that runs it.
@@ -45,9 +46,15 @@ const NOT_PASSED: Record<string, string> = {
   REDIS_URL: 'set by compose to the service name on its own network'
 };
 
-/** Every `process.env.X` the service itself can reach. */
+/**
+ * Every setting the service reads: the ones `config.ts` declares, which is
+ * where settings are read now, and any `process.env.X` still left in the
+ * source. The declaration is what brings the thirteen `<NAME>_POOL_CONFIG`
+ * settings into this check — they were read under computed names a scan for
+ * `process.env.X` could not see, and compose passed none of them.
+ */
 function settingsReadBySource(): Set<string> {
-  const found = new Set<string>();
+  const found = new Set<string>(SETTINGS);
 
   const walk = (dir: string) => {
     for (const entry of readdirSync(dir)) {
