@@ -11,6 +11,7 @@ import { applyPolicy, partitionByPolicy, type PolicyOptions, type UserFilters } 
 import { canRescue, rescueCandidates, DEFAULT_RESCUE_BUDGET_MS, DEFAULT_RESCUE_LIMIT, type RescueReport } from './rescue';
 import { AuthorityCache, type AuthorityFactsCache } from './authority-cache';
 import { resultSetKey, type ResultSet, type ResultSetCache, type ResultSetKeyParts } from './result-set';
+import type { UpstreamStats } from './upstream-stats';
 import { facetBaseSets, generateFacets, type Facets } from './facet';
 import { sortPapers } from './sort';
 import { enrichPage } from './enrich';
@@ -24,6 +25,8 @@ export type { RescueReport } from './rescue';
 export { AuthorityCache, AuthorityFactsCache } from './authority-cache';
 export { ResultSetCache, resultSetKey } from './result-set';
 export type { ResultSet } from './result-set';
+export { UpstreamStats } from './upstream-stats';
+export type { UpstreamStatsSnapshot } from './upstream-stats';
 
 /**
  * plan -> fan out -> merge/dedupe -> rank -> filter -> rescue -> facet -> paginate -> enrich
@@ -83,6 +86,8 @@ export type SearchOptions = {
   resultSets?: ResultSetCache;
   /** Authorities' answers, held across searches. See `AuthorityFactsCache`. */
   authorityFacts?: AuthorityFactsCache;
+  /** Where each source's reports are tallied across searches. See `UpstreamStats`. */
+  stats?: UpstreamStats;
   providers?: readonly ProviderEntry[];
   userAgent?: string;
   now?: () => Date;
@@ -163,6 +168,7 @@ type Settled = ResultSetKeyParts & {
   providers: readonly ProviderEntry[];
   authorities: readonly AuthorityEntry[] | undefined;
   cache: ProviderCache | undefined;
+  stats: UpstreamStats | undefined;
   userAgent: string | undefined;
   now: (() => Date) | undefined;
 };
@@ -193,6 +199,7 @@ function settle(query: Query, options: SearchOptions): Settled {
       budgetMs: options.rescueBudgetMs ?? DEFAULT_RESCUE_BUDGET_MS
     },
     cache: options.cache,
+    stats: options.stats,
     userAgent: options.userAgent,
     now: options.now
   };
@@ -211,7 +218,7 @@ function keyOf(settled: Settled): string {
  * the set, before any page is cut from it.
  */
 async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache): Promise<ResultSet> {
-  const { query, filters, policy, openAccessOnly, depth, timeoutMs, providers, authorities, cache, userAgent, now } = settled;
+  const { query, filters, policy, openAccessOnly, depth, timeoutMs, providers, authorities, cache, stats, userAgent, now } = settled;
 
   const planned = plan(query, providers);
 
@@ -221,6 +228,7 @@ async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache
     ...(userAgent ? { userAgent } : {}),
     ...(now ? { now } : {})
   });
+  stats?.recordProviders(reports);
 
   const merged = mergePapers(fetched);
 
@@ -263,6 +271,7 @@ async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache
     filters,
     policy
   });
+  stats?.recordAuthorities(rescueReport.authorities);
 
   // Back into rank order. A rescued paper takes the position it always had —
   // it was ranked with everything else and only ever excluded by the gate — so
@@ -327,6 +336,7 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
     ...(userAgent ? { userAgent } : {}),
     cache: authorityCache
   });
+  options.stats?.recordAuthorities(authorityReports);
 
   /**
    * Order the page again, because enrichment just rewrote the keys it was

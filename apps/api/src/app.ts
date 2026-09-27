@@ -10,10 +10,11 @@ import { PaperCacheManager } from './lib/paper-cache-manager';
 import { httpPerformanceMonitor } from './lib/http-performance-monitor';
 import { assertPublicHttpUrl, attachmentHeader, fetchPdfStream, PdfProxyError } from './lib/pdf-proxy';
 import { adminOnly } from './lib/admin-auth';
+import { withLogger } from './lib/logger';
 import { SingleFlight } from './lib/single-flight';
 import { searchBodySchema, paperParamsSchema } from './lib/schemas';
 import { clientError, clientErrorStatus, lookupErrorStatus } from './lib/client-error';
-import { AuthorityCache, AuthorityFactsCache, ProviderCache, ResultSetCache, lookupPaper, enrichPage } from './orchestrator';
+import { AuthorityCache, AuthorityFactsCache, ProviderCache, ResultSetCache, UpstreamStats, lookupPaper, enrichPage } from './orchestrator';
 import { runSearch } from './orchestrator/from-search-params';
 import type { ProviderEntry } from './orchestrator/registry';
 import type { AuthorityEntry } from './authorities';
@@ -28,6 +29,8 @@ export type AppOptions = {
   resultSets?: ResultSetCache;
   /** Authorities' answers across requests. Defaults to an empty one. */
   authorityFacts?: AuthorityFactsCache;
+  /** How each source has fared across requests. Defaults to an empty one. */
+  stats?: UpstreamStats;
   /** Default to the registries. A subset is how the routes are driven offline. */
   providers?: readonly ProviderEntry[];
   authorities?: readonly AuthorityEntry[];
@@ -61,6 +64,10 @@ export function buildApp(options: AppOptions): FastifyInstance {
   });
 
   fastify.register(helmet);
+
+  // Everything a request sets off logs as that request, `reqId` included —
+  // pipeline code logs through `lib/logger`, not through `request.log`.
+  fastify.addHook('onRequest', (request, _reply, done) => withLogger(request.log, done));
 
   /**
    * A search costs a fan-out to ten providers, so an unthrottled caller is not
@@ -107,6 +114,7 @@ export function buildApp(options: AppOptions): FastifyInstance {
     // papers. See `orchestrator/result-set.ts`.
     resultSets: options.resultSets ?? new ResultSetCache(),
     authorityFacts: options.authorityFacts ?? new AuthorityFactsCache(),
+    stats: options.stats ?? new UpstreamStats(),
     ...(options.providers ? { providers: options.providers } : {}),
     ...(options.authorities ? { authorities: options.authorities } : {})
   });
@@ -134,6 +142,7 @@ type RouteContext = {
   providerCache: ProviderCache;
   resultSets: ResultSetCache;
   authorityFacts: AuthorityFactsCache;
+  stats: UpstreamStats;
   providers?: readonly ProviderEntry[];
   authorities?: readonly AuthorityEntry[];
 };
@@ -163,7 +172,7 @@ type RouteContext = {
  * onto the root instance now fails a test rather than a production load.
  */
 async function routes(fastify: FastifyInstance, context: RouteContext) {
-  const { config, cache, paperCacheManager, searchFlights, providerCache, resultSets, authorityFacts } = context;
+  const { config, cache, paperCacheManager, searchFlights, providerCache, resultSets, authorityFacts, stats } = context;
   // Who we say we are to every provider. See `UNPAYWALL_EMAIL` in `config.ts`.
   const userAgent = config.userAgent;
   const admin = adminOnly(config.adminKey);
@@ -192,6 +201,7 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
           cache: providerCache,
           resultSets,
           authorityFacts,
+          stats,
           userAgent,
           settings: config.search,
           ...upstream
@@ -331,6 +341,7 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
      * other, so the second visitor pays nothing.
      */
     const { papers: [enriched], reports } = await enrichPage([found], { userAgent, cache: new AuthorityCache(authorityFacts), ...enrichWith });
+    stats.recordAuthorities(reports);
     const paper = toOARecord(enriched);
     await paperCacheManager.cachePaperDetails(paper);
 
@@ -549,6 +560,14 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
       return clientError(error, request.id);
     }
   });
+
+  // What the pipeline got out of each source — the HTTP metrics above count
+  // requests to hosts, this counts answers. See `orchestrator/upstream-stats.ts`.
+  fastify.get('/api/performance/sources', admin, async () => ({
+    success: true,
+    data: stats.snapshot(),
+    timestamp: new Date().toISOString()
+  }));
 
   fastify.get('/api/performance/report', admin, async (request, reply) => {
     try {

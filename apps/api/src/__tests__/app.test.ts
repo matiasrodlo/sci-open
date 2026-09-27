@@ -6,6 +6,7 @@ import type { Paper } from '@open-access-explorer/shared';
 import { buildApp } from '../app';
 import { loadConfig } from '../config';
 import { CacheManager } from '../lib/cache-manager';
+import { log } from '../lib/logger';
 import type { ProviderEntry } from '../orchestrator/registry';
 import { paper, ref } from '../orchestrator/__tests__/helpers';
 
@@ -331,5 +332,44 @@ describe('administrative routes', () => {
     expect(cleared.statusCode).toBe(200);
     expect((await search({ q: 'crispr' })).headers['x-cache-hit']).toBe('false');
     expect(searches).toHaveLength(2);
+  });
+});
+
+describe('GET /api/performance/sources', () => {
+  it('counts each provider once per resolved set, not once per page served from it', async () => {
+    build({}, provider(Array.from({ length: 45 }, (_, i) => record(i))).entry);
+    await search({ q: 'crispr', page: 1 });
+    await search({ q: 'crispr', page: 2 });
+
+    const response = await app!.inject({
+      method: 'GET', url: '/api/performance/sources', headers: { authorization: `Bearer ${ADMIN_KEY}` }
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().data.providers.europepmc).toMatchObject({ ok: 1, error: 0, timeout: 0 });
+  });
+});
+
+describe('logging', () => {
+  it('attributes a line a provider writes mid-search to the request that caused it', async () => {
+    // Pipeline code logs through `lib/logger`, not `request.log`; before the
+    // request's logger was carried to it, such a line had no `reqId`.
+    const lines: Array<Record<string, unknown>> = [];
+    const stream = { write: (line: string) => { lines.push(JSON.parse(line)); } };
+    const noisy = provider();
+    const search = noisy.entry.search;
+    noisy.entry.search = async args => {
+      log.warn('provider note');
+      return search(args);
+    };
+
+    const config = configWith();
+    app = buildApp({
+      config, cache: new CacheManager(config.redisUrl), providers: [noisy.entry], authorities: [],
+      logger: { level: 'warn', stream }
+    });
+    await app.inject({ method: 'POST', url: '/api/search', payload: { q: 'crispr' } });
+
+    const note = lines.find(line => line.msg === 'provider note');
+    expect(note?.reqId).toEqual(expect.any(String));
   });
 });

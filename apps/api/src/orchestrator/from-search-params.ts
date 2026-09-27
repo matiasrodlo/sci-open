@@ -5,6 +5,7 @@ import type { UserFilters } from './policy';
 import type { ProviderCache } from './provider-cache';
 import type { ResultSetCache } from './result-set';
 import type { AuthorityFactsCache } from './authority-cache';
+import type { UpstreamStats } from './upstream-stats';
 import type { ProviderEntry } from './registry';
 import type { AuthorityEntry } from '../authorities';
 import { toSearchResponse } from './to-search-response';
@@ -103,6 +104,8 @@ export type RunOptions = {
   resultSets?: ResultSetCache;
   /** And for what the authorities said, so a page shown again is not asked about again. */
   authorityFacts?: AuthorityFactsCache;
+  /** Tallies each source's reports across searches. */
+  stats?: UpstreamStats;
   userAgent?: string;
   /** Defaults to the whole registry. A subset is how this is driven offline. */
   providers?: readonly ProviderEntry[];
@@ -194,6 +197,7 @@ export async function runSearch(
     ...(options.cache ? { cache: options.cache } : {}),
     ...(options.resultSets ? { resultSets: options.resultSets } : {}),
     ...(options.authorityFacts ? { authorityFacts: options.authorityFacts } : {}),
+    ...(options.stats ? { stats: options.stats } : {}),
     ...(options.userAgent ? { userAgent: options.userAgent } : {}),
     ...(options.providers ? { providers: options.providers } : {}),
     ...(options.authorities ? { authorities: options.authorities } : {})

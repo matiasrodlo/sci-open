@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'async_hooks';
 import type { FastifyBaseLogger } from 'fastify';
 
 /**
@@ -8,7 +9,9 @@ import type { FastifyBaseLogger } from 'fastify';
  * so the configured level did nothing and `NODE_ENV=production` silenced none
  * of it. Everything goes through here instead, and here forwards to Fastify's
  * pino instance: levelled, structured, and correlated with the request that
- * caused it.
+ * caused it — through `withLogger`, which each request enters, so a line a
+ * provider writes mid-search carries that search's `reqId`. Until that existed
+ * every such line went to the root logger and carried no request at all.
  *
  * The argument order is console's rather than pino's — message first, detail
  * second — because that is what the call sites already read like, and a logging
@@ -20,9 +23,20 @@ type Level = 'debug' | 'info' | 'warn' | 'error';
 
 let sink: FastifyBaseLogger | null = null;
 
+/** The logger of the request whose work is running, where there is one. */
+const current = new AsyncLocalStorage<FastifyBaseLogger>();
+
 /** Called once at boot with the server's logger. */
 export function useLogger(logger: FastifyBaseLogger): void {
   sink = logger;
+}
+
+/**
+ * Runs `work` — and everything it starts, however asynchronously — logging to
+ * `logger`. The server enters it for each request with that request's logger.
+ */
+export function withLogger<T>(logger: FastifyBaseLogger, work: () => T): T {
+  return current.run(logger, work);
 }
 
 function fieldsFor(detail: unknown): Record<string, unknown> {
@@ -37,8 +51,9 @@ function fieldsFor(detail: unknown): Record<string, unknown> {
 }
 
 function emit(level: Level, msg: string, detail?: unknown): void {
-  if (sink) {
-    sink[level](fieldsFor(detail), msg);
+  const target = current.getStore() ?? sink;
+  if (target) {
+    target[level](fieldsFor(detail), msg);
     return;
   }
   // Before the server starts — scripts, tests — stay quiet unless something

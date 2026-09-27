@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { log, useLogger } from '../logger';
+import { log, useLogger, withLogger } from '../logger';
 
 /**
  * Phase 03's acceptance list says one search should produce "tens of
@@ -106,5 +106,46 @@ describe('log — structured detail', () => {
     log.info('ids', [1, 2]);
 
     expect(s.info).toHaveBeenCalledWith({ detail: [1, 2] }, 'ids');
+  });
+});
+
+describe('withLogger — the request a line belongs to', () => {
+  it('logs to the request\'s logger inside, and to the server\'s outside', () => {
+    const server = sink();
+    const request = sink();
+    useLogger(server);
+
+    withLogger(request, () => log.warn('inside'));
+    log.warn('outside');
+
+    expect(request.warn).toHaveBeenCalledWith({}, 'inside');
+    expect(server.warn).toHaveBeenCalledWith({}, 'outside');
+    expect(server.warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('follows the work across an await, which is where pipeline code logs from', async () => {
+    const request = sink();
+    useLogger(sink());
+
+    await withLogger(request, async () => {
+      await new Promise(resolve => setTimeout(resolve, 1));
+      log.info('after a timer', { provider: 'europepmc' });
+    });
+
+    expect(request.info).toHaveBeenCalledWith({ provider: 'europepmc' }, 'after a timer');
+  });
+
+  it('keeps two requests running at once apart', async () => {
+    const a = sink();
+    const b = sink();
+    const logAfter = (ms: number, msg: string) =>
+      new Promise<void>(resolve => setTimeout(() => { log.info(msg); resolve(); }, ms));
+
+    await Promise.all([withLogger(a, () => logAfter(5, 'a')), withLogger(b, () => logAfter(1, 'b'))]);
+
+    expect(a.info).toHaveBeenCalledWith({}, 'a');
+    expect(b.info).toHaveBeenCalledWith({}, 'b');
+    expect(a.info).toHaveBeenCalledTimes(1);
+    expect(b.info).toHaveBeenCalledTimes(1);
   });
 });

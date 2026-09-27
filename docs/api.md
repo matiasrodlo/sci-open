@@ -288,15 +288,29 @@ Cache hit/miss counts and response times.
 
 **GET** `/api/performance/metrics`
 
-Aggregate HTTP client metrics across all provider services.
+Aggregate HTTP client metrics across all upstream hosts, sampled every 30
+seconds. Every attempt is counted once, retries included, by how it ended —
+succeeded, client error, rate limited (429), server error, failed with no
+answer, or aborted by this service's own budget. `errorRate` is the share the
+upstream did not serve: rate limits, server errors and failures. Connection
+reuse is what Node reports for the socket each answer came on.
 
 **GET** `/api/performance/metrics/:service`
 
-Metrics for one service.
+Metrics for one host.
+
+**GET** `/api/performance/sources`
+
+What the pipeline got out of each source, from the reports every search
+writes: per provider, how many searches it answered, timed out on, failed or
+was skipped for, the p50 and p95 of its recent latencies, and its last error;
+per authority, the same plus how many DOIs it was asked about, how many it
+answered, and how many fields those answers filled. A provider is counted once
+per result set resolved, not once per page served from a held set.
 
 **GET** `/api/performance/report`
 
-A rendered summary of the above.
+A rendered summary of the HTTP metrics.
 
 ---
 
