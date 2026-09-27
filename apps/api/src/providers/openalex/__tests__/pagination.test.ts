@@ -98,10 +98,27 @@ describe('search — pagination across the 200-record cap', () => {
     expect((await run(400)).totalHits).toBe(12345);
   });
 
+  it('asks no further than the corpus reaches', async () => {
+    // A query matching 250 works needs two pages, whatever the depth. Every
+    // page used to be asked for blind: three requests, one answered empty,
+    // against a metered daily budget.
+    fetchPage.mockImplementation(async (_p: any, o: any) => ({ ...page(o.offset, o.offset === 0 ? 200 : 50), meta: { count: 250 } }));
+
+    const r = await run(600);
+    expect(fetchPage.mock.calls.map((c: any) => c[1].offset)).toEqual([0, 200]);
+    expect(r.papers).toHaveLength(250);
+  });
+
+  it('makes one request when the first page is short', async () => {
+    fetchPage.mockImplementation(async (_p: any, o: any) => ({ ...page(o.offset, 40), meta: { count: 40 } }));
+    await run(600);
+    expect(fetchPage).toHaveBeenCalledTimes(1);
+  });
+
   it('returns what came back when the corpus runs out mid-read', async () => {
-    // The pages go out together, so a short page cannot stop the ones already
-    // in flight — it simply contributes fewer records. Fewer than asked for is
-    // a real answer, not a failure.
+    // The pages after the first go out together, so a short one cannot stop
+    // the others in flight — it simply contributes fewer records. Fewer than
+    // asked for is a real answer, not a failure.
     fetchPage.mockImplementation(async (_p: any, o: any) => page(o.offset, o.offset === 0 ? 200 : 30));
 
     const r = await run(600);
