@@ -7,10 +7,18 @@ export interface PerformanceMetrics {
   totalRequests: number;
   reusedConnections: number;
   newConnections: number;
+  /** Of the answers whose socket Node could account for, the share on a reused one. */
   connectionReuseRate: number;
   averageResponseTime: number;
+  /** Rate limits, server errors and failures, over every attempt. See `HttpPoolMetrics`. */
   errorRate: number;
+  /** 429s so far — the figure that says a quota is being spent. */
+  rateLimited: number;
   throughput: number; // requests per second
+}
+
+function reuseRate(reused: number, fresh: number): number {
+  return reused + fresh > 0 ? reused / (reused + fresh) : 0;
 }
 
 export class HttpPerformanceMonitor {
@@ -70,9 +78,10 @@ export class HttpPerformanceMonitor {
           totalRequests: metrics.totalRequests,
           reusedConnections: metrics.reusedConnections,
           newConnections: metrics.newConnections,
-          connectionReuseRate: metrics.totalRequests > 0 ? metrics.reusedConnections / metrics.totalRequests : 0,
+          connectionReuseRate: reuseRate(metrics.reusedConnections, metrics.newConnections),
           averageResponseTime: metrics.averageResponseTime,
           errorRate: metrics.errorRate,
+          rateLimited: metrics.rateLimited,
           throughput: this.throughputSince(service, timestamp, metrics.totalRequests)
         };
 
@@ -150,6 +159,7 @@ export class HttpPerformanceMonitor {
       connectionReuseRate: number;
       averageResponseTime: number;
       errorRate: number;
+      rateLimited: number;
       throughput: number;
     }>;
   } {
@@ -158,6 +168,7 @@ export class HttpPerformanceMonitor {
       connectionReuseRate: number;
       averageResponseTime: number;
       errorRate: number;
+      rateLimited: number;
       throughput: number;
     }> = [];
 
@@ -175,6 +186,7 @@ export class HttpPerformanceMonitor {
           connectionReuseRate: latest.connectionReuseRate,
           averageResponseTime: latest.averageResponseTime,
           errorRate: latest.errorRate,
+          rateLimited: latest.rateLimited,
           throughput: latest.throughput
         });
 
@@ -220,6 +232,7 @@ export class HttpPerformanceMonitor {
         `  Connection Reuse: ${(service.connectionReuseRate * 100).toFixed(2)}%`,
         `  Response Time: ${service.averageResponseTime.toFixed(2)}ms`,
         `  Error Rate: ${(service.errorRate * 100).toFixed(2)}%`,
+        `  Rate Limited: ${service.rateLimited}`,
         `  Throughput: ${service.throughput.toFixed(2)} req/s`,
         ''
       );

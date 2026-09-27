@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import axiosRetry from 'axios-retry';
 import http from 'http';
 import https from 'https';
@@ -22,13 +22,64 @@ export interface HttpPoolConfig {
   retryDelay?: number;
 }
 
+/**
+ * What one upstream host has been asked and how it answered, counting every
+ * attempt — a retried request is two.
+ *
+ * The counters this replaced could not see a rate limit. The clients resolve
+ * every status below 500 as a response (`validateStatus`), and the metrics
+ * counted every resolved response as a success — so an OpenAlex answering 429
+ * all afternoon showed an error rate of zero. Connection reuse was read from
+ * the server's `Connection: keep-alive` header, which says the server would
+ * keep the socket open, not that this client used an open one.
+ */
 export interface HttpPoolMetrics {
+  /** Every attempt: answered, failed or aborted. */
   totalRequests: number;
+  /** 2xx and 3xx. */
+  succeeded: number;
+  /** 4xx other than 429: an answer about the request — a 404 is often the right one. */
+  clientErrors: number;
+  /** 429: the upstream refusing us for asking too often. */
+  rateLimited: number;
+  /** 5xx, per attempt. */
+  serverErrors: number;
+  /** No answer at all: a timeout, a refused or reset connection. */
+  failed: number;
+  /** Cut off by this service's own budget — not the upstream's doing. */
+  aborted: number;
+  /** Answered on a socket kept open from an earlier request, as Node reports it. */
   reusedConnections: number;
+  /** Answered on a socket opened for it. */
   newConnections: number;
+  /** Mean time to an answer or a failure, in milliseconds. */
   averageResponseTime: number;
+  /**
+   * The share of attempts the upstream did not serve: rate limits, server
+   * errors and failures. A 4xx is left out — it is an answer, and a 404 for an
+   * id nobody holds is the right one — and so is an abort, which is ours.
+   */
   errorRate: number;
   lastReset: Date;
+}
+
+/** How one attempt ended, as the metrics count it. */
+type Outcome =
+  | { status: number; reused: boolean | undefined }
+  | { failure: 'failed' | 'aborted' };
+
+function emptyMetrics(): HttpPoolMetrics {
+  return {
+    totalRequests: 0, succeeded: 0, clientErrors: 0, rateLimited: 0, serverErrors: 0,
+    failed: 0, aborted: 0, reusedConnections: 0, newConnections: 0,
+    averageResponseTime: 0, errorRate: 0, lastReset: new Date()
+  };
+}
+
+/** Whether Node answered this request on a reused socket. `undefined` off Node's http. */
+function reusedSocket(request: unknown): boolean | undefined {
+  const reused = (request as { reusedSocket?: unknown } | undefined)?.reusedSocket;
+  return typeof reused === 'boolean' ? reused : undefined;
 }
 
 export class HttpClientFactory {
@@ -102,11 +153,15 @@ export class HttpClientFactory {
     // Configure connection pooling
     this.configureConnectionPooling(client, config);
 
+    // Metrics before retries. Response interceptors run in the order they were
+    // added, so this one sees each attempt before the retry logic decides to
+    // make another — and each retry comes back through it as an attempt of its
+    // own. Added after, it also saw the retried result on the way out, and a
+    // request retried once was counted three times.
+    this.addMetricsTracking(client, baseUrl);
+
     // Add retry logic
     this.configureRetryLogic(client, config);
-
-    // Add metrics tracking
-    this.addMetricsTracking(client, baseUrl);
 
     return client;
   }
@@ -176,54 +231,55 @@ export class HttpClientFactory {
     // Response interceptor
     client.interceptors.response.use(
       (response) => {
-        this.updateMetrics(normalizedUrl, response, false);
+        this.updateMetrics(normalizedUrl, response.config.metadata?.startTime, {
+          status: response.status,
+          reused: reusedSocket(response.request)
+        });
         return response;
       },
       (error) => {
-        this.updateMetrics(normalizedUrl, error.response, true);
+        const outcome: Outcome = error.response
+          ? { status: error.response.status, reused: reusedSocket(error.response.request) }
+          : { failure: axios.isCancel(error) ? 'aborted' : 'failed' };
+        this.updateMetrics(normalizedUrl, error.config?.metadata?.startTime, outcome);
         return Promise.reject(error);
       }
     );
   }
 
-  /**
-   * Update metrics for a request
-   */
-  private updateMetrics(baseUrl: string, response: AxiosResponse | undefined, isError: boolean): void {
+  /** Counts one attempt. */
+  private updateMetrics(baseUrl: string, startTime: number | undefined, outcome: Outcome): void {
     const metrics = this.metrics.get(baseUrl);
     if (!metrics) return;
 
     metrics.totalRequests++;
-    if (isError) {
-      metrics.errorRate = (metrics.errorRate * (metrics.totalRequests - 1) + 1) / metrics.totalRequests;
+
+    if ('status' in outcome) {
+      const { status, reused } = outcome;
+      if (status < 400) metrics.succeeded++;
+      else if (status === 429) metrics.rateLimited++;
+      else if (status < 500) metrics.clientErrors++;
+      else metrics.serverErrors++;
+
+      if (reused === true) metrics.reusedConnections++;
+      else if (reused === false) metrics.newConnections++;
+    } else if (outcome.failure === 'aborted') {
+      metrics.aborted++;
     } else {
-      metrics.errorRate = (metrics.errorRate * (metrics.totalRequests - 1)) / metrics.totalRequests;
+      metrics.failed++;
     }
 
-    // Check if connection was reused (simplified heuristic)
-    if (response?.headers['connection'] === 'keep-alive') {
-      metrics.reusedConnections++;
-    } else {
-      metrics.newConnections++;
-    }
+    const unserved = metrics.rateLimited + metrics.serverErrors + metrics.failed;
+    metrics.errorRate = unserved / metrics.totalRequests;
 
-    // Update average response time
-    const responseTime = response ? Date.now() - (response.config.metadata?.startTime || 0) : 0;
-    metrics.averageResponseTime = (metrics.averageResponseTime * (metrics.totalRequests - 1) + responseTime) / metrics.totalRequests;
+    if (startTime !== undefined) {
+      const elapsed = Date.now() - startTime;
+      metrics.averageResponseTime += (elapsed - metrics.averageResponseTime) / metrics.totalRequests;
+    }
   }
 
-  /**
-   * Initialize metrics for a base URL
-   */
   private initializeMetrics(baseUrl: string): void {
-    this.metrics.set(baseUrl, {
-      totalRequests: 0,
-      reusedConnections: 0,
-      newConnections: 0,
-      averageResponseTime: 0,
-      errorRate: 0,
-      lastReset: new Date()
-    });
+    this.metrics.set(baseUrl, emptyMetrics());
   }
 
   /**
@@ -268,15 +324,7 @@ export class HttpClientFactory {
   resetMetrics(baseUrl?: string): void {
     if (baseUrl) {
       const normalizedUrl = this.normalizeUrl(baseUrl);
-      const metrics = this.metrics.get(normalizedUrl);
-      if (metrics) {
-        metrics.totalRequests = 0;
-        metrics.reusedConnections = 0;
-        metrics.newConnections = 0;
-        metrics.averageResponseTime = 0;
-        metrics.errorRate = 0;
-        metrics.lastReset = new Date();
-      }
+      if (this.metrics.has(normalizedUrl)) this.initializeMetrics(normalizedUrl);
     } else {
       this.metrics.clear();
       // Reinitialised under the same key the recording path writes to.

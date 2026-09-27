@@ -17,6 +17,12 @@ const INTERVAL = 1000;
 
 const counters = (totalRequests: number): HttpPoolMetrics => ({
   totalRequests,
+  succeeded: totalRequests,
+  clientErrors: 0,
+  rateLimited: 0,
+  serverErrors: 0,
+  failed: 0,
+  aborted: 0,
   reusedConnections: 0,
   newConnections: 0,
   averageResponseTime: 0,
