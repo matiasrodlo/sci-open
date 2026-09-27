@@ -28,7 +28,7 @@ describe('loadConfig', () => {
     expect(config.port).toBe(4000);
     expect(config.logLevel).toBe('debug');
     expect(config.production).toBe(false);
-    expect(config.rateLimit).toEqual({ max: 120, window: '1 minute', downloadMax: 20 });
+    expect(config.rateLimit).toEqual({ max: 120, window: 60_000, downloadMax: 20 });
     expect(config.redisUrl).toBe('redis://localhost:6379');
     expect(config.search).toEqual(DEFAULT_SEARCH_SETTINGS);
     expect(config.httpPool).toEqual({ defaults: DEFAULT_HTTP_POOL, services: {} });
@@ -132,6 +132,28 @@ describe('loadConfig', () => {
     const { config, warnings } = load({ SEARCH_FACET_COUNTS: 'sometimes' });
     expect(config.search.facetCounts).toBe(true);
     expect(warnings).toEqual(['SEARCH_FACET_COUNTS=sometimes is neither on nor off; counting across the sources']);
+  });
+
+  it('reads the rate-limit window as a duration, and a bare number as milliseconds', () => {
+    expect(load({ RATE_LIMIT_WINDOW: '30 seconds' }).config.rateLimit.window).toBe(30_000);
+    expect(load({ RATE_LIMIT_WINDOW: '1 hour' }).config.rateLimit.window).toBe(3_600_000);
+    expect(load({ RATE_LIMIT_WINDOW: '2m' }).config.rateLimit.window).toBe(120_000);
+    expect(load({ RATE_LIMIT_WINDOW: '60000' }).config.rateLimit.window).toBe(60_000);
+    expect(load({ RATE_LIMIT_WINDOW: '1 minute' }).warnings).toEqual([]);
+  });
+
+  it('refuses a window it cannot read, which used to fail every request', () => {
+    // Handed to the limiter as it stood, this became an undefined window that
+    // the plugin then called as a function: 500 on every route but /health.
+    const { config, warnings } = load({ RATE_LIMIT_WINDOW: 'one minute' });
+    expect(config.rateLimit.window).toBe(60_000);
+    expect(warnings).toEqual([expect.stringMatching(/^RATE_LIMIT_WINDOW=one minute is not a duration/)]);
+  });
+
+  it('refuses a window too short to limit anything, which a bare 60 was', () => {
+    const { config, warnings } = load({ RATE_LIMIT_WINDOW: '60' });
+    expect(config.rateLimit.window).toBe(60_000);
+    expect(warnings).toEqual([expect.stringMatching(/^RATE_LIMIT_WINDOW=60 is 60 ms — a bare number is milliseconds/)]);
   });
 
   it('warns about a trust setting Fastify cannot honour', () => {

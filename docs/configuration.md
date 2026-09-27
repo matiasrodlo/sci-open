@@ -47,6 +47,13 @@ It is a starting point rather than a measured figure — the worst case is still
 gigabyte a minute per caller — so expect to move it once there is real traffic to
 look at. Both limits share `RATE_LIMIT_WINDOW`.
 
+`RATE_LIMIT_WINDOW` is a duration — `30 seconds`, `2m`, `1 hour` — and a bare
+number is milliseconds. It is checked at startup like every other setting: one
+that does not parse, or comes to less than a second, falls back to a minute and
+says so. It used to be handed to the limiter unchecked, and the limiter checks
+nothing — `one minute` failed every route but `/health` with a 500, and `60`
+was a sixty-millisecond window that limited nobody.
+
 `TRUST_PROXY` decides what the rate limit counts. The limiter keys on
 `request.ip`, and with nothing trusted that is the address that opened the
 socket — which, because `apps/web` proxies every `/api/*` call server-side, is

@@ -141,6 +141,19 @@ describe('rate limiting', () => {
     }
   });
 
+  it('keeps answering under a window it cannot read, and still limits', async () => {
+    // Passed through as a string, `one minute` answered every route but
+    // /health with a 500, and `60` was a sixty-millisecond window.
+    for (const window of ['one minute', '60']) {
+      build({ RATE_LIMIT_MAX: '2', RATE_LIMIT_WINDOW: window });
+      const codes = [];
+      for (let i = 0; i < 3; i++) codes.push((await search({ q: 'crispr' })).statusCode);
+      expect(codes).toEqual([200, 200, 429]);
+      await app!.close();
+      app = undefined;
+    }
+  });
+
   it('gives the download a bucket of its own', async () => {
     build({ RATE_LIMIT_MAX: '1', RATE_LIMIT_DOWNLOAD_MAX: '5' }, provider([
       record(0),

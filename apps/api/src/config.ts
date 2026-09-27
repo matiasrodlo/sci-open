@@ -39,7 +39,8 @@ export type Config = {
   rateLimit: {
     /** Requests per window, per caller, across every route but the download. */
     max: number;
-    window: string;
+    /** In milliseconds. See `parseWindow`. */
+    window: number;
     /** The download's own bucket. See the route in `app.ts`. */
     downloadMax: number;
   };
@@ -98,6 +99,43 @@ const RETIRED: Record<string, string> = {
 };
 
 const PLACEHOLDER_EMAIL = 'your-email@example.com';
+
+const DEFAULT_RATE_LIMIT_WINDOW_MS = 60_000;
+
+/** The shortest window that limits anything: below it a bucket refills between two requests. */
+const MIN_RATE_LIMIT_WINDOW_MS = 1000;
+
+const DURATION = /^(\d+(?:\.\d+)?)\s*([a-z]*)$/i;
+
+const DURATION_UNITS: Record<string, number> = {
+  '': 1, ms: 1, msec: 1, msecs: 1, millisecond: 1, milliseconds: 1,
+  s: 1000, sec: 1000, secs: 1000, second: 1000, seconds: 1000,
+  m: 60_000, min: 60_000, mins: 60_000, minute: 60_000, minutes: 60_000,
+  h: 3_600_000, hr: 3_600_000, hrs: 3_600_000, hour: 3_600_000, hours: 3_600_000,
+  d: 86_400_000, day: 86_400_000, days: 86_400_000
+};
+
+/**
+ * `RATE_LIMIT_WINDOW` -> milliseconds, or `undefined` when it names no duration.
+ *
+ * Parsed here rather than handed to `@fastify/rate-limit` as a string, because
+ * the plugin checks nothing. A string it cannot read became an `undefined`
+ * window, and the limiter then called it as a function on every request: `one
+ * minute` answered 500 on every route but `/health` — which it exempts before
+ * reading the window, so a container's health check stayed green through the
+ * outage. And a bare number is milliseconds to the plugin, so `60` meant sixty
+ * of them: a bucket that refilled between any two requests, which is no limit.
+ *
+ * A bare number still means milliseconds here — that is what it has always
+ * done, and a value that works should keep working — but one under a second is
+ * refused with a warning that says why, since nobody sets that on purpose.
+ */
+export function parseWindow(raw: string): number | undefined {
+  const match = raw.trim().match(DURATION);
+  if (!match) return undefined;
+  const unit = DURATION_UNITS[match[2]!.toLowerCase()];
+  return unit === undefined ? undefined : Math.round(Number(match[1]) * unit);
+}
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -166,6 +204,24 @@ export function loadConfig(env: Env = process.env): LoadedConfig {
       'Behind the web tier that is one shared bucket for every visitor, not one each.'
     );
   }
+
+  const rateLimitWindow = (): number => {
+    const raw = text('RATE_LIMIT_WINDOW');
+    if (raw === undefined) return DEFAULT_RATE_LIMIT_WINDOW_MS;
+
+    const ms = parseWindow(raw);
+    if (ms === undefined) {
+      warnings.push(`RATE_LIMIT_WINDOW=${raw} is not a duration like "1 minute" or "30 seconds"; using 1 minute`);
+      return DEFAULT_RATE_LIMIT_WINDOW_MS;
+    }
+    if (ms < MIN_RATE_LIMIT_WINDOW_MS) {
+      warnings.push(
+        `RATE_LIMIT_WINDOW=${raw} is ${ms} ms — a bare number is milliseconds — which is too short to limit anything; using 1 minute`
+      );
+      return DEFAULT_RATE_LIMIT_WINDOW_MS;
+    }
+    return ms;
+  };
 
   const adminKey = text('ADMIN_API_KEY');
   if (!adminKey) warnings.push('ADMIN_API_KEY is not set: the cache and performance endpoints are disabled');
@@ -244,7 +300,7 @@ export function loadConfig(env: Env = process.env): LoadedConfig {
     adminKey,
     rateLimit: {
       max: number('RATE_LIMIT_MAX', 120),
-      window: text('RATE_LIMIT_WINDOW') ?? '1 minute',
+      window: rateLimitWindow(),
       downloadMax: number('RATE_LIMIT_DOWNLOAD_MAX', 20)
     },
     redisUrl: text('REDIS_URL') ?? 'redis://localhost:6379',
