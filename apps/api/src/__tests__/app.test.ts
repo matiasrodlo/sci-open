@@ -141,6 +141,32 @@ describe('rate limiting', () => {
     }
   });
 
+  it('keys on the visitor only when the web tier is the hop trusted', async () => {
+    // The API's socket is always opened by the web tier; a load balancer in
+    // front of it appends the visitor's address to X-Forwarded-For.
+    const WEB = '172.18.0.3';
+    const LOAD_BALANCER = '10.0.1.7';
+    const from = (forwardedFor: string) => app!.inject({
+      method: 'POST', url: '/api/search', payload: { q: 'crispr' },
+      remoteAddress: WEB, headers: { 'x-forwarded-for': forwardedFor }
+    });
+
+    build({ RATE_LIMIT_MAX: '1', TRUST_PROXY: WEB });
+    expect((await from('203.0.113.1')).statusCode).toBe(200);
+    expect((await from('203.0.113.2')).statusCode).toBe(200);
+    expect((await from('203.0.113.1')).statusCode).toBe(429);
+    // A forged entry sits left of the one the load balancer appended, and is never read.
+    expect((await from('198.51.100.9, 203.0.113.1')).statusCode).toBe(429);
+    await app!.close();
+    app = undefined;
+
+    // What the docs used to say: name the load balancer, not the web tier. The
+    // walk stops at the socket, and every visitor shares the web tier's bucket.
+    build({ RATE_LIMIT_MAX: '1', TRUST_PROXY: LOAD_BALANCER });
+    expect((await from('203.0.113.1')).statusCode).toBe(200);
+    expect((await from('203.0.113.2')).statusCode).toBe(429);
+  });
+
   it('keeps answering under a window it cannot read, and still limits', async () => {
     // Passed through as a string, `one minute` answered every route but
     // /health with a 500, and `60` was a sixty-millisecond window.

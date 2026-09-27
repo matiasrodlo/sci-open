@@ -66,11 +66,13 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-}
       # Which hops in front of this service may state the caller's address.
       # Every browser request arrives via `web`, so without this the rate limit
-      # is one bucket for all visitors rather than one each. Left empty by
-      # default because the safe value depends on who can reach port 4000: the
-      # compose file publishes it on the host's loopback, so trusting the bridge
-      # network would also trust any process on the host. Set it once that is
-      # acceptable, or the deployment is behind a known proxy.
+      # is one bucket for all visitors rather than one each. The hop to name is
+      # `web` — its address or this network's CIDR — and only once a proxy in
+      # front of `web` appends the visitor's address: `web` itself passes on
+      # whatever X-Forwarded-For a visitor sent. Left empty by default because
+      # plain compose has no such proxy, and because port 4000 is published on
+      # the host's loopback, so trusting the bridge network also trusts any
+      # process on the host.
       - TRUST_PROXY=${TRUST_PROXY:-}
       # What that trust setting is counting. Empty uses 120 per minute.
       - RATE_LIMIT_MAX=${RATE_LIMIT_MAX:-}

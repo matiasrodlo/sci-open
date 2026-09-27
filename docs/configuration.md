@@ -59,26 +59,38 @@ was a sixty-millisecond window that limited nobody.
 socket — which, because `apps/web` proxies every `/api/*` call server-side, is
 the web tier for all traffic. The 120-per-minute default is then one bucket
 shared by every visitor rather than one each, roughly two searches a second
-before everyone starts seeing `429`. Naming the proxy here restores the real
-caller, taken from `X-Forwarded-For`:
+before everyone starts seeing `429`. Naming the hops in front of the API
+restores the real caller, taken from `X-Forwarded-For`.
+
+Fastify reads that header from the right, starting at the socket. Each address
+it trusts lets it read one entry further left, and the first address it does
+not trust is the caller. The API's socket is always opened by `apps/web`, so
+**the web tier is the hop that must be trusted** — name only the load balancer
+and Fastify stops at the socket, `request.ip` stays the web tier, and every
+visitor still shares one bucket. Worse, the startup warning goes quiet, because
+a proxy is now configured:
 
 ```env
-TRUST_PROXY=10.0.1.7          # the load balancer, by address
-TRUST_PROXY=172.16.0.0/12     # a CIDR, or a comma-separated list of either
-TRUST_PROXY=loopback          # or a named range
+TRUST_PROXY=172.18.0.3        # apps/web, by address
+TRUST_PROXY=172.18.0.0/16     # or the network it runs on, as a CIDR
+TRUST_PROXY=10.0.0.5,172.18.0.3  # plus any proxy whose own address the chain carries
 ```
 
-**Not the web tier.** It is the address the API sees, so naming it looks like
-the obvious answer and is the one setting that makes this worse. `apps/web`
-cannot *start* the chain: neither the route handler nor the server-side fetcher
-can see the socket it was reached on, so neither can append the visitor's
-address — both only pass on an `X-Forwarded-For` that was already there. Trust
-the web tier with nothing in front of it and the header is whatever the caller
-typed, so every caller picks their own rate-limit key and the limit applies to
-nobody. Name the thing in front of `apps/web` — the load balancer, the ingress,
-the reverse proxy — which is the only hop that can both see the real address and
-overwrite a forged one. If there is nothing in front of `apps/web`, leave this
-unset and accept the shared bucket; it is the safer of the two failures.
+**Only behind a proxy that appends the visitor's address.** Trusting the web
+tier means believing the entry to its left, and something has to have put the
+visitor there. A load balancer, ingress or reverse proxy in front of `apps/web`
+does — nginx's `$proxy_add_x_forwarded_for`, and every managed load balancer —
+and a visitor who forges the header only adds entries further left, which are
+never read. `apps/web` cannot do this for itself: Next fills `X-Forwarded-For`
+from the socket only when the request carries none, so a visitor's own header
+passes through untouched. Trust the web tier with nothing in front of it and
+every caller picks their own rate-limit key, and the limit applies to nobody.
+If there is nothing in front of `apps/web`, leave this unset and accept the
+shared bucket; it is the safer of the two failures.
+
+With more than one proxy — a CDN in front of the load balancer — each one
+behind the first appends the address of the one before it, so name those too.
+Never name the outermost proxy's *clients*.
 
 A bare number used to mean "trust this many hops" and no longer does. Fastify 5
 answers a hop count by trusting *nothing* — hop-count-only trust cannot check
@@ -88,10 +100,10 @@ service refuses it and logs why at startup; a deployment carrying `TRUST_PROXY=1
 would otherwise keep booting, keep looking configured, and quietly return to one
 rate-limit bucket for every visitor.
 
-Point it at the proxy and nothing else. `X-Forwarded-For` is a request header,
-so trusting an address that is not really a proxy lets any caller choose their
+Name the hops and nothing else. `X-Forwarded-For` is a request header, so
+trusting an address that is not really a proxy lets any caller choose their
 own rate-limit key — a limit that applies to nobody, which is the worse half of
-the trade. `true` is only correct when the proxy is the sole thing that can
+the trade. `true` is only correct when the web tier is the sole thing that can
 reach the port; note that `docker-compose.yml` publishes `4000` on the host, so
 that is not the case under plain compose. The service logs a warning at startup
 whenever this is unset.
@@ -337,12 +349,12 @@ API_ORIGIN=https://api.yourdomain.com
   fails closed. They are also not on the public edge: `apps/web` forwards only
   `search`, `paper/:id` and a paper's PDF, and compose publishes the API's port
   on loopback only, so an operator reaches them on the API directly.
-- **`TRUST_PROXY`** — name the proxy in front of **`apps/web`** by address or
-  CIDR, not the web tier itself. Unset, the rate limit is keyed on the
-  connecting address, which behind the web tier is one shared bucket for every
-  visitor; pointed at the web tier, which cannot start the forwarded chain, it
-  is no bucket at all and any caller can choose their own key. Do not set it to
-  `true` unless nothing but the proxy can open a connection to the port.
+- **`TRUST_PROXY`** — name **`apps/web`** by address or CIDR, and only once a
+  load balancer or reverse proxy in front of it appends the visitor's address.
+  Unset, or naming only that load balancer, the rate limit is keyed on the web
+  tier: one shared bucket for every visitor. Naming the web tier with nothing
+  in front of it lets any caller choose their own key. Do not set it to `true`
+  unless nothing but the web tier can open a connection to the port.
 - **Redis** — put credentials in `REDIS_URL`
   (`redis://user:password@host:6379`), and do not publish the port. The compose
   file binds it to `127.0.0.1` for this reason.

@@ -11,11 +11,18 @@
  * `RATE_LIMIT_MAX=3`: three requests through, then 429 regardless of who sent
  * them.
  *
- * Fastify already knows how to resolve this. Given `trustProxy`, `request.ip`
- * becomes the left-most address in `X-Forwarded-For` that did not come from a
- * trusted hop, which is the actual caller. `@fastify/rate-limit` reads
- * `request.ip` by default, so there is nothing to configure on the limiter
- * itself.
+ * Fastify already knows how to resolve this. Given `trustProxy`, it reads
+ * `X-Forwarded-For` from the right, starting at the socket: each trusted
+ * address lets it read one entry further left, and `request.ip` is the first
+ * address it does not trust. `@fastify/rate-limit` reads `request.ip` by
+ * default, so there is nothing to configure on the limiter itself.
+ *
+ * Which is why **the web tier is the hop to name**. It opens every socket this
+ * service sees, so trusting only the load balancer in front of it stops the
+ * walk at the socket and changes nothing — while silencing the startup warning
+ * that says nothing is configured. And it is only safe to name once that load
+ * balancer appends the visitor's address: the web tier passes on a visitor's
+ * own `X-Forwarded-For` untouched. `app.test.ts` pins both halves.
  *
  * **It stays off unless an operator turns it on, and that is the point.**
  * `X-Forwarded-For` is a request header: trusting it from an address that is

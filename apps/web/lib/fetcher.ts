@@ -43,11 +43,12 @@ function apiUrl(path: string): string {
  * search is rendered on the server: with `RATE_LIMIT_MAX` at 120 a minute, the
  * site as a whole had 120 searches a minute and one script could spend them.
  *
- * The chain has to be *started* by a real proxy in front of this app, exactly
- * as the route handler's own comment says — a server component cannot see its
- * own socket any more than a route handler can. So this passes on what it was
- * given and invents nothing; the API, in turn, believes it only for the hops
- * named in its `TRUST_PROXY`.
+ * The chain has to be *started* by a proxy in front of this app that appends
+ * the visitor's address, exactly as the route handler's own comment says — a
+ * server component cannot see its own socket any more than a route handler
+ * can, and Next only fills the header when the visitor sent none. So this
+ * passes on what it was given and invents nothing; the API believes it only
+ * when its `TRUST_PROXY` names this tier.
  */
 export type Caller = {
   /** The incoming request's `x-forwarded-for`, when there is one. */

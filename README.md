@@ -46,10 +46,11 @@ deployment rather than after one.
 # Which hops in front of the API may state the caller's address.
 # Unset trusts none of them — and the browser never reaches the API directly,
 # so every request arrives from the web tier and the rate limit becomes one
-# bucket shared by every visitor rather than one each. Name your proxy by
-# address, CIDR or a range like `loopback`; the API warns at startup until you
-# do. Do not set it to `true` unless nothing but the proxy can reach the port,
-# or any caller can pick their own rate-limit key.
+# bucket shared by every visitor rather than one each. Name the web tier by
+# address or CIDR — not the load balancer in front of it, which the API never
+# sees — and only once that load balancer appends the visitor's address to
+# X-Forwarded-For; without one, any caller could pick their own rate-limit key.
+# The API warns at startup while this is unset.
 TRUST_PROXY=
 
 # The two in-process caches, in bytes. Defaults are 256 MB of responses and

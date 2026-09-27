@@ -44,13 +44,15 @@ function apiOrigin(): string {
  * in its own `TRUST_PROXY`; forwarding the chain intact is this side's half of
  * the arrangement.
  *
- * Nothing can be *added* to the chain here. A route handler cannot see its own
- * socket, so the address this process received the request from is not knowable
- * from inside it. `NextRequest.ip` used to stand in and was removed in Next 15;
- * it was only ever populated on Vercel, so self-hosted it was already
- * undefined. The chain therefore has to be started by a real proxy or load
- * balancer in front of this app — which is also the only arrangement in which
- * the API could safely believe it.
+ * Nothing is *added* to the chain here, and nothing here can make it safe to
+ * believe. A route handler cannot see its own socket — `NextRequest.ip` was
+ * removed in Next 15 and was only ever populated on Vercel. Next's server does
+ * fill the header from the socket, but only when the request carries none
+ * (`x-forwarded-for ??=` in `base-server.js`), so a visitor who sends their own
+ * reaches the API with it intact. The chain the API believes therefore has to
+ * be started by a proxy in front of this app that appends the visitor's
+ * address, and the API trusts *this* tier to have passed it on — see
+ * `TRUST_PROXY` in `docs/configuration.md`.
  */
 const HOP_BY_HOP = new Set([
   'host', 'connection', 'keep-alive', 'transfer-encoding', 'upgrade',
