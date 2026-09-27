@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import axios from 'axios';
-import { Readable } from 'stream';
+import { PassThrough, Readable } from 'stream';
+import { gzipSync } from 'zlib';
 
 // pdf-proxy binds `promisify(dns.lookup)` at import time, so the resolver has
 // to be replaced at module level rather than spied on afterwards. The same stub
@@ -439,6 +440,66 @@ describe('fetchPdfStream wiring', () => {
       .toThrow(PdfProxyError);
     expect(() => config.beforeRedirect({ protocol: 'file:', hostname: 'example.com' }))
       .toThrow(PdfProxyError);
+  });
+});
+
+describe('fetchPdfStream — the body', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const serve = (headers: Record<string, string>, data: Readable) =>
+    vi.spyOn(axios, 'get').mockResolvedValue({ status: 200, headers, data });
+  const fetch = () => fetchPdfStream(new URL('https://publisher.example.com/paper.pdf'), 'ua');
+  const read = async (stream: Readable) => {
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) chunks.push(chunk);
+    return Buffer.concat(chunks);
+  };
+  const pdf = Buffer.concat([Buffer.from('%PDF-1.7\n'), Buffer.alloc(200_000, 0x41)]);
+
+  it('closes the publisher\'s side when the reader abandons the download', async () => {
+    // Piped, a destroyed destination only paused the source, and the socket
+    // to the publisher stayed open for as long as the publisher waited.
+    const upstream = new PassThrough();
+    upstream.write(Buffer.alloc(1024));
+    serve({ 'content-type': 'application/pdf' }, upstream);
+
+    const { stream } = await fetch();
+    stream.destroy();
+    await new Promise(resolve => setImmediate(resolve));
+
+    expect(upstream.destroyed).toBe(true);
+  });
+
+  it('decodes a compressed body, and does not pass on the compressed length', async () => {
+    // Axios decoded it and kept Content-Length: a header of 244 bytes in front
+    // of a body of 200,009, and the reader got the first 244.
+    const gz = gzipSync(pdf);
+    const get = serve(
+      { 'content-type': 'application/pdf', 'content-encoding': 'gzip', 'content-length': String(gz.length) },
+      Readable.from([gz])
+    );
+
+    const { stream, contentLength } = await fetch();
+
+    expect(contentLength).toBeUndefined();
+    expect((await read(stream)).equals(pdf)).toBe(true);
+    const config = get.mock.calls[0]![1] as any;
+    expect(config.decompress).toBe(false);
+    expect(config.headers['Accept-Encoding']).toBe('identity');
+  });
+
+  it('passes on the length of a body sent as it is', async () => {
+    serve({ 'content-type': 'application/pdf', 'content-length': String(pdf.length) }, Readable.from([pdf]));
+    const { stream, contentLength } = await fetch();
+    expect(contentLength).toBe(pdf.length);
+    expect((await read(stream)).length).toBe(pdf.length);
+  });
+
+  it('refuses an encoding it cannot read rather than send it as a PDF', async () => {
+    const data = Readable.from([Buffer.from('x')]);
+    serve({ 'content-type': 'application/pdf', 'content-encoding': 'compress' }, data);
+    await expect(fetch()).rejects.toMatchObject({ statusCode: 502 });
+    expect(data.destroyed).toBe(true);
   });
 });
 

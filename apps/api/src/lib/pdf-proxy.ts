@@ -3,8 +3,9 @@ import dns from 'dns';
 import http from 'http';
 import https from 'https';
 import net from 'net';
-import { PassThrough, Readable } from 'stream';
+import { pipeline, Readable, Transform } from 'stream';
 import { promisify } from 'util';
+import zlib from 'zlib';
 import { preferredPdfUrl } from './pdf-url';
 
 const dnsLookup = promisify(dns.lookup);
@@ -396,6 +397,8 @@ type GuardedGetOptions = {
   timeoutMs: number;
   signal?: AbortSignal;
   headers?: Record<string, string>;
+  /** Whether axios decodes a compressed body. See `fetchPdfStream`. */
+  decompress?: boolean;
   validateStatus: (status: number) => boolean;
 };
 
@@ -430,17 +433,57 @@ function guardedGet(url: URL, userAgent: string, options: GuardedGetOptions) {
       assertRoutableHostSync(String(options.hostname || options.host || ''));
     },
     validateStatus: options.validateStatus,
+    ...(options.decompress === false ? { decompress: false } : {}),
     ...(options.signal ? { signal: options.signal } : {})
   });
 }
 
 /**
+ * The stream that decodes a body sent in `encoding`: `undefined` for one that
+ * needs none, `null` for one this cannot read.
+ */
+function decoderFor(encoding: string): Transform | undefined | null {
+  switch (encoding) {
+    case '':
+    case 'identity':
+      return undefined;
+    case 'gzip':
+    case 'x-gzip':
+    case 'deflate':
+      // Either header, detected from the first bytes.
+      return zlib.createUnzip();
+    case 'br':
+      return zlib.createBrotliDecompress();
+    default:
+      return null;
+  }
+}
+
+/**
  * Streams the PDF rather than buffering it, so a large file does not sit in
  * memory on its way to the browser.
+ *
+ * **Decoded here, not by axios.** Axios decodes a gzip body and deletes
+ * `Content-Encoding`, but keeps the upstream `Content-Length` — the compressed
+ * size — and the route forwarded it. Measured: a header of 244 bytes in front
+ * of a body of 200,009, so the web tier read 244 bytes and the reader got a
+ * truncated file. The plain body is asked for, and a body encoded anyway is
+ * decoded below and sent without a length, since its decoded size is not known
+ * until it has all arrived.
+ *
+ * **One pipeline, so that ending either side ends both.** The body used to be
+ * piped into the stream handed to the route. When a reader abandoned the
+ * download, Fastify destroyed that stream, and `pipe` answers a destroyed
+ * destination by unpiping and *pausing* the source, not destroying it. Axios's
+ * `timeout` stops applying once the headers arrive, so the publisher's socket
+ * stayed open, paused, for as long as the publisher cared to wait. `pipeline`
+ * destroys every stage when any one of them closes early or fails.
  */
 export async function fetchPdfStream(url: URL, userAgent: string): Promise<PdfStream> {
   const response = await guardedGet(url, userAgent, {
     timeoutMs: DOWNLOAD_TIMEOUT_MS,
+    headers: { 'Accept-Encoding': 'identity' },
+    decompress: false,
     validateStatus: (status: number) => status >= 200 && status < 400
   }).catch((error: any) => {
     if (error instanceof PdfProxyError) {
@@ -466,28 +509,43 @@ export async function fetchPdfStream(url: URL, userAgent: string): Promise<PdfSt
     throw new PdfProxyError(`Upstream served ${contentType || 'an unknown type'}, not a PDF`, 415);
   }
 
+  // A compressed body over the limit is a larger file still, so this holds
+  // whether or not it is encoded; what it cannot be is forwarded as the length
+  // of a body that is decoded on the way through.
   const declaredLength = Number(response.headers['content-length']);
   if (Number.isFinite(declaredLength) && declaredLength > MAX_PDF_BYTES) {
     response.data.destroy();
     throw new PdfProxyError('PDF is larger than the download limit', 413);
   }
 
-  // Enforce the cap on the wire too, since content-length is often absent.
-  const limited = new PassThrough();
+  const encoding = String(response.headers['content-encoding'] || '').trim().toLowerCase();
+  const decoder = decoderFor(encoding);
+  if (decoder === null) {
+    response.data.destroy();
+    throw new PdfProxyError(`Upstream sent the PDF in an encoding this proxy cannot read (${encoding})`, 502);
+  }
+
+  // Enforce the cap on the wire too, since content-length is often absent —
+  // and after decoding, so a small compressed body cannot expand past it.
   let received = 0;
-  response.data.on('data', (chunk: Buffer) => {
-    received += chunk.length;
-    if (received > MAX_PDF_BYTES) {
-      response.data.destroy();
-      limited.destroy(new PdfProxyError('PDF is larger than the download limit', 413));
+  const limited = new Transform({
+    transform(chunk: Buffer, _encoding, done) {
+      received += chunk.length;
+      if (received > MAX_PDF_BYTES) {
+        done(new PdfProxyError('PDF is larger than the download limit', 413));
+        return;
+      }
+      done(null, chunk);
     }
   });
-  response.data.on('error', (error: Error) => limited.destroy(error));
-  response.data.pipe(limited);
+
+  // The error reaches the route through `limited`, which is what it reads;
+  // the callback only has to exist.
+  pipeline([response.data, ...(decoder ? [decoder] : []), limited], () => {});
 
   return {
     stream: limited,
-    contentLength: Number.isFinite(declaredLength) ? declaredLength : undefined,
+    contentLength: !decoder && Number.isFinite(declaredLength) ? declaredLength : undefined,
     filename: filenameFor(url)
   };
 }
