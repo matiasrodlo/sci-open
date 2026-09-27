@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Download, ExternalLink, FileText, Quote, Share2, Check, Copy } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { generateBibTeX, downloadBibTeX } from '@/lib/bibtex';
-import { openExternal } from '@/lib/external-link';
+import { externalHref, openExternal } from '@/lib/external-link';
 import { copyNote } from '@/lib/access';
 
 interface PaperActionsProps {
@@ -42,6 +42,8 @@ async function reasonFor(response: Response): Promise<string> {
 export function PaperActions({ paper }: PaperActionsProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  // Where the reader can fetch the copy themselves, when the proxy could not.
+  const [fallbackHref, setFallbackHref] = useState<string | null>(null);
   const [citationCopied, setCitationCopied] = useState(false);
 
   /**
@@ -67,6 +69,7 @@ export function PaperActions({ paper }: PaperActionsProps) {
 
     setIsDownloading(true);
     setDownloadError(null);
+    setFallbackHref(null);
 
     try {
       // By the paper's id: the API takes the address from its own record of
@@ -90,23 +93,22 @@ export function PaperActions({ paper }: PaperActionsProps) {
       // browser has read the blob, so give it a moment first.
       setTimeout(() => window.URL.revokeObjectURL(url), 1000);
     } catch (error) {
-      // Fallback: open in new tab. Only report failure if the fallback
-      // can't run either, so a working download never shows an error.
-      // `openExternal` reports on the URL rather than the tab, which is what
-      // this needs: `noopener` makes `window.open` return null by
-      // specification, so testing its handle would show an error for every
-      // download that in fact opened fine.
-      if (openExternal(copy.url)) {
-        // Logged, because the proxy failing is worth seeing, but not as an
-        // error: the reader has the paper open in a tab and nothing is left to
-        // fix here. `console.error` raised Next's error overlay on the most
-        // ordinary outcome this endpoint has — a publisher refusing the proxy
-        // and the reader's own browser being sent to fetch it instead.
-        console.warn('Proxy download failed; opened the publisher link instead:', error);
-      } else {
-        console.error('Download error:', error);
-        setDownloadError('Failed to download PDF');
-      }
+      /**
+       * Offered as a link rather than opened.
+       *
+       * The fallback used to be `window.open` on the publisher's copy, run once
+       * the proxy had answered — by which point the click that started this is
+       * seconds old. Browsers only let a page open a tab close to a click, so a
+       * slow failure, the ordinary one, had its tab blocked; Safari blocks it
+       * after any wait at all. And `noopener` makes `window.open` return null
+       * whether or not the tab opened, so the page could not tell, said
+       * nothing, and the reader was left with a button that did nothing. A link
+       * is opened by the reader's own click, which no blocker refuses.
+       */
+      const href = externalHref(copy.url);
+      console.warn('Proxy download failed:', error);
+      setDownloadError(error instanceof Error ? error.message : 'Failed to download PDF');
+      setFallbackHref(href ?? null);
     } finally {
       setIsDownloading(false);
     }
@@ -181,7 +183,19 @@ export function PaperActions({ paper }: PaperActionsProps) {
         </Button>
       )}
       {downloadError && (
-        <p className="text-xs text-destructive">{downloadError}</p>
+        <p className="text-xs text-destructive">
+          {downloadError}
+          {fallbackHref && (
+            <a
+              href={fallbackHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 block underline text-foreground"
+            >
+              Open the publisher&rsquo;s copy instead
+            </a>
+          )}
+        </p>
       )}
 
       {/* View Source */}
