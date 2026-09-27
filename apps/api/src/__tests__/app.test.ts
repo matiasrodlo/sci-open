@@ -373,3 +373,73 @@ describe('logging', () => {
     expect(note?.reqId).toEqual(expect.any(String));
   });
 });
+
+describe('POST /api/v2/search', () => {
+  /** OpenAlex returning the first of the Europe PMC papers too, with what only it knows. */
+  function twoSources() {
+    const europepmc = provider();
+    const openalex: ProviderEntry = {
+      ...provider().entry,
+      id: 'openalex',
+      search: async () => ({
+        papers: [paper({
+          id: 'openalex:W0', doi: '10.1/e-0', title: 'Study 0', year: 2020, oaStatus: 'gold',
+          fullText: { url: `${PUBLISHER}0.pdf`, kind: 'pdf', verified: true },
+          sources: [ref('openalex', { nativeId: 'W0', rank: 0 })]
+        })],
+        totalHits: 1,
+        skipped: []
+      })
+    };
+    return [europepmc.entry, openalex];
+  }
+
+  const buildWith = (providers: ProviderEntry[]) => {
+    const config = configWith();
+    app = buildApp({ config, cache: new CacheManager(config.redisUrl), providers, authorities: [], logger: false });
+  };
+
+  it('returns the paper as the pipeline holds it, where version 1 keeps one source of two', async () => {
+    buildWith(twoSources());
+
+    const v2 = (await app!.inject({ method: 'POST', url: '/api/v2/search', payload: { q: 'study' } })).json();
+    const merged = v2.papers.find((p: Paper) => p.doi === '10.1/e-0');
+    expect(merged.sources.map((s: { provider: string }) => s.provider)).toEqual(['openalex', 'europepmc']);
+    expect(merged).toMatchObject({ oaStatus: 'gold', stage: 'published', fullText: { verified: true } });
+
+    const v1 = (await search({ q: 'study' })).json();
+    const flattened = v1.hits.find((h: { doi?: string }) => h.doi === '10.1/e-0');
+    expect(flattened).toMatchObject({ source: 'openalex', oaStatus: 'published' });
+    expect(flattened).not.toHaveProperty('sources');
+  });
+
+  it('answers from the set version 1 was answered from', async () => {
+    const { entry, searches } = provider(Array.from({ length: 30 }, (_, i) => record(i)));
+    build({}, entry);
+
+    const v1 = await search({ q: 'crispr', page: 2 });
+    const v2 = await app!.inject({ method: 'POST', url: '/api/v2/search', payload: { q: 'crispr', page: 2 } });
+
+    expect(v2.headers['x-cache-hit']).toBe('true');
+    expect(searches).toHaveLength(1);
+    expect(v2.json().total).toBe(v1.json().total);
+    expect(v2.json().papers.map((p: Paper) => p.id)).toEqual(v1.json().hits.map((h: { id: string }) => h.id));
+  });
+
+  it('reports every provider whole, and the facets with their sources', async () => {
+    buildWith(twoSources());
+    const body = (await app!.inject({ method: 'POST', url: '/api/v2/search', payload: { q: 'study' } })).json();
+
+    expect(body.providers).toEqual(expect.arrayContaining([
+      expect.objectContaining({ provider: 'europepmc', status: 'ok', retrieved: 3, latency: expect.any(Number) }),
+      expect.objectContaining({ provider: 'openalex', status: 'ok', retrieved: 1 })
+    ]));
+    expect(body.facets.source).toEqual(expect.arrayContaining([{ value: 'openalex', count: 1 }]));
+    expect(body).toMatchObject({ complete: true, bounded: false, sort: 'relevance', page: 1, pageSize: 20 });
+  });
+
+  it('refuses what version 1 refuses', async () => {
+    build();
+    expect((await app!.inject({ method: 'POST', url: '/api/v2/search', payload: { q: 'x', pageSize: 1000 } })).statusCode).toBe(400);
+  });
+});

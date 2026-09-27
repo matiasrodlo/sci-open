@@ -9,3 +9,4 @@ export * from './adapters';
 export * from './url';
 export * from './full-text';
 export * from './text';
+export * from './search-v2';

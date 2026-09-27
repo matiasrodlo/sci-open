@@ -1,4 +1,4 @@
-import Fastify, { type FastifyInstance, type FastifyReply, type FastifyServerOptions } from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest, type FastifyServerOptions } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
@@ -184,9 +184,15 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
   const enrichWith = context.authorities ? { authorities: context.authorities } : {};
 
   // Search endpoint with advanced caching
-  fastify.post<{ Body: SearchParams }>('/api/search', {
-    schema: { body: searchBodySchema }
-  }, async (request, reply) => {
+  /**
+   * A search, answered in either version of the response. Both come from one
+   * run of `runSearch`, joined under one key, so a v1 and a v2 request for the
+   * same search share the work and the set — and cannot disagree.
+   */
+  const answerSearch = (version: 1 | 2) => async (
+    request: FastifyRequest<{ Body: SearchParams }>,
+    reply: FastifyReply
+  ) => {
     const startTime = Date.now();
   
     try {
@@ -195,7 +201,7 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
       // Collapses concurrent identical requests onto one run. The set behind
       // them is held by `resultSets`, so a new page of a search already
       // resolved is a slice and twenty enrichments, not a fan-out.
-      const { value: { response: searchResult, fromCache }, coalesced } = await searchFlights.run(
+      const { value: { response: searchResult, responseV2, fromCache }, coalesced } = await searchFlights.run(
         searchKey(params),
         () => runSearch(params, {
           cache: providerCache,
@@ -256,7 +262,7 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
         coalesced
       }, 'Search completed');
     
-      return searchResult;
+      return version === 2 ? responseV2 : searchResult;
 
     } catch (error: any) {
       const responseTime = Date.now() - startTime;
@@ -274,7 +280,10 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
       reply.code(status);
       return clientError(error, request.id);
     }
-  });
+  };
+
+  fastify.post<{ Body: SearchParams }>('/api/search', { schema: { body: searchBodySchema } }, answerSearch(1));
+  fastify.post<{ Body: SearchParams }>('/api/v2/search', { schema: { body: searchBodySchema } }, answerSearch(2));
 
   /**
    * The paper behind an id, as `/api/paper/:id` returns it: from the cache, or

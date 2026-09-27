@@ -1,5 +1,5 @@
 import { toOARecord } from '@open-access-explorer/shared';
-import type { ProviderTotal, SearchFilters, SearchResponse, SearchSort } from '@open-access-explorer/shared';
+import type { ProviderTotal, SearchFilters, SearchResponse, SearchResponseV2, SearchSort } from '@open-access-explorer/shared';
 import type { OrchestratorResult } from './index';
 
 /**
@@ -59,5 +59,31 @@ export function toSearchResponse(
     // The facets need no flag beside them: each bucket names the source its
     // count came from, and one taken from the read names none.
     countsFromSources: result.countsFromSources
+  };
+}
+
+/**
+ * Orchestrator result -> version 2 of the response: the page's `Paper`s as the
+ * pipeline holds them, the facets typed, and every provider's and authority's
+ * report whole. See `SearchResponseV2` for what version 1 loses on the way.
+ */
+export function toSearchResponseV2(
+  result: OrchestratorResult,
+  echo: { filters?: SearchFilters; sort: SearchSort }
+): SearchResponseV2 {
+  return {
+    papers: result.papers,
+    total: result.total,
+    page: result.page,
+    pageSize: result.pageSize,
+    sort: echo.sort,
+    ...(echo.filters !== undefined ? { filters: echo.filters } : {}),
+    facets: result.facets,
+    complete: result.complete,
+    bounded: result.rescue.bounded,
+    countsFromSources: result.countsFromSources,
+    providers: result.reports,
+    authorities: result.authorities,
+    duration: result.duration
   };
 }

@@ -339,7 +339,8 @@ describe('which routes are reachable', () => {
   it.each([
     [['search']],
     [['paper', 'plos:10.1371/journal.pone.0265114']],
-    [['papers', 'arxiv:2310.12345', 'pdf']]
+    [['papers', 'arxiv:2310.12345', 'pdf']],
+    [['v2', 'search']]
   ])('forwards %j', async path => {
     await POST(request('http://localhost:3000/api/x', { method: 'POST', body: '{}' }), context(...path));
     expect(fetchMock).toHaveBeenCalledOnce();
@@ -354,7 +355,8 @@ describe('which routes are reachable', () => {
     [['paper']],
     [['paper', 'a', 'b']],
     [['search', 'extra']],
-    [['papers', 'x', 'pdf', 'more']]
+    [['papers', 'x', 'pdf', 'more']],
+    [['v2', 'paper', 'x']]
   ])('refuses %j without asking the API', async path => {
     const response = await POST(request('http://localhost:3000/api/x', { method: 'POST', body: '{}' }), context(...path));
     expect(response.status).toBe(404);

@@ -1,4 +1,4 @@
-import type { CountedFacet, Paper, ProviderId, SourceFacets } from '@open-access-explorer/shared';
+import type { CountedFacet, FacetBucket, Paper, ProviderId, SourceFacets } from '@open-access-explorer/shared';
 import { matchesFilters, passesPolicy, type PolicyOptions, type UserFilters } from './policy';
 import { facetKey } from './facet-key';
 
@@ -27,17 +27,11 @@ export { facetKey };
  * in given everything else they have chosen. That is what this now counts.
  */
 
-export type FacetBucket = {
-  value: string | number;
-  count: number;
-  /**
-   * The source whose own count this is, when it is one — the largest single
-   * source's count across everything it matches, which beat what this search
-   * read. Absent when the count was taken from the read. See
-   * `withSourceCounts`.
-   */
-  from?: ProviderId;
-};
+/**
+ * One value and its count. Shared with clients, since version 2 of the search
+ * response returns the facets as they are; `from` is set by `withSourceCounts`.
+ */
+export type { FacetBucket };
 export type Facets = Record<string, FacetBucket[]>;
 
 /** The facets this module produces, and the filter each one's checkboxes write to. */

@@ -148,6 +148,45 @@ against indexes, like MeSH headings and full text, that are not reproduced here.
 
 ---
 
+### Search, version 2
+
+**POST** `/api/v2/search`
+
+The same request body as `/api/search`, answered with the papers as the
+pipeline holds them rather than flattened to `OARecord`. Version 1 keeps one
+source of the several that returned a paper, reports the publication stage
+under the name `oaStatus`, reduces a copy to a URL, and cuts each provider's
+report down to two counts; version 2 returns the `Paper` itself — every
+source, the access route and the stage separately, whether a copy was
+confirmed, which source supplied each field — and the reports whole.
+
+Both versions are answered from one run, joined under one key and sliced from
+one held result set, so a v1 and a v2 request for the same search share the
+work and cannot disagree. `X-Cache-Hit` means the same thing on both.
+
+**Response:**
+```typescript
+{
+  papers: Paper[];                // see packages/shared/src/paper.ts
+  total: number;                  // the same for every page of a search
+  page: number;
+  pageSize: number;
+  sort: SearchSort;
+  filters?: SearchFilters;        // echoed when the request set them
+  facets: Record<string, Array<{ value: string | number; count: number; from?: ProviderId }>>;
+  complete: boolean;              // false when a provider failed or timed out
+  bounded: boolean;               // true when the rescue pass was cut short
+  countsFromSources: boolean;
+  providers: ProviderReport[];    // status, retrieved, totalHits, latency, error, skipReason, facetError
+  authorities: AuthorityReport[]; // asked, answered, applied — for this page
+  duration: number;
+}
+```
+
+A `Paper`'s `oaStatus` is the access route in Unpaywall's vocabulary — `gold`,
+`green`, `hybrid`, `bronze`, `closed` or `unknown` — and `stage` is which
+version it is. In version 1 the field called `oaStatus` holds the stage.
+
 ### Paper Details
 
 **GET** `/api/paper/:id`

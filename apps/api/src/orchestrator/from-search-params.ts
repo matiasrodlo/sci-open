@@ -1,4 +1,4 @@
-import type { CountedFacet, PaperStage, Query, SearchFilters, SearchParams, SearchResponse, YearRange } from '@open-access-explorer/shared';
+import type { CountedFacet, PaperStage, Query, SearchFilters, SearchParams, SearchResponse, SearchResponseV2, YearRange } from '@open-access-explorer/shared';
 import { isStructured } from '@open-access-explorer/shared';
 import type { FacetQueries } from './source-facets';
 import { search as orchestratorSearch, DEFAULT_DEPTH } from './index';
@@ -10,7 +10,7 @@ import type { AuthorityFactsCache } from './authority-cache';
 import type { UpstreamStats } from './upstream-stats';
 import type { ProviderEntry } from './registry';
 import type { AuthorityEntry } from '../authorities';
-import { toSearchResponse } from './to-search-response';
+import { toSearchResponse, toSearchResponseV2 } from './to-search-response';
 import { DEFAULT_RESCUE_BUDGET_MS, DEFAULT_RESCUE_LIMIT } from './rescue';
 import { log } from '../lib/logger';
 
@@ -211,14 +211,15 @@ export async function runOrchestrator(
 }
 
 /**
- * `runOrchestrator`, also saying whether the result set was held rather than
- * resolved for this request — which the response shape has nowhere to put and
- * the route reports in `X-Cache-Hit`.
+ * `runOrchestrator`, answering in both versions of the response from one run,
+ * and saying whether the result set was held rather than resolved for this
+ * request — which neither shape has anywhere to put and the route reports in
+ * `X-Cache-Hit`.
  */
 export async function runSearch(
   params: SearchParams,
   options: RunOptions = {}
-): Promise<{ response: SearchResponse; fromCache: boolean }> {
+): Promise<{ response: SearchResponse; responseV2: SearchResponseV2; fromCache: boolean }> {
   const filters = params.filters ?? {};
   const settings = options.settings ?? DEFAULT_SEARCH_SETTINGS;
   const { yearFrom, yearTo } = filters;
@@ -296,13 +297,17 @@ export async function runSearch(
     log.debug('Rescue pass', { query: params.q, ...counts });
   }
 
-  const response = toSearchResponse(result, {
-    // Echoed the way the old path echoed them, absent field included, so the
-    // response is the same object to a client that cannot tell which path
-    // produced it.
+  // Echoed the way the old path echoed them, absent field included, so the
+  // response is the same object to a client that cannot tell which path
+  // produced it.
+  const echo = {
     ...(params.filters !== undefined ? { filters: params.filters } : {}),
     sort: params.sort ?? 'relevance'
-  });
+  };
 
-  return { response, fromCache: result.fromCache };
+  return {
+    response: toSearchResponse(result, echo),
+    responseV2: toSearchResponseV2(result, echo),
+    fromCache: result.fromCache
+  };
 }
