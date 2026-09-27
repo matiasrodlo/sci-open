@@ -451,8 +451,21 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
    * than a share of the global one, which is the point: a reader downloading
    * papers no longer spends the search allowance, and a search loop no longer
    * locks them out of the file they were reading.
+   *
+   * **No automatic HEAD.** Fastify answers HEAD on a GET route by running the
+   * GET handler and then *draining* whatever stream it sent — so a HEAD here
+   * fetched the whole PDF from the publisher, up to fifty megabytes, and threw
+   * it away to send nothing. The HEAD route also got a rate-limit bucket of its
+   * own, which doubled the download budget. There is no way to answer a HEAD
+   * honestly without asking the publisher, so it is refused below instead.
    */
+  fastify.head<{ Params: { id: string } }>('/api/papers/:id/pdf', async (_request, reply) => {
+    reply.code(405).header('Allow', 'GET');
+    return reply.send();
+  });
+
   fastify.get<{ Params: { id: string } }>('/api/papers/:id/pdf', {
+    exposeHeadRoute: false,
     schema: { params: paperParamsSchema },
     config: {
       rateLimit: {

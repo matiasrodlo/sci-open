@@ -48,16 +48,21 @@ vi.mock('ioredis', () => {
  */
 const PUBLISHER = 'https://files.example.org/';
 
+/** How many times the route asked the publisher for a file. */
+const downloads = vi.hoisted(() => ({ started: 0 }));
+
 vi.mock('../lib/pdf-proxy', async importOriginal => {
   const actual = await importOriginal<typeof import('../lib/pdf-proxy')>();
   return {
     ...actual,
     assertPublicHttpUrl: async (raw: string) =>
       raw.startsWith(PUBLISHER) ? new URL(raw) : actual.assertPublicHttpUrl(raw),
-    fetchPdfStream: async (url: URL, userAgent: string) =>
-      url.href.startsWith(PUBLISHER)
+    fetchPdfStream: async (url: URL, userAgent: string) => {
+      downloads.started += 1;
+      return url.href.startsWith(PUBLISHER)
         ? { stream: Readable.from([Buffer.from('%PDF-1.7 fixture')]), contentLength: 16, filename: 'upstream.pdf' }
-        : actual.fetchPdfStream(url, userAgent)
+        : actual.fetchPdfStream(url, userAgent);
+    }
   };
 });
 
@@ -343,6 +348,23 @@ describe('GET /api/papers/:id/pdf', () => {
     );
     expect(response.headers['cache-control']).toBe('private, max-age=3600');
     expect(response.body).toBe('%PDF-1.7 fixture');
+  });
+
+  it('refuses HEAD rather than fetching the file to answer it', async () => {
+    // Fastify's automatic HEAD route ran the GET handler and drained the
+    // stream: the whole PDF fetched and thrown away, in a bucket of its own.
+    build({ RATE_LIMIT_DOWNLOAD_MAX: '1' }, provider([withCopy(1, `${PUBLISHER}1.pdf`)]).entry);
+    const before = downloads.started;
+
+    for (let i = 0; i < 3; i++) {
+      const head = await app!.inject({ method: 'HEAD', url: '/api/papers/europepmc%3A1/pdf' });
+      expect(head.statusCode).toBe(405);
+      expect(head.headers.allow).toBe('GET');
+    }
+    expect(downloads.started).toBe(before);
+
+    expect((await pdfOf('europepmc:1')).statusCode).toBe(200);
+    expect((await pdfOf('europepmc:1')).statusCode).toBe(429);
   });
 
   it('refuses a record whose copy is inside the network, however it is spelled', async () => {

@@ -301,6 +301,11 @@ own browser may well get past. Every other upstream status is a `502`,
 including an upstream `429`: this endpoint answers with `429` when *the caller*
 has asked too often, and only that one is fixed by the caller waiting.
 
+**HEAD** answers `405` with `Allow: GET`. There is no way to say whether the
+file is there, or how large it is, without fetching it from the publisher, and
+Fastify's automatic HEAD route did exactly that: it fetched the whole file and
+discarded it, under a rate-limit bucket separate from the download's.
+
 ---
 
 ### Health Check
