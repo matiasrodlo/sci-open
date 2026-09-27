@@ -1,5 +1,5 @@
 import type { Paper, ProviderCapabilities, ProviderId, Query } from '@open-access-explorer/shared';
-import { apiKeyFor } from '../lib/api-key';
+import { apiKeyFor, type KeyedProvider } from '../lib/api-key';
 import * as arxiv from '../providers/arxiv';
 import * as biorxiv from '../providers/biorxiv';
 import * as core from '../providers/core';
@@ -15,12 +15,8 @@ import type { ProviderFacetArgs, ProviderFacetOutcome } from '../providers/count
 export type { ProviderFacetArgs, ProviderFacetOutcome, FacetRequest } from '../providers/count-facets';
 
 /**
- * Every provider in the new shape, and how to drive it.
- *
- * Phase 08 is migrating these one at a time, and each arrival is one row here.
- * The orchestrator was built against Europe PMC alone deliberately — a fan-out
- * of one provider is still a fan-out, and every part of the pipeline could be
- * proven before breadth was added.
+ * Every provider, and how to drive it: one row each in `PROVIDERS`, built by
+ * `defineProvider` from the provider's own module.
  */
 
 export type ProviderSearchArgs = {
@@ -100,293 +96,95 @@ export type ProviderEntry = {
   facetsAggregate?: boolean;
 };
 
+/**
+ * What a provider module exports, as the registry drives it.
+ *
+ * Every provider's `search`, `lookup` and `facets` already take the same core
+ * options — the provider's own option types are supersets of these — so one
+ * adapter drives all ten. There used to be ten, written out by hand: thirty
+ * lines each of copying `signal`, `userAgent` and `now` across and reading an
+ * API key from `process.env`, identical but for which key, and a place for
+ * one of them to forward something the others did not.
+ */
+export type ProviderModule = {
+  capabilities: ProviderCapabilities;
+  translate(query: Query, options: { openAccessOnly: boolean }): string;
+  search(query: Query, options: ProviderCallOptions & {
+    pageSize: number;
+    offset: number;
+    openAccessOnly: boolean;
+  }): Promise<{ papers: Paper[]; totalHits?: number; skipped: ProviderSearchOutcome['skipped'] }>;
+  lookup?(nativeId: string, options: ProviderCallOptions): Promise<Paper | null>;
+  facets?(args: ProviderFacetArgs, options: { apiKey?: string }): Promise<ProviderFacetOutcome>;
+};
+
+/** What every call to a provider carries. */
+export type ProviderCallOptions = {
+  timeoutMs: number;
+  signal?: AbortSignal;
+  userAgent?: string;
+  now?: () => Date;
+  apiKey?: string;
+};
+
+export type ProviderSpec = {
+  /** See `ProviderEntry.normalizerVersion`; pinned in `normalizer-version.test.ts`. */
+  normalizerVersion: number;
+  /** The key this provider is sent, when one is configured. See `useConfig`. */
+  key?: KeyedProvider;
+  /** See `ProviderEntry.facetsAggregate`. */
+  facetsAggregate?: boolean;
+};
+
+/** A provider module as the orchestrator drives it. */
+export function defineProvider(id: ProviderId, module: ProviderModule, spec: ProviderSpec): ProviderEntry {
+  // Read per call, so a key configured after this module loaded — which is
+  // every key, since `useConfig` runs at startup — still reaches the provider.
+  const key = (): { apiKey?: string } => (spec.key ? apiKeyFor(spec.key) : {});
+  const carried = ({ signal, userAgent, now }: Pick<ProviderCallOptions, 'signal' | 'userAgent' | 'now'>) => ({
+    ...(signal ? { signal } : {}),
+    ...(userAgent ? { userAgent } : {}),
+    ...(now ? { now } : {})
+  });
+
+  const { lookup, facets } = module;
+
+  return {
+    id,
+    capabilities: module.capabilities,
+    normalizerVersion: spec.normalizerVersion,
+    ...(spec.facetsAggregate ? { facetsAggregate: true } : {}),
+    translate: (query, options) => module.translate(query, options),
+    async search({ query, depth, offset, timeoutMs, openAccessOnly, ...rest }) {
+      const result = await module.search(query, {
+        pageSize: depth, offset, timeoutMs, openAccessOnly, ...key(), ...carried(rest)
+      });
+      return {
+        papers: result.papers,
+        ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
+        skipped: result.skipped
+      };
+    },
+    ...(lookup
+      ? { lookup: ({ nativeId, timeoutMs, ...rest }: ProviderLookupArgs) => lookup(nativeId, { timeoutMs, ...key(), ...carried(rest) }) }
+      : {}),
+    ...(facets ? { facets: (args: ProviderFacetArgs) => facets(args, key()) } : {})
+  };
+}
+
+/**
+ * The providers, in the order the fan-out asks them. bioRxiv and medRxiv are
+ * one API and one row; see `PROVIDER_ALIASES` in `lookup.ts`.
+ */
 export const PROVIDERS: ProviderEntry[] = [
-  {
-    id: 'arxiv',
-    capabilities: arxiv.capabilities,
-    facets: args => arxiv.facets(args),
-    translate: (query, options) => arxiv.translate(query, options),
-    normalizerVersion: 1,
-    async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
-      const result = await arxiv.search(query, {
-        pageSize: depth,
-        offset,
-        timeoutMs,
-        openAccessOnly,
-        ...(signal ? { signal } : {}),
-        ...(userAgent ? { userAgent } : {}),
-        ...(now ? { now } : {})
-      });
-      return {
-        papers: result.papers,
-        ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
-        skipped: result.skipped
-      };
-    },
-    async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
-      return arxiv.lookup(nativeId, {
-        timeoutMs,
-        ...(signal ? { signal } : {}),
-        ...(userAgent ? { userAgent } : {}),
-        ...(now ? { now } : {})
-      });
-    }
-  },
-  {
-    id: 'ncbi',
-    capabilities: ncbi.capabilities,
-    facets: args => ncbi.facets(args, apiKeyFor('ncbi')),
-    translate: (query, options) => ncbi.translate(query, options),
-    normalizerVersion: 1,
-    async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
-      const result = await ncbi.search(query, {
-        pageSize: depth,
-        offset,
-        timeoutMs,
-        openAccessOnly,
-        ...apiKeyFor('ncbi'),
-        ...(signal ? { signal } : {}),
-        ...(userAgent ? { userAgent } : {}),
-        ...(now ? { now } : {})
-      });
-      return {
-        papers: result.papers,
-        ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
-        skipped: result.skipped
-      };
-    },
-    async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
-      return ncbi.lookup(nativeId, {
-        timeoutMs,
-        ...apiKeyFor('ncbi'),
-        ...(signal ? { signal } : {}),
-        ...(userAgent ? { userAgent } : {}),
-        ...(now ? { now } : {})
-      });
-    }
-  },
-  {
-    id: 'doaj',
-    capabilities: doaj.capabilities,
-    facets: args => doaj.facets(args, apiKeyFor('doaj')),
-    translate: (query, options) => doaj.translate(query, options),
-    normalizerVersion: 2,
-    async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
-      return doaj.lookup(nativeId, {
-        timeoutMs,
-        ...apiKeyFor('doaj'),
-        ...(signal ? { signal } : {}),
-        ...(userAgent ? { userAgent } : {}),
-        ...(now ? { now } : {})
-      });
-    },
-    async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
-      const result = await doaj.search(query, {
-        pageSize: depth,
-        offset,
-        timeoutMs,
-        openAccessOnly,
-        ...apiKeyFor('doaj'),
-        ...(signal ? { signal } : {}),
-        ...(userAgent ? { userAgent } : {}),
-        ...(now ? { now } : {})
-      });
-      return {
-        papers: result.papers,
-        ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
-        skipped: result.skipped
-      };
-    }
-  },
-  {
-    id: 'plos',
-    capabilities: plos.capabilities,
-    facets: args => plos.facets(args),
-    facetsAggregate: true,
-    translate: (query, options) => plos.translate(query, options),
-    normalizerVersion: 1,
-    async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
-      const result = await plos.search(query, {
-        pageSize: depth,
-        offset,
-        timeoutMs,
-        openAccessOnly,
-        ...(signal ? { signal } : {}),
-        ...(userAgent ? { userAgent } : {}),
-        ...(now ? { now } : {})
-      });
-      return {
-        papers: result.papers,
-        ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
-        skipped: result.skipped
-      };
-    }
-  },
-  {
-    id: 'openaire',
-    capabilities: openaire.capabilities,
-    facets: args => openaire.facets(args),
-    translate: (query, options) => openaire.translate(query, options),
-    normalizerVersion: 3,
-    async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
-      return openaire.lookup(nativeId, {
-        timeoutMs,
-        ...(signal ? { signal } : {}),
-        ...(userAgent ? { userAgent } : {}),
-        ...(now ? { now } : {})
-      });
-    },
-    async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
-      const result = await openaire.search(query, {
-        pageSize: depth,
-        offset,
-        timeoutMs,
-        openAccessOnly,
-        ...(signal ? { signal } : {}),
-        ...(userAgent ? { userAgent } : {}),
-        ...(now ? { now } : {})
-      });
-      return {
-        papers: result.papers,
-        ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
-        skipped: result.skipped
-      };
-    }
-  },
-  {
-    id: 'datacite',
-    capabilities: datacite.capabilities,
-    translate: (query, options) => datacite.translate(query, options),
-    normalizerVersion: 2,
-    async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
-      const result = await datacite.search(query, {
-        pageSize: depth,
-        offset,
-        timeoutMs,
-        openAccessOnly,
-        ...apiKeyFor('datacite'),
-        ...(signal ? { signal } : {}),
-        ...(userAgent ? { userAgent } : {}),
-        ...(now ? { now } : {})
-      });
-      return {
-        papers: result.papers,
-        ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
-        skipped: result.skipped
-      };
-    }
-  },
-  {
-    id: 'biorxiv',
-    capabilities: biorxiv.capabilities,
-    translate: (query, options) => biorxiv.translate(query, options),
-    normalizerVersion: 1,
-    async search({ query, offset, timeoutMs, signal, userAgent, now }) {
-      const result = await biorxiv.search(query, {
-        offset,
-        timeoutMs,
-        ...(signal ? { signal } : {}),
-        ...(userAgent ? { userAgent } : {}),
-        ...(now ? { now } : {})
-      });
-      return { papers: result.papers, skipped: result.skipped };
-    }
-  },
-  {
-    id: 'openalex',
-    capabilities: openalex.capabilities,
-    facets: args => openalex.facets(args, apiKeyFor('openalex')),
-    facetsAggregate: true,
-    translate: (query, options) => openalex.translate(query, options),
-    normalizerVersion: 2,
-    async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
-      return openalex.lookup(nativeId, {
-        timeoutMs,
-        ...apiKeyFor('openalex'),
-        ...(signal ? { signal } : {}),
-        ...(userAgent ? { userAgent } : {}),
-        ...(now ? { now } : {})
-      });
-    },
-    async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
-      const result = await openalex.search(query, {
-        pageSize: depth,
-        offset,
-        timeoutMs,
-        openAccessOnly,
-        ...apiKeyFor('openalex'),
-        ...(signal ? { signal } : {}),
-        ...(userAgent ? { userAgent } : {}),
-        ...(now ? { now } : {})
-      });
-      return {
-        papers: result.papers,
-        ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
-        skipped: result.skipped
-      };
-    }
-  },
-  {
-    id: 'core',
-    capabilities: core.capabilities,
-    translate: (query, options) => core.translate(query, options),
-    normalizerVersion: 2,
-    async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
-      return core.lookup(nativeId, {
-        timeoutMs,
-        ...apiKeyFor('core'),
-        ...(signal ? { signal } : {}),
-        ...(userAgent ? { userAgent } : {}),
-        ...(now ? { now } : {})
-      });
-    },
-    async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
-      const result = await core.search(query, {
-        pageSize: depth,
-        offset,
-        timeoutMs,
-        openAccessOnly,
-        ...apiKeyFor('core'),
-        ...(signal ? { signal } : {}),
-        ...(userAgent ? { userAgent } : {}),
-        ...(now ? { now } : {})
-      });
-      return {
-        papers: result.papers,
-        ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
-        skipped: result.skipped
-      };
-    }
-  },
-  {
-    id: 'europepmc',
-    capabilities: europepmc.capabilities,
-    facets: args => europepmc.facets(args),
-    translate: (query, options) => europepmc.translate(query, options),
-    normalizerVersion: 2,
-    async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
-      const result = await europepmc.search(query, {
-        pageSize: depth,
-        offset,
-        timeoutMs,
-        openAccessOnly,
-        ...(signal ? { signal } : {}),
-        ...(userAgent ? { userAgent } : {}),
-        ...(now ? { now } : {})
-      });
-      return {
-        papers: result.papers,
-        ...(result.totalHits !== undefined ? { totalHits: result.totalHits } : {}),
-        skipped: result.skipped
-      };
-    },
-    async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
-      return europepmc.lookup(nativeId, {
-        timeoutMs,
-        ...(signal ? { signal } : {}),
-        ...(userAgent ? { userAgent } : {}),
-        ...(now ? { now } : {})
-      });
-    }
-  }
+  defineProvider('arxiv', arxiv, { normalizerVersion: 1 }),
+  defineProvider('ncbi', ncbi, { normalizerVersion: 1, key: 'ncbi' }),
+  defineProvider('doaj', doaj, { normalizerVersion: 2, key: 'doaj' }),
+  defineProvider('plos', plos, { normalizerVersion: 1, facetsAggregate: true }),
+  defineProvider('openaire', openaire, { normalizerVersion: 3 }),
+  defineProvider('datacite', datacite, { normalizerVersion: 2, key: 'datacite' }),
+  defineProvider('biorxiv', biorxiv, { normalizerVersion: 1 }),
+  defineProvider('openalex', openalex, { normalizerVersion: 2, key: 'openalex', facetsAggregate: true }),
+  defineProvider('core', core, { normalizerVersion: 2, key: 'core' }),
+  defineProvider('europepmc', europepmc, { normalizerVersion: 2 })
 ];
