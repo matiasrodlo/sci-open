@@ -307,8 +307,41 @@ export async function assertPublicHttpUrl(rawUrl: string): Promise<URL> {
 
 function filenameFor(url: URL): string {
   const last = url.pathname.split('/').filter(Boolean).pop() || 'paper';
-  const base = decodeURIComponent(last).replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
+  // A malformed escape in a publisher's path is not a reason to fail the
+  // download; it is a reason to use the segment as it stands.
+  let decoded = last;
+  try {
+    decoded = decodeURIComponent(last);
+  } catch {
+    // keep `last`
+  }
+  const base = decoded.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
   return base.toLowerCase().endsWith('.pdf') ? base : `${base}.pdf`;
+}
+
+/**
+ * `Content-Disposition` for a paper's PDF, named after its title.
+ *
+ * Two names, because the header's plain `filename` is ASCII by definition and
+ * titles are not: `filename` carries an ASCII stand-in for clients that read
+ * nothing else, and `filename*` (RFC 6266 / 8187) carries the title itself,
+ * which every current browser prefers. The ASCII name falls back to the one
+ * the file had upstream when the title has no ASCII in it, and both do when
+ * there is no title.
+ */
+export function attachmentHeader(title: string | undefined, fallback: string): string {
+  const trimmed = (title ?? '').replace(/\s+/g, ' ').trim().slice(0, 120);
+  const ascii = trimmed
+    .normalize('NFKD')
+    .replace(/[^\x20-\x7e]/g, '')
+    .replace(/[^A-Za-z0-9._-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 80);
+
+  if (!trimmed) return `attachment; filename="${fallback}"`;
+
+  const utf8 = encodeURIComponent(`${trimmed}.pdf`).replace(/['()*]/g, c => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+  return `attachment; filename="${ascii ? `${ascii}.pdf` : fallback}"; filename*=UTF-8''${utf8}`;
 }
 
 function looksLikePdfResponse(url: URL, contentType: string): boolean {

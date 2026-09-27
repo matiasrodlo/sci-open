@@ -65,7 +65,7 @@ flowchart TB
       subgraph PUBROUTES["Public"]
         R_SEARCH["POST /api/search"]
         R_PAPER["GET /api/paper/:id"]
-        R_PDF["POST /api/download-pdf"]
+        R_PDF["GET /api/papers/:id/pdf"]
         R_HEALTH["GET /health"]
       end
       GATE{{"adminOnly<br/>Bearer ADMIN_API_KEY<br/>fails closed when unset"}}
@@ -305,9 +305,10 @@ sequenceDiagram
     F-->>P: OARecord (or 404)
 
     U->>P: click Download PDF
-    P->>F: POST /api/download-pdf {paperId, pdfUrl}
+    P->>F: GET /api/papers/:id/pdf
+    F->>PC: the record, as above — its bestPdfUrl is the address
     F->>F: assertPublicHttpUrl — blocks private/internal targets
-    F->>H: GET pdfUrl
+    F->>H: GET bestPdfUrl
     H-->>F: PDF stream
     F-->>U: application/pdf as attachment
 ```

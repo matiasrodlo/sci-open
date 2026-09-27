@@ -203,34 +203,32 @@ reported the same way.
 
 ### PDF Download
 
-**POST** `/api/download-pdf`
+**GET** `/api/papers/:id/pdf`
 
-Streams a PDF through the API and returns it as an attachment. Publishers
-rarely allow a cross-origin fetch from the browser, which is the reason this
-proxy exists rather than the client fetching the file directly.
+Streams a paper's PDF through the API and returns it as an attachment.
+Publishers rarely allow a cross-origin fetch from the browser, which is the
+reason this proxy exists rather than the client fetching the file directly.
 
-**Request:**
-```json
-{
-  "pdfUrl": "https://example.org/article.pdf",
-  "paperId": "openalex:W2741809807"
-}
-```
+`:id` is the paper id, as for `/api/paper/:id`. The address fetched is the
+`bestPdfUrl` of the record that route returns — the caller never names a URL.
+The download used to be `POST /api/download-pdf` with a `pdfUrl` in the body,
+which fetched whatever it was given; it is gone.
 
-`pdfUrl` is required and must be `http` or `https`. `paperId` is optional and
-used only for logging.
+**Response:** the PDF bytes, with `Content-Type: application/pdf`,
+`Cache-Control: private, max-age=3600`, and a `Content-Disposition: attachment`
+named after the paper's title (`filename*` carries the title as written).
 
-**Response:** the PDF bytes, with `Content-Type: application/pdf` and
-`Content-Disposition: attachment`.
-
-The URL is resolved and checked before anything is fetched, so this endpoint
-cannot be used to reach the internal network:
+The address is resolved and checked before anything is fetched, and again on
+each redirect, so a record naming an internal address cannot reach the
+internal network:
 
 | | |
 |---|---|
-| **400** | Not a valid URL, or the host would not resolve |
-| **403** | Resolves to a non-public address, a redirect left http/https, or the publisher refused the request |
-| **404** | The publisher has no PDF at that URL |
+| **404** | No paper has that id, or none of the sources knows a copy of it |
+| **502 / 504** | The provider holding the paper failed or was too slow, as for `/api/paper/:id` |
+| **400** | The record's address is not a valid URL, or its host would not resolve |
+| **403** | It resolves to a non-public address, a redirect left http/https, or the publisher refused the request |
+| **404** | The publisher has no PDF at that address |
 | **413** | Larger than the download limit |
 | **415** | Upstream served something that is not a PDF |
 | **502** | Upstream could not be fetched, or answered with anything else |
@@ -239,7 +237,7 @@ The check is applied again to each redirect, not only to the URL supplied.
 
 `403` and `404` are the two upstream answers reported as themselves, because
 they are the two a caller acts on differently: `404` says the record's
-`bestPdfUrl` is wrong and the file is not there, `403` says the file is there
+address is wrong and the file is not there, `403` says the file is there
 and this proxy is not allowed to fetch it — bot protection, which the reader's
 own browser may well get past. Every other upstream status is a `502`,
 including an upstream `429`: this endpoint answers with `429` when *the caller*

@@ -90,7 +90,7 @@ function walksOut(segment: string): boolean {
 
 /**
  * The API routes a browser has any business reaching, by the shape of their
- * path: `search`, `paper/:id`, and a paper's PDF.
+ * path: `search`, `paper/:id`, and `papers/:id/pdf`.
  *
  * Everything under `/api/` used to be forwarded, so the cache and performance
  * routes were published on the site's own origin, one bearer token away from
@@ -106,7 +106,6 @@ function isPublic(path: readonly string[]): boolean {
   const [route, ...rest] = path;
   switch (route) {
     case 'search':
-    case 'download-pdf':
       return rest.length === 0;
     case 'paper':
       return rest.length === 1;
@@ -128,8 +127,10 @@ function isPublic(path: readonly string[]): boolean {
  *
  * Thirty seconds is above anything the two routes that reach the API through
  * here can legitimately take. `/api/paper/:id` is a 15s lookup plus a 6s
- * enrichment budget; `/api/download-pdf` answers as soon as the publisher's
- * headers arrive. A slower answer than this is a hung upstream, not a slow one.
+ * enrichment budget; `/api/papers/:id/pdf` answers as soon as the publisher's
+ * headers arrive, after the same lookup — which the paper page the reader is
+ * on has almost always cached already. A slower answer than this is a hung
+ * upstream, not a slow one.
  */
 const UPSTREAM_TIMEOUT_MS = 30000;
 

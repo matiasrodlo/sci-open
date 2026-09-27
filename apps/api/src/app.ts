@@ -1,17 +1,17 @@
-import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyReply, type FastifyServerOptions } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
-import { SearchParams, toOARecord, type Paper } from '@open-access-explorer/shared';
+import { SearchParams, toOARecord, type OARecord, type Paper } from '@open-access-explorer/shared';
 import type { Config } from './config';
 import type { CacheManager } from './lib/cache-manager';
 import { searchKey, worthCaching } from './lib/search-key';
 import { PaperCacheManager } from './lib/paper-cache-manager';
 import { httpPerformanceMonitor } from './lib/http-performance-monitor';
-import { assertPublicHttpUrl, fetchPdfStream, PdfProxyError } from './lib/pdf-proxy';
+import { assertPublicHttpUrl, attachmentHeader, fetchPdfStream, PdfProxyError } from './lib/pdf-proxy';
 import { adminOnly } from './lib/admin-auth';
 import { SingleFlight } from './lib/single-flight';
-import { searchBodySchema, paperParamsSchema, downloadPdfBodySchema } from './lib/schemas';
+import { searchBodySchema, paperParamsSchema } from './lib/schemas';
 import { clientError, clientErrorStatus, lookupErrorStatus } from './lib/client-error';
 import { AuthorityCache, AuthorityFactsCache, ProviderCache, ResultSetCache, lookupPaper, enrichPage } from './orchestrator';
 import { runSearch } from './orchestrator/from-search-params';
@@ -112,6 +112,17 @@ export function buildApp(options: AppOptions): FastifyInstance {
   });
 
   return fastify;
+}
+
+/** A provider failed while being asked for one record, with the status that failure deserves. */
+class PaperLookupError extends Error {
+  readonly status: number;
+
+  constructor(readonly cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause));
+    this.name = 'PaperLookupError';
+    this.status = lookupErrorStatus(cause);
+  }
 }
 
 /** What the routes are built over, handed to them as the plugin's options. */
@@ -255,133 +266,142 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
     }
   });
 
-  // Paper details endpoint with advanced caching
+  /**
+   * The paper behind an id, as `/api/paper/:id` returns it: from the cache, or
+   * from the provider that owns the id and then the authorities, and cached.
+   *
+   * Shared by the details route and the PDF route, so the file a reader
+   * downloads is the copy the page they are on shows. `null` when nobody holds
+   * the id. A provider's failure is thrown as a `PaperLookupError` carrying the
+   * status it deserves — see `lookupErrorStatus`.
+   */
+  async function recordFor(id: string): Promise<{ paper: OARecord; cached: boolean; fieldsEnriched: number } | null> {
+    const cached = await paperCacheManager.getCachedPaper(id);
+    if (cached) return { paper: cached, cached: true, fieldsEnriched: 0 };
+
+    // A second lookup by DOI used to sit here, gated on `id.includes('10.')`.
+    // That test is looser than it reads — an arXiv id like `arxiv:2310.12345`
+    // contains `10.` — so ordinary requests paid a Redis round trip for a key
+    // nothing had written, which is the same guaranteed miss the `partial:`
+    // probe was removed from the search path for.
+    //
+    // Its tail was worse than the cost. For an id that genuinely is a bare
+    // DOI the lookup below returns null, because `splitPaperId` finds no
+    // provider prefix — so the URL answered 200 while an entry happened to be
+    // cached and 404 once it expired. This endpoint takes `source:nativeId`,
+    // as `docs/api.md` says and as the frontend only ever sends; a DOI is
+    // asked about through `POST /api/search` with `{ doi }`, which resolves
+    // it properly across every provider that can answer. The answer here is
+    // now consistently 404, and `cachePaperDetails` no longer writes a second
+    // copy under a key nothing reads.
+
+    // One question, asked of the provider that owns the id. Which request
+    // that becomes — a by-id endpoint, a DOI lookup, or a search of the
+    // provider's own index — is the registry's business rather than the
+    // route's, which is why a hundred lines of per-connector branching
+    // could go.
+    let found: Paper | null;
+    try {
+      found = await lookupPaper(id, { userAgent, ...lookupFrom });
+    } catch (error) {
+      throw new PaperLookupError(error);
+    }
+    if (!found) return null;
+
+    /**
+     * The same authorities the search path asks about its page, asked about
+     * the one record this endpoint returns.
+     *
+     * Without this the two ways of reaching a paper page disagreed, and the
+     * shareable one was the worse one. A click from the results list carries
+     * the record the search produced — merged across every provider that
+     * returned the work, then enriched — because the frontend caches it in
+     * `sessionStorage` on the way. A shared link, a reload or a new tab has
+     * no such copy and lands here, where `lookupPaper` asks exactly one
+     * provider and returns what it says: no citation count from
+     * OpenCitations, no access route or verified copy from Unpaywall, no
+     * fields filled in from Crossref. Same URL, two bodies.
+     *
+     * It is cheap where it lands. `enrichPage` returns immediately for a
+     * paper carrying no DOI, each lookup is bounded by its own timeout and
+     * the step's budget, an authority that fails is reported rather than
+     * thrown — so an Unpaywall outage costs the enrichment, not the paper —
+     * and this runs only on a cache miss, which is precisely the request
+     * that was being answered poorly. The result is then cached like any
+     * other, so the second visitor pays nothing.
+     */
+    const { papers: [enriched], reports } = await enrichPage([found], { userAgent, cache: new AuthorityCache(authorityFacts), ...enrichWith });
+    const paper = toOARecord(enriched);
+    await paperCacheManager.cachePaperDetails(paper);
+
+    // The fields the authorities actually wrote, which is the only number
+    // that says whether asking them was worth the requests.
+    return { paper, cached: false, fieldsEnriched: reports.reduce((total, report) => total + report.applied, 0) };
+  }
+
+  /** Answers a failed `recordFor`: the provider's status for its failures, 500 for ours. */
+  function lookupFailed(error: unknown, id: string, reply: FastifyReply, requestId: string) {
+    if (error instanceof PaperLookupError) {
+      fastify.log[error.status === 500 ? 'error' : 'warn'](
+        { id, status: error.status, error: error.message },
+        'Could not fetch paper details from its provider'
+      );
+      reply.code(error.status);
+      return clientError(error.cause, requestId);
+    }
+    fastify.log.error({ id, error: error instanceof Error ? error.message : String(error) }, 'Error fetching paper details');
+    reply.code(500);
+    return clientError(error, requestId);
+  }
+
   fastify.get<{ Params: { id: string } }>('/api/paper/:id', {
     schema: { params: paperParamsSchema }
   }, async (request, reply) => {
     const startTime = Date.now();
-  
+    const { id } = request.params;
+
+    let record;
     try {
-      const { id } = request.params;
-
-      // Check advanced cache first
-      const cached = await paperCacheManager.getCachedPaper(id);
-      if (cached) {
-        const responseTime = Date.now() - startTime;
-        fastify.log.info({ 
-          id, 
-          responseTime,
-          title: cached.title 
-        }, 'Returning cached paper details');
-        reply.header('Cache-Control', 'public, max-age=600');
-        reply.header('X-Cache-Hit', 'true');
-        reply.header('X-Response-Time', responseTime.toString());
-        return cached;
-      }
-
-      // A second lookup by DOI used to sit here, gated on `id.includes('10.')`.
-      // That test is looser than it reads — an arXiv id like `arxiv:2310.12345`
-      // contains `10.` — so ordinary requests paid a Redis round trip for a key
-      // nothing had written, which is the same guaranteed miss the `partial:`
-      // probe was removed from the search path for.
-      //
-      // Its tail was worse than the cost. For an id that genuinely is a bare
-      // DOI the lookup below returns null, because `splitPaperId` finds no
-      // provider prefix — so the URL answered 200 while an entry happened to be
-      // cached and 404 once it expired. This endpoint takes `source:nativeId`,
-      // as `docs/api.md` says and as the frontend only ever sends; a DOI is
-      // asked about through `POST /api/search` with `{ doi }`, which resolves
-      // it properly across every provider that can answer. The answer here is
-      // now consistently 404, and `cachePaperDetails` no longer writes a second
-      // copy under a key nothing reads.
-      fastify.log.info({ id }, 'No cache hit, fetching paper details');
-
-      // One question, asked of the provider that owns the id. Which request
-      // that becomes — a by-id endpoint, a DOI lookup, or a search of the
-      // provider's own index — is the registry's business rather than the
-      // route's, which is why a hundred lines of per-connector branching
-      // could go.
-      //
-      // Its failures are the provider's, and are answered as such: a timeout
-      // is a 504 and a provider that is down a 502 — see `lookupErrorStatus`.
-      let found: Paper | null;
-      try {
-        found = await lookupPaper(id, { userAgent, ...lookupFrom });
-      } catch (error: any) {
-        const status = lookupErrorStatus(error);
-        fastify.log[status === 500 ? 'error' : 'warn'](
-          { id, status, error: error?.message },
-          'Could not fetch paper details from its provider'
-        );
-        reply.code(status);
-        return clientError(error, request.id);
-      }
-
-      // If no paper found, return 404
-      if (!found) {
-        reply.code(404);
-        return { error: 'Paper not found' };
-      }
-
-      /**
-       * The same authorities the search path asks about its page, asked about
-       * the one record this endpoint returns.
-       *
-       * Without this the two ways of reaching a paper page disagreed, and the
-       * shareable one was the worse one. A click from the results list carries
-       * the record the search produced — merged across every provider that
-       * returned the work, then enriched — because the frontend caches it in
-       * `sessionStorage` on the way. A shared link, a reload or a new tab has
-       * no such copy and lands here, where `lookupPaper` asks exactly one
-       * provider and returns what it says: no citation count from
-       * OpenCitations, no access route or verified copy from Unpaywall, no
-       * fields filled in from Crossref. Same URL, two bodies.
-       *
-       * It is cheap where it lands. `enrichPage` returns immediately for a
-       * paper carrying no DOI, each lookup is bounded by its own timeout and
-       * the step's budget, an authority that fails is reported rather than
-       * thrown — so an Unpaywall outage costs the enrichment, not the paper —
-       * and this runs only on a cache miss, which is precisely the request
-       * that was being answered poorly. The result is then cached like any
-       * other, so the second visitor pays nothing.
-       */
-      const { papers: [enriched], reports } = await enrichPage([found], { userAgent, cache: new AuthorityCache(authorityFacts), ...enrichWith });
-      const paper = toOARecord(enriched);
-
-      // Cache the result using advanced cache manager
-      await paperCacheManager.cachePaperDetails(paper);
-    
-      const responseTime = Date.now() - startTime;
-      reply.header('Cache-Control', 'public, max-age=600');
-      reply.header('X-Cache-Hit', 'false');
-      reply.header('X-Response-Time', responseTime.toString());
-    
-      // The fields the authorities actually wrote, which is the only number
-      // that says whether asking them was worth the requests.
-      fastify.log.info({
-        id,
-        title: paper.title,
-        responseTime,
-        fieldsEnriched: reports.reduce((total, report) => total + report.applied, 0)
-      }, 'Paper details fetched and cached');
-    
-      return paper;
-
-    } catch (error: any) {
-      fastify.log.error({ error: error.message }, 'Error fetching paper details');
-      reply.code(500);
-      return clientError(error, request.id);
+      record = await recordFor(id);
+    } catch (error) {
+      return lookupFailed(error, id, reply, request.id);
     }
+
+    if (!record) {
+      reply.code(404);
+      return { error: 'Paper not found' };
+    }
+
+    const responseTime = Date.now() - startTime;
+    reply.header('Cache-Control', 'public, max-age=600');
+    reply.header('X-Cache-Hit', record.cached ? 'true' : 'false');
+    reply.header('X-Response-Time', responseTime.toString());
+    fastify.log.info({
+      id,
+      title: record.paper.title,
+      responseTime,
+      cached: record.cached,
+      fieldsEnriched: record.fieldsEnriched
+    }, 'Paper details');
+
+    return record.paper;
   });
 
-  // PDF download proxy. Publishers rarely allow a cross-origin fetch from the
-  // browser, so the file is streamed through the API and handed to the client as
-  // an attachment.
-  // `pdfUrl` is non-optional here because the schema requires it: validation
-  // rejects the request before the handler runs, so the type says what is
-  // actually true inside it rather than repeating a check Fastify already made.
   /**
-   * Its own budget, because it is not the same kind of request as a search.
+   * A paper's PDF, streamed through the API and handed over as an attachment:
+   * publishers rarely allow a cross-origin fetch from the browser.
+   *
+   * By the paper's id, not by a URL. The download used to take a `pdfUrl` in a
+   * POST body and fetch whatever it named, which made it a general-purpose
+   * fetcher for anyone who could reach it — the SSRF guard was all that stood
+   * between a caller and the private network, so a gap in the guard was a gap
+   * in the whole API. The address now comes from the paper record this
+   * service holds, the one the details page shows; the guard stays in front of
+   * it as the second line rather than the only one. And as a GET, the
+   * `Cache-Control` it sends finally means what it says.
+   *
+   * It has a rate-limit budget of its own, because it is not the same kind of
+   * request as a search.
    *
    * Both used to spend the one `RATE_LIMIT_MAX`, which priced two things that
    * are expensive in different currencies as though they were the same. A
@@ -403,8 +423,8 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
    * papers no longer spends the search allowance, and a search loop no longer
    * locks them out of the file they were reading.
    */
-  fastify.post<{ Body: { paperId?: string; pdfUrl: string } }>('/api/download-pdf', {
-    schema: { body: downloadPdfBodySchema },
+  fastify.get<{ Params: { id: string } }>('/api/papers/:id/pdf', {
+    schema: { params: paperParamsSchema },
     config: {
       rateLimit: {
         max: config.rateLimit.downloadMax,
@@ -412,31 +432,43 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
       }
     }
   }, async (request, reply) => {
-    const { paperId, pdfUrl } = request.body;
+    const { id } = request.params;
+
+    let record;
+    try {
+      record = await recordFor(id);
+    } catch (error) {
+      return lookupFailed(error, id, reply, request.id);
+    }
+
+    if (!record) {
+      reply.code(404);
+      return { error: 'Paper not found' };
+    }
+
+    const pdfUrl = record.paper.bestPdfUrl;
+    if (!pdfUrl) {
+      reply.code(404);
+      return { error: 'No copy of this paper is known' };
+    }
 
     try {
       const url = await assertPublicHttpUrl(pdfUrl);
       const pdf = await fetchPdfStream(url, userAgent);
 
       reply.header('Content-Type', 'application/pdf');
-      reply.header('Content-Disposition', `attachment; filename="${pdf.filename}"`);
+      reply.header('Content-Disposition', attachmentHeader(record.paper.title, pdf.filename));
       if (pdf.contentLength) {
         reply.header('Content-Length', pdf.contentLength.toString());
       }
-      // Also a POST, so also inert — a browser will not reuse this for the
-      // next download of the same paper, and the hour named here has never
-      // saved a single request. Worth stating because a fifty-megabyte body
-      // with a one-hour freshness on it reads exactly like a working cache.
-      // Making it real means a GET, keyed on the paper rather than on a URL in
-      // a body, which is a route change and not a header change.
       reply.header('Cache-Control', 'private, max-age=3600');
 
-      fastify.log.info({ paperId, pdfUrl: url.href }, 'Streaming PDF to client');
+      fastify.log.info({ id, pdfUrl: url.href }, 'Streaming PDF to client');
       return reply.send(pdf.stream);
 
     } catch (error: any) {
       const statusCode = error instanceof PdfProxyError ? error.statusCode : 502;
-      fastify.log.warn({ paperId, pdfUrl, statusCode, error: error.message }, 'PDF download failed');
+      fastify.log.warn({ id, pdfUrl, statusCode, error: error.message }, 'PDF download failed');
       reply.code(statusCode);
       return clientError(error, request.id);
     }

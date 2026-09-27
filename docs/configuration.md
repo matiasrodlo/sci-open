@@ -32,7 +32,7 @@ RATE_LIMIT_DOWNLOAD_MAX=20
 TRUST_PROXY=
 ```
 
-`RATE_LIMIT_MAX` covers every route but one. `/api/download-pdf` has its own
+`RATE_LIMIT_MAX` covers every route but one. `/api/papers/:id/pdf` has its own
 bucket, `RATE_LIMIT_DOWNLOAD_MAX`, because the two requests are expensive in
 different currencies and one number could only ever be right for one of them: a
 search costs a fan-out to ten providers and returns a few kilobytes, spending
@@ -283,10 +283,10 @@ Requests must carry it as `Authorization: Bearer <key>` (or `X-Admin-Key`).
 
 The gate fails closed. With no key configured every one of those routes returns
 `503` instead of being served unauthenticated, and the server logs a warning at
-startup. This is deliberate: `apps/web/next.config.js` proxies `/api/*` straight
-through, so an ungated route is reachable from any browser that can load the
-site. `/api/search`, `/api/paper/:id`, `/api/download-pdf` and `/health` stay
-public.
+startup. This is deliberate: an ungated operator route should not depend on
+nothing else standing in front of it. They are not forwarded by `apps/web`
+either, which forwards `/api/search`, `/api/paper/:id` and
+`/api/papers/:id/pdf` and nothing else.
 
 ## Docker Compose
 

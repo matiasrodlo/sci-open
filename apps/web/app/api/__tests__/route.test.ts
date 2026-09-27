@@ -339,14 +339,14 @@ describe('which routes are reachable', () => {
   it.each([
     [['search']],
     [['paper', 'plos:10.1371/journal.pone.0265114']],
-    [['papers', 'arxiv:2310.12345', 'pdf']],
-    [['download-pdf']]
+    [['papers', 'arxiv:2310.12345', 'pdf']]
   ])('forwards %j', async path => {
     await POST(request('http://localhost:3000/api/x', { method: 'POST', body: '{}' }), context(...path));
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
   it.each([
+    [['download-pdf']],
     [['cache', 'metrics']],
     [['cache', 'clear']],
     [['performance', 'report']],

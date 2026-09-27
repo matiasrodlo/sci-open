@@ -266,7 +266,7 @@ flowchart TD
   P -.-> RP["RelatedPapers links the topics already on the record<br/>to the searches they stand for — no second fan-out"]
 
   P --> Q(["Download PDF"])
-  Q --> R["POST /api/download-pdf {paperId, pdfUrl}"]
+  Q --> R["GET /api/papers/:id/pdf<br/>the address is the record's bestPdfUrl —<br/>the caller never names a URL"]
   R --> S{"assertPublicHttpUrl<br/>scheme · DNS resolution · private ranges"}
   S -- "private or unroutable" --> S1["refused — ESSRFREFUSED"]
   S -- "public" --> T["fetchPdfStream, capped at 50 MB<br/>guardedLookup re-checks on redirect"]

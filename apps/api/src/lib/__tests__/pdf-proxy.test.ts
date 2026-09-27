@@ -23,6 +23,7 @@ import {
   ssrfRefusalIn,
   fetchPdfStream,
   statusForUpstream,
+  attachmentHeader,
   PdfProxyError,
   SSRF_REFUSED
 } from '../pdf-proxy';
@@ -436,5 +437,30 @@ describe('fetchPdfStream wiring', () => {
       .toThrow(PdfProxyError);
     expect(() => config.beforeRedirect({ protocol: 'file:', hostname: 'example.com' }))
       .toThrow(PdfProxyError);
+  });
+});
+
+describe('attachmentHeader', () => {
+  it('names the file after the title, in ASCII and as written', () => {
+    expect(attachmentHeader('CRISPR "base" editing: a review', 'upstream.pdf')).toBe(
+      `attachment; filename="CRISPR_base_editing_a_review.pdf"; filename*=UTF-8''CRISPR%20%22base%22%20editing%3A%20a%20review.pdf`
+    );
+  });
+
+  it('keeps a title with no ASCII in it, and falls back only for the plain name', () => {
+    expect(attachmentHeader('新型冠状病毒', 'upstream.pdf')).toBe(
+      `attachment; filename="upstream.pdf"; filename*=UTF-8''${encodeURIComponent('新型冠状病毒.pdf')}`
+    );
+  });
+
+  it('uses the upstream name when there is no title', () => {
+    expect(attachmentHeader(undefined, 'upstream.pdf')).toBe('attachment; filename="upstream.pdf"');
+    expect(attachmentHeader('   ', 'upstream.pdf')).toBe('attachment; filename="upstream.pdf"');
+  });
+
+  it('escapes what RFC 8187 does not allow bare', () => {
+    expect(attachmentHeader("Smith's (2024) *notes*", 'x.pdf')).toContain(
+      "filename*=UTF-8''Smith%27s%20%282024%29%20%2Anotes%2A.pdf"
+    );
   });
 });

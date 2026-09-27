@@ -76,15 +76,3 @@ export const paperParamsSchema = {
     id: { type: 'string', minLength: 1, maxLength: 500 }
   }
 } as const;
-
-export const downloadPdfBodySchema = {
-  type: 'object',
-  required: ['pdfUrl'],
-  additionalProperties: false,
-  properties: {
-    paperId: { type: 'string', maxLength: 500 },
-    // The URL is re-validated by `assertPublicHttpUrl`, which resolves the host
-    // and refuses private addresses. This only keeps the obviously wrong out.
-    pdfUrl: { type: 'string', minLength: 8, maxLength: 2000, pattern: '^https?://' }
-  }
-} as const;

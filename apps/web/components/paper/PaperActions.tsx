@@ -53,14 +53,10 @@ export function PaperActions({ paper }: PaperActionsProps) {
     setDownloadError(null);
 
     try {
-      const response = await fetch('/api/download-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          paperId: paper.id,
-          pdfUrl: paper.bestPdfUrl 
-        }),
-      });
+      // By the paper's id: the API takes the address from its own record of
+      // the paper rather than from the browser, which is what keeps the
+      // download from being a fetcher for any URL a caller names.
+      const response = await fetch(`/api/papers/${encodeURIComponent(paper.id)}/pdf`);
 
       if (!response.ok) {
         throw new Error(await reasonFor(response));

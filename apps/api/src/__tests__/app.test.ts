@@ -1,4 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
+import { Readable } from 'stream';
 import { AxiosError } from 'axios';
 import type { FastifyInstance } from 'fastify';
 import type { Paper } from '@open-access-explorer/shared';
@@ -37,6 +38,26 @@ vi.mock('ioredis', () => {
     async quit() { return 'OK'; }
   }
   return { default: FakeRedis };
+});
+
+/**
+ * One publisher that serves a PDF without leaving the process. Every other
+ * address goes through the real guard and the real fetch — so the SSRF
+ * refusals below are the real ones.
+ */
+const PUBLISHER = 'https://files.example.org/';
+
+vi.mock('../lib/pdf-proxy', async importOriginal => {
+  const actual = await importOriginal<typeof import('../lib/pdf-proxy')>();
+  return {
+    ...actual,
+    assertPublicHttpUrl: async (raw: string) =>
+      raw.startsWith(PUBLISHER) ? new URL(raw) : actual.assertPublicHttpUrl(raw),
+    fetchPdfStream: async (url: URL, userAgent: string) =>
+      url.href.startsWith(PUBLISHER)
+        ? { stream: Readable.from([Buffer.from('%PDF-1.7 fixture')]), contentLength: 16, filename: 'upstream.pdf' }
+        : actual.fetchPdfStream(url, userAgent)
+  };
 });
 
 const ADMIN_KEY = 'test-admin-key';
@@ -120,15 +141,16 @@ describe('rate limiting', () => {
   });
 
   it('gives the download a bucket of its own', async () => {
-    build({ RATE_LIMIT_MAX: '1', RATE_LIMIT_DOWNLOAD_MAX: '5' });
+    build({ RATE_LIMIT_MAX: '1', RATE_LIMIT_DOWNLOAD_MAX: '5' }, provider([
+      record(0),
+      paper({ ...record(1), fullText: { url: `${PUBLISHER}1.pdf`, kind: 'pdf', verified: false } })
+    ]).entry);
     await search({ q: 'crispr' });
     expect((await search({ q: 'crispr' })).statusCode).toBe(429);
 
-    // Refused for its address, not for the search allowance being spent.
-    const download = await app!.inject({
-      method: 'POST', url: '/api/download-pdf', payload: { pdfUrl: 'http://[::ffff:127.0.0.1]/x.pdf' }
-    });
-    expect(download.statusCode).toBe(403);
+    // Served, not refused for the search allowance being spent.
+    const download = await app!.inject({ method: 'GET', url: '/api/papers/europepmc%3A1/pdf' });
+    expect(download.statusCode).toBe(200);
     expect(download.headers['x-ratelimit-limit']).toBe('5');
   });
 });
@@ -226,22 +248,57 @@ describe('GET /api/paper/:id', () => {
   });
 });
 
-describe('POST /api/download-pdf', () => {
-  const download = (pdfUrl: string) =>
-    app!.inject({ method: 'POST', url: '/api/download-pdf', payload: { pdfUrl } });
+describe('GET /api/papers/:id/pdf', () => {
+  const pdfOf = (id: string) => app!.inject({ method: 'GET', url: `/api/papers/${encodeURIComponent(id)}/pdf` });
+  const withCopy = (i: number, url: string, over: Partial<Paper> = {}) =>
+    paper({ ...record(i), fullText: { url, kind: 'pdf', verified: false }, ...over });
 
-  it('refuses an address inside the network, however it is spelled', async () => {
-    build();
-    for (const url of ['http://127.0.0.1/x.pdf', 'http://[::ffff:127.0.0.1]/x.pdf', 'http://[::ffff:a9fe:a9fe]/latest']) {
-      const response = await download(url);
+  it('streams the copy the paper record names, as an attachment named for the paper', async () => {
+    build({}, provider([withCopy(1, `${PUBLISHER}1.pdf`, { title: 'Épidémiologie du paludisme' })]).entry);
+
+    const response = await pdfOf('europepmc:1');
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toBe('application/pdf');
+    expect(response.headers['content-disposition']).toBe(
+      `attachment; filename="Epidemiologie_du_paludisme.pdf"; filename*=UTF-8''${encodeURIComponent('Épidémiologie du paludisme.pdf')}`
+    );
+    expect(response.headers['cache-control']).toBe('private, max-age=3600');
+    expect(response.body).toBe('%PDF-1.7 fixture');
+  });
+
+  it('refuses a record whose copy is inside the network, however it is spelled', async () => {
+    // The address comes from a record now, not from the caller — and the guard
+    // still stands in front of it, in case a provider ever says something odd.
+    const internal = ['http://127.0.0.1/x.pdf', 'http://[::ffff:127.0.0.1]/x.pdf', 'http://[::ffff:a9fe:a9fe]/latest'];
+    build({}, provider(internal.map((url, i) => withCopy(i, url))).entry);
+
+    for (const [i, url] of internal.entries()) {
+      const response = await pdfOf(`europepmc:${i}`);
       expect(response.statusCode, url).toBe(403);
       expect(response.json().error).toMatch(/non-public/);
     }
   });
 
-  it('refuses anything that is not an http URL before looking at it', async () => {
+  it('answers 404 for a paper with no copy, and for one nobody holds', async () => {
+    build({}, provider([paper({ ...record(1), fullText: undefined })]).entry);
+    expect((await pdfOf('europepmc:1')).json()).toEqual({ error: 'No copy of this paper is known' });
+    expect((await pdfOf('europepmc:1')).statusCode).toBe(404);
+    expect((await pdfOf('europepmc:404')).statusCode).toBe(404);
+  });
+
+  it('answers 504 when the provider holding the paper is too slow to say where the copy is', async () => {
+    build({}, provider(undefined, async () => {
+      throw new AxiosError('timeout of 15000ms exceeded', 'ECONNABORTED');
+    }).entry);
+    expect((await pdfOf('europepmc:1')).statusCode).toBe(504);
+  });
+
+  it('no longer fetches a URL the caller names', async () => {
     build();
-    expect((await download('file:///etc/passwd')).statusCode).toBe(400);
+    const response = await app!.inject({
+      method: 'POST', url: '/api/download-pdf', payload: { pdfUrl: `${PUBLISHER}anything.pdf` }
+    });
+    expect(response.statusCode).toBe(404);
   });
 });
 
