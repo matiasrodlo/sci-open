@@ -60,10 +60,15 @@ function normalizeFilters(filters: SearchParams['filters']): Array<[string, unkn
  * reason; the route states the same rule in `Cache-Control`.
  *
  * `bounded` is deliberately not consulted, though it makes `total` a lower
- * bound just as `complete: false` does. A rescue that hit its limit is
+ * bound just as `complete: false` does. It is set two ways, and neither is a
+ * reason to resolve the set again. A rescue that hit its limit is
  * deterministic — ask again and the same limit cuts the same list at the same
- * place — so declining to keep it would repeat a ten-provider fan-out forever
- * to arrive at the identical answer.
+ * place. One that ran out of its wall-clock budget is not, since how far it got
+ * depends on how fast Unpaywall answered — but on a broad query the budget
+ * expires every time, so declining to keep those would repeat a ten-provider
+ * fan-out on every page of every broad search. What it reached is held with
+ * the set, and the authorities' answers outlive it in `AuthorityFactsCache`,
+ * so the next resolution of the same search starts further along.
  */
 export function worthCaching(result: SearchResponse): boolean {
   return result.complete !== false;
