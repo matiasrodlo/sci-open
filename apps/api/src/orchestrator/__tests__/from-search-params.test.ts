@@ -104,6 +104,24 @@ describe('runOrchestrator: what the providers are asked', () => {
     expect(calls[0]!.query.years).toEqual({ from: 2022, to: 2024 });
   });
 
+  it('asks no source a year range that ends before it starts, however it arose', async () => {
+    // Filters out of order, a ticked year outside the bound, and PY= disjoint
+    // from the filter each intersect to an empty range. Each used to cost a
+    // whole fan-out for an answer that could only be empty.
+    for (const params of [
+      { q: 'crispr', filters: { yearFrom: 2024, yearTo: 2020 } },
+      { q: 'crispr', filters: { yearFrom: 2022, year: ['2019'] } },
+      { q: 'crispr PY=2010', filters: { yearFrom: 2020 } }
+    ] satisfies SearchParams[]) {
+      const { entry, calls } = recorder();
+      const response = await run(params, [entry]);
+
+      expect(calls, JSON.stringify(params)).toEqual([]);
+      expect(response.total).toBe(0);
+      expect(response.complete).toBe(true);
+    }
+  });
+
   it('leaves years unset when neither bound was given', async () => {
     const { entry, calls } = recorder();
     await run({ q: 'crispr' }, [entry]);

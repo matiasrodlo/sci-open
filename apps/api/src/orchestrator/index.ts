@@ -255,6 +255,40 @@ function keyOf(settled: Settled): string {
 }
 
 /**
+ * A year range that starts after it ends, which nothing can be published in.
+ *
+ * Reached three ways, none of them a typo the parser could refuse: `yearFrom`
+ * after `yearTo` in the filters, a ticked year outside that bound, and `PY=`
+ * in the query text disjoint from either — the bounds are intersected, and two
+ * that do not overlap intersect to this. Asked of the sources, it cost a whole
+ * fan-out, facet counts included, for an answer that could only be empty, and
+ * each source read the backwards range its own way.
+ */
+function emptyYears(query: Query): boolean {
+  const { from, to } = query.years ?? {};
+  return from !== undefined && to !== undefined && from > to;
+}
+
+/** The set a search with no possible answer resolves to, without asking anyone. */
+function emptySet(settled: Settled): ResultSet {
+  const { filters, policy, providers, now } = settled;
+  return {
+    papers: [],
+    facets: generateFacets([], facetBaseSets([], filters, policy, new Map()), now?.()),
+    reports: providers.map((provider: ProviderEntry): ProviderReport => ({
+      provider: provider.id,
+      status: 'skipped',
+      retrieved: 0,
+      latency: 0,
+      skipReason: 'the year range ends before it starts'
+    })),
+    rescue: { candidates: 0, examined: 0, rescued: 0, bounded: false, authorities: [] },
+    complete: true,
+    countsFromSources: false
+  };
+}
+
+/**
  * plan -> fan out -> merge/dedupe -> match -> rank -> filter -> rescue -> facet:
  * the set, before any page is cut from it.
  */
@@ -263,6 +297,8 @@ async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache
     query, filters, policy, openAccessOnly, depth, timeoutMs, facetQueries, facetBudgetMs, filtersSent,
     providers, authorities, cache, stats, userAgent, now
   } = settled;
+
+  if (emptyYears(query)) return emptySet(settled);
 
   const planned = plan(query, providers);
 
