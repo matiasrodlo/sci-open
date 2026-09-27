@@ -285,8 +285,9 @@ The gate fails closed. With no key configured every one of those routes returns
 `503` instead of being served unauthenticated, and the server logs a warning at
 startup. This is deliberate: an ungated operator route should not depend on
 nothing else standing in front of it. They are not forwarded by `apps/web`
-either, which forwards `/api/search`, `/api/paper/:id` and
-`/api/papers/:id/pdf` and nothing else.
+either, which forwards search and paper details in both versions
+(`/api/search`, `/api/paper/:id` and their `/api/v2/` twins) and
+`/api/papers/:id/pdf`, and nothing else.
 
 ## Docker Compose
 

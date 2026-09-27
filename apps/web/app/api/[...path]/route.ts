@@ -90,7 +90,7 @@ function walksOut(segment: string): boolean {
 
 /**
  * The API routes a browser has any business reaching, by the shape of their
- * path: `search` and `v2/search`, `paper/:id`, and `papers/:id/pdf`.
+ * path: `search` and `paper/:id` in either version, and `papers/:id/pdf`.
  *
  * Everything under `/api/` used to be forwarded, so the cache and performance
  * routes were published on the site's own origin, one bearer token away from
@@ -112,7 +112,7 @@ function isPublic(path: readonly string[]): boolean {
     case 'papers':
       return rest.length === 2 && rest[1] === 'pdf';
     case 'v2':
-      return rest.length === 1 && rest[0] === 'search';
+      return isPublic(rest) && (rest[0] === 'search' || rest[0] === 'paper');
     default:
       return false;
   }

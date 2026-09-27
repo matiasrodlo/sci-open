@@ -249,6 +249,45 @@ describe('GET /api/paper/:id', () => {
   });
 });
 
+describe('GET /api/v2/paper/:id', () => {
+  const paperAt = (id: string, version = 'v2/') => app!.inject({ method: 'GET', url: `/api/${version}paper/${encodeURIComponent(id)}` });
+
+  it('returns the paper whole: its sources, stage, access route and copy', async () => {
+    build({}, provider([paper({
+      ...record(1),
+      oaStatus: 'gold',
+      stage: 'published',
+      fullText: { url: `${PUBLISHER}1.pdf`, kind: 'pdf', verified: true }
+    })]).entry);
+
+    const response = await paperAt('europepmc:1');
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      id: 'europepmc:1',
+      oaStatus: 'gold',
+      stage: 'published',
+      fullText: { url: `${PUBLISHER}1.pdf`, kind: 'pdf', verified: true },
+      sources: [{ provider: 'europepmc', nativeId: '1' }]
+    });
+  });
+
+  it('answers from the same held record as version 1, whichever is asked first', async () => {
+    build();
+    const v2 = await paperAt('europepmc:1');
+    const v1 = await paperAt('europepmc:1', '');
+
+    expect(v2.headers['x-cache-hit']).toBe('false');
+    expect(v1.headers['x-cache-hit']).toBe('true');
+    expect(v1.json()).toMatchObject({ id: 'europepmc:1', title: v2.json().title, source: 'europepmc', sourceId: '1' });
+    expect(v1.json()).not.toHaveProperty('sources');
+  });
+
+  it('answers 404 for an id nobody holds', async () => {
+    build();
+    expect((await paperAt('europepmc:404')).statusCode).toBe(404);
+  });
+});
+
 describe('GET /api/papers/:id/pdf', () => {
   const pdfOf = (id: string) => app!.inject({ method: 'GET', url: `/api/papers/${encodeURIComponent(id)}/pdf` });
   const withCopy = (i: number, url: string, over: Partial<Paper> = {}) =>

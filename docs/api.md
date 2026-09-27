@@ -164,6 +164,8 @@ Both versions are answered from one run, joined under one key and sliced from
 one held result set, so a v1 and a v2 request for the same search share the
 work and cannot disagree. `X-Cache-Hit` means the same thing on both.
 
+The web app reads this version. Version 1 stays for other clients.
+
 **Response:**
 ```typescript
 {
@@ -234,9 +236,26 @@ status field. This response has never had one; the shape documented here until
 phase 13 described a `{ record, pdf }` wrapper the endpoint never returned, and
 a frontend that believed it crashed on every record without a PDF.
 
-**404** when the provider has no such record. **500** when the provider could
-not be asked — a slow provider is not a missing paper, and the two are not
-reported the same way.
+**404** when the provider has no such record. **504** when the provider was
+too slow to answer and **502** when it failed — a provider that could not be
+asked is not a missing paper, and the two are not reported the same way.
+**500** is kept for a fault of this service's own.
+
+### Paper Details, version 2
+
+**GET** `/api/v2/paper/:id`
+
+The same lookup as `/api/paper/:id`, answered with the `Paper` rather than
+flattened to an `OARecord` — the shape a version 2 search returns its papers
+in, so a result and its detail page are one type. Both versions are answered
+from one cached record, so they cannot disagree, and `X-Cache-Hit` means the
+same thing on both.
+
+`sources` holds the one provider the id belongs to, since that is the only one
+asked: a search result that several providers returned lists them all, and its
+detail record lists the one that owns its id.
+
+**Response:** a `Paper`, and nothing wrapping it. Errors as for version 1.
 
 ---
 

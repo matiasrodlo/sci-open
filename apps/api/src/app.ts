@@ -2,7 +2,7 @@ import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest, 
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
-import { SearchParams, toOARecord, type OARecord, type Paper } from '@open-access-explorer/shared';
+import { SearchParams, toOARecord, type Paper } from '@open-access-explorer/shared';
 import type { Config } from './config';
 import type { CacheManager } from './lib/cache-manager';
 import { searchKey, worthCaching } from './lib/search-key';
@@ -286,15 +286,16 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
   fastify.post<{ Body: SearchParams }>('/api/v2/search', { schema: { body: searchBodySchema } }, answerSearch(2));
 
   /**
-   * The paper behind an id, as `/api/paper/:id` returns it: from the cache, or
-   * from the provider that owns the id and then the authorities, and cached.
+   * The paper behind an id, as both versions of `/api/paper/:id` return it:
+   * from the cache, or from the provider that owns the id and then the
+   * authorities, and cached.
    *
    * Shared by the details route and the PDF route, so the file a reader
    * downloads is the copy the page they are on shows. `null` when nobody holds
    * the id. A provider's failure is thrown as a `PaperLookupError` carrying the
    * status it deserves — see `lookupErrorStatus`.
    */
-  async function recordFor(id: string): Promise<{ paper: OARecord; cached: boolean; fieldsEnriched: number } | null> {
+  async function recordFor(id: string): Promise<{ paper: Paper; cached: boolean; fieldsEnriched: number } | null> {
     const cached = await paperCacheManager.getCachedPaper(id);
     if (cached) return { paper: cached, cached: true, fieldsEnriched: 0 };
 
@@ -349,9 +350,8 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
      * that was being answered poorly. The result is then cached like any
      * other, so the second visitor pays nothing.
      */
-    const { papers: [enriched], reports } = await enrichPage([found], { userAgent, cache: new AuthorityCache(authorityFacts), ...enrichWith });
+    const { papers: [paper], reports } = await enrichPage([found], { userAgent, cache: new AuthorityCache(authorityFacts), ...enrichWith });
     stats.recordAuthorities(reports);
-    const paper = toOARecord(enriched);
     await paperCacheManager.cachePaperDetails(paper);
 
     // The fields the authorities actually wrote, which is the only number
@@ -374,9 +374,15 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
     return clientError(error, requestId);
   }
 
-  fastify.get<{ Params: { id: string } }>('/api/paper/:id', {
-    schema: { params: paperParamsSchema }
-  }, async (request, reply) => {
+  /**
+   * One paper, in either version: the `Paper` itself for version 2, and for
+   * version 1 flattened to the `OARecord` that version has always returned.
+   * Both are the one record `recordFor` holds, so they cannot disagree.
+   */
+  const answerPaper = (version: 1 | 2) => async (
+    request: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply
+  ) => {
     const startTime = Date.now();
     const { id } = request.params;
 
@@ -404,8 +410,11 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
       fieldsEnriched: record.fieldsEnriched
     }, 'Paper details');
 
-    return record.paper;
-  });
+    return version === 2 ? record.paper : toOARecord(record.paper);
+  };
+
+  fastify.get<{ Params: { id: string } }>('/api/paper/:id', { schema: { params: paperParamsSchema } }, answerPaper(1));
+  fastify.get<{ Params: { id: string } }>('/api/v2/paper/:id', { schema: { params: paperParamsSchema } }, answerPaper(2));
 
   /**
    * A paper's PDF, streamed through the API and handed over as an attachment:
@@ -466,7 +475,7 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
       return { error: 'Paper not found' };
     }
 
-    const pdfUrl = record.paper.bestPdfUrl;
+    const pdfUrl = record.paper.fullText?.url;
     if (!pdfUrl) {
       reply.code(404);
       return { error: 'No copy of this paper is known' };

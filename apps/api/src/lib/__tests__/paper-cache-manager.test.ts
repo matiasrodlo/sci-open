@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { OARecord } from '@open-access-explorer/shared';
+import type { Paper } from '@open-access-explorer/shared';
 
 vi.mock('ioredis', () => {
   class FakeRedis {
@@ -13,19 +13,16 @@ vi.mock('ioredis', () => {
   return { default: FakeRedis };
 });
 
-import { CacheManager } from '../cache-manager';
+import { CacheManager, CacheStrategy } from '../cache-manager';
 import { PaperCacheManager } from '../paper-cache-manager';
+import { paper, ref } from '../../orchestrator/__tests__/helpers';
 
-const record = (over: Partial<OARecord> = {}): OARecord => ({
+const record = (over: Partial<Paper> = {}): Paper => paper({
   id: 'arxiv:2310.12345',
   doi: '10.1234/abc',
-  title: 'A study of things',
-  authors: ['Lovelace, Ada'],
-  source: 'arxiv',
-  sourceId: '2310.12345',
-  createdAt: '2026-01-01T00:00:00.000Z',
+  sources: [ref('arxiv', { nativeId: '2310.12345' })],
   ...over
-} as OARecord);
+});
 
 let cache: CacheManager;
 let papers: PaperCacheManager;
@@ -64,5 +61,12 @@ describe('PaperCacheManager', () => {
     await papers.cachePaperDetails(record({ doi: undefined }));
 
     expect(set).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not read what the old namespace held, which was a record in another shape', async () => {
+    // Entries written before papers were cached whole are `OARecord`s, and
+    // live for two hours. Read back as a `Paper` they have no `sources`.
+    await cache.set(cache.generateKey('paper', 'arxiv:2310.12345'), { id: 'arxiv:2310.12345', source: 'arxiv' }, CacheStrategy.PAPER_DETAILS);
+    expect(await papers.getCachedPaper('arxiv:2310.12345')).toBeNull();
   });
 });
