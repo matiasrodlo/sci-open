@@ -1,14 +1,15 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, cleanup, within } from '@testing-library/react';
-import type { ProviderTotal } from '@open-access-explorer/shared';
+import type { ProviderId, ProviderReport } from '@open-access-explorer/shared';
 import { ProviderCoverage } from '../ProviderCoverage';
 
 /**
  * The three outcomes this panel keeps apart are the whole reason
- * `ProviderReport` exists, and telling them apart is entirely string work on
- * the `error` field — `skipped:` prefixed or not — which is exactly the kind of
- * distinction that collapses under a later edit.
+ * `ProviderReport` exists. Version 1 of the response told them apart by string
+ * work on its `error` field — `skipped:` prefixed or not — and version 2 by a
+ * status; either way it is the kind of distinction that collapses under a
+ * later edit.
  *
  * A provider that was *skipped* declined to guess, and said why — the reason
  * comes from `ProviderCapabilities.skipReason` and is shown verbatim. A
@@ -17,19 +18,20 @@ import { ProviderCoverage } from '../ProviderCoverage';
  * in the comparison sweep, and it would be the same bug here.
  */
 
-const answered = (source: string, over: Partial<ProviderTotal> = {}): ProviderTotal => ({
-  source,
+/** A string rather than a `ProviderId`, so a provider this build has no label for can be tried. */
+const answered = (provider: string, over: Partial<ProviderReport> = {}): ProviderReport => ({
+  provider: provider as ProviderId,
+  status: 'ok',
   retrieved: 100,
   totalHits: 5000,
+  latency: 0,
   ...over
 });
 
-const failed = (source: string): ProviderTotal => ({ source, retrieved: 0, error: 'exceeded the 20000ms budget' });
-const skipped = (source: string, reason = 'no keyword index'): ProviderTotal => ({
-  source,
-  retrieved: 0,
-  error: `skipped: ${reason}`
-});
+const failed = (provider: string): ProviderReport =>
+  answered(provider, { status: 'timeout', retrieved: 0, totalHits: undefined, error: 'exceeded the 20000ms budget' });
+const skipped = (provider: string, reason = 'no keyword index'): ProviderReport =>
+  answered(provider, { status: 'skipped', retrieved: 0, totalHits: undefined, skipReason: reason });
 
 const banner = () => screen.queryByRole('status');
 
@@ -111,14 +113,6 @@ describe('telling a skip from a failure', () => {
     render(<ProviderCoverage providers={[answered('europepmc')]} complete={false} />);
 
     expect(banner()!.textContent).toContain('At least one source did not answer');
-  });
-
-  it('treats an absent complete as not-known-to-be-degraded', () => {
-    // Optional in the response, and a consumer that does not know about it
-    // should not be told the search is broken.
-    render(<ProviderCoverage providers={[answered('europepmc')]} />);
-
-    expect(banner()).toBeNull();
   });
 });
 
@@ -255,7 +249,7 @@ describe('what it shows for a provider that answered', () => {
 
   it('shows an em dash rather than a zero when a provider reports no total', () => {
     // `reportsTotal: false` is a fact about the API, not a count of zero.
-    render(<ProviderCoverage providers={[{ source: 'biorxiv', retrieved: 30 }]} complete />);
+    render(<ProviderCoverage providers={[answered('biorxiv', { retrieved: 30, totalHits: undefined })]} complete />);
 
     const row = screen.getByText('bioRxiv').closest('li')!;
     expect(row.textContent).toContain('—');

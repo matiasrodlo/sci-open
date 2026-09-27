@@ -13,7 +13,7 @@ import { SearchError } from '@/components/SearchError';
 import { searchPapers } from '@/lib/fetcher';
 import { toList, toSingle, toPage, toYear, toSort } from '@/lib/search-params';
 import { classifySearchError, queryProblem } from '@/lib/search-error';
-import { coverageOf, countLabel, filtersNarrow, matchingNote, matchingOf, sourceCountsApply, totalLabel } from '@/lib/coverage';
+import { coverageOf, countLabel, filtersNarrow, matchingNote, matchingOf, totalLabel } from '@/lib/coverage';
 import { SearchParams } from '@open-access-explorer/shared';
 
 // Force dynamic rendering
@@ -94,7 +94,7 @@ async function ResultsContent({ searchParams }: { searchParams: ResultsSearchPar
   try {
     const results = await searchPapers(searchParamsObj, { forwardedFor });
 
-    if (results.hits.length === 0) {
+    if (results.papers.length === 0) {
       return <EmptyState type="no-results" />;
     }
 
@@ -106,14 +106,9 @@ async function ResultsContent({ searchParams }: { searchParams: ResultsSearchPar
      * with five — it is what pagination walks, and nothing a reader should be
      * told is the size of their search. See `Matching` in `lib/coverage.ts`.
      */
-    const coverage = coverageOf(results.providerTotals ?? []);
-    // The API says whether its sources were asked exactly this search. The
-    // local guess is for a response from before it did.
-    const matching = matchingOf(
-      results.total,
-      coverage,
-      results.countsFromSources ?? sourceCountsApply(query, searchParamsObj.filters ?? {})
-    );
+    const coverage = coverageOf(results.providers);
+    // The API says whether its sources were asked exactly this search.
+    const matching = matchingOf(results.total, coverage, results.countsFromSources);
 
             return (
               <div className="space-y-8">
@@ -145,7 +140,7 @@ async function ResultsContent({ searchParams }: { searchParams: ResultsSearchPar
                       </span>
                     </div>
                     <ExportButton 
-                      results={results.hits} 
+                      results={results.papers} 
                       query={query} 
                       totalResults={results.total}
                       currentPage={currentPage}
@@ -154,9 +149,9 @@ async function ResultsContent({ searchParams }: { searchParams: ResultsSearchPar
                   </div>
                 </div>
 
-                {results.providerTotals && results.providerTotals.length > 0 && (
+                {results.providers.length > 0 && (
                   <ProviderCoverage
-                    providers={results.providerTotals}
+                    providers={results.providers}
                     complete={results.complete}
                     bounded={results.bounded}
                   />
@@ -172,7 +167,7 @@ async function ResultsContent({ searchParams }: { searchParams: ResultsSearchPar
                   <div className="lg:col-span-3 space-y-6">
                     <SortBar />
                     <PaginatedResults
-                      results={results.hits}
+                      results={results.papers}
                       total={results.total}
                       matching={countLabel(matching)}
                       page={currentPage}

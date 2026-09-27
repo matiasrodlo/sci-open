@@ -1,10 +1,10 @@
 'use client';
 
-import { OARecord } from '@open-access-explorer/shared';
+import type { Paper } from '@open-access-explorer/shared';
 import { WoSExportDialog } from './WoSExportDialog';
 
 interface ExportButtonProps {
-  results: OARecord[];
+  results: Paper[];
   query: string;
   totalResults?: number;
   currentPage?: number;

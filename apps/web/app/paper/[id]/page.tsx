@@ -11,12 +11,12 @@ import { RelatedPapers } from '@/components/paper/RelatedPapers';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { cachePaper, getCachedPaper } from '@/lib/paper-cache';
 import { getPaper } from '@/lib/fetcher';
-import { OARecord } from '@open-access-explorer/shared';
+import type { Paper } from '@open-access-explorer/shared';
 
 function PaperContent() {
   const params = useParams();
   const encodedId = params.id as string;
-  const [paper, setPaper] = useState<OARecord | null>(null);
+  const [paper, setPaper] = useState<Paper | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 

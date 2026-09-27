@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import axios from 'axios';
-import { searchPapers, SEARCH_TIMEOUT_MS } from '../fetcher';
+import { getPaper, searchPapers, SEARCH_TIMEOUT_MS } from '../fetcher';
 import type { SearchParams } from '@open-access-explorer/shared';
 
 /**
@@ -24,6 +24,7 @@ vi.mock('axios', () => ({
 }));
 
 const post = vi.mocked(axios.post);
+const get = vi.mocked(axios.get);
 
 /** What `axios.post` was handed, as body plus config. */
 const called = () => ({
@@ -35,6 +36,22 @@ const params: SearchParams = { q: 'crispr', page: 1, pageSize: 20 };
 
 beforeEach(() => {
   post.mockClear();
+  get.mockClear();
+});
+
+describe('the version of the response asked for', () => {
+  // Version 2 is the one that carries a paper's sources, access route and
+  // verified copy, and every provider's report whole. Version 1 would still
+  // answer — so a path pointed back at it compiles and fails only on the page.
+  it('searches through version 2', async () => {
+    await searchPapers(params);
+    expect(post.mock.calls[0]![0]).toBe('http://localhost:4000/api/v2/search');
+  });
+
+  it('looks a paper up through version 2, with its id as one segment', async () => {
+    await getPaper('plos:10.1371/journal.pone.0265114');
+    expect(get.mock.calls[0]![0]).toBe('http://localhost:4000/api/v2/paper/plos%3A10.1371%2Fjournal.pone.0265114');
+  });
 });
 
 describe('searchPapers', () => {

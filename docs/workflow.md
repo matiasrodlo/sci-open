@@ -53,7 +53,7 @@ flowchart LR
   G1 -- no --> G3["drop hop-by-hop headers<br/>forward x-forwarded-for intact<br/>fetch API_ORIGIN + /api/…<br/>30s budget on the wait for an answer, not the transfer"]
 
   F --> H
-  G3 --> H["POST /api/search — Fastify"]
+  G3 --> H["POST /api/v2/search — Fastify<br/>/api/search answers the same run as OARecords"]
 
   H --> I["cors · helmet · rate-limit<br/>120/min keyed on request.ip, /health exempt"]
   I --> J{"body matches searchBodySchema?"}
@@ -72,10 +72,10 @@ flowchart LR
   R -- yes --> S["hold the set, 30 minutes"] --> PAGE
   R -- no --> T["return it unheld<br/>Cache-Control: no-store<br/>so a retry can reach the providers that failed"] --> PAGE
 
-  PAGE["present one page of the set<br/>sort · slice · enrich from AuthorityFactsCache"] --> Q["toSearchResponse<br/>hits · facets · providers<br/>complete · bounded"]
+  PAGE["present one page of the set<br/>sort · slice · enrich from AuthorityFactsCache"] --> Q["toSearchResponseV2<br/>papers · facets · providers<br/>complete · bounded"]
   Q --> Y["200 · X-Cache-Hit: true (set held) | false | coalesced<br/>X-Response-Time"] --> Z
 
-  Z["hits · facets · providers · complete · bounded"] --> ZA["ResultCard · FacetPanel · SortBar · Pagination"]
+  Z["papers · facets · providers · complete · bounded"] --> ZA["ResultCard — route, stage, every source, what the copy is<br/>FacetPanel · SortBar · Pagination"]
   Z --> ZB["ProviderCoverage — who answered, who was skipped and why<br/>complete:false — a source did not answer<br/>bounded:true — every source did, but the rescue was cut short<br/>either one renders as 'total is a lower bound'"]
 
   classDef gate stroke:#dc2626,stroke-width:2px
@@ -242,9 +242,9 @@ flowchart TD
   B --> C{"sessionStorage — stashed by ResultCard<br/>on the way out of the results list"}
   C -- hit --> C1["render immediately"]
   C -- miss --> D
-  C1 --> D["GET /api/paper/:id"]
+  C1 --> D["GET /api/v2/paper/:id"]
 
-  D --> E{"PaperCacheManager.getCachedPaper<br/>paper:hash(id)"}
+  D --> E{"PaperCacheManager.getCachedPaper<br/>paper-v2:hash(id)"}
   E -- hit --> Z["200 · Cache-Control: max-age=600"]
   E -- miss --> F["lookupPaper('source:nativeId')"]
 
@@ -260,13 +260,13 @@ flowchart TD
   K --> L
   L -- no --> N404["404 — a near miss is not somebody else's paper"]
   L -- yes --> M["enrichPage on the single record<br/>so a shared link and a click-through<br/>return the same body"]
-  M --> N["toOARecord → cachePaperDetails"] --> Z
+  M --> N["cachePaperDetails — the Paper<br/>version 1 flattens it with toOARecord"] --> Z
 
   Z --> P["PaperHeader · PaperAbstract · PaperMetadata<br/>PaperCitations · PaperActions · RelatedPapers"]
   P -.-> RP["RelatedPapers links the topics already on the record<br/>to the searches they stand for — no second fan-out"]
 
-  P --> Q(["Download PDF"])
-  Q --> R["GET /api/papers/:id/pdf<br/>the address is the record's bestPdfUrl —<br/>the caller never names a URL"]
+  P --> Q(["Download PDF — a copy that is a web page<br/>opens in a tab instead"])
+  Q --> R["GET /api/papers/:id/pdf<br/>the address is the record's fullText.url —<br/>the caller never names a URL"]
   R --> S{"assertPublicHttpUrl<br/>scheme · DNS resolution · private ranges"}
   S -- "private or unroutable" --> S1["refused — ESSRFREFUSED"]
   S -- "public" --> T["fetchPdfStream, capped at 50 MB<br/>guardedLookup re-checks on redirect"]

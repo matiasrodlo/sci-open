@@ -1,17 +1,16 @@
 import { Fragment } from 'react';
-import { ProviderTotal } from '@open-access-explorer/shared';
+import type { ProviderReport } from '@open-access-explorer/shared';
 import { AlertTriangle } from 'lucide-react';
 import { coverageOf, isFailed, isSkipped, skipsByReason } from '@/lib/coverage';
 import { PROVIDER_LABELS } from '@/lib/provider-labels';
 
 interface ProviderCoverageProps {
-  providers: ProviderTotal[];
+  providers: ProviderReport[];
   /**
    * False when a provider failed or timed out, which makes the reported total
-   * a lower bound rather than an answer. Absent on the old search path, which
-   * never reported it — treated as "not known to be degraded".
+   * a lower bound rather than an answer.
    */
-  complete?: boolean;
+  complete: boolean;
   /**
    * True when the rescue pass was cut short, which makes the total a lower
    * bound for a different reason: papers were dropped for want of a retrievable
@@ -56,7 +55,7 @@ export function ProviderCoverage({ providers, complete, bounded }: ProviderCover
   const skipped = providers.filter(isSkipped);
   const failed = providers.filter(isFailed);
   const answered = providers
-    .filter(p => !p.error && (p.retrieved > 0 || typeof p.totalHits === 'number'))
+    .filter(p => p.status === 'ok' && (p.retrieved > 0 || typeof p.totalHits === 'number'))
     .sort((a, b) => (b.totalHits ?? 0) - (a.totalHits ?? 0));
 
   if (answered.length === 0 && failed.length === 0 && skipped.length === 0) {
@@ -68,7 +67,7 @@ export function ProviderCoverage({ providers, complete, bounded }: ProviderCover
   // Two different reasons the count can be short, and the notice has to say
   // which one it is. A source that did not answer is a gap in the corpus; a
   // bounded rescue is a gap in what was asked about papers we did retrieve.
-  const sourceGap = complete === false || failed.length > 0;
+  const sourceGap = !complete || failed.length > 0;
   const degraded = sourceGap || bounded === true;
 
   return (
@@ -84,9 +83,9 @@ export function ProviderCoverage({ providers, complete, bounded }: ProviderCover
 
       <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-1.5">
         {answered.map(provider => (
-          <li key={provider.source} className="flex items-baseline justify-between gap-2 text-sm">
-            <span className="truncate" title={label(provider.source)}>
-              {label(provider.source)}
+          <li key={provider.provider} className="flex items-baseline justify-between gap-2 text-sm">
+            <span className="truncate" title={label(provider.provider)}>
+              {label(provider.provider)}
             </span>
             <span className="shrink-0 tabular-nums text-muted-foreground">
               {typeof provider.totalHits === 'number'
@@ -122,7 +121,7 @@ export function ProviderCoverage({ providers, complete, bounded }: ProviderCover
             {sourceGap && (
               <>
                 {failed.length > 0
-                  ? `${failed.map(p => label(p.source)).join(', ')} did not answer`
+                  ? `${failed.map(p => label(p.provider)).join(', ')} did not answer`
                   : 'At least one source did not answer'}
                 , so the count above is a lower bound — there are more matching papers
                 than are shown.{' '}

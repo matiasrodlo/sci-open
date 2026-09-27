@@ -1,15 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { OARecord } from '@open-access-explorer/shared';
+import type { Paper } from '@open-access-explorer/shared';
 import { Button } from '@/components/ui/button';
-import { Download, ExternalLink, Quote, Share2, Check, Copy } from 'lucide-react';
+import { Download, ExternalLink, FileText, Quote, Share2, Check, Copy } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { generateBibTeX, downloadBibTeX } from '@/lib/bibtex';
 import { openExternal } from '@/lib/external-link';
+import { copyNote } from '@/lib/access';
 
 interface PaperActionsProps {
-  paper: OARecord;
+  paper: Paper;
 }
 
 /**
@@ -43,8 +44,23 @@ export function PaperActions({ paper }: PaperActionsProps) {
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [citationCopied, setCitationCopied] = useState(false);
 
+  /**
+   * The copy, and whether it is a file to download.
+   *
+   * Every copy used to arrive as `bestPdfUrl`, so a web page — a CORE reader,
+   * a DOAJ article page — was offered as "Download PDF", sent through the PDF
+   * route, refused by it as "Upstream served text/html, not a PDF", and then
+   * opened in a tab by the fallback below. It opens in a tab directly now.
+   */
+  const copy = paper.fullText;
+  const isPdf = copy?.kind === 'pdf';
+
+  const handleOpenFullText = () => {
+    setDownloadError(openExternal(copy?.url) ? null : 'This copy’s link could not be opened');
+  };
+
   const handleDownloadPDF = async () => {
-    if (!paper.bestPdfUrl) {
+    if (!copy) {
       setDownloadError('PDF not available');
       return;
     }
@@ -80,7 +96,7 @@ export function PaperActions({ paper }: PaperActionsProps) {
       // this needs: `noopener` makes `window.open` return null by
       // specification, so testing its handle would show an error for every
       // download that in fact opened fine.
-      if (openExternal(paper.bestPdfUrl)) {
+      if (openExternal(copy.url)) {
         // Logged, because the proxy failing is worth seeing, but not as an
         // error: the reader has the paper open in a tab and nothing is left to
         // fix here. `console.error` raised Next's error overlay on the most
@@ -140,17 +156,30 @@ export function PaperActions({ paper }: PaperActionsProps) {
 
   return (
     <div className="space-y-4">
-      {/* Download PDF */}
-      <Button
-        onClick={handleDownloadPDF}
-        disabled={!paper.bestPdfUrl || isDownloading}
-        className="w-full gap-2 font-medium"
-        variant={paper.bestPdfUrl ? "default" : "secondary"}
-        size="lg"
-      >
-        <Download className="h-4 w-4" />
-        {isDownloading ? 'Downloading...' : paper.bestPdfUrl ? 'Download PDF' : 'PDF Not Available'}
-      </Button>
+      {/* Download the PDF, or open a copy that is a web page */}
+      {copy && !isPdf ? (
+        <Button
+          onClick={handleOpenFullText}
+          className="w-full gap-2 font-medium"
+          size="lg"
+          title={copyNote(copy)}
+        >
+          <FileText className="h-4 w-4" />
+          Read Full Text
+        </Button>
+      ) : (
+        <Button
+          onClick={handleDownloadPDF}
+          disabled={!copy || isDownloading}
+          className="w-full gap-2 font-medium"
+          variant={copy ? "default" : "secondary"}
+          size="lg"
+          {...(copy ? { title: copyNote(copy) } : {})}
+        >
+          <Download className="h-4 w-4" />
+          {isDownloading ? 'Downloading...' : copy ? 'Download PDF' : 'Full Text Not Available'}
+        </Button>
+      )}
       {downloadError && (
         <p className="text-xs text-destructive">{downloadError}</p>
       )}

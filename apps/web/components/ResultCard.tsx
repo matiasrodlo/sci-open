@@ -1,22 +1,29 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, ExternalLink, Eye, Quote } from 'lucide-react';
+import { Download, ExternalLink, Eye, FileText, Quote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { OARecord } from '@open-access-explorer/shared';
-import { getPaper } from '@/lib/fetcher';
+import type { Paper } from '@open-access-explorer/shared';
+import { accessRoute, copyLabel, copyNote, foundIn, notableStage } from '@/lib/access';
 import { openExternal } from '@/lib/external-link';
 import { cachePaper } from '@/lib/paper-cache';
 import Link from 'next/link';
 
 interface ResultCardProps {
-  record: OARecord;
+  record: Paper;
 }
 
+/** Sources named on a card before the rest are counted instead. */
+const SOURCES_SHOWN = 3;
+
 export function ResultCard({ record }: ResultCardProps) {
-  const [isDownloading, setIsDownloading] = useState(false);
   const [doiCopied, setDoiCopied] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  const route = accessRoute(record.oaStatus);
+  const stage = notableStage(record.stage);
+  const sources = foundIn(record);
+  const copy = record.fullText;
 
   // Cache paper data for detail page
   const handlePaperClick = () => {
@@ -44,32 +51,16 @@ export function ResultCard({ record }: ResultCardProps) {
     }
   };
 
-  const handleDownload = async () => {
-    setIsDownloading(true);
-    setDownloadError(null);
-    
-    try {
-      // If we already have a PDF URL, use it directly
-      if (record.bestPdfUrl && openExternal(record.bestPdfUrl)) {
-        setIsDownloading(false);
-        return;
-      }
-      
-      // Otherwise, try to resolve it via the API. The endpoint returns the
-      // record itself — this read `response.pdf.url`, which the typed fetcher
-      // promised and the endpoint has never sent, so every record without a
-      // `bestPdfUrl` threw a TypeError here instead of reporting no PDF.
-      const resolved = await getPaper(record.id);
-      const url = resolved.bestPdfUrl;
-      if (!openExternal(url)) {
-        setDownloadError('PDF not available');
-      }
-    } catch (error) {
-      console.error('PDF download error:', error);
-      setDownloadError('Failed to fetch PDF');
-    } finally {
-      setIsDownloading(false);
-    }
+  /**
+   * Opens the copy the record names.
+   *
+   * This used to ask `/api/paper/:id` for the record again when the URL would
+   * not open. It cannot fail to: `openExternal` refuses only what `httpUrl`
+   * rejects, and a copy is built by `fullTextAt`, which keeps nothing else.
+   * The error stays for a record that reached here some other way.
+   */
+  const handleOpenCopy = () => {
+    setDownloadError(openExternal(copy?.url) ? null : 'This copy’s link could not be opened');
   };
 
   return (
@@ -116,6 +107,25 @@ export function ResultCard({ record }: ResultCardProps) {
             <span className="font-mono text-xs">DOI</span>
           )}
         </div>
+
+        {/* How it is open, which version it is, and who returned it: what
+            the paper carries beyond the one source version 1 kept. */}
+        {(route || stage || sources.length > 0) && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            {route && (
+              <span className="font-medium text-green-700 dark:text-green-400" title={route.note}>
+                {route.label}
+              </span>
+            )}
+            {stage && <span className="font-medium">{stage}</span>}
+            {sources.length > 0 && (
+              <span title={sources.join(', ')}>
+                Found in {sources.slice(0, SOURCES_SHOWN).join(', ')}
+                {sources.length > SOURCES_SHOWN && ` +${sources.length - SOURCES_SHOWN}`}
+              </span>
+            )}
+          </div>
+        )}
         
         {/* Abstract */}
         {record.abstract && (
@@ -162,17 +172,19 @@ export function ResultCard({ record }: ResultCardProps) {
             </Button>
           </Link>
           
-          {record.bestPdfUrl && (
+          {copy && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleDownload}
-              disabled={isDownloading}
+              onClick={handleOpenCopy}
               className="h-8 text-xs hover:bg-muted"
-              aria-label={`Download PDF of ${record.title}`}
+              aria-label={`Open the ${copy.kind === 'pdf' ? 'PDF' : 'full text'} of ${record.title} in a new tab`}
+              title={copyNote(copy)}
             >
-              <Download className="h-3 w-3 mr-1.5" aria-hidden="true" />
-              {isDownloading ? 'Downloading...' : 'PDF'}
+              {copy.kind === 'pdf'
+                ? <Download className="h-3 w-3 mr-1.5" aria-hidden="true" />
+                : <FileText className="h-3 w-3 mr-1.5" aria-hidden="true" />}
+              {copyLabel(copy)}
             </Button>
           )}
           

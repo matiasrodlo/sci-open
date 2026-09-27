@@ -1,4 +1,4 @@
-import { OARecord } from '@open-access-explorer/shared';
+import type { Paper } from '@open-access-explorer/shared';
 
 /**
  * Two export formats, both correct.
@@ -71,23 +71,24 @@ export function bareDoi(doi: string): string {
     .replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, '');
 }
 
-function toCitationData(record: OARecord): CitationData {
-  const doi = record.doi ? bareDoi(record.doi) : undefined;
+function toCitationData(paper: Paper): CitationData {
+  const doi = paper.doi ? bareDoi(paper.doi) : undefined;
 
   return {
-    title: (record.title || '').trim(),
-    authors: (record.authors || []).filter(a => a && a.trim()).map(a => a.trim()),
-    ...(record.year !== undefined ? { year: record.year } : {}),
-    ...(record.venue ? { venue: record.venue } : {}),
-    ...(record.publisher ? { publisher: record.publisher } : {}),
-    ...(record.abstract ? { abstract: record.abstract } : {}),
+    title: (paper.title || '').trim(),
+    authors: (paper.authors || []).filter(a => a && a.trim()).map(a => a.trim()),
+    ...(paper.year !== undefined ? { year: paper.year } : {}),
+    ...(paper.venue ? { venue: paper.venue } : {}),
+    ...(paper.publisher ? { publisher: paper.publisher } : {}),
+    ...(paper.abstract ? { abstract: paper.abstract } : {}),
     ...(doi ? { doi } : {}),
     // The DOI is the durable link, so it is preferred over whatever landing
     // page a provider recorded.
-    url: doi ? `https://doi.org/${doi}` : record.landingPage || record.bestPdfUrl,
-    keywords: record.topics || [],
-    ...(record.language ? { language: record.language } : {}),
-    isPreprint: record.oaStatus === 'preprint'
+    url: doi ? `https://doi.org/${doi}` : paper.landingPage || paper.fullText?.url,
+    keywords: paper.topics || [],
+    ...(paper.language ? { language: paper.language } : {}),
+    // Which version this is, not how it is open: `stage`, not `oaStatus`.
+    isPreprint: paper.stage === 'preprint'
   };
 }
 
@@ -227,9 +228,9 @@ function generateRISEntry(data: CitationData, options: Required<CitationOptions>
 
 /* ------------------------------------------------------------------- entry */
 
-export function generateCitation(record: OARecord, options: CitationOptions): string {
+export function generateCitation(paper: Paper, options: CitationOptions): string {
   const resolved: Required<CitationOptions> = { ...DEFAULTS, ...options };
-  const data = toCitationData(record);
+  const data = toCitationData(paper);
 
   return resolved.format === 'ris'
     ? generateRISEntry(data, resolved)
@@ -242,9 +243,9 @@ export function generateCitation(record: OARecord, options: CitationOptions): st
  * Two papers by the same author in the same year produce the same key, and a
  * `.bib` file with a repeated key silently loses one of the entries.
  */
-export function generateCitationsBatch(records: OARecord[], options: CitationOptions): string {
+export function generateCitationsBatch(papers: Paper[], options: CitationOptions): string {
   const separator = options.format === 'ris' ? '\r\n\r\n' : '\n\n';
-  const entries = records.map(record => generateCitation(record, options));
+  const entries = papers.map(paper => generateCitation(paper, options));
 
   if (options.format !== 'bibtex') return entries.join(separator);
 

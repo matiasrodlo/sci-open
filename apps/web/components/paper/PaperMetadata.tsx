@@ -1,10 +1,14 @@
-import { OARecord } from '@open-access-explorer/shared';
+import type { Paper } from '@open-access-explorer/shared';
+import { accessRoute, copyNote, foundIn, stageLabel } from '@/lib/access';
 
 interface PaperMetadataProps {
-  paper: OARecord;
+  paper: Paper;
 }
 
 export function PaperMetadata({ paper }: PaperMetadataProps) {
+  const route = accessRoute(paper.oaStatus);
+  const stage = stageLabel(paper.stage);
+  const sources = foundIn(paper);
 
   return (
     <div className="space-y-6">
@@ -44,11 +48,39 @@ export function PaperMetadata({ paper }: PaperMetadataProps) {
           </div>
         )}
 
-        {/* Open Access Status */}
-        {paper.oaStatus && (
+        {/* Version. This row was "Access Status" and printed `published`
+            or `preprint`: the version, under the route's name. */}
+        {stage && (
           <div>
-            <div className="text-xs text-muted-foreground mb-1">Access Status</div>
-            <div className="text-sm text-foreground capitalize">{paper.oaStatus}</div>
+            <div className="text-xs text-muted-foreground mb-1">Version</div>
+            <div className="text-sm text-foreground">{stage}</div>
+          </div>
+        )}
+
+        {/* Open-access route */}
+        {route && (
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Open Access</div>
+            <div className="text-sm text-foreground">{route.label}</div>
+            <div className="text-xs text-muted-foreground">{route.note}</div>
+          </div>
+        )}
+
+        {/* The copy, and whether anyone has looked at it */}
+        {paper.fullText && (
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Full Text</div>
+            <div className="text-sm text-foreground">{copyNote(paper.fullText)}</div>
+          </div>
+        )}
+
+        {/* Who the record came from. A click from the results carries every
+            source the search merged; the page's own lookup asks the one
+            provider the id belongs to, and replaces it with that. */}
+        {sources.length > 0 && (
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Record From</div>
+            <div className="text-sm text-foreground">{sources.join(', ')}</div>
           </div>
         )}
       </div>

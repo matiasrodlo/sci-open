@@ -1,10 +1,9 @@
-import { isStructured, parseExpression } from '@open-access-explorer/shared';
-import type { ProviderTotal, SearchFilters } from '@open-access-explorer/shared';
+import type { ProviderReport, SearchFilters } from '@open-access-explorer/shared';
 
 /**
  * What the reported total is a total *of*.
  *
- * `SearchResponse.total` is the length of the filtered set, and the filtered
+ * `SearchResponseV2.total` is the length of the filtered set, and the filtered
  * set is built from a fixed number of records per provider — `SEARCH_DEPTH`,
  * 600 by default — not from everything that matched. The header called that
  * number "retrievable open-access papers", which reads as a count of the
@@ -75,17 +74,25 @@ export type Matching = {
    *   `Coverage.matching`.
    * - `read` — what this search read and kept. Also a floor, since every paper
    *   in it matches. Used when the sources' own counts do not describe the
-   *   question (see `sourceCountsApply`), and when the reads outnumber the
-   *   largest of them — several sources each read to depth can hold more
-   *   between them than the biggest one reports.
+   *   question, and when the reads outnumber the largest of them — several
+   *   sources each read to depth can hold more between them than the biggest
+   *   one reports.
    */
   basis: 'exact' | 'source' | 'read';
 };
 
-export function matchingOf(total: number, coverage: Coverage, sourceCountsApply: boolean): Matching {
+/**
+ * `countsFromSources` is the API's word on whether the sources were asked
+ * exactly this search. A ticked facet is applied to the read, not sent, and a
+ * structured query — a field tag, `OR`, `NOT` — is widened for every source
+ * that cannot express it, so OpenAIRE's count for `AU=Doudna AND crispr` is of
+ * every paper about CRISPR. Either way the only count true of the question is
+ * the read, taken after the narrowing.
+ */
+export function matchingOf(total: number, coverage: Coverage, countsFromSources: boolean): Matching {
   if (!coverage.truncated) return { count: total, basis: 'exact' };
 
-  if (sourceCountsApply && coverage.matching !== undefined && coverage.matching > total) {
+  if (countsFromSources && coverage.matching !== undefined && coverage.matching > total) {
     return { count: coverage.matching, basis: 'source' };
   }
 
@@ -106,37 +113,6 @@ const LOCAL_FILTERS = ['source', 'year', 'oaStatus', 'venue', 'publisher', 'topi
 /** True when a facet narrows the set after the sources have answered. */
 export function filtersNarrow(filters: SearchFilters): boolean {
   return LOCAL_FILTERS.some(key => (filters[key]?.length ?? 0) > 0);
-}
-
-/**
- * Whether the sources' own counts are counts of what was asked.
- *
- * Two things narrow a search after the sources answer, and a source's count
- * knows about neither. A ticked facet is applied to the read, not sent. And a
- * structured query — a field tag, `OR`, `NOT` — is *widened* for every source
- * that cannot express it: OpenAIRE is asked `crispr` for `AU=Doudna AND
- * crispr`, and its count is then of every paper about CRISPR. Shown as the
- * size of that search, it would claim hundreds of thousands for a query that
- * matches a few hundred, and `#1 NOT #3` would read as the same size as `#1` —
- * a narrowing that did nothing, which is exactly what the search history's
- * counts exist to reveal.
- *
- * In either case the only count that is true of the question is the one taken
- * after the narrowing, which is the read.
- */
-export function sourceCountsApply(query: string, filters: SearchFilters): boolean {
-  if (filtersNarrow(filters)) return false;
-
-  try {
-    // Parsed as the API parses it, so "structured" means the same thing here
-    // as it does to the providers that widen it.
-    return !isStructured(parseExpression(query));
-  } catch {
-    // The API accepted this query or there would be no count to label, so a
-    // parse failure here is a disagreement between the two; the read is the
-    // number that cannot overstate.
-    return false;
-  }
 }
 
 /** The count as a figure: `684,999+`, or `53` when it is the whole set. */
@@ -177,23 +153,20 @@ export function matchingNote(matching: Matching): string | undefined {
 }
 
 /**
- * How `toSearchResponse` spells a skip.
+ * Declined to guess: never asked, and not a sign of anything wrong.
  *
- * `ProviderTotal` has one field for "why this contributed nothing", so a skip
- * travels as a prefixed `error`. The prefix is the only thing separating "we
- * chose not to ask" from "we asked and it broke", and it was being compared
- * against a string literal at three call sites. One place knows the encoding.
+ * Read from the report's `status`. Version 1 of the response had one field
+ * for "why this contributed nothing", so a skip travelled as an `error`
+ * prefixed `skipped: `, and that prefix was all that separated "we chose not
+ * to ask" from "we asked and it broke". Version 2 says which it was.
  */
-const SKIPPED = 'skipped: ';
-
-/** Declined to guess: never asked, and not a sign of anything wrong. */
-export function isSkipped(provider: ProviderTotal): boolean {
-  return provider.error?.startsWith(SKIPPED) ?? false;
+export function isSkipped(provider: ProviderReport): boolean {
+  return provider.status === 'skipped';
 }
 
 /** Asked, and did not answer. The one that makes the total a lower bound. */
-export function isFailed(provider: ProviderTotal): boolean {
-  return provider.error !== undefined && !isSkipped(provider);
+export function isFailed(provider: ProviderReport): boolean {
+  return provider.status === 'error' || provider.status === 'timeout';
 }
 
 /**
@@ -208,16 +181,17 @@ export function isFailed(provider: ProviderTotal): boolean {
  * print for all of them.
  */
 export function skipsByReason(
-  providers: readonly ProviderTotal[]
+  providers: readonly ProviderReport[]
 ): Array<{ reason: string; sources: string[] }> {
   const groups = new Map<string, string[]>();
 
   for (const provider of providers) {
     if (!isSkipped(provider)) continue;
-    const reason = provider.error!.slice(SKIPPED.length).trim();
+    // Every skip the fan-out writes has a reason; the type cannot say so.
+    const reason = provider.skipReason?.trim() || 'no reason given';
     const sources = groups.get(reason);
-    if (sources) sources.push(provider.source);
-    else groups.set(reason, [provider.source]);
+    if (sources) sources.push(provider.provider);
+    else groups.set(reason, [provider.provider]);
   }
 
   // `Array.from` rather than a spread over the Map's iterator, which this
@@ -233,8 +207,8 @@ export function skipsByReason(
  * nor raise the floor. That a failed source *also* makes the total a lower
  * bound is a separate statement, made separately — see `ProviderCoverage`.
  */
-export function coverageOf(providers: readonly ProviderTotal[]): Coverage {
-  const answered = providers.filter(p => !p.error && typeof p.totalHits === 'number');
+export function coverageOf(providers: readonly ProviderReport[]): Coverage {
+  const answered = providers.filter(p => p.status === 'ok' && typeof p.totalHits === 'number');
 
   const truncated = answered.some(p => p.totalHits! > p.retrieved);
   if (!truncated) return { truncated: false };

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { OARecord, SearchParams, SearchResponse } from '@open-access-explorer/shared';
+import type { Paper, SearchParams, SearchResponseV2 } from '@open-access-explorer/shared';
 
 /**
  * Every call to the API goes through here.
@@ -71,8 +71,15 @@ function callerHeaders(caller: Caller): Record<string, string> {
  */
 export const SEARCH_TIMEOUT_MS = 45000;
 
-export async function searchPapers(params: SearchParams, caller: Caller = {}): Promise<SearchResponse> {
-  const response = await axios.post<SearchResponse>(apiUrl('/api/search'), params, {
+/**
+ * A search, in version 2 of the response: each paper as the API holds it —
+ * every source that returned it, its access route and stage, and whether its
+ * copy was confirmed — and each provider's report whole. Version 1 flattens a
+ * paper to one source and a URL, and a report to two counts and an `error`
+ * string that a skip had to be spelled into.
+ */
+export async function searchPapers(params: SearchParams, caller: Caller = {}): Promise<SearchResponseV2> {
+  const response = await axios.post<SearchResponseV2>(apiUrl('/api/v2/search'), params, {
     headers: callerHeaders(caller),
     timeout: SEARCH_TIMEOUT_MS
   });
@@ -80,16 +87,11 @@ export async function searchPapers(params: SearchParams, caller: Caller = {}): P
 }
 
 /**
- * `/api/paper/:id` returns the record itself.
- *
- * It was typed `PaperResponse` — `{ record, pdf: { url?, status } }` — which
- * the endpoint has never returned. Nothing read the declared shape, because
- * the only caller bypassed this function and treated the response as what it
- * actually is. The type is gone rather than corrected: `OARecord` is the
- * contract, and a second name for it that disagreed was the whole problem.
+ * `/api/v2/paper/:id` returns the paper itself, in the shape a search returns
+ * it, so the detail page and the result card it was opened from read one type.
  */
-export async function getPaper(id: string): Promise<OARecord> {
-  const response = await axios.get<OARecord>(apiUrl(`/api/paper/${encodeURIComponent(id)}`), {
+export async function getPaper(id: string): Promise<Paper> {
+  const response = await axios.get<Paper>(apiUrl(`/api/v2/paper/${encodeURIComponent(id)}`), {
     headers: { 'Cache-Control': 'no-store' }
   });
   return response.data;

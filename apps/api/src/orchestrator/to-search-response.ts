@@ -3,13 +3,12 @@ import type { ProviderTotal, SearchFilters, SearchResponse, SearchResponseV2, Se
 import type { OrchestratorResult } from './index';
 
 /**
- * Orchestrator result -> the response shape the API returns.
+ * Orchestrator result -> version 1 of the response.
  *
- * `OARecord` is the external contract, so the orchestrator builds `Paper`s
- * and flattens on the way out. Everything richer that it knows — field
+ * Version 1's contract is `OARecord`, so the orchestrator's `Paper`s are
+ * flattened on the way out. Everything richer that it knows — field
  * provenance, every provider that returned a paper, the access route — is
- * dropped here. That is the price of a stable contract; surfacing it is a
- * response-shape change rather than anything this function can decide.
+ * dropped here; `toSearchResponseV2` below is where it is kept.
  *
  * `complete` is the one addition. It is optional, and a consumer that does
  * not know about it is unaffected.
@@ -17,9 +16,8 @@ import type { OrchestratorResult } from './index';
  * `result.authorities` is deliberately not folded into `providerTotals`. An
  * authority never returns a paper, so it has no `retrieved` to report, and
  * listing it beside the search providers would put a row in the response that
- * the source facet and `filters.source` both disagree with. It belongs with
- * `fieldSources` in that response-shape change, having the same problem for
- * the same reason.
+ * the source facet and `filters.source` both disagree with. Version 2 reports
+ * authorities in a list of their own.
  */
 export function toSearchResponse(
   result: OrchestratorResult,

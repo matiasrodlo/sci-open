@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { OARecord } from '@open-access-explorer/shared';
+import type { Paper } from '@open-access-explorer/shared';
 import { ResultCard } from './ResultCard';
 import { Pagination } from './Pagination';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,7 @@ import { RefreshCw } from 'lucide-react';
  */
 
 interface PaginatedResultsProps {
-  results: OARecord[];
+  results: Paper[];
   /** What pagination walks: the papers this search read and kept. */
   total: number;
   /** What the counter names as the size of the search. See `Matching`. */

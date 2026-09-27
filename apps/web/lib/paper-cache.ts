@@ -1,4 +1,4 @@
-import { OARecord } from '@open-access-explorer/shared';
+import type { Paper } from '@open-access-explorer/shared';
 
 /**
  * The record a results click carries into the paper page, for the first paint.
@@ -22,11 +22,15 @@ import { OARecord } from '@open-access-explorer/shared';
  * browser is set to refuse it, and a placeholder that could not be stored costs
  * a loading skeleton and nothing else — so a failure here is not an error and
  * is not reported as one.
+ *
+ * The prefix names the shape. A tab open across a deploy still holds entries
+ * written as `OARecord`s under the old prefix, and painted as a `Paper` one
+ * would have no `sources` to read; under a new prefix it is simply not found.
  */
 
-const CACHE_KEY_PREFIX = 'paper_cache_';
+const CACHE_KEY_PREFIX = 'paper_v2_';
 
-export function cachePaper(paper: OARecord): void {
+export function cachePaper(paper: Paper): void {
   if (typeof window === 'undefined') return;
 
   try {
@@ -36,7 +40,7 @@ export function cachePaper(paper: OARecord): void {
   }
 }
 
-export function getCachedPaper(id: string): OARecord | null {
+export function getCachedPaper(id: string): Paper | null {
   if (typeof window === 'undefined') return null;
 
   try {

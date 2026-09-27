@@ -1,21 +1,37 @@
-import { OARecord } from '@open-access-explorer/shared';
+import type { Paper } from '@open-access-explorer/shared';
 import { ExternalLink, Quote } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { externalHref } from '@/lib/external-link';
+import { accessRoute, landingLabel, notableStage } from '@/lib/access';
 
 interface PaperHeaderProps {
-  paper: OARecord;
+  paper: Paper;
 }
 
 export function PaperHeader({ paper }: PaperHeaderProps) {
+  const route = accessRoute(paper.oaStatus);
+  const stage = notableStage(paper.stage);
+  const landingPage = externalHref(paper.landingPage);
+
   return (
     <div className="bg-card border-b pb-8 space-y-5">
-      {/* OA Status and DOI Badges */}
+      {/* How it is open, which version it is, and the DOI. The first badge
+          read "Open Access" whenever the record had a version, because
+          version 1 kept the version in the field named for the route. */}
       <div className="flex items-center gap-2 flex-wrap">
-        {paper.oaStatus && (
-          <Badge variant="outline" className="text-xs font-medium border-green-500/20 text-green-700 dark:text-green-400">
-            Open Access
+        {route && (
+          <Badge
+            variant="outline"
+            className="text-xs font-medium border-green-500/20 text-green-700 dark:text-green-400"
+            title={route.note}
+          >
+            {route.label}
+          </Badge>
+        )}
+        {stage && (
+          <Badge variant="outline" className="text-xs font-medium border-muted-foreground/20">
+            {stage}
           </Badge>
         )}
         {paper.doi && (
@@ -83,17 +99,21 @@ export function PaperHeader({ paper }: PaperHeaderProps) {
 
       {/* Landing Page Link. Screened the same way `openExternal` screens a
           click target: React renders a `javascript:` href with a warning rather
-          than refusing it, and this URL comes from provider metadata. */}
-      {externalHref(paper.landingPage) && (
+          than refusing it, and this URL comes from provider metadata.
+
+          Named for where it goes. It said "View on" the provider that returned
+          the record, which is often not where the page is: OpenAlex records a
+          DOI link, which leads to the publisher. */}
+      {landingPage && (
         <div className="pt-2">
           <Link 
-            href={externalHref(paper.landingPage)!}
+            href={landingPage}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ExternalLink className="h-3.5 w-3.5" />
-            View on {paper.source.toUpperCase()}
+            {landingLabel(landingPage)}
           </Link>
         </div>
       )}

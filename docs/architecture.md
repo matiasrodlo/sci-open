@@ -137,13 +137,13 @@ Paper details are cached in two levels, keyed as
 ### Search Request
 
 ```
-1. Client → API: POST /api/search
+1. Client → API: POST /api/v2/search (or /api/search, for OARecords)
 2. Identical requests already running are joined (single-flight)
 3. The result set for this query and filters: held, or resolved —
    plan → fan out → merge → match → rank → filter → rescue → facet —
    and held if every provider answered
 4. One page of it: sort → paginate → enrich
-5. Paper[] → SearchResponse
+5. Paper[] → SearchResponseV2, or flattened to SearchResponse for version 1
 ```
 
 Step 3 is where the cache is, and what it holds is the set, not a page. Page
@@ -162,11 +162,11 @@ get past.
 ### Paper Details
 
 ```
-1. Client → API: GET /api/paper/:id
+1. Client → API: GET /api/v2/paper/:id (or /api/paper/:id, for an OARecord)
 2. Check cache, by the id that was asked for
 3. lookupPaper: split `source:nativeId`, ask that provider for that record
 4. Ask the authorities about that one record
-5. Cache and return
+5. Cache the Paper, and return it — flattened for version 1
 ```
 
 Step 4 is `enrichPage` pointed at a single paper, which is the same step the

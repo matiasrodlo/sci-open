@@ -2,13 +2,12 @@ import type { OARecord } from './types';
 import type { Paper, PaperStage } from './paper';
 
 /**
- * `Paper` -> the `OARecord` the API still speaks.
+ * `Paper` -> the `OARecord` version 1 of the API speaks.
  *
- * The orchestrator builds `Paper`s and converts on the way out, so the response
- * shape holds steady no matter what the pipeline behind it knows. That is
- * permanent by decision: the frontend consumes `OARecord`, and a stable
- * external contract turned out to be worth the translation. Moving the frontend
- * onto `Paper` is a response-shape change and its own piece of work.
+ * The orchestrator builds `Paper`s and converts on the way out of the version 1
+ * routes, so that shape holds steady for the clients that read it no matter what
+ * the pipeline behind it knows. Version 2 returns the `Paper` itself, and the
+ * frontend reads version 2.
  *
  * **The reverse direction is gone.** `fromOARecord` rebuilt a `Paper` from an
  * `OARecord` and parked whatever the new model had no place for in a

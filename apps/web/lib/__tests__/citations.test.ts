@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import type { OARecord } from '@open-access-explorer/shared';
+import type { Paper } from '@open-access-explorer/shared';
 import {
   generateCitation, generateCitationsBatch, getFileExtension, bareDoi, escapeBibTeX, citeKey
 } from '../citations';
 
-function record(over: Partial<OARecord> = {}): OARecord {
+function record(over: Partial<Paper> = {}): Paper {
   return {
     id: 'europepmc:1',
     doi: '10.1234/example',
@@ -13,16 +13,18 @@ function record(over: Partial<OARecord> = {}): OARecord {
     year: 2020,
     venue: 'Journal of Things',
     publisher: 'Thing Press',
-    source: 'europepmc',
-    sourceId: '1',
-    oaStatus: 'published',
-    createdAt: '2024-01-01T00:00:00.000Z',
+    topics: [],
+    oaStatus: 'gold',
+    stage: 'published',
+    sources: [{ provider: 'europepmc', nativeId: '1', rank: 0, retrievedAt: '2024-01-01T00:00:00.000Z' }],
+    fieldSources: {},
+    retrievedAt: '2024-01-01T00:00:00.000Z',
     ...over
-  } as OARecord;
+  };
 }
 
-const bibtex = (r: OARecord) => generateCitation(r, { format: 'bibtex' });
-const ris = (r: OARecord) => generateCitation(r, { format: 'ris' });
+const bibtex = (r: Paper) => generateCitation(r, { format: 'bibtex' });
+const ris = (r: Paper) => generateCitation(r, { format: 'ris' });
 
 describe('BibTeX escaping', () => {
   it.each([
@@ -84,6 +86,13 @@ describe('DOIs', () => {
   it('still offers the resolver as the url', () => {
     expect(bibtex(record())).toContain('url = {https://doi.org/10.1234/example}');
   });
+
+  it('offers the landing page without a DOI, and the copy without either', () => {
+    const copy = { url: 'https://example.org/p.pdf', kind: 'pdf' as const, verified: false };
+    expect(bibtex(record({ doi: undefined, landingPage: 'https://example.org/p', fullText: copy })))
+      .toContain('url = {https://example.org/p}');
+    expect(bibtex(record({ doi: undefined, fullText: copy }))).toContain('url = {https://example.org/p.pdf}');
+  });
 });
 
 describe('BibTeX entries', () => {
@@ -106,7 +115,7 @@ describe('BibTeX entries', () => {
   });
 
   it('calls a preprint misc rather than article', () => {
-    expect(bibtex(record({ oaStatus: 'preprint' }))).toMatch(/^@misc\{/);
+    expect(bibtex(record({ stage: 'preprint' }))).toMatch(/^@misc\{/);
   });
 
   it('builds a cite key from author, year and title', () => {
@@ -153,7 +162,7 @@ describe('RIS entries', () => {
   });
 
   it('calls a preprint GEN rather than JOUR', () => {
-    expect(ris(record({ oaStatus: 'preprint' }))).toContain('TY  - GEN');
+    expect(ris(record({ stage: 'preprint' }))).toContain('TY  - GEN');
   });
 });
 
@@ -177,10 +186,10 @@ describe('generateCitationsBatch', () => {
 
 describe('robustness', () => {
   it('does not throw on a record missing everything optional', () => {
-    const sparse = {
-      id: 'x:1', title: 'Bare', authors: [], source: 'arxiv', sourceId: '1',
-      createdAt: '2024-01-01T00:00:00.000Z'
-    } as OARecord;
+    const sparse: Paper = {
+      id: 'x:1', title: 'Bare', authors: [], topics: [], oaStatus: 'unknown', stage: 'unknown',
+      sources: [], fieldSources: {}, retrievedAt: '2024-01-01T00:00:00.000Z'
+    };
 
     expect(() => generateCitation(sparse, { format: 'bibtex' })).not.toThrow();
     expect(() => generateCitation(sparse, { format: 'ris' })).not.toThrow();

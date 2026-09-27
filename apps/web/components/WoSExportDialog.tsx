@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Download, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { OARecord } from '@open-access-explorer/shared';
+import type { Paper } from '@open-access-explorer/shared';
 import {
   generateCitationsBatch,
   downloadCitation,
@@ -14,7 +14,7 @@ import {
 } from '@/lib/citations';
 
 interface WoSExportDialogProps {
-  results: OARecord[];
+  results: Paper[];
   query: string;
   totalResults: number;
   currentPage: number;
