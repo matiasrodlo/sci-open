@@ -87,7 +87,7 @@ function provider(
     capabilities: {
       keywordSearch: true, fieldedSearch: true, doiLookup: true, fields: [], yearFilter: true,
       maxPageSize: 1000, reportsTotal: true, suppliesCitations: false,
-      stages: { holds: ['published'], filter: false }
+      stages: { holds: ['published'], filter: false }, facets: []
     },
     translate: query => query.terms.join(' '),
     normalizerVersion: 1,

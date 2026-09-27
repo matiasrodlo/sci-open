@@ -84,4 +84,4 @@ export type AuthorityReport = {
  * where it is named. The two sets are both subsets of `OASource`, and they
  * overlap — OpenAlex is a provider and an authority both.
  */
-export type AuthorityId = Extract<OASource, 'crossref' | 'unpaywall' | 'openalex' | 'opencitations'>;
+export type AuthorityId = Extract<OASource, 'crossref' | 'unpaywall' | 'openalex' | 'opencitations' | 'preprints'>;

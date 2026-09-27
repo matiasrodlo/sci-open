@@ -14,6 +14,7 @@ const set = (over: Partial<ResultSet> = {}): ResultSet => ({
   reports: [],
   rescue: { candidates: 0, examined: 0, rescued: 0, bounded: false, authorities: [] },
   complete: true,
+  countsFromSources: false,
   ...over
 });
 
@@ -24,6 +25,9 @@ const parts = (over: Partial<ResultSetKeyParts> = {}): ResultSetKeyParts => ({
   openAccessOnly: true,
   depth: 600,
   timeoutMs: 20000,
+  facetQueries: undefined,
+  facetBudgetMs: 20000,
+  filtersSent: false,
   providers: [{ id: 'europepmc', normalizerVersion: 2 }],
   rescue: { authorities: ['unpaywall'], limit: 200, budgetMs: 5000 },
   ...over
@@ -92,6 +96,21 @@ describe('ResultSetCache', () => {
     expect((await cache.resolve('k', work)).cached).toBe(false);
   });
 
+  it('holds a set whose source counts partly failed for a minute, not half an hour', async () => {
+    // Long enough for one reader's pages to agree; short enough that a rate
+    // limit that cost some counts is asked about again soon.
+    let now = 0;
+    const cache = new ResultSetCache({ now: () => now });
+    const partial = set({ reports: [{ provider: 'europepmc', status: 'ok', retrieved: 1, latency: 5, facetError: '3 counts failed: 429' }] });
+    const work = vi.fn(async () => partial);
+
+    await cache.resolve('k', work);
+    now = 59_999;
+    expect((await cache.resolve('k', work)).cached).toBe(true);
+    now = 60_000;
+    expect((await cache.resolve('k', work)).cached).toBe(false);
+  });
+
   it('lets the least recently read set go first when over budget', async () => {
     // Each set is one paper, charged a little over 700 bytes.
     const cache = new ResultSetCache({ maxBytes: 1600 });
@@ -136,7 +155,7 @@ describe('search, with a set cache', () => {
       capabilities: {
         keywordSearch: true, fieldedSearch: true, doiLookup: true, fields: [], yearFilter: true,
         maxPageSize: 1000, reportsTotal: true, suppliesCitations: false,
-        stages: { holds: ['published'], filter: false }
+        stages: { holds: ['published'], filter: false }, facets: []
       },
       translate: () => 'native',
       normalizerVersion: 1,

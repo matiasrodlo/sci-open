@@ -42,8 +42,16 @@ export type SearchSet = {
    * what makes `expandSets` a single pass with no recursion to bound.
    */
   expanded: string;
-  /** What it returned, once the search that produced it has come back. */
+  /**
+   * How many papers match it, once the search that produced it has come back —
+   * the same figure the results header shows, so the two never disagree.
+   */
   total?: number;
+  /**
+   * True when `total` is a floor: more match, and how many more is not known.
+   * Shown as the `+` after it. See `Matching` in `lib/coverage.ts`.
+   */
+  atLeast?: boolean;
   at: string;
 };
 
@@ -139,32 +147,41 @@ export function setTexts(sets: readonly SearchSet[]): string[] {
  * issued, not one above the list length, so evicting `#1` cannot make the next
  * search `#1` and quietly redirect a reference the reader has already typed.
  */
-export function record(entry: { label: string; expanded: string; total?: number }): SearchSet[] {
+export function record(entry: {
+  label: string;
+  expanded: string;
+  total?: number;
+  atLeast?: boolean;
+}): SearchSet[] {
   if (typeof window === 'undefined') return [];
 
   const expanded = entry.expanded.trim();
   if (!expanded) return load();
 
+  // The count and its `+` travel together. A set that was a floor and is now
+  // exact has to lose the `+`, which spreading the new fields over the old
+  // ones would not do.
+  const count = (set: SearchSet): SearchSet => {
+    if (entry.total === undefined) return set;
+    const { total: _total, atLeast: _atLeast, ...rest } = set;
+    return { ...rest, total: entry.total, ...(entry.atLeast ? { atLeast: true } : {}) };
+  };
+
   const sets = load();
   const existing = sets.find(set => set.expanded === expanded);
 
   if (existing) {
-    const updated = sets.map(set =>
-      set === existing
-        ? { ...set, ...(entry.total !== undefined ? { total: entry.total } : {}) }
-        : set
-    );
+    const updated = sets.map(set => (set === existing ? count(set) : set));
     save(updated);
     return updated;
   }
 
-  const next: SearchSet = {
+  const next: SearchSet = count({
     number: sets.reduce((max, set) => Math.max(max, set.number), 0) + 1,
     label: entry.label.trim() || expanded,
     expanded,
-    ...(entry.total !== undefined ? { total: entry.total } : {}),
     at: new Date().toISOString()
-  };
+  });
 
   const updated = [...sets, next].slice(-MAX_SETS);
   save(updated);

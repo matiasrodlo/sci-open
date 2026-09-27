@@ -32,6 +32,17 @@ export type ProviderReport = {
   latency: number;
   /** Why it was not asked. Present when `status` is `skipped`. */
   skipReason?: string;
+  /**
+   * Why this provider's whole-index facet counts are missing, when it was
+   * asked for them and did not supply them.
+   *
+   * Kept apart from `error` because the two failures mean different things. A
+   * failed search is a hole in the results and makes the search incomplete; a
+   * failed count only lowers a floor — every facet bucket is the largest single
+   * source's count, so losing one source can make a bucket smaller and never
+   * wrong — and the search it came with is whole.
+   */
+  facetError?: string;
 };
 
 /**
@@ -123,7 +134,42 @@ export type ProviderCapabilities = {
     holds: readonly PaperStage[];
     filter: boolean;
   };
+  /**
+   * The facets this provider can count over **everything it matches**, rather
+   * than over the records a search reads from it.
+   *
+   * The read is the top `depth` records, and a facet counted over it describes
+   * the top of the answer: on `ai`, OpenAlex matched 983,815 open papers and
+   * the year facet said 964 of them were from 2026, where OpenAlex's own count
+   * for that year is 424,757. A reader looking at the panel to see how much
+   * work there is on a topic was being shown the size of our read.
+   *
+   * Only what the API can actually answer. Two providers aggregate natively —
+   * OpenAlex's `group_by` and PLOS's Solr facets — and answer every facet they
+   * list in one request each. The rest can only be asked for a count, so a year
+   * facet costs them one request per year and they list it only where that is
+   * affordable: arXiv asks for three seconds between requests, so it lists only
+   * `stage` — every record it holds is a preprint, so that count is its total,
+   * which its search already reports.
+   */
+  facets: readonly CountedFacet[];
 };
+
+/**
+ * The facets a provider can count across its whole index. The names are the
+ * facet keys the search response carries.
+ */
+export type CountedFacet = 'year' | 'stage' | 'venue' | 'publisher' | 'topics';
+
+/** One value of a facet and how many papers carry it. */
+export type FacetCount = { value: string | number; count: number };
+
+/**
+ * One provider's counts across everything it matches, per facet. A facet it was
+ * not asked for, or could not count, is absent rather than empty: empty says
+ * the provider has no papers carrying any value of it, which is a claim.
+ */
+export type SourceFacets = Partial<Record<CountedFacet, FacetCount[]>>;
 
 /** True when the provider can serve this query at all. */
 export function canServe(

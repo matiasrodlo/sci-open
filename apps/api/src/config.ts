@@ -80,7 +80,7 @@ export const SETTINGS = [
   'PORT', 'NODE_ENV', 'LOG_LEVEL', 'TRUST_PROXY', 'ADMIN_API_KEY', 'UNPAYWALL_EMAIL',
   'RATE_LIMIT_MAX', 'RATE_LIMIT_WINDOW', 'RATE_LIMIT_DOWNLOAD_MAX',
   'REDIS_URL', 'CACHE_MAX_BYTES', 'CACHE_REDIS_COOLDOWN_MS', 'PROVIDER_CACHE_MAX_BYTES',
-  'SEARCH_DEPTH', 'SEARCH_RESCUE_LIMIT', 'SEARCH_RESCUE_BUDGET_MS',
+  'SEARCH_DEPTH', 'SEARCH_RESCUE_LIMIT', 'SEARCH_RESCUE_BUDGET_MS', 'SEARCH_FACET_COUNTS',
   'HTTP_POOL_KEEP_ALIVE_TIMEOUT', 'HTTP_POOL_MAX_SOCKETS', 'HTTP_POOL_TIMEOUT',
   'HTTP_POOL_RETRY_ATTEMPTS', 'HTTP_POOL_RETRY_DELAY',
   ...POOLED_SERVICES.map(poolSetting),
@@ -133,6 +133,14 @@ export function loadConfig(env: Env = process.env): LoadedConfig {
   };
 
   const production = env.NODE_ENV === 'production';
+
+  const facetCounts = (): boolean => {
+    const raw = text('SEARCH_FACET_COUNTS');
+    if (raw === undefined || raw.toLowerCase() === 'on') return true;
+    if (raw.toLowerCase() === 'off') return false;
+    warnings.push(`SEARCH_FACET_COUNTS=${raw} is neither on nor off; counting across the sources`);
+    return true;
+  };
 
   const logLevelRaw = text('LOG_LEVEL');
   const defaultLevel: LogLevel = production ? 'info' : 'debug';
@@ -266,7 +274,14 @@ export function loadConfig(env: Env = process.env): LoadedConfig {
        * broad query this budget expires long before the limit is. Zero would run
        * the step and abort it before any lookup returned, so it is refused.
        */
-      rescueBudgetMs: number('SEARCH_RESCUE_BUDGET_MS', DEFAULT_SEARCH_SETTINGS.rescueBudgetMs)
+      rescueBudgetMs: number('SEARCH_RESCUE_BUDGET_MS', DEFAULT_SEARCH_SETTINGS.rescueBudgetMs),
+      /**
+       * `off` counts every facet over the read, as before the sources were
+       * asked for their own counts — which are most of a search's upstream
+       * requests, a year facet being ten of them for each source that counts
+       * one at a time. Anything else leaves them on.
+       */
+      facetCounts: facetCounts()
     },
     httpPool,
     apiKeys

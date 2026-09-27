@@ -146,3 +146,33 @@ describe('ticking a box', () => {
     expect(url.has('page')).toBe(false);
   });
 });
+
+/**
+ * A bucket the API raised to a source's own count is a count across
+ * everything that source holds, and a floor: the other sources hold papers it
+ * does not. It is marked the way the header marks its floor, and says whose
+ * count it is — a count taken from the read is left plain.
+ */
+describe('a source’s own count', () => {
+  it('is shown with a plus and names the source', () => {
+    render(<FacetPanel facets={facets({
+      year: [{ value: 2026, count: 424757, from: 'openalex' }, { value: 2025, count: 12 }]
+    })} />);
+
+    expect(group(/Year/)).toEqual(['2026424,757+', '202512']);
+    const count = screen.getByText((_, el) => el?.textContent === '424,757+' && el.tagName === 'SPAN');
+    expect(count.getAttribute('title')).toMatch(/OpenAlex’s own count/);
+  });
+
+  it('marks a publication type whose larger half came from a source', () => {
+    render(<FacetPanel facets={facets({
+      stage: [
+        { value: 'published', count: 605605, from: 'openalex' },
+        { value: 'accepted', count: 3 },
+        { value: 'preprint', count: 5 }
+      ]
+    })} />);
+
+    expect(group(/Publication Type/)).toEqual(['Peer Reviewed605,608+', 'Pre-print5']);
+  });
+});

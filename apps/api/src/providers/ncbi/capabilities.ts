@@ -49,5 +49,8 @@ export const capabilities: ProviderCapabilities = {
 
   // Published when PubMed Central holds it, which `pubmed pmc[sb]` asks for.
   // Under the open-access filter every record is in PMC already.
-  stages: { holds: ['published', 'unknown'], filter: true }
+  stages: { holds: ['published', 'unknown'], filter: true },
+
+  // Counted with `rettype=count`, one request a year. ESearch has no facets.
+  facets: ['year', 'stage']
 };

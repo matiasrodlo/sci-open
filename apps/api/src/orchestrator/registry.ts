@@ -10,6 +10,9 @@ import * as ncbi from '../providers/ncbi';
 import * as openaire from '../providers/openaire';
 import * as openalex from '../providers/openalex';
 import * as plos from '../providers/plos';
+import type { ProviderFacetArgs, ProviderFacetOutcome } from '../providers/count-facets';
+
+export type { ProviderFacetArgs, ProviderFacetOutcome, FacetRequest } from '../providers/count-facets';
 
 /**
  * Every provider in the new shape, and how to drive it.
@@ -76,12 +79,32 @@ export type ProviderEntry = {
    * and routes to a DOI clause rather than a scoped keyword.
    */
   lookup?(args: ProviderLookupArgs): Promise<Paper | null>;
+  /**
+   * Counts the facets `capabilities.facets` lists, across everything this
+   * provider matches rather than across what a search reads from it. See
+   * `orchestrator/source-facets.ts`.
+   */
+  facets?(args: ProviderFacetArgs): Promise<ProviderFacetOutcome>;
+  /**
+   * True when `facets` is answered by the provider's own aggregation — a
+   * request per facet at most — and so is asked at the same time as the
+   * search.
+   *
+   * False, or absent, when it is answered one count at a time, which is a
+   * request per bucket. Those wait for the provider's search to settle, for
+   * three reasons: the search's `totalHits` is often a bucket already; a
+   * search that read everything the provider matched makes every count
+   * derivable from the records in hand; and two of these providers enforce a
+   * rate that a second burst on top of the search's own would trip.
+   */
+  facetsAggregate?: boolean;
 };
 
 export const PROVIDERS: ProviderEntry[] = [
   {
     id: 'arxiv',
     capabilities: arxiv.capabilities,
+    facets: args => arxiv.facets(args),
     translate: (query, options) => arxiv.translate(query, options),
     normalizerVersion: 1,
     async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
@@ -112,6 +135,7 @@ export const PROVIDERS: ProviderEntry[] = [
   {
     id: 'ncbi',
     capabilities: ncbi.capabilities,
+    facets: args => ncbi.facets(args, apiKeyFor('ncbi')),
     translate: (query, options) => ncbi.translate(query, options),
     normalizerVersion: 1,
     async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
@@ -144,6 +168,7 @@ export const PROVIDERS: ProviderEntry[] = [
   {
     id: 'doaj',
     capabilities: doaj.capabilities,
+    facets: args => doaj.facets(args, apiKeyFor('doaj')),
     translate: (query, options) => doaj.translate(query, options),
     normalizerVersion: 2,
     async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
@@ -176,6 +201,8 @@ export const PROVIDERS: ProviderEntry[] = [
   {
     id: 'plos',
     capabilities: plos.capabilities,
+    facets: args => plos.facets(args),
+    facetsAggregate: true,
     translate: (query, options) => plos.translate(query, options),
     normalizerVersion: 1,
     async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {
@@ -198,6 +225,7 @@ export const PROVIDERS: ProviderEntry[] = [
   {
     id: 'openaire',
     capabilities: openaire.capabilities,
+    facets: args => openaire.facets(args),
     translate: (query, options) => openaire.translate(query, options),
     normalizerVersion: 3,
     async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
@@ -267,6 +295,8 @@ export const PROVIDERS: ProviderEntry[] = [
   {
     id: 'openalex',
     capabilities: openalex.capabilities,
+    facets: args => openalex.facets(args, apiKeyFor('openalex')),
+    facetsAggregate: true,
     translate: (query, options) => openalex.translate(query, options),
     normalizerVersion: 2,
     async lookup({ nativeId, timeoutMs, signal, userAgent, now }) {
@@ -331,6 +361,7 @@ export const PROVIDERS: ProviderEntry[] = [
   {
     id: 'europepmc',
     capabilities: europepmc.capabilities,
+    facets: args => europepmc.facets(args),
     translate: (query, options) => europepmc.translate(query, options),
     normalizerVersion: 2,
     async search({ query, depth, offset, timeoutMs, openAccessOnly, signal, userAgent, now }) {

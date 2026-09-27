@@ -4,6 +4,7 @@ import { SingleFlight } from '../lib/single-flight';
 import type { Facets } from './facet';
 import type { PolicyOptions, UserFilters } from './policy';
 import type { RescueReport } from './rescue';
+import type { FacetQueries } from './source-facets';
 import { sizeOf } from './provider-cache';
 
 /**
@@ -30,6 +31,8 @@ export type ResultSet = {
   rescue: RescueReport;
   /** False when a provider failed, which also keeps the set out of the cache. */
   complete: boolean;
+  /** Whether the sources' own counts describe this search. See `OrchestratorResult`. */
+  countsFromSources: boolean;
 };
 
 /**
@@ -44,6 +47,10 @@ export type ResultSetKeyParts = {
   openAccessOnly: boolean;
   depth: number;
   timeoutMs: number;
+  /** Which facets are counted across the sources, and under which queries. */
+  facetQueries: FacetQueries | undefined;
+  facetBudgetMs: number;
+  filtersSent: boolean;
   /** A normaliser change changes the papers, as it does the provider cache's key. */
   providers: ReadonlyArray<{ id: string; normalizerVersion: number }>;
   rescue: { authorities: readonly string[]; limit: number; budgetMs: number };
@@ -78,6 +85,18 @@ function stableJson(value: unknown): string {
 export const DEFAULT_RESULT_SET_TTL_MS = 30 * 60 * 1000;
 
 /**
+ * How long a set is held when some source's whole-index counts failed.
+ *
+ * `ProviderCache` never keeps partial counts — a rate limit that cost three of
+ * ten years is a passing condition, and keeping it would show the gap to every
+ * search. Holding the set for the full half hour would do exactly that, and
+ * not holding it at all would cut each page from a different set again. A
+ * minute keeps one reader's pages consistent and has the gap counted again
+ * soon after.
+ */
+export const DEFAULT_PARTIAL_COUNTS_TTL_MS = 60 * 1000;
+
+/**
  * How much the held sets may be charged, in the serialised bytes
  * `ProviderCache` also counts. A set at the default depth is a few thousand
  * papers, a few megabytes — so this is a dozen or two searches being paged
@@ -88,6 +107,8 @@ export const DEFAULT_RESULT_SET_MAX_BYTES = 64 * 1024 * 1024;
 
 export type ResultSetCacheOptions = {
   ttlMs?: number;
+  /** For a set some of whose facet counts failed. See `DEFAULT_PARTIAL_COUNTS_TTL_MS`. */
+  partialCountsTtlMs?: number;
   maxBytes?: number;
   now?: () => number;
 };
@@ -108,12 +129,14 @@ export class ResultSetCache {
   private readonly entries = new Map<string, { set: ResultSet; bytes: number; expiresAt: number }>();
   private readonly flights = new SingleFlight();
   private readonly ttlMs: number;
+  private readonly partialCountsTtlMs: number;
   private readonly maxBytes: number;
   private readonly now: () => number;
   private held = 0;
 
   constructor(options: ResultSetCacheOptions = {}) {
     this.ttlMs = options.ttlMs ?? DEFAULT_RESULT_SET_TTL_MS;
+    this.partialCountsTtlMs = options.partialCountsTtlMs ?? DEFAULT_PARTIAL_COUNTS_TTL_MS;
     this.maxBytes = options.maxBytes ?? DEFAULT_RESULT_SET_MAX_BYTES;
     this.now = options.now ?? Date.now;
   }
@@ -159,8 +182,11 @@ export class ResultSetCache {
     // Larger than the whole budget is not held, rather than evicting everything.
     if (bytes > this.maxBytes) return;
 
+    const partial = set.reports.some(report => report.facetError !== undefined);
+    const ttl = partial ? Math.min(this.partialCountsTtlMs, this.ttlMs) : this.ttlMs;
+
     this.drop(key);
-    this.entries.set(key, { set, bytes, expiresAt: this.now() + this.ttlMs });
+    this.entries.set(key, { set, bytes, expiresAt: this.now() + ttl });
     this.held += bytes;
 
     for (const oldest of [...this.entries.keys()]) {

@@ -55,6 +55,22 @@ describe('recording a search', () => {
     expect(readHistory()).toEqual([expect.objectContaining({ number: 1, total: 4212 })]);
   });
 
+  it('keeps whether the count is a floor, and drops the mark when it no longer is', () => {
+    record({ label: 'crispr', expanded: 'crispr', total: 684999, atLeast: true });
+    expect(readHistory()[0]).toMatchObject({ total: 684999, atLeast: true });
+
+    record({ label: 'crispr', expanded: 'crispr', total: 53 });
+    expect(readHistory()[0]!.total).toBe(53);
+    expect(readHistory()[0]!.atLeast).toBeUndefined();
+  });
+
+  it('keeps the count and its mark when handed no count', () => {
+    record({ label: 'crispr', expanded: 'crispr', total: 684999, atLeast: true });
+    record({ label: 'crispr', expanded: 'crispr' });
+
+    expect(readHistory()[0]).toMatchObject({ total: 684999, atLeast: true });
+  });
+
   it('keeps the query as it was typed, not as it was expanded', () => {
     record({ label: '#1 AND #2', expanded: '(crispr) AND (AU=Doudna)' });
 

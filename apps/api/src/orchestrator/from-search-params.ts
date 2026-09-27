@@ -1,4 +1,6 @@
-import type { PaperStage, Query, SearchFilters, SearchParams, SearchResponse, YearRange } from '@open-access-explorer/shared';
+import type { CountedFacet, PaperStage, Query, SearchFilters, SearchParams, SearchResponse, YearRange } from '@open-access-explorer/shared';
+import { isStructured } from '@open-access-explorer/shared';
+import type { FacetQueries } from './source-facets';
 import { search as orchestratorSearch, DEFAULT_DEPTH } from './index';
 import { parseQuery } from './parse-query';
 import type { UserFilters } from './policy';
@@ -53,6 +55,23 @@ export function toUserFilters(filters: SearchFilters): UserFilters {
   };
 }
 
+/**
+ * Filters no source can be sent — applied to what the sources returned, and
+ * nowhere else. A venue is a name, and there is no query every source would
+ * read the same way for it; the source and route filters are this service's
+ * own labels.
+ */
+const READ_ONLY_FILTERS = ['source', 'oaStatus', 'venue', 'publisher', 'topics'] as const;
+
+/** The filter each countable facet's own checkboxes write, which its count lifts. */
+const OWN_FILTER: Record<CountedFacet, keyof SearchFilters> = {
+  year: 'year',
+  stage: 'publicationType',
+  venue: 'venue',
+  publisher: 'publisher',
+  topics: 'topics'
+};
+
 /** The years ticked in the year facet, as numbers, once each, oldest first. */
 function tickedYears(filters: SearchFilters): number[] {
   const years = (filters.year ?? []).map(Number).filter(Number.isInteger);
@@ -76,9 +95,10 @@ function yearsToSend(bound: YearRange | undefined, ticked: readonly number[]): Y
 }
 
 /**
- * The three settings that decide how much work a search does. Parsed and
- * explained in `config.ts`, where `SEARCH_DEPTH`, `SEARCH_RESCUE_LIMIT` and
- * `SEARCH_RESCUE_BUDGET_MS` are read; this only applies them.
+ * The settings that decide how much work a search does. Parsed and explained
+ * in `config.ts`, where `SEARCH_DEPTH`, `SEARCH_RESCUE_LIMIT`,
+ * `SEARCH_RESCUE_BUDGET_MS` and `SEARCH_FACET_COUNTS` are read; this only
+ * applies them.
  */
 export type SearchSettings = {
   /** How deep each provider is read. The orchestrator clamps it to `MAX_DEPTH`. */
@@ -87,13 +107,73 @@ export type SearchSettings = {
   rescueLimit: number;
   /** Wall clock for the whole rescue pass. */
   rescueBudgetMs: number;
+  /** Whether facets are counted across everything the sources hold, or only over the read. */
+  facetCounts: boolean;
 };
 
 export const DEFAULT_SEARCH_SETTINGS: SearchSettings = {
   depth: DEFAULT_DEPTH,
   rescueLimit: DEFAULT_RESCUE_LIMIT,
-  rescueBudgetMs: DEFAULT_RESCUE_BUDGET_MS
+  rescueBudgetMs: DEFAULT_RESCUE_BUDGET_MS,
+  facetCounts: true
 };
+
+function gapless(years: readonly number[]): boolean {
+  return years.length === 0 || years[years.length - 1]! - years[0]! + 1 === years.length;
+}
+
+/**
+ * Which facets to count across everything the sources match, and whether the
+ * sources' own counts describe this search — both decided by one question:
+ * was everything that narrows it sent to them?
+ *
+ * The year and publication-type facets are sent (see `runOrchestrator`), so a
+ * reader who ticks 2024 is shown how many papers from 2024 there are, not how
+ * many were in the top of what was read. The rest are not, and a facet is only
+ * counted across the sources when no *other* ticked filter is one of those:
+ * ticking a venue leaves the venue facet counted across the sources — it is
+ * counted with its own selection lifted — and every other facet counted from
+ * the read, because no source's count of 2024 knows about the venue.
+ *
+ * A structured query is widened for the sources that cannot express it —
+ * OpenAIRE is sent `crispr` for `AU=Doudna AND crispr` — so its counts are of a
+ * larger question, and nothing is counted across the sources for one. The same
+ * rule the web applies to the header's count, for the same reason.
+ */
+function sourceCounting(
+  filters: SearchFilters,
+  query: Query,
+  ask: (years: YearRange | undefined, withStages: boolean) => Query,
+  bound: YearRange | undefined,
+  countAcrossSources: boolean
+): { facetQueries?: FacetQueries; filtersSent: boolean } {
+  if (query.doi || (query.expression && isStructured(query.expression))) return { filtersSent: false };
+
+  const readOnly = READ_ONLY_FILTERS.filter(key => (filters[key]?.length ?? 0) > 0);
+  const ticked = tickedYears(filters);
+  const yearsExact = gapless(ticked);
+  const filtersSent = readOnly.length === 0 && yearsExact;
+
+  // The off switch, `SEARCH_FACET_COUNTS=off`: every facet counted over the
+  // read, as before this existed. Worth having because the counts are most of
+  // a search's upstream requests — a year facet is ten of them for each source
+  // that counts one at a time.
+  if (!countAcrossSources) return { filtersSent };
+
+  const facetQueries: FacetQueries = {};
+  for (const facet of Object.keys(OWN_FILTER) as CountedFacet[]) {
+    const own = OWN_FILTER[facet];
+    if (readOnly.some(key => key !== own)) continue;
+    if (facet !== 'year' && !yearsExact) continue;
+
+    facetQueries[facet] =
+      facet === 'year' ? ask(bound, true)
+      : facet === 'stage' ? ask(yearsToSend(bound, ticked), false)
+      : query;
+  }
+
+  return { facetQueries, filtersSent };
+}
 
 export type RunOptions = {
   /** Defaults to `DEFAULT_SEARCH_SETTINGS`. */
@@ -181,6 +261,7 @@ export async function runSearch(
   };
 
   const query = ask(yearsToSend(bound, ticked), true);
+  const { facetQueries, filtersSent } = sourceCounting(filters, query, ask, bound, settings.facetCounts);
 
   const openAccessOnly = filters.openAccessOnly ?? true;
 
@@ -191,6 +272,8 @@ export async function runSearch(
     filters: userFilters,
     sort: params.sort ?? 'relevance',
     openAccessOnly,
+    filtersSent,
+    ...(facetQueries ? { facetQueries } : {}),
     policy: { requireOpenAccess: openAccessOnly },
     rescueLimit: settings.rescueLimit,
     rescueBudgetMs: settings.rescueBudgetMs,

@@ -43,5 +43,11 @@ export const capabilities: ProviderCapabilities = {
   suppliesCitations: false,
 
   // A directory of journals: every article is the published version.
-  stages: { holds: ['published'], filter: false }
+  stages: { holds: ['published'], filter: false },
+
+  // Counted, one request a year: the search API reports a total and no
+  // aggregations. The Elasticsearch endpoint behind the site does aggregate,
+  // and answers a script with 403 — it is behind bot protection, which is not
+  // ours to get round.
+  facets: ['year', 'stage']
 };

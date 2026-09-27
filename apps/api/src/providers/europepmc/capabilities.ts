@@ -45,5 +45,9 @@ export const capabilities: ProviderCapabilities = {
   suppliesCitations: true,
 
   // `SRC:PPR` is the preprint source, and `normalize` reads it the same way.
-  stages: { holds: ['preprint', 'published', 'unknown'], filter: true }
+  stages: { holds: ['preprint', 'published', 'unknown'], filter: true },
+
+  // Counted, one request a year: the REST search reports `hitCount` and has no
+  // facets. The stage is two counts — preprints and everything else.
+  facets: ['year', 'stage']
 };

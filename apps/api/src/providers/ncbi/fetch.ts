@@ -206,3 +206,39 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
     ...(totalHits !== undefined ? { totalHits } : {})
   };
 }
+
+export type CountFetchOptions = Omit<FetchOptions, 'pageSize' | 'offset'>;
+
+/**
+ * PubMed's count for a query and nothing else: ESearch with `rettype=count`,
+ * which answers with the number and no id list.
+ */
+export async function fetchCount(nativeQuery: string, options: CountFetchOptions): Promise<number> {
+  const { baseUrl = DEFAULT_BASE_URL, apiKey, timeoutMs, signal, userAgent } = options;
+
+  const client: AxiosInstance = getPooledClient(baseUrl, getServiceConfig('ncbi'));
+  const key = usableApiKey(apiKey);
+
+  const response = await client.get('/esearch.fcgi', {
+    params: {
+      db: 'pubmed',
+      term: nativeQuery,
+      rettype: 'count',
+      retmode: 'json',
+      ...(key ? { api_key: key } : {})
+    },
+    timeout: timeoutMs,
+    ...(signal ? { signal } : {}),
+    ...(userAgent ? { headers: { 'User-Agent': userAgent } } : {})
+  });
+
+  // A rate limit arrives as a resolved 429 carrying `{ error }`, not as a
+  // throw — the pooled client resolves every status under 500.
+  const count = Number(response.data?.esearchresult?.count);
+  if (response.status >= 400 || !Number.isFinite(count)) {
+    const detail = typeof response.data?.error === 'string' ? response.data.error : `HTTP ${response.status}`;
+    throw new NcbiUnavailableError(`esearch count: ${detail}`);
+  }
+
+  return count;
+}

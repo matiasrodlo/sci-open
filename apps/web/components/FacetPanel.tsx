@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FacetGroup, type FacetOption } from '@/components/FacetGroup';
 import { withFilter } from '@/lib/search-params';
+import { providerLabel } from '@/lib/provider-labels';
 
 interface FacetPanelProps {
   facets: Record<string, any>;
@@ -24,7 +25,8 @@ const PUBLISHER_LABELS: Record<string, string> = {
   'Cambridge University Press': 'Cambridge UP'
 };
 
-type Bucket = { value: string | number; count: number };
+/** `from` is set when the count is a source's own rather than the read's. See `FacetBucket` in the API. */
+type Bucket = { value: string | number; count: number; from?: string };
 
 /** Facet buckets as the panel wants them: sorted, capped, labelled. */
 function toOptions(
@@ -38,7 +40,11 @@ function toOptions(
 
   return buckets
     .filter(bucket => bucket && bucket.value !== undefined && bucket.value !== null && `${bucket.value}` !== '')
-    .map(bucket => ({ value: String(bucket.value), count: Number(bucket.count) || 0 }))
+    .map(bucket => ({
+      value: String(bucket.value),
+      count: Number(bucket.count) || 0,
+      ...(bucket.from ? { from: providerLabel(bucket.from) } : {})
+    }))
     .sort((a, b) =>
       sort === 'valueDesc' ? Number(b.value) - Number(a.value) : b.count - a.count
     )
@@ -84,19 +90,31 @@ export function FacetPanel({ facets }: FacetPanelProps) {
    */
   const publicationTypeOptions = (): FacetOption[] => {
     const buckets: Bucket[] = Array.isArray(facets.stage) ? facets.stage : [];
-    const byStage: Record<string, number> = {};
+    const byStage: Record<string, Bucket> = {};
 
     for (const bucket of buckets) {
-      byStage[String(bucket.value)] = Number(bucket.count) || 0;
+      byStage[String(bucket.value)] = bucket;
     }
+
+    // Two disjoint stages, so their floors add to a floor of both. Named after
+    // the source of the larger half, which is the one the reader would ask about.
+    const reviewed = [byStage.accepted, byStage.published].filter((b): b is Bucket => !!b);
+    const reviewedFrom = [...reviewed].sort((a, b) => (Number(b.count) || 0) - (Number(a.count) || 0))
+      .find(b => b.from)?.from;
 
     return [
       {
         value: 'peer-reviewed',
         label: 'Peer Reviewed',
-        count: (byStage.accepted ?? 0) + (byStage.published ?? 0)
+        count: reviewed.reduce((sum, b) => sum + (Number(b.count) || 0), 0),
+        ...(reviewedFrom ? { from: providerLabel(reviewedFrom) } : {})
       },
-      { value: 'preprint', label: 'Pre-print', count: byStage.preprint ?? 0 }
+      {
+        value: 'preprint',
+        label: 'Pre-print',
+        count: Number(byStage.preprint?.count) || 0,
+        ...(byStage.preprint?.from ? { from: providerLabel(byStage.preprint.from) } : {})
+      }
     ];
   };
 

@@ -80,5 +80,8 @@ export const capabilities: ProviderCapabilities = {
 
   // `normalize` cannot tell a preprint from a published version in CORE's
   // records, and says so.
-  stages: { holds: ['unknown'], filter: false }
+  stages: { holds: ['unknown'], filter: false },
+
+  // Not asked a keyword query, so not asked to count one.
+  facets: []
 };

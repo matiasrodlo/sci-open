@@ -3,6 +3,7 @@ import { capabilities } from './capabilities';
 import { translate, translateId, translateIds, type TranslateOptions } from './translate';
 import { fetchPage, EuropePmcUnavailableError, type FetchOptions } from './fetch';
 import { normalize, type SkippedRecord } from './normalize';
+import { countFacets, type Pace, type ProviderFacetArgs, type ProviderFacetOutcome } from '../count-facets';
 
 /**
  * Europe PMC as a provider: capabilities, a pure translate, one I/O call, and a
@@ -174,4 +175,46 @@ export async function lookup(nativeId: string, options: LookupOptions): Promise<
 
   const { papers } = normalize(payload, { retrievedAt: now().toISOString(), latency });
   return papers[0] ?? null;
+}
+
+export type CountOptions = TranslateOptions & Omit<FetchOptions, 'pageSize' | 'resultType'>;
+
+/**
+ * Europe PMC's count for a query: one id-list request a single record long,
+ * for its `hitCount`. Measured at about 2.6s a request on 2026-09-25 — the
+ * index is slow to count, not the payload slow to arrive.
+ */
+export async function count(query: Query, options: CountOptions): Promise<number> {
+  const { openAccessOnly, ...fetchOptions } = options;
+  const payload = await fetchPage(translate(query, { openAccessOnly }), {
+    ...fetchOptions,
+    resultType: 'idlist',
+    pageSize: 1
+  });
+  const hits = Number(payload.hitCount);
+  if (!Number.isFinite(hits)) throw new EuropePmcUnavailableError('a count carrying no hitCount');
+  return hits;
+}
+
+/**
+ * No published rate limit, and none met in measurement. The pace is about the
+ * latency: at 2.6s a count, eleven of them in sequence would outlast the
+ * search, so most go at once.
+ */
+const PACE: Pace = { burst: 6, perSecond: 6 };
+
+/** Year and stage counts across everything Europe PMC matches. See `count-facets.ts`. */
+export function facets(args: ProviderFacetArgs): Promise<ProviderFacetOutcome> {
+  return countFacets(args, {
+    holds: capabilities.stages.holds,
+    translate: query => translate(query, { openAccessOnly: args.openAccessOnly }),
+    count: query => count(query, {
+      openAccessOnly: args.openAccessOnly,
+    timeoutMs: args.timeoutMs,
+    ...(args.signal ? { signal: args.signal } : {}),
+    ...(args.userAgent ? { userAgent: args.userAgent } : {})
+    }),
+    pace: PACE,
+    ...(args.signal ? { signal: args.signal } : {})
+  });
 }

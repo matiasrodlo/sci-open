@@ -28,7 +28,7 @@ import type { AuthorityId } from './authority';
  * They existed because `Record<ProviderId, number>` demanded every key of a
  * union that had three names too many in it.
  */
-export type ProviderId = Exclude<OASource, 'crossref' | 'unpaywall' | 'opencitations'>;
+export type ProviderId = Exclude<OASource, 'crossref' | 'unpaywall' | 'opencitations' | 'preprints'>;
 
 /**
  * One provider's sighting of this paper.
@@ -75,12 +75,12 @@ export type FullTextKind = 'pdf' | 'html' | 'xml';
  * A copy of the paper, as opposed to a page about it. Built with `fullTextAt`,
  * which is where the difference is decided.
  *
- * `verified` means we fetched the URL and a copy came back. **Nothing sets it
- * today** — no step in the pipeline fetches a candidate copy — so it is false
- * on every record, and a consumer must read it as "not confirmed" rather than
- * as "confirmed absent". It is a slot, kept because `enrich.ts` already
- * prefers a verified copy over an unverified one and so will need no change
- * when something fills it.
+ * `verified` means we fetched the URL and a copy came back. One step sets it:
+ * the `preprints` authority, which builds a preprint server's PDF address from
+ * the DOI and keeps it only once the first bytes read `%PDF-`. Everything else
+ * is false, and a consumer must read false as "not confirmed" rather than as
+ * "confirmed absent". `enrich.ts` prefers a verified copy over an unverified
+ * one.
  *
  * Which is why the field's presence is a provider's claim, not a guarantee.
  * `fullTextAt` throws out the claims that are false on their face — a DOI

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Query } from '@open-access-explorer/shared';
 import { translate } from '../translate';
+import { journalName } from '../index';
 
 const query = (over: Partial<Query>): Query => ({ terms: [], phrases: [], join: 'AND', ...over });
 
@@ -74,5 +75,14 @@ describe('translate — the scope of the search', () => {
   it('leaves a DOI lookup on the id field, which is where a PLOS DOI lives', () => {
     expect(translate(query({ doi: '10.1371/journal.pone.0253351' })))
       .toBe('id:"10.1371/journal.pone.0253351"');
+  });
+});
+
+describe('journalName', () => {
+  it('rebuilds the display form Solr’s lower-cased facet loses', () => {
+    expect(journalName('plos one')).toBe('PLOS ONE');
+    expect(journalName('plos genetics')).toBe('PLOS Genetics');
+    expect(journalName('plos neglected tropical diseases')).toBe('PLOS Neglected Tropical Diseases');
+    expect(journalName('plos computational biology')).toBe('PLOS Computational Biology');
   });
 });

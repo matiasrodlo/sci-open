@@ -7,11 +7,22 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-r
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
+  /** How many papers there are to page through. The last page ends here. */
   totalResults: number;
+  /**
+   * The size of the search, as the counter says it — `684,999+`.
+   *
+   * Separate from `totalResults` because on a broad search they are different
+   * numbers: every source is read to a fixed depth, so there are more matching
+   * papers than pages to walk. The counter names what matches, and the page
+   * arithmetic stays on what is here. Defaults to `totalResults`, which is the
+   * whole set when every source was read to the end.
+   */
+  matching?: string;
   pageSize: number;
 }
 
-export function Pagination({ currentPage, totalPages, totalResults, pageSize }: PaginationProps) {
+export function Pagination({ currentPage, totalPages, totalResults, matching, pageSize }: PaginationProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -77,7 +88,7 @@ export function Pagination({ currentPage, totalPages, totalResults, pageSize }: 
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-6">
       {/* Results info */}
       <div className="text-sm text-muted-foreground">
-        Showing {startResult.toLocaleString()} to {endResult.toLocaleString()} of {totalResults.toLocaleString()} results
+        Showing {startResult.toLocaleString()} to {endResult.toLocaleString()} of {matching ?? totalResults.toLocaleString()} results
       </div>
 
       {/* Pagination controls */}

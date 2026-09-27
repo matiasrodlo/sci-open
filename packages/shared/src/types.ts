@@ -3,7 +3,7 @@
 // records from directly.
 export type OASource =
   | "arxiv" | "core" | "europepmc" | "ncbi" | "openaire" | "biorxiv" | "medrxiv" | "doaj" | "plos" | "opencitations" | "datacite"
-  | "openalex" | "crossref" | "unpaywall";
+  | "openalex" | "crossref" | "unpaywall" | "preprints";
 
 // Provenance attached by the pipeline when a record comes from an aggregator
 export type SourceMetadata = {
@@ -105,5 +105,23 @@ export type SearchResponse = {
    * its limit, which for a broad query is most of them.
    */
   bounded?: boolean;
+  /**
+   * True when every source was asked exactly this search, so the sources' own
+   * counts are counts of it and `providerTotals[].totalHits` describes these
+   * results rather than a larger set.
+   *
+   * False when something narrows the search after the sources answer — a
+   * structured query that some source could only be sent in a wider form, or a
+   * ticked facet no source can be asked for. The only count true of the
+   * question is then the one taken from the read. Absent from a response that
+   * predates it, which a consumer should read as false.
+   *
+   * The facets say for themselves, bucket by bucket, whether their count is a
+   * source's — see `from` on each bucket — because one facet can be counted
+   * across the sources while another cannot: a facet is counted with its own
+   * selection lifted, so ticking a venue leaves the venue facet countable and
+   * nothing else.
+   */
+  countsFromSources?: boolean;
 };
 

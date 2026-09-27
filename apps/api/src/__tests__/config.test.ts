@@ -126,6 +126,14 @@ describe('loadConfig', () => {
     ]);
   });
 
+  it('turns the whole-index facet counts off only when told to', () => {
+    expect(load().config.search.facetCounts).toBe(true);
+    expect(load({ SEARCH_FACET_COUNTS: 'OFF' }).config.search.facetCounts).toBe(false);
+    const { config, warnings } = load({ SEARCH_FACET_COUNTS: 'sometimes' });
+    expect(config.search.facetCounts).toBe(true);
+    expect(warnings).toEqual(['SEARCH_FACET_COUNTS=sometimes is neither on nor off; counting across the sources']);
+  });
+
   it('warns about a trust setting Fastify cannot honour', () => {
     const { config, warnings } = load({ TRUST_PROXY: '1' });
     expect(config.trustProxy).toBe(false);

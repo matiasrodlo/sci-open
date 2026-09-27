@@ -24,7 +24,15 @@ export type FanOutOptions = {
   cache?: ProviderCache;
   userAgent?: string;
   now?: () => Date;
+  /**
+   * Called as each planned provider settles, with what it returned — before
+   * the slowest one has. The facet counts are the listener: a provider that is
+   * counted one bucket at a time waits for its own search, not for everyone's.
+   */
+  onSettled?: (settled: ProviderSettled) => void;
 };
+
+export type ProviderSettled = { report: ProviderReport; papers: readonly Paper[] };
 
 export type FanOutResult = {
   papers: Paper[];
@@ -45,7 +53,7 @@ class TimeoutError extends Error {
  * multi-megabyte payload on the same thread as everyone else — the reason a
  * slow provider used to make its neighbours look slow too.
  */
-async function withBudget<T>(ms: number, work: (signal: AbortSignal) => Promise<T>): Promise<T> {
+export async function withBudget<T>(ms: number, work: (signal: AbortSignal) => Promise<T>): Promise<T> {
   const controller = new AbortController();
   let timer: NodeJS.Timeout | undefined;
 
@@ -64,7 +72,7 @@ async function withBudget<T>(ms: number, work: (signal: AbortSignal) => Promise<
 }
 
 export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOutResult> {
-  const { query, depth, offset, timeoutMs, openAccessOnly, cache, userAgent, now } = options;
+  const { query, depth, offset, timeoutMs, openAccessOnly, cache, userAgent, now, onSettled } = options;
 
   const skippedReports: ProviderReport[] = plan.skipped.map(s => ({
     provider: s.provider,
@@ -76,60 +84,9 @@ export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOut
 
   const settled = await Promise.all(
     plan.planned.map(async (provider): Promise<{ papers: Paper[]; report: ProviderReport }> => {
-      const startedAt = Date.now();
-      const nativeQuery = provider.translate(query, { openAccessOnly });
-
-      const run = async () => {
-        const work = (signal: AbortSignal) =>
-          provider.search({
-            query, depth, offset, timeoutMs, openAccessOnly, signal,
-            ...(userAgent ? { userAgent } : {}),
-            ...(now ? { now } : {})
-          });
-
-        if (!cache) return withBudget(timeoutMs, work);
-
-        const { outcome } = await cache.fetch(
-          {
-            provider: provider.id,
-            nativeQuery,
-            depth,
-            offset,
-            normalizerVersion: provider.normalizerVersion
-          },
-          () => withBudget(timeoutMs, work)
-        );
-        return outcome;
-      };
-
-      try {
-        const outcome = await run();
-        return {
-          papers: outcome.papers,
-          report: {
-            provider: provider.id,
-            status: 'ok',
-            retrieved: outcome.papers.length,
-            ...(outcome.totalHits !== undefined ? { totalHits: outcome.totalHits } : {}),
-            latency: Date.now() - startedAt
-          }
-        };
-      } catch (error) {
-        const timedOut = error instanceof Error && error.name === 'TimeoutError';
-        return {
-          papers: [],
-          report: {
-            provider: provider.id,
-            // A timeout is not an error: the provider may be fine and simply
-            // slower than this request could wait for. Retrying it is
-            // reasonable; retrying a 400 is not.
-            status: timedOut ? 'timeout' : 'error',
-            retrieved: 0,
-            error: error instanceof Error ? error.message : String(error),
-            latency: Date.now() - startedAt
-          }
-        };
-      }
+      const result = await ask(provider);
+      onSettled?.(result);
+      return result;
     })
   );
 
@@ -137,6 +94,63 @@ export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOut
     papers: settled.flatMap(s => s.papers),
     reports: [...settled.map(s => s.report), ...skippedReports]
   };
+
+  async function ask(provider: Plan['planned'][number]): Promise<{ papers: Paper[]; report: ProviderReport }> {
+    const startedAt = Date.now();
+    const nativeQuery = provider.translate(query, { openAccessOnly });
+
+    const run = async () => {
+      const work = (signal: AbortSignal) =>
+        provider.search({
+          query, depth, offset, timeoutMs, openAccessOnly, signal,
+          ...(userAgent ? { userAgent } : {}),
+          ...(now ? { now } : {})
+        });
+
+      if (!cache) return withBudget(timeoutMs, work);
+
+      const { outcome } = await cache.fetch(
+        {
+          provider: provider.id,
+          nativeQuery,
+          depth,
+          offset,
+          normalizerVersion: provider.normalizerVersion
+        },
+        () => withBudget(timeoutMs, work)
+      );
+      return outcome;
+    };
+
+    try {
+      const outcome = await run();
+      return {
+        papers: outcome.papers,
+        report: {
+          provider: provider.id,
+          status: 'ok',
+          retrieved: outcome.papers.length,
+          ...(outcome.totalHits !== undefined ? { totalHits: outcome.totalHits } : {}),
+          latency: Date.now() - startedAt
+        }
+      };
+    } catch (error) {
+      const timedOut = error instanceof Error && error.name === 'TimeoutError';
+      return {
+        papers: [],
+        report: {
+          provider: provider.id,
+          // A timeout is not an error: the provider may be fine and simply
+          // slower than this request could wait for. Retrying it is
+          // reasonable; retrying a 400 is not.
+          status: timedOut ? 'timeout' : 'error',
+          retrieved: 0,
+          error: error instanceof Error ? error.message : String(error),
+          latency: Date.now() - startedAt
+        }
+      };
+    }
+  }
 }
 
 /**

@@ -2,19 +2,21 @@ import type { Paper, Query } from '@open-access-explorer/shared';
 import { capabilities } from './capabilities';
 import { translate, type TranslateOptions } from './translate';
 import {
-  fetchPage, fetchRecord, NcbiUnavailableError,
-  type FetchOptions, type RecordFetchOptions
+  fetchPage, fetchRecord, fetchCount, NcbiUnavailableError,
+  type FetchOptions, type RecordFetchOptions, type CountFetchOptions
 } from './fetch';
 import { normalize, type SkippedRecord } from './normalize';
 import { readPages } from '../read-pages';
+import { countFacets, type Pace, type ProviderFacetArgs, type ProviderFacetOutcome } from '../count-facets';
 import { log } from '../../lib/logger';
+import { usableApiKey } from '../../lib/api-key';
 
 /**
  * PubMed as a provider: capabilities, a pure translate, the two E-utilities
  * calls, and a pure normalise.
  */
 
-export { capabilities, translate, fetchPage, fetchRecord, normalize, NcbiUnavailableError };
+export { capabilities, translate, fetchPage, fetchRecord, fetchCount, normalize, NcbiUnavailableError };
 export type { TranslateOptions, FetchOptions, RecordFetchOptions, SkippedRecord };
 
 export type SearchOptions = TranslateOptions &
@@ -101,4 +103,41 @@ export async function lookup(nativeId: string, options: LookupOptions): Promise<
 
   const { papers } = normalize(articles, { retrievedAt: now().toISOString(), latency });
   return papers[0] ?? null;
+}
+
+export type CountOptions = TranslateOptions & CountFetchOptions;
+
+/** PubMed's count for a query. See `fetchCount`. */
+export async function count(query: Query, options: CountOptions): Promise<number> {
+  const { openAccessOnly, ...fetchOptions } = options;
+  const nativeQuery = translate(query, { openAccessOnly });
+  return nativeQuery ? fetchCount(nativeQuery, fetchOptions) : 0;
+}
+
+/**
+ * E-utilities allow three requests a second without a key and ten with one,
+ * over any second rather than per bucket refill — so no burst: a burst of two
+ * followed by 2.5 a second put four requests inside the first second and drew
+ * a 429, 2026-09-25. One at a time at 2.5 a second never has more than three
+ * in any second.
+ */
+function paceFor(apiKey: string | undefined): Pace {
+  return usableApiKey(apiKey) ? { burst: 1, perSecond: 9 } : { burst: 1, perSecond: 2.5 };
+}
+
+/** Year and stage counts across everything PubMed matches. See `count-facets.ts`. */
+export function facets(args: ProviderFacetArgs, options: { apiKey?: string } = {}): Promise<ProviderFacetOutcome> {
+  return countFacets(args, {
+    holds: capabilities.stages.holds,
+    translate: query => translate(query, { openAccessOnly: args.openAccessOnly }),
+    count: query => count(query, {
+      openAccessOnly: args.openAccessOnly,
+      ...(options.apiKey ? { apiKey: options.apiKey } : {}),
+      timeoutMs: args.timeoutMs,
+      ...(args.signal ? { signal: args.signal } : {}),
+      ...(args.userAgent ? { userAgent: args.userAgent } : {})
+    }),
+    pace: paceFor(options.apiKey),
+    ...(args.signal ? { signal: args.signal } : {})
+  });
 }

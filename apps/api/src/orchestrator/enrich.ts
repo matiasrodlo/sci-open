@@ -57,6 +57,13 @@ export type EnrichResult = {
    * failed lookup and one the budget never reached do not, because both leave
    * the paper exactly as unjudged as never asking would have.
    *
+   * Every lookup put for the paper has to have answered, not just one. With a
+   * single authority those are the same thing; with two they are not — the
+   * rescue asks Unpaywall and the preprint servers together, and a paper
+   * Unpaywall answered null for while its server timed out has had half its
+   * question answered. Counted as examined, the rescue reported itself
+   * complete with a paper dropped that one more second would have kept.
+   *
    * The reports cannot answer this. `asked` is per authority and counts tasks
    * *started*, so it double-counts a paper two authorities both looked up and
    * over-counts one whose lookup was abandoned mid-flight. This counts distinct
@@ -268,13 +275,13 @@ export async function enrichPage(
   const expiry = setTimeout(() => controller.abort(), budgetMs);
 
   /**
-   * Papers a lookup actually came back for, by id.
-   *
-   * A set rather than a counter because a paper is asked about once per
-   * authority and examined either way, and because the two passes mean the
-   * same paper appears in two rounds of tasks.
+   * Lookups put for each paper, and how many of them came back, by id. A paper
+   * is examined when the two agree — see `EnrichResult.examined`. Counted when
+   * a task is queued rather than when it starts, so one the budget never
+   * reached is a question put and not answered.
    */
-  const examined = new Set<string>();
+  const put = new Map<string, number>();
+  const answeredFor = new Map<string, number>();
 
   const tally = new Map<string, { asked: number; settled: number; answered: number; applied: number; errors: number; error?: string; startedAt: number; latency: number }>();
   for (const authority of authorities) {
@@ -286,17 +293,25 @@ export async function enrichPage(
       const running = authorities.filter(a => a.pass === pass);
       if (running.length === 0 || controller.signal.aborted) continue;
 
+      // Paper by paper, every authority's question about it together, in the
+      // order the papers came — which for the rescue is rank order. Queued
+      // authority by authority, the second one's questions waited behind all
+      // of the first one's, and on two hundred candidates a budget spent on
+      // Unpaywall left the preprint servers none; a paper is only examined
+      // once all its questions are answered, so the budget is better spent
+      // finishing the best-ranked papers than half-asking every one.
       const tasks: Array<() => Promise<void>> = [];
-      for (const authority of running) {
-        for (const paper of withDoi) {
+      for (const paper of withDoi) {
+        for (const authority of running) {
           if (authority.wants && !authority.wants(paper)) continue;
+          put.set(paper.id, (put.get(paper.id) ?? 0) + 1);
           tasks.push(async () => {
             const counters = tally.get(authority.id)!;
             counters.asked += 1;
             try {
               const lookup = () => authority.lookup({
                 doi: paper.doi!,
-                timeoutMs,
+                timeoutMs: authority.timeoutMs ?? timeoutMs,
                 signal: controller.signal,
                 ...(userAgent ? { userAgent } : {})
               });
@@ -310,7 +325,7 @@ export async function enrichPage(
 
               // Answered, including a null: "this authority knows nothing about
               // that DOI" is an answer, and the paper had its chance.
-              examined.add(paper.id);
+              answeredFor.set(paper.id, (answeredFor.get(paper.id) ?? 0) + 1);
               counters.settled += 1;
 
               if (!facts) return;
@@ -392,5 +407,8 @@ export async function enrichPage(
     };
   });
 
-  return { papers: enriched, reports, examined: examined.size };
+  let examined = 0;
+  for (const [id, count] of put) if (answeredFor.get(id) === count) examined += 1;
+
+  return { papers: enriched, reports, examined };
 }

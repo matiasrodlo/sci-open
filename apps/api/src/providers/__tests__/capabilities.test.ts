@@ -199,30 +199,35 @@ describe('provider capabilities', () => {
 });
 
 /**
- * Which publication types each provider holds, and whether it can be asked for
- * one.
+ * Which publication types each provider holds, whether it can be asked for
+ * one, and which facets it can count across everything it matches.
  *
  * `plan` skips a provider holding none of the types ticked, so a wrong `holds`
  * silently drops a source from a search; and `filter` decides whether its
  * counts can be trusted under a ticked type. The reasons are in each
  * provider's `capabilities.ts`.
  */
-const STAGES: Record<string, { holds: string[]; filter: boolean }> = {
-  arxiv: { holds: ['preprint'], filter: false },
-  biorxiv: { holds: ['preprint'], filter: false },
-  core: { holds: ['unknown'], filter: false },
-  datacite: { holds: ['preprint', 'published', 'unknown'], filter: false },
-  doaj: { holds: ['published'], filter: false },
-  europepmc: { holds: ['preprint', 'published', 'unknown'], filter: true },
-  ncbi: { holds: ['published', 'unknown'], filter: true },
-  openaire: { holds: ['published', 'unknown'], filter: true },
-  openalex: { holds: ['preprint', 'published', 'unknown'], filter: true },
-  plos: { holds: ['published'], filter: false }
+const STAGES_AND_FACETS: Record<string, { holds: string[]; filter: boolean; facets: string[] }> = {
+  arxiv: { holds: ['preprint'], filter: false, facets: ['stage'] },
+  biorxiv: { holds: ['preprint'], filter: false, facets: [] },
+  core: { holds: ['unknown'], filter: false, facets: [] },
+  datacite: { holds: ['preprint', 'published', 'unknown'], filter: false, facets: [] },
+  doaj: { holds: ['published'], filter: false, facets: ['year', 'stage'] },
+  europepmc: { holds: ['preprint', 'published', 'unknown'], filter: true, facets: ['year', 'stage'] },
+  ncbi: { holds: ['published', 'unknown'], filter: true, facets: ['year', 'stage'] },
+  openaire: { holds: ['published', 'unknown'], filter: true, facets: ['year', 'stage'] },
+  openalex: { holds: ['preprint', 'published', 'unknown'], filter: true, facets: ['year', 'stage', 'venue', 'publisher', 'topics'] },
+  plos: { holds: ['published'], filter: false, facets: ['year', 'stage', 'venue', 'publisher'] }
 };
 
-describe('publication types', () => {
+describe('publication types and counted facets', () => {
   it.each(PROVIDERS.map(p => [p.id, p] as const))('%s', (id, provider) => {
-    const { stages } = provider.capabilities;
-    expect({ holds: [...stages.holds], filter: stages.filter }).toEqual(STAGES[id]);
+    const { stages, facets } = provider.capabilities;
+    expect({ holds: [...stages.holds], filter: stages.filter, facets: [...facets] }).toEqual(STAGES_AND_FACETS[id]);
+  });
+
+  it.each(PROVIDERS.map(p => [p.id, p] as const))('%s counts only if it can', (_, provider) => {
+    // A facet declared with nothing to count it is a facet silently left out.
+    if (provider.capabilities.facets.length > 0) expect(provider.facets).toBeTypeOf('function');
   });
 });

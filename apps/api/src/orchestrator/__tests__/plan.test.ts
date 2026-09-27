@@ -25,6 +25,7 @@ const caps = (over: Partial<ProviderCapabilities> = {}): ProviderCapabilities =>
   reportsTotal: true,
   suppliesCitations: false,
   stages: { holds: ['published'], filter: false },
+  facets: [],
   ...over
 });
 

@@ -4,6 +4,7 @@ import { translate, toParams, type TranslateOptions } from './translate';
 import { fetchPage, fetchProduct, OpenAireUnavailableError, type FetchOptions } from './fetch';
 import { normalize, normalizeRecord, totalHits, type SkippedRecord } from './normalize';
 import { readPages } from '../read-pages';
+import { countFacets, type Pace, type ProviderFacetArgs, type ProviderFacetOutcome } from '../count-facets';
 import { log } from '../../lib/logger';
 
 export { capabilities, translate, toParams, fetchPage, fetchProduct, normalize, totalHits, OpenAireUnavailableError };
@@ -90,4 +91,45 @@ export async function lookup(nativeId: string, options: LookupOptions): Promise<
 
   const { papers } = normalizeRecord(record, { retrievedAt: now().toISOString(), latency });
   return papers.find(paper => paper.sources[0]?.nativeId === nativeId) ?? null;
+}
+
+export type CountOptions = TranslateOptions & Omit<FetchOptions, 'pageSize' | 'offset'>;
+
+/** The query as it is sent, or nothing when there is nothing to send. */
+function asked(query: Query, options: TranslateOptions): string {
+  const params = toParams(query, options);
+  return params.search || params.pid ? translate(query, options) : '';
+}
+
+/** OpenAIRE's count for a query, from a one-record page's `numFound`. */
+export async function count(query: Query, options: CountOptions): Promise<number> {
+  const { openAccessOnly, ...fetchOptions } = options;
+  if (!asked(query, { openAccessOnly })) return 0;
+  const payload = await fetchPage(toParams(query, { openAccessOnly }), { ...fetchOptions, pageSize: 1, offset: 0 });
+  const total = totalHits(payload);
+  if (total === undefined) throw new OpenAireUnavailableError('a count carrying no numFound');
+  return total;
+}
+
+/**
+ * The Graph API meters by the hour — `x-ratelimit-limit: 7199` on an anonymous
+ * request, 2026-09-25 — which is two a second sustained. A search spends six
+ * of them and its counts eleven, so the burst is kept short.
+ */
+const PACE: Pace = { burst: 6, perSecond: 4 };
+
+/** Year and stage counts across everything OpenAIRE matches. See `count-facets.ts`. */
+export function facets(args: ProviderFacetArgs): Promise<ProviderFacetOutcome> {
+  return countFacets(args, {
+    holds: capabilities.stages.holds,
+    translate: query => asked(query, { openAccessOnly: args.openAccessOnly }),
+    count: query => count(query, {
+      openAccessOnly: args.openAccessOnly,
+      timeoutMs: args.timeoutMs,
+      ...(args.signal ? { signal: args.signal } : {}),
+      ...(args.userAgent ? { userAgent: args.userAgent } : {})
+    }),
+    pace: PACE,
+    ...(args.signal ? { signal: args.signal } : {})
+  });
 }

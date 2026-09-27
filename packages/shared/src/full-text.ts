@@ -88,9 +88,9 @@ export function isLocator(url: string): boolean {
  * address itself is not lost — every normaliser writes it to `landingPage`,
  * which is the field that was always meant to hold it.
  *
- * `verified` is false here and everywhere else. Nothing in the pipeline fetches
- * a copy to confirm it exists, so nothing may claim it did; the field is the
- * slot for the day something does. See `FullText` in `paper.ts`.
+ * `verified` is false here: this judges an address, not what it serves. The
+ * one step that fetches a copy to confirm it — the `preprints` authority —
+ * sets it itself. See `FullText` in `paper.ts`.
  */
 export function fullTextAt(url: unknown, kind: FullTextKind): FullText | undefined {
   const usable = httpUrl(url);
