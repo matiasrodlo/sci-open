@@ -55,6 +55,27 @@ describe('fetchPage — the ordering PubMed is asked for', () => {
 });
 
 describe('fetchPage — a 200 is not on its own an answer', () => {
+  it('throws when esearch reports its own failure inside the result', async () => {
+    // What E-utilities answers while its search backend is failing: a 200 with
+    // an ERROR and no count. Read as a search that matched nothing, it made
+    // PubMed "ok, 0 records" and the search complete, with PubMed missing.
+    get.mockResolvedValue({ status: 200, data: { esearchresult: { ERROR: 'Search Backend failed: timeout' } } });
+
+    await expect(fetchPage('crispr', OPTIONS)).rejects.toThrow(NcbiUnavailableError);
+    await expect(fetchPage('crispr', OPTIONS)).rejects.toThrow('Search Backend failed: timeout');
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('throws when the result carries no count, which every answer has', async () => {
+    get.mockResolvedValue({ status: 200, data: { esearchresult: { idlist: [] } } });
+    await expect(fetchPage('crispr', OPTIONS)).rejects.toThrow(NcbiUnavailableError);
+  });
+
+  it('still answers empty for a search that matched nothing', async () => {
+    get.mockResolvedValue(esearch({ count: '0', idlist: [] }));
+    await expect(fetchPage('crispr', OPTIONS)).resolves.toEqual({ articles: [], totalHits: 0 });
+  });
+
   it('throws when esearch returns a body with no esearchresult', async () => {
     // The pooled client resolves 4xx, so a refusal arrives looking like a
     // success with the wrong body in it.

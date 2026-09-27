@@ -175,8 +175,17 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
     throw new NcbiUnavailableError(`esearch body carried no esearchresult (HTTP ${search.status})`);
   }
 
+  // A failing search backend answers 200 with an `ERROR` in the result and no
+  // count. Read as a search that matched nothing, it reported PubMed as
+  // answering with zero records and the search as complete — the silent
+  // shortfall `ProviderReport` exists to prevent. Every real answer carries a
+  // count, "0" included.
   const reported = Number(result.count);
-  const totalHits = Number.isFinite(reported) ? reported : undefined;
+  if (typeof result.ERROR === 'string' || result.count === undefined || !Number.isFinite(reported)) {
+    const detail = typeof result.ERROR === 'string' ? result.ERROR : 'no count';
+    throw new NcbiUnavailableError(`esearch: ${detail} (HTTP ${search.status})`);
+  }
+  const totalHits = reported;
   const pmids: string[] = result.idlist ?? [];
 
   // A search that matched nothing is a real answer, and there is nothing to
