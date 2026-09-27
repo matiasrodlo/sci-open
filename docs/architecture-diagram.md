@@ -102,8 +102,8 @@ flowchart TB
     CM["CacheManager<br/>key: namespace:hash(subject):hash(variant)"]
     L1[("L1 · MemoryCache<br/>bounded in bytes, LRU")]
     L2[("L2 · Redis<br/>ioredis, walked with SCAN")]
-    SCM["SearchCacheManager<br/>one key per request<br/>a degraded answer is not stored"]
-    PCM["PaperCacheManager<br/>by id and by DOI"]
+    PCM["PaperCacheManager<br/>paper details, by id"]
+    RSC["ResultSetCache<br/>what each search resolved to, in process<br/>every page slices one set"]
   end
 
   %% ============ SHARED PACKAGES ============
@@ -168,7 +168,7 @@ flowchart TB
 
   %% ---- edges: routes → internals ----
   PLUGINS -.-> ROUTES
-  R_SEARCH --> SCM
+  R_SEARCH --> RSC
   R_SEARCH --> FLIGHT
   FLIGHT --> O1
   R_PAPER --> PCM
@@ -191,7 +191,6 @@ flowchart TB
   PDFPROXY --> PUBLISHERS
 
   %% ---- cache wiring ----
-  SCM --> CM
   PCM --> CM
   CM --> L1
   CM --> L2
@@ -230,43 +229,43 @@ sequenceDiagram
     participant U as Browser
     participant N as Next.js /results
     participant F as Fastify POST /api/search
-    participant SC as SearchCacheManager
-    participant CM as CacheManager L1-L2
     participant SF as SingleFlight
     participant OR as Orchestrator
+    participant RS as ResultSetCache
     participant P as Providers
     participant AU as Authorities
 
     U->>N: /results?q=...&venue=A&venue=B&page=1
     N->>F: POST /api/search {q, filters, sort, page}
-    F->>SC: getCachedSearchResults(q, params)
-    SC->>CM: get(key)
-    CM-->>SC: hit / miss
+    F->>SF: run(searchKey(params), …) — once however many identical requests wait
+    SF->>OR: runSearch(params)
+    OR->>OR: parseQuery → Query AST
+    OR->>RS: resolve(key of query + filters — not page, not sort)
 
-    alt cache hit
-        SC-->>F: SearchResponse
-        F-->>N: 200 · X-Cache-Hit: true
-    else cache miss
-        F->>SF: run(key, …) — one fan-out however many callers wait
-        SF->>OR: runOrchestrator(params)
-        OR->>OR: parseQuery → Query AST
+    alt set held
+        RS-->>OR: the set this search resolved to
+    else not held
         OR->>OR: plan — capabilities decide who is asked
         OR->>P: fanOut, in parallel, per-provider timeout
         P-->>OR: Paper[] + ProviderReport per provider
-        OR->>OR: merge → rank → filter → rescue → sort → facet → paginate
-        OR->>AU: enrichPage — the returned page only
-        AU-->>OR: fields, each attributed in fieldSources
-        OR-->>SF: papers, facets, reports, complete
-        SF->>SC: cacheSearchResults — stored only when complete
-        F-->>N: 200 · X-Cache-Hit: false | coalesced
+        OR->>OR: merge → match → rank → filter → rescue → facet
+        OR-->>RS: the set — held only when complete
     end
+
+    OR->>OR: sort → slice one page
+    OR->>AU: enrichPage — the page only, answers held across requests
+    AU-->>OR: fields, each attributed in fieldSources
+    OR-->>SF: page, facets, reports, complete
+    F-->>N: 200 · X-Cache-Hit: true (set held) | false | coalesced
 
     N-->>U: results, facets, and provider coverage
 ```
 
-The single flight is around the whole miss, so the two waiters on one key share
-the fan-out *and* the cache write. A miss costs tens of seconds across ten
-providers, which is a wide window for duplicates.
+Every page is a slice of one held set, so the total, the facets and which
+paper is on which page stay fixed while a reader pages — the rescue behind the
+set ran once, against its budget, not once per page. The set cache also runs a
+set's resolution once for concurrent requests of different pages; the single
+flight around the route does the same for identical requests.
 
 `complete: false` reaches the page as a notice: a provider that failed makes
 the count a lower bound, and one that was skipped is listed separately, because
@@ -288,7 +287,7 @@ sequenceDiagram
     U->>P: open paper
     P->>P: lib/paper-cache lookup
     P->>F: GET /api/paper/:id
-    F->>PC: getCachedPaper(id) / getCachedPaperByDoi
+    F->>PC: getCachedPaper(id)
     alt hit
         PC-->>F: OARecord
     else miss

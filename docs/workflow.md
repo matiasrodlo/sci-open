@@ -58,31 +58,22 @@ flowchart LR
   H --> I["cors · helmet · rate-limit<br/>120/min keyed on request.ip, /health exempt"]
   I --> J{"body matches searchBodySchema?"}
   J -- no --> J1["400 before the handler runs"]
-  J -- yes --> K["SearchCacheManager.getCachedSearchResults<br/>key: search:hash(query):hash(page·sort·filters)"]
+  J -- yes --> N
 
-  K --> L{"L1 — MemoryCache<br/>bytes-bounded LRU"}
-  L -- hit --> HIT
-  L -- miss --> M{"L2 — Redis<br/>skipped while the circuit is open"}
-  M -- hit --> M1["promote into L1"] --> HIT
-  M -- miss --> N
-
-  HIT["200 · X-Cache-Hit: true<br/>Cache-Control: max-age=300"] --> Z
-
-  N["SingleFlight.run(keyFor(params))"] --> O{"a flight already in the air<br/>for this exact key?"}
+  N["SingleFlight.run(searchKey(params))"] --> O{"a flight already in the air<br/>for this exact request?"}
   O -- yes --> O1["await it — X-Cache-Hit: coalesced"] --> Y
-  O -- no --> P["runOrchestrator(params)"]
+  O -- no --> P["runSearch(params)"]
 
   P --> P1["parseQuery — doi wins over q"]
-  P1 --> PIPE[["the orchestrator pipeline — diagram 2"]]
-  PIPE --> Q["toSearchResponse<br/>hits · facets · providers<br/>complete · bounded"]
+  P1 --> K{"ResultSetCache<br/>a set held for this query and filters?<br/>page and sort are not part of the key"}
+  K -- "held" --> PAGE
+  K -- "not held" --> PIPE[["resolve the set — the orchestrator pipeline, diagram 2"]]
+  PIPE --> R{"complete — every provider answered?"}
+  R -- yes --> S["hold the set, 30 minutes"] --> PAGE
+  R -- no --> T["return it unheld<br/>Cache-Control: no-store<br/>so a retry can reach the providers that failed"] --> PAGE
 
-  Q --> R{"worthCaching — complete !== false"}
-  R -- "every provider answered" --> S["cache the response<br/>Cache-Control: max-age=300"]
-  R -- "one failed or timed out" --> T["do not store it<br/>Cache-Control: no-store<br/>so a retry can reach the providers that failed"]
-
-  S --> Y
-  T --> Y
-  Y["200 · X-Cache-Hit: false | coalesced<br/>X-Response-Time"] --> Z
+  PAGE["present one page of the set<br/>sort · slice · enrich from AuthorityFactsCache"] --> Q["toSearchResponse<br/>hits · facets · providers<br/>complete · bounded"]
+  Q --> Y["200 · X-Cache-Hit: true (set held) | false | coalesced<br/>X-Response-Time"] --> Z
 
   Z["hits · facets · providers · complete · bounded"] --> ZA["ResultCard · FacetPanel · SortBar · Pagination"]
   Z --> ZB["ProviderCoverage — who answered, who was skipped and why<br/>complete:false — a source did not answer<br/>bounded:true — every source did, but the rescue was cut short<br/>either one renders as 'total is a lower bound'"]
@@ -91,21 +82,23 @@ flowchart LR
   classDef store stroke:#7c3aed,stroke-width:2px
   classDef exit stroke:#2563eb,stroke-width:2px
   class J,G1,R,O gate
-  class L,M,K store
-  class HIT,Y,Z exit
+  class K,S store
+  class Y,Z exit
 ```
 
 Two rules are worth reading off this diagram, because both were bugs before
 they were rules:
 
-- **The single flight wraps the whole miss**, cache write included — not just
-  the fan-out. A miss costs tens of seconds across ten providers, which is a
-  wide window for duplicates to arrive in.
-- **A degraded answer is returned but never remembered.** Storing one would
-  answer everybody for the next five minutes with a result nothing could get
-  past, and the frontend's retry re-posts the identical request. The
-  `Cache-Control` matches the store's decision, so no cache between here and
-  the reader can reinstate it.
+- **A page is a slice of a held set, never a set of its own.** The set — fan-out,
+  rescue and facets — is resolved once per query and filters and held for 30
+  minutes, so every page and sort of a search reports one total and no paper
+  is on two pages. Resolving it again per page let the rescue's wall-clock
+  budget reach a different number of papers each time.
+- **A degraded set is returned but never held.** Holding one would answer
+  everybody for the next half hour with a result nothing could get past, and
+  the frontend's retry re-posts the identical request. The `Cache-Control`
+  matches that decision, so no cache between here and the reader can
+  reinstate it.
 
 ---
 
@@ -166,9 +159,10 @@ flowchart LR
   BACK --> REBUILD
   REBUILD["rebuild by walking the ranked list<br/>— substitution, not appending"]
 
-  REBUILD --> SORT["sortPapers — after filtering, before pagination"]
-  SORT --> FACET["generateFacets over the filtered set<br/>with facetBaseSets: a facet is not counted<br/>over its own selection, so a second year<br/>can still be ticked"]
-  FACET --> PAGE["paginate — slice(page-1 × pageSize, +pageSize)"]
+  REBUILD --> FACET["generateFacets over the filtered set, in ranked order<br/>with facetBaseSets: a facet is not counted<br/>over its own selection, so a second year<br/>can still be ticked"]
+  FACET --> HELD[("the result set — held by ResultSetCache<br/>everything above runs once per query and filters;<br/>everything below, once per page")]
+  HELD --> SORT["sortPapers — the caller's order"]
+  SORT --> PAGE["paginate — slice(page-1 × pageSize, +pageSize)"]
 
   PAGE --> E0
 
@@ -184,13 +178,13 @@ flowchart LR
   EAPPLY --> RESORT["sortPapers again — enrichment just rewrote<br/>title, authors, year, venue, publisher, citationCount,<br/>which are the keys the page was ordered by"]
   RESORT --> DONE(["papers · total · facets · reports · authorities · rescue · complete"])
 
-  ENRICHBOX -.-> AC[("AuthorityCache — per-search memo of<br/>(authority, DOI) → facts, shared with the rescue,<br/>so a rescued paper on the visible page<br/>is not asked about twice")]
+  ENRICHBOX -.-> AC[("AuthorityCache — per-search memo of<br/>(authority, DOI) → facts, shared with the rescue,<br/>so a rescued paper on the visible page<br/>is not asked about twice — backed by<br/>AuthorityFactsCache, answers held an hour<br/>across searches")]
   RESCUEBOX -.-> AC
 
   classDef gate stroke:#dc2626,stroke-width:2px
   classDef store stroke:#7c3aed,stroke-width:2px
   class PLAN,PART,RETEST,RES,EBUD gate
-  class PC,AC store
+  class PC,AC,HELD store
 ```
 
 **Providers and authorities are different kinds of thing.** A provider answers

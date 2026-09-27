@@ -240,6 +240,11 @@ export class ProviderCache {
     return removed;
   }
 
+  clear(): void {
+    this.entries.clear();
+    this.held = 0;
+  }
+
   get size(): number {
     return this.entries.size;
   }

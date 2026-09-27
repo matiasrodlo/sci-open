@@ -152,6 +152,21 @@ describe('POST /api/search', () => {
     expect(searches).toEqual(['crispr']);
   });
 
+  it('answers every page and sort of a search from the one set', async () => {
+    const papers = Array.from({ length: 45 }, (_, i) => record(i));
+    const { entry, searches } = provider(papers);
+    build({}, entry);
+
+    const pages = await Promise.all([1, 2, 3].map(page => search({ q: 'crispr', page })));
+    const byTitle = await search({ q: 'crispr', sort: 'title' });
+
+    expect(searches).toEqual(['crispr']);
+    expect(pages.map(p => p.json().total)).toEqual([45, 45, 45]);
+    const ids = pages.flatMap(p => p.json().hits.map((hit: { id: string }) => hit.id));
+    expect(new Set(ids).size).toBe(45);
+    expect(byTitle.headers['x-cache-hit']).toBe('true');
+  });
+
   it('does not keep an answer a provider failed to contribute to', async () => {
     const failing = provider();
     failing.entry.search = async () => { throw new Error('Europe PMC 503'); };
@@ -247,15 +262,17 @@ describe('administrative routes', () => {
     expect((await metrics('guess')).statusCode).toBe(401);
   });
 
-  it('answer the configured key, and clearing empties the cache', async () => {
-    build();
+  it('answer the configured key, and clearing makes the next search ask the sources', async () => {
+    const { entry, searches } = provider();
+    build({}, entry);
     await search({ q: 'crispr' });
-    expect((await metrics(ADMIN_KEY)).json().cache.keys).toBe(1);
+    expect((await metrics(ADMIN_KEY)).json().resultSets.entries).toBe(1);
 
     const cleared = await app!.inject({
       method: 'POST', url: '/api/cache/clear', headers: { authorization: `Bearer ${ADMIN_KEY}` }
     });
     expect(cleared.statusCode).toBe(200);
     expect((await search({ q: 'crispr' })).headers['x-cache-hit']).toBe('false');
+    expect(searches).toHaveLength(2);
   });
 });

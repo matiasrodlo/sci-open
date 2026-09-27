@@ -140,7 +140,9 @@ against indexes, like MeSH headings and full text, that are not reproduced here.
 ```
 
 **Headers:**
-- `X-Cache-Hit`: `true` | `false` | `coalesced`
+- `X-Cache-Hit`: `true` when the search's result set was held, so this page
+  is a slice of the set earlier pages came from; `false` when it was resolved
+  for this request; `coalesced` when an identical request was already running
 - `X-Response-Time`: milliseconds
 - `Cache-Control`: `public, max-age=300`
 

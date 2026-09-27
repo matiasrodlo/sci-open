@@ -351,40 +351,40 @@ API_ORIGIN=https://api.yourdomain.com
 
 ### Cache TTLs
 
-There are two caches, and only one of them has levels. Keeping that straight is
-the difference between "L1" meaning something and it meaning "the fast one".
+Search and paper details are cached differently, and only the paper cache has
+levels. Keeping that straight is the difference between "L1" meaning something
+and it meaning "the fast one".
 
-**The response cache** (`apps/api/src/lib/cache-manager.ts`) holds whole
-`/api/search` and `/api/paper/:id` answers, keyed on the request. It has two
-levels — L1 in memory in front of L2 in Redis — and its TTLs are fixed per
-strategy in `STRATEGY_CONFIGS`, deliberately not configurable, because a TTL
-that can be set per deployment is a TTL nobody can reason about from the code:
+**Search is cached in three in-process stages**, each keyed on what decides it:
 
-| Strategy | L1 (memory) | L2 (Redis) |
-|---|---|---|
-| Search results | 5 min | 1 hour |
-| Paper details | 10 min | 2 hours |
+| Cache | Holds | Keyed on | TTL |
+|---|---|---|---|
+| Fan-out (`orchestrator/provider-cache.ts`) | what each provider returned | provider, native query, depth | 10 min |
+| Result sets (`orchestrator/result-set.ts`) | the set a search resolved to — merged, ranked, gated, rescued, faceted | query and filters, never page or sort | 30 min |
+| Authority answers (`orchestrator/authority-cache.ts`) | what Unpaywall, Crossref and the rest said about a DOI | authority and DOI | 1 hour |
 
-There is no third *level*, and no 24-hour tier. The old L3 was an unbounded
-`Map` with no expiry that `get` promoted from, so any entry reaching it was
-served indefinitely and the other two levels' TTLs stopped meaning anything.
+Every page and sort of a search is a slice of one held set, which is what keeps
+`total` and the page boundaries fixed while a reader pages. They used not to
+be: each page resolved the set again, and the rescue — which runs against a
+wall-clock budget — reached a different number of papers each time. Presenting
+a page is then a sort, a slice and twenty enrichments answered from the
+authority cache. A set that reported itself `complete: false` is not held, and
+is sent with `no-store`, so a retry reaches the provider that failed.
 
-An answer that reported itself `complete: false` is not stored at either level,
-and is sent with `no-store` so nothing between the API and the reader stores it
-either. A provider's bad minute is not worth remembering for an hour, and
-remembering it is what put the frontend's retry in front of its own cache entry.
+Search used to have a per-page response cache in Redis as well. It went because
+it could not be kept consistent with the sets: a page computed from one set
+could outlive it by up to an hour and sit beside pages from the next. So a
+restart starts search cold, and two API instances each hold their own sets.
 
-**The fan-out cache** (`apps/api/src/orchestrator/provider-cache.ts`) is a
-separate cache rather than a further level of that one, which is why the README
-counts it alongside rather than as an "L3". It holds what each *provider*
-returned, keyed on the provider and the native query it was sent — not on the
-request — so changing page, sort or a post-fetch filter reuses the fan-out
-instead of repeating it. One TTL of ten minutes, in process, per provider.
+**Paper details** (`apps/api/src/lib/cache-manager.ts`) are cached in two
+levels — L1 in memory in front of L2 in Redis — for 10 minutes and 2 hours,
+fixed in `STRATEGY_CONFIGS`, deliberately not configurable, because a TTL that
+can be set per deployment is a TTL nobody can reason about from the code.
 
-What is tunable on both is how much they may *hold*: `CACHE_MAX_BYTES` for the
-response cache and `PROVIDER_CACHE_MAX_BYTES` for the fan-out one, each counting
+What is tunable is how much may be *held*: `CACHE_MAX_BYTES` for the
+paper cache's L1 and `PROVIDER_CACHE_MAX_BYTES` for the fan-out, each counting
 serialised bytes. Plus `CACHE_REDIS_COOLDOWN_MS`, which is how long L2 stays
-shut after Redis has failed.
+shut after Redis has failed. `POST /api/cache/clear` empties all of them.
 
 ### Connection Pools
 

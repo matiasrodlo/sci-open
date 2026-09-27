@@ -8,7 +8,7 @@ A modern search interface for discovering open-access research papers across lea
 
 - **Multi-source search** across ten academic repositories
 - **PDF resolution** that rewrites hosts advertising PDFs they do not serve
-- **Two-layer caching** — an in-process LRU bounded in bytes over Redis
+- **Consistent paging** — each search's result set is resolved once and every page is a slice of it
 - **Capability-based source selection** — a provider is asked only what its API can answer
 - **Real-time faceting** by source, open-access status, year, venue and publisher
 - **Per-provider coverage reporting**, so a degraded search says which sources answered
@@ -80,7 +80,7 @@ Comprehensive documentation is available in the [`/docs`](./docs) directory:
 **Frontend:** Next.js 15, React 19, TypeScript, Tailwind CSS, shadcn/ui  
 **Backend:** Fastify, TypeScript, Node.js  
 **Search:** in-process orchestrator — capability-based planning, fan-out, merge, rank  
-**Cache:** Redis (L2), in-process LRU bounded in bytes (L1), plus a byte-bounded per-provider fan-out cache  
+**Cache:** search in process — per-provider fan-outs, result sets, authority answers; paper details in memory over Redis  
 **Data Sources:** arXiv, CORE, Europe PMC, NCBI, OpenAIRE, and more
 
 ## Project Structure

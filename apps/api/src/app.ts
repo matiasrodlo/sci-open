@@ -5,7 +5,7 @@ import rateLimit from '@fastify/rate-limit';
 import { SearchParams, toOARecord, type Paper } from '@open-access-explorer/shared';
 import type { Config } from './config';
 import type { CacheManager } from './lib/cache-manager';
-import { SearchCacheManager, worthCaching } from './lib/search-cache-manager';
+import { searchKey, worthCaching } from './lib/search-key';
 import { PaperCacheManager } from './lib/paper-cache-manager';
 import { httpPerformanceMonitor } from './lib/http-performance-monitor';
 import { assertPublicHttpUrl, fetchPdfStream, PdfProxyError } from './lib/pdf-proxy';
@@ -13,8 +13,8 @@ import { adminOnly } from './lib/admin-auth';
 import { SingleFlight } from './lib/single-flight';
 import { searchBodySchema, paperParamsSchema, downloadPdfBodySchema } from './lib/schemas';
 import { clientError, clientErrorStatus, lookupErrorStatus } from './lib/client-error';
-import { ProviderCache, lookupPaper, enrichPage } from './orchestrator';
-import { runOrchestrator } from './orchestrator/from-search-params';
+import { AuthorityCache, AuthorityFactsCache, ProviderCache, ResultSetCache, lookupPaper, enrichPage } from './orchestrator';
+import { runSearch } from './orchestrator/from-search-params';
 import type { ProviderEntry } from './orchestrator/registry';
 import type { AuthorityEntry } from './authorities';
 
@@ -24,6 +24,10 @@ export type AppOptions = {
   cache: CacheManager;
   /** Defaults to one held under `config.cache.providerMaxBytes`. */
   providerCache?: ProviderCache;
+  /** Resolved sets, so a search's pages slice one set. Defaults to an empty one. */
+  resultSets?: ResultSetCache;
+  /** Authorities' answers across requests. Defaults to an empty one. */
+  authorityFacts?: AuthorityFactsCache;
   /** Default to the registries. A subset is how the routes are driven offline. */
   providers?: readonly ProviderEntry[];
   authorities?: readonly AuthorityEntry[];
@@ -89,7 +93,6 @@ export function buildApp(options: AppOptions): FastifyInstance {
   fastify.register(routes, {
     config,
     cache,
-    searchCacheManager: new SearchCacheManager(cache),
     paperCacheManager: new PaperCacheManager(cache),
     // Collapses concurrent identical searches onto one fan-out. A miss costs
     // tens of seconds across every provider, which is a wide window for
@@ -99,6 +102,11 @@ export function buildApp(options: AppOptions): FastifyInstance {
     // returned only pays across requests — it is what makes a page-2 click
     // reuse the fan-out instead of repeating it.
     providerCache: options.providerCache ?? new ProviderCache({ maxBytes: config.cache.providerMaxBytes }),
+    // Search is cached here and not in `cache`, which holds paper details:
+    // what a search resolved to, and what the authorities said about its
+    // papers. See `orchestrator/result-set.ts`.
+    resultSets: options.resultSets ?? new ResultSetCache(),
+    authorityFacts: options.authorityFacts ?? new AuthorityFactsCache(),
     ...(options.providers ? { providers: options.providers } : {}),
     ...(options.authorities ? { authorities: options.authorities } : {})
   });
@@ -110,10 +118,11 @@ export function buildApp(options: AppOptions): FastifyInstance {
 type RouteContext = {
   config: Config;
   cache: CacheManager;
-  searchCacheManager: SearchCacheManager;
   paperCacheManager: PaperCacheManager;
   searchFlights: SingleFlight;
   providerCache: ProviderCache;
+  resultSets: ResultSetCache;
+  authorityFacts: AuthorityFactsCache;
   providers?: readonly ProviderEntry[];
   authorities?: readonly AuthorityEntry[];
 };
@@ -143,7 +152,7 @@ type RouteContext = {
  * onto the root instance now fails a test rather than a production load.
  */
 async function routes(fastify: FastifyInstance, context: RouteContext) {
-  const { config, cache, searchCacheManager, paperCacheManager, searchFlights, providerCache } = context;
+  const { config, cache, paperCacheManager, searchFlights, providerCache, resultSets, authorityFacts } = context;
   // Who we say we are to every provider. See `UNPAYWALL_EMAIL` in `config.ts`.
   const userAgent = config.userAgent;
   const admin = adminOnly(config.adminKey);
@@ -163,52 +172,35 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
     try {
       const params = request.body;
 
-      // Check advanced cache first
-      const cached = await searchCacheManager.getCachedSearchResults(params);
-      if (cached) {
-        const responseTime = Date.now() - startTime;
-        fastify.log.info({ 
-          query: params.q, 
-          responseTime,
-          totalResults: cached.total 
-        }, 'Returning cached search results');
-        // Inert on a POST, like its counterpart on the fresh path below —
-        // stated for the same reason, and see the note there.
-        reply.header('Cache-Control', 'public, max-age=300');
-        reply.header('X-Cache-Hit', 'true');
-        reply.header('X-Response-Time', responseTime.toString());
-        return cached;
-      }
-    
-      fastify.log.info({ query: params.q }, 'No cache hit, performing fresh search');
-
-      // Everything from here to the cache write happens once per key, however
-      // many callers are waiting on it.
-      const { value: searchResult, coalesced } = await searchFlights.run(
-        searchCacheManager.keyFor(params),
-        async () => {
-          const result = await runOrchestrator(params, { cache: providerCache, userAgent, settings: config.search, ...upstream });
-
-          // A degraded answer is returned but not remembered — see
-          // `worthCaching`. The result is still worth having; `complete` is in
-          // the response so the UI can say what it is.
-          const stored = await searchCacheManager.cacheSearchResults(params, result);
-
-          if (!stored) {
-            fastify.log.warn(
-              { query: params.q, total: result.total },
-              'Search incomplete; returning it uncached so a retry can reach the providers that failed'
-            );
-          }
-
-          return result;
-        }
+      // Collapses concurrent identical requests onto one run. The set behind
+      // them is held by `resultSets`, so a new page of a search already
+      // resolved is a slice and twenty enrichments, not a fan-out.
+      const { value: { response: searchResult, fromCache }, coalesced } = await searchFlights.run(
+        searchKey(params),
+        () => runSearch(params, {
+          cache: providerCache,
+          resultSets,
+          authorityFacts,
+          userAgent,
+          settings: config.search,
+          ...upstream
+        })
       );
+
+      if (!worthCaching(searchResult) && !coalesced) {
+        // A degraded set is returned but not held — see `worthCaching`. The
+        // answer is still worth having; `complete` is in the response so the
+        // UI can say what it is.
+        fastify.log.warn(
+          { query: params.q, total: searchResult.total },
+          'Search incomplete; returning it unheld so a retry can reach the providers that failed'
+        );
+      }
 
       const responseTime = Date.now() - startTime;
       /**
-       * The same rule the store applies, stated to every cache between here and
-       * the reader — and on this route, stated to nobody.
+       * The same rule the set cache applies, stated to every cache between here
+       * and the reader — and on this route, stated to nobody.
        *
        * Search is a POST, and a POST response is not cacheable in any way that
        * a later POST can be answered from: RFC 9111 lets a cache store one only
@@ -216,7 +208,7 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
        * subsequent *GET* of that URI. So neither branch here does anything, and
        * that includes `no-store` — the protection this line was credited with
        * was never in force. What actually keeps a degraded answer out of the
-       * way of the retry is `worthCaching` refusing to store it, which is a
+       * way of the retry is `ResultSetCache` refusing to hold it, which is a
        * decision this service makes for itself and does not delegate.
        *
        * Kept rather than deleted, because it is the correct header either way
@@ -231,13 +223,15 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
         'Cache-Control',
         worthCaching(searchResult) ? 'public, max-age=300' : 'no-store'
       );
-      reply.header('X-Cache-Hit', coalesced ? 'coalesced' : 'false');
+      // Whether the set was held — the page itself is presented every time.
+      reply.header('X-Cache-Hit', coalesced ? 'coalesced' : fromCache ? 'true' : 'false');
       reply.header('X-Response-Time', responseTime.toString());
     
       fastify.log.info({
         totalResults: searchResult.total,
         query: params.q,
         responseTime,
+        fromCache,
         coalesced
       }, 'Search completed');
     
@@ -351,7 +345,7 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
        * that was being answered poorly. The result is then cached like any
        * other, so the second visitor pays nothing.
        */
-      const { papers: [enriched], reports } = await enrichPage([found], { userAgent, ...enrichWith });
+      const { papers: [enriched], reports } = await enrichPage([found], { userAgent, cache: new AuthorityCache(authorityFacts), ...enrichWith });
       const paper = toOARecord(enriched);
 
       // Cache the result using advanced cache manager
@@ -458,6 +452,9 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
     try {
       return {
         cache: cache.getMetrics(),
+        resultSets: resultSets.stats(),
+        providers: providerCache.stats(),
+        authorityFacts: authorityFacts.size,
         timestamp: new Date().toISOString()
       };
     } catch (error: any) {
@@ -469,7 +466,12 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
   // Cache clear endpoint
   fastify.post('/api/cache/clear', admin, async (request, reply) => {
     try {
+      // Everything this service remembers about an answer, so a search after
+      // this asks the sources again rather than slicing a set held from before.
       await cache.clear();
+      resultSets.clear();
+      providerCache.clear();
+      authorityFacts.clear();
       return { 
         message: 'Cache cleared',
         timestamp: new Date().toISOString()

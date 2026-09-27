@@ -3,6 +3,8 @@ import { search as orchestratorSearch, DEFAULT_DEPTH } from './index';
 import { parseQuery } from './parse-query';
 import type { UserFilters } from './policy';
 import type { ProviderCache } from './provider-cache';
+import type { ResultSetCache } from './result-set';
+import type { AuthorityFactsCache } from './authority-cache';
 import type { ProviderEntry } from './registry';
 import type { AuthorityEntry } from '../authorities';
 import { toSearchResponse } from './to-search-response';
@@ -97,6 +99,10 @@ export type RunOptions = {
   settings?: SearchSettings;
   /** Shared across requests, which is the only way caching a fan-out pays. */
   cache?: ProviderCache;
+  /** Likewise for resolved sets, which is what keeps a search's pages slices of one set. */
+  resultSets?: ResultSetCache;
+  /** And for what the authorities said, so a page shown again is not asked about again. */
+  authorityFacts?: AuthorityFactsCache;
   userAgent?: string;
   /** Defaults to the whole registry. A subset is how this is driven offline. */
   providers?: readonly ProviderEntry[];
@@ -118,6 +124,18 @@ export async function runOrchestrator(
   params: SearchParams,
   options: RunOptions = {}
 ): Promise<SearchResponse> {
+  return (await runSearch(params, options)).response;
+}
+
+/**
+ * `runOrchestrator`, also saying whether the result set was held rather than
+ * resolved for this request — which the response shape has nowhere to put and
+ * the route reports in `X-Cache-Hit`.
+ */
+export async function runSearch(
+  params: SearchParams,
+  options: RunOptions = {}
+): Promise<{ response: SearchResponse; fromCache: boolean }> {
   const filters = params.filters ?? {};
   const settings = options.settings ?? DEFAULT_SEARCH_SETTINGS;
   const { yearFrom, yearTo } = filters;
@@ -174,6 +192,8 @@ export async function runOrchestrator(
     rescueLimit: settings.rescueLimit,
     rescueBudgetMs: settings.rescueBudgetMs,
     ...(options.cache ? { cache: options.cache } : {}),
+    ...(options.resultSets ? { resultSets: options.resultSets } : {}),
+    ...(options.authorityFacts ? { authorityFacts: options.authorityFacts } : {}),
     ...(options.userAgent ? { userAgent: options.userAgent } : {}),
     ...(options.providers ? { providers: options.providers } : {}),
     ...(options.authorities ? { authorities: options.authorities } : {})
@@ -183,17 +203,19 @@ export async function runOrchestrator(
   // one whose accounting the response shape has nowhere to put. Logged so a
   // bounded rescue — the case where `total` is still a lower bound — is
   // visible without waiting on a contract change. Debug, because it is one
-  // line per uncached search and says nothing when there was nothing to ask.
-  if (result.rescue.candidates > 0) {
+  // line per resolved set and says nothing when there was nothing to ask.
+  if (result.rescue.candidates > 0 && !result.fromCache) {
     const { authorities: _asked, ...counts } = result.rescue;
     log.debug('Rescue pass', { query: params.q, ...counts });
   }
 
-  return toSearchResponse(result, {
+  const response = toSearchResponse(result, {
     // Echoed the way the old path echoed them, absent field included, so the
     // response is the same object to a client that cannot tell which path
     // produced it.
     ...(params.filters !== undefined ? { filters: params.filters } : {}),
     sort: params.sort ?? 'relevance'
   });
+
+  return { response, fromCache: result.fromCache };
 }

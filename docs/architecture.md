@@ -31,8 +31,8 @@ shared package holding the types both speak.
        │    Crossref · OpenAlex · OpenCitations · Unpaywall
        │
        └──► Cache
-            ├── L1 memory, bounded in bytes
-            └── L2 Redis
+            ├── Search, in process: fan-outs · result sets · authority answers
+            └── Paper details: L1 memory, bounded in bytes · L2 Redis
 ```
 
 ## Core Components
@@ -112,9 +112,15 @@ the visible page is not asked about twice.
 
 ### Caching
 
-Two levels, both keyed as `namespace:hash(subject):hash(variant)` so every
-page, sort and filter of one query sits under a prefix the query itself
-derives:
+Search is cached in process, in three stages — what each provider returned
+(`ProviderCache`), the result set each search resolved to (`ResultSetCache`),
+and what each authority said about each DOI (`AuthorityFactsCache`). The set is
+the one that matters for correctness: every page and sort of a search is a
+slice of one held set, so `total` and the page boundaries stay fixed while a
+reader pages. See `docs/configuration.md` for their keys and lifetimes.
+
+Paper details are cached in two levels, keyed as
+`namespace:hash(subject):hash(variant)`:
 
 - **L1, in memory** — bounded in *bytes* (`CACHE_MAX_BYTES`, 256 MB by
   default), least-recently-used, spending expired entries before live ones. It
@@ -132,25 +138,26 @@ derives:
 
 ```
 1. Client → API: POST /api/search
-2. Cache lookup: one key, derived from the request
-3. On a miss, one fan-out per key however many callers are waiting (single-flight)
-4. Orchestrator: plan → fan out → merge → rank → filter → rescue → facet →
-   paginate → enrich
-5. Paper[] → SearchResponse, cached unless a provider failed
+2. Identical requests already running are joined (single-flight)
+3. The result set for this query and filters: held, or resolved —
+   plan → fan out → merge → match → rank → filter → rescue → facet —
+   and held if every provider answered
+4. One page of it: sort → paginate → enrich
+5. Paper[] → SearchResponse
 ```
 
-Step 2 used to read "exact key, then a similar one". The similar-key lookup
-probed a `partial:` namespace that nothing in the service ever wrote, so it was
-a guaranteed miss — and, past L1, a guaranteed Redis round trip — in front of
-every fresh search. It is gone.
+Step 3 is where the cache is, and what it holds is the set, not a page. Page
+and sort are not part of its key, so every page of a search slices the same
+set and reports the same total — which it did not while each page was resolved
+on its own, because the rescue in step 3 runs against a wall clock.
 
-Step 5 is conditional for the reason the response carries `complete` at all. The
+It is conditional for the reason the response carries `complete` at all. The
 report says what each provider was asked, what it returned, and whether it
 failed, timed out or was skipped; `complete` is false when one failed, which
-makes `total` a lower bound. An answer in that state is returned but not stored,
-at either cache level or anywhere downstream — a provider's bad minute is not
-worth serving for the next hour, and serving it is what left the frontend's
-retry answered from the entry it was trying to get past.
+makes `total` a lower bound. A set in that state is returned but not held — a
+provider's bad minute is not worth serving for the next half hour, and serving
+it is what left the frontend's retry answered from the entry it was trying to
+get past.
 
 ### Paper Details
 

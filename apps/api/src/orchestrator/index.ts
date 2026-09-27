@@ -1,6 +1,6 @@
 import type { AuthorityReport, Paper, ProviderReport, Query, SearchSort } from '@open-access-explorer/shared';
 import { matchesQuery } from '@open-access-explorer/shared';
-import type { AuthorityEntry } from '../authorities';
+import { AUTHORITIES, type AuthorityEntry } from '../authorities';
 import { PROVIDERS, type ProviderEntry } from './registry';
 import { plan } from './plan';
 import { fanOut, isComplete } from './fanout';
@@ -8,8 +8,9 @@ import { ProviderCache } from './provider-cache';
 import { mergePapers } from './merge';
 import { rank } from './rank';
 import { applyPolicy, partitionByPolicy, type PolicyOptions, type UserFilters } from './policy';
-import { rescueCandidates, type RescueReport } from './rescue';
-import { AuthorityCache } from './authority-cache';
+import { canRescue, rescueCandidates, DEFAULT_RESCUE_BUDGET_MS, DEFAULT_RESCUE_LIMIT, type RescueReport } from './rescue';
+import { AuthorityCache, type AuthorityFactsCache } from './authority-cache';
+import { resultSetKey, type ResultSet, type ResultSetCache, type ResultSetKeyParts } from './result-set';
 import { facetBaseSets, generateFacets, type Facets } from './facet';
 import { sortPapers } from './sort';
 import { enrichPage } from './enrich';
@@ -20,7 +21,9 @@ export { PROVIDERS, plan, fanOut, isComplete, ProviderCache, mergePapers, rank, 
 export { partitionByPolicy } from './policy';
 export { rescueCandidates, canRescue, DEFAULT_RESCUE_LIMIT, DEFAULT_RESCUE_BUDGET_MS } from './rescue';
 export type { RescueReport } from './rescue';
-export { AuthorityCache } from './authority-cache';
+export { AuthorityCache, AuthorityFactsCache } from './authority-cache';
+export { ResultSetCache, resultSetKey } from './result-set';
+export type { ResultSet } from './result-set';
 
 /**
  * plan -> fan out -> merge/dedupe -> rank -> filter -> rescue -> facet -> paginate -> enrich
@@ -41,6 +44,11 @@ export { AuthorityCache } from './authority-cache';
  * only up to a limit — is what keeps `total` and the facets describing the set
  * the caller could see rather than the set the providers described. It runs
  * before faceting for exactly the reason faceting runs after filtering.
+ *
+ * Everything up to the facets resolves the *set*, and depends on neither the
+ * page nor the sort; what follows presents one page of it. The two halves are
+ * `resolveResultSet` and the rest of `search`, and the line between them is
+ * where `ResultSetCache` holds the set — see `result-set.ts`.
  */
 
 export type SearchOptions = {
@@ -68,6 +76,13 @@ export type SearchOptions = {
   /** Passed to providers that support it. Default true, matching prior behaviour. */
   openAccessOnly?: boolean;
   cache?: ProviderCache;
+  /**
+   * Where resolved sets are held between requests, so every page of a search
+   * slices the same one. Absent resolves the set on every call.
+   */
+  resultSets?: ResultSetCache;
+  /** Authorities' answers, held across searches. See `AuthorityFactsCache`. */
+  authorityFacts?: AuthorityFactsCache;
   providers?: readonly ProviderEntry[];
   userAgent?: string;
   now?: () => Date;
@@ -103,6 +118,8 @@ export type OrchestratorResult = {
    * were already going to be returned.
    */
   complete: boolean;
+  /** True when the set came from `resultSets` — held, or resolved by a concurrent identical search. */
+  fromCache: boolean;
   duration: number;
 };
 
@@ -110,8 +127,8 @@ export type OrchestratorResult = {
  * How deep each provider is read, and the ceiling on what that may be set to.
  *
  * 600 is the measured default, and the number the comments throughout this
- * package are written against. It is configurable — `SEARCH_DEPTH`, read at the
- * request boundary in `from-search-params.ts` — because it is the one setting
+ * package are written against. It is configurable — `SEARCH_DEPTH`, read in
+ * `config.ts` — because it is the one setting
  * that decides how much of a corpus a search actually sees. The header reading
  * "2,754 retrieved of 977,761+ matching" is reporting this bound and nothing
  * else: the first figure is `depth x providers that answered`, less duplicates
@@ -132,7 +149,7 @@ export type OrchestratorResult = {
  *
  * Two thousand is where all three stay tolerable. It clamps rather than
  * rejects, because a mis-set variable should cost an operator the depth they
- * asked for and not the service — and `searchDepth` warns when it binds, so the
+ * asked for and not the service — and `config.ts` warns when it binds, so the
  * setting cannot quietly be a number nobody is using.
  */
 export const DEFAULT_DEPTH = 600;
@@ -140,34 +157,61 @@ export const MAX_DEPTH = 2000;
 
 const DEFAULT_TIMEOUT_MS = 20000;
 
-export async function search(query: Query, options: SearchOptions = {}): Promise<OrchestratorResult> {
-  const startedAt = Date.now();
-  const {
-    page = 1,
-    pageSize = 20,
-    // Deliberately independent of `page`. Letting depth grow with the page
-    // would change the reported total as the user walks through the results,
-    // so every page answers from the same window.
-    depth: requestedDepth = DEFAULT_DEPTH,
-    timeoutMs = DEFAULT_TIMEOUT_MS,
-    filters = {},
-    sort = 'relevance',
-    policy = {},
-    authorities,
-    enrichBudgetMs,
-    rescueLimit,
-    rescueBudgetMs,
-    openAccessOnly = true,
-    cache,
-    providers = PROVIDERS,
-    userAgent,
-    now
-  } = options;
+/** `SearchOptions` with the defaults applied, for the steps that resolve the set. */
+type Settled = ResultSetKeyParts & {
+  query: Query;
+  providers: readonly ProviderEntry[];
+  authorities: readonly AuthorityEntry[] | undefined;
+  cache: ProviderCache | undefined;
+  userAgent: string | undefined;
+  now: (() => Date) | undefined;
+};
 
-  // Bounded here rather than where the setting is read, so that every caller
-  // is bounded by it — the route, the offline scripts and the comparison
-  // harness alike. See `MAX_DEPTH`.
-  const depth = Math.min(Math.max(requestedDepth, 1), MAX_DEPTH);
+function settle(query: Query, options: SearchOptions): Settled {
+  const providers = options.providers ?? PROVIDERS;
+  return {
+    query,
+    filters: options.filters ?? {},
+    policy: {
+      requireFullText: options.policy?.requireFullText ?? true,
+      requireOpenAccess: options.policy?.requireOpenAccess ?? true
+    },
+    openAccessOnly: options.openAccessOnly ?? true,
+    // Bounded here rather than where the setting is read, so that every caller
+    // is bounded by it — the route, the offline scripts and the comparison
+    // harness alike. See `MAX_DEPTH`. Deliberately independent of `page`:
+    // letting depth grow with the page would change the reported total as the
+    // user walks through the results, so every page answers from the same
+    // window.
+    depth: Math.min(Math.max(options.depth ?? DEFAULT_DEPTH, 1), MAX_DEPTH),
+    timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    providers,
+    authorities: options.authorities,
+    rescue: {
+      authorities: (options.authorities ?? AUTHORITIES).filter(canRescue).map(authority => authority.id),
+      limit: options.rescueLimit ?? DEFAULT_RESCUE_LIMIT,
+      budgetMs: options.rescueBudgetMs ?? DEFAULT_RESCUE_BUDGET_MS
+    },
+    cache: options.cache,
+    userAgent: options.userAgent,
+    now: options.now
+  };
+}
+
+function keyOf(settled: Settled): string {
+  const { query, filters, policy, openAccessOnly, depth, timeoutMs, providers, rescue } = settled;
+  return resultSetKey({
+    query, filters, policy, openAccessOnly, depth, timeoutMs, rescue,
+    providers: providers.map(({ id, normalizerVersion }) => ({ id, normalizerVersion }))
+  });
+}
+
+/**
+ * plan -> fan out -> merge/dedupe -> match -> rank -> filter -> rescue -> facet:
+ * the set, before any page is cut from it.
+ */
+async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache): Promise<ResultSet> {
+  const { query, filters, policy, openAccessOnly, depth, timeoutMs, providers, authorities, cache, userAgent, now } = settled;
 
   const planned = plan(query, providers);
 
@@ -204,10 +248,6 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
 
   const ranked = rank(matched, { query, ...(now ? { now: now().getTime() } : {}) }).map(s => s.paper);
 
-  // Shared with the rescue below, so a paper that is asked about twice is
-  // fetched once.
-  const authorityCache = new AuthorityCache();
-
   // The gate reads `fullText`, `oaStatus` and `stage`, and the authorities
   // fill all three — so a paper failing it has been judged on what the
   // providers happened to say rather than on what is knowable. `kept` needs no
@@ -216,8 +256,8 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
 
   const { papers: rescuedPapers, report: rescueReport } = await rescueCandidates(candidates, {
     ...(authorities ? { authorities } : {}),
-    ...(rescueLimit !== undefined ? { limit: rescueLimit } : {}),
-    ...(rescueBudgetMs !== undefined ? { budgetMs: rescueBudgetMs } : {}),
+    limit: settled.rescue.limit,
+    budgetMs: settled.rescue.budgetMs,
     ...(userAgent ? { userAgent } : {}),
     cache: authorityCache,
     filters,
@@ -235,10 +275,6 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
     return included ? [included] : [];
   });
 
-  // After filtering so it only orders what will be returned, and before
-  // pagination so a page is a slice of the sorted set.
-  const sorted = sortPapers(filtered, sort);
-
   // Facets describe the filtered set — after the rescue, so a paper Unpaywall
   // found a copy for is counted in the buckets it belongs to. Counting before
   // it would have described a set the caller never sees, which is the same
@@ -250,7 +286,35 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
   // added, and the OR semantics these filters already have were unreachable
   // from the UI. `facetBaseSets` rebuilds, per ticked facet, the set the other
   // filters admit. It costs nothing when nothing is ticked. See `facet.ts`.
-  const facets = generateFacets(sorted, facetBaseSets(ranked, filters, policy, admitted));
+  //
+  // Counted in ranked order, not in whatever order a page is sorted by: the
+  // counts are the same either way, but a bucket is labelled with the spelling
+  // its best-ranked paper carries on a tie, and that should not change with
+  // the sort.
+  const facets = generateFacets(filtered, facetBaseSets(ranked, filters, policy, admitted));
+
+  return { papers: filtered, facets, reports, rescue: rescueReport, complete: isComplete(reports) };
+}
+
+export async function search(query: Query, options: SearchOptions = {}): Promise<OrchestratorResult> {
+  const startedAt = Date.now();
+  const { page = 1, pageSize = 20, sort = 'relevance', authorities, enrichBudgetMs, userAgent, resultSets } = options;
+
+  const settled = settle(query, options);
+
+  // Shared by the rescue and the page, so a paper that is asked about twice in
+  // one request is fetched once — and backed by the answers held across
+  // requests, so a page shown again is not asked about again.
+  const authorityCache = new AuthorityCache(options.authorityFacts);
+
+  const resolve = () => resolveResultSet(settled, authorityCache);
+  const { set, cached } = resultSets
+    ? await resultSets.resolve(keyOf(settled), resolve)
+    : { set: await resolve(), cached: false };
+
+  // After filtering so it only orders what will be returned, and before
+  // pagination so a page is a slice of the sorted set.
+  const sorted = sortPapers(set.papers, sort);
 
   const start = Math.max(page - 1, 0) * pageSize;
 
@@ -288,14 +352,15 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
 
   return {
     papers,
-    total: sorted.length,
+    total: set.papers.length,
     page,
     pageSize,
-    facets,
-    reports,
+    facets: set.facets,
+    reports: set.reports,
     authorities: authorityReports,
-    rescue: rescueReport,
-    complete: isComplete(reports),
+    rescue: set.rescue,
+    complete: set.complete,
+    fromCache: cached,
     duration: Date.now() - startedAt
   };
 }
