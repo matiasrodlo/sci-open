@@ -181,10 +181,10 @@ export const PROVIDERS: ProviderEntry[] = [
   defineProvider('ncbi', ncbi, { normalizerVersion: 1, key: 'ncbi' }),
   defineProvider('doaj', doaj, { normalizerVersion: 2, key: 'doaj' }),
   defineProvider('plos', plos, { normalizerVersion: 1, facetsAggregate: true }),
-  defineProvider('openaire', openaire, { normalizerVersion: 3 }),
+  defineProvider('openaire', openaire, { normalizerVersion: 4 }),
   defineProvider('datacite', datacite, { normalizerVersion: 2, key: 'datacite' }),
   defineProvider('biorxiv', biorxiv, { normalizerVersion: 1 }),
-  defineProvider('openalex', openalex, { normalizerVersion: 2, key: 'openalex', facetsAggregate: true }),
+  defineProvider('openalex', openalex, { normalizerVersion: 3, key: 'openalex', facetsAggregate: true }),
   defineProvider('core', core, { normalizerVersion: 2, key: 'core' }),
   defineProvider('europepmc', europepmc, { normalizerVersion: 2 })
 ];

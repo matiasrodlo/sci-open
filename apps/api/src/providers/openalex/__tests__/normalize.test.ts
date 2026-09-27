@@ -111,6 +111,32 @@ describe('normalize — full text', () => {
   it('leaves fullText absent when there is no open copy', () => {
     expect(find('W3').fullText).toBeUndefined();
   });
+
+  /**
+   * `oa_url` used to be called a PDF only when the whole string ended in
+   * `.pdf`, so a query string or fragment was enough to have the web app label
+   * a PDF "Full text". The first two are shapes seen live for `crispr malaria`.
+   */
+  describe('an oa_url, classified by its path', () => {
+    const fromOaUrl = (oa_url: string) =>
+      run({ results: [{ id: 'https://openalex.org/W9', title: 'T', open_access: { oa_url } }] })
+        .papers[0].fullText;
+
+    it.each([
+      ['https://escholarship.org/content/qt9qc3p2nq/qt9qc3p2nq.pdf?t=ouq2fd', 'a query string after .pdf'],
+      ['http://www.jbc.org/article/S0021925817502598/pdf', 'a publisher /article/<id>/pdf'],
+      ['https://example.org/files/paper.PDF#page=2', 'a fragment, in capitals']
+    ])('calls %s a PDF (%s)', url => {
+      expect(fromOaUrl(url)).toEqual({ url, kind: 'pdf', verified: false });
+    });
+
+    it.each([
+      ['https://onlinelibrary.wiley.com/doi/pdf/10.1002/adma.201907006', 'pdf before the last segment'],
+      ['https://example.org/view?format=pdf', 'pdf only in the query']
+    ])('still calls %s html (%s)', url => {
+      expect(fromOaUrl(url)).toEqual({ url, kind: 'html', verified: false });
+    });
+  });
 });
 
 describe('normalize — the rest', () => {

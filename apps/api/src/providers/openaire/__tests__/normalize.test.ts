@@ -86,6 +86,41 @@ describe('normalize — record shapes', () => {
     });
   });
 
+  /**
+   * A PDF used to be recognised only when the whole URL ended in `.pdf`, and
+   * everything else was offered as `html` — which the web app labels "Full
+   * text" rather than "PDF".
+   */
+  describe('a PDF, recognised by its path', () => {
+    const fromUrls = (...urls: string[]) =>
+      normalizeRecord({ id: 'x', mainTitle: 'T', instances: [{ urls }] }, { retrievedAt: AT })
+        .papers[0].fullText;
+
+    it('reads the recorded Research Square copy, which carries a query string', () => {
+      expect(run(RECORDED).papers[2].fullText).toEqual({
+        url: 'https://www.researchsquare.com/article/rs-244759/v1.pdf?c=1613714721000',
+        kind: 'pdf',
+        verified: false
+      });
+    });
+
+    it.each([
+      ['https://escholarship.org/content/qt9qc3p2nq/qt9qc3p2nq.pdf?t=ouq2fd', 'a query string after .pdf'],
+      ['https://www.frontiersin.org/articles/10.3389/fpls.2023.1164461/pdf', 'a publisher /articles/<id>/pdf']
+    ])('calls %s a PDF (%s)', url => {
+      expect(fromUrls('https://doi.org/10.1000/x', 'https://repository.example.org/items/1', url))
+        .toEqual({ url, kind: 'pdf', verified: false });
+    });
+
+    it('does not offer the next PDF as html when the first one is a locator', () => {
+      // The old fallback took the first URL `fullTextAt` accepted and called it
+      // html, whatever it was.
+      const url = 'https://repository.example.org/files/paper.pdf';
+      expect(fromUrls('https://hdl.handle.net/1234/paper.pdf', url))
+        .toEqual({ url, kind: 'pdf', verified: false });
+    });
+  });
+
   it('offers a non-PDF resource as html rather than calling it a PDF', () => {
     expect(find('od______1234::hhhh').fullText).toEqual({
       url: 'https://repository.example.org/items/1234',

@@ -55,12 +55,15 @@ const PINNED: Record<string, { version: number; normalizer: string }> = {
   datacite: { version: 2, normalizer: 'e25ea42d0c08' },
   doaj: { version: 2, normalizer: '52ed78538ef1' },
   europepmc: { version: 2, normalizer: 'e464db8efb04' },
-  // The file changed to export `STAGES` for `translate`; nothing it emits did.
-  openalex: { version: 2, normalizer: 'ce5f94353202' },
+  // Version 3: a copy is called a PDF by its path, so `….pdf?t=…` and
+  // `/article/<id>/pdf` stop arriving as `html`. A version-2 entry holds those
+  // PDFs labelled as web pages.
+  openalex: { version: 3, normalizer: '77a894283fbe' },
   // Version 3: moved from the legacy search endpoint to the Graph API, a
   // different payload read by a rewritten normaliser. A version-2 entry holds
   // papers built from the legacy shape and must not be served as this one's.
-  openaire: { version: 3, normalizer: 'a1cfaaa7793d' }
+  // Version 4: PDFs recognised by path, as for openalex above.
+  openaire: { version: 4, normalizer: '4dc4f57783e7' }
 };
 
 const PROVIDER_DIR = join(__dirname, '..');

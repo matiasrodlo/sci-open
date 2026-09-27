@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fullTextAt, isLocator } from '../full-text';
+import { fullTextAt, isLocator, looksLikePdf } from '../full-text';
 
 /**
  * `passesPolicy` admits a paper on `fullText` being present, and the header
@@ -69,6 +69,37 @@ describe('what it inherits from httpUrl', () => {
     // a PDF endpoint that is sensitive to it.
     const url = 'https://example.org/article/file?id=10.1371/journal.x&type=printable';
     expect(fullTextAt(url, 'pdf')!.url).toBe(url);
+  });
+});
+
+/**
+ * The kind a normaliser gives a copy it has no other word on. Read off the
+ * path alone, because a query string or fragment after `.pdf` is what made
+ * `endsWith('.pdf')` call PDFs web pages.
+ */
+describe('URLs whose path names a PDF', () => {
+  it.each([
+    ['https://example.org/paper.pdf', 'the plain case'],
+    ['https://escholarship.org/content/qt9qc3p2nq/qt9qc3p2nq.pdf?t=ouq2fd', 'a query string'],
+    ['https://example.org/paper.pdf#page=2', 'a fragment'],
+    ['https://example.org/PAPER.PDF', 'in capitals'],
+    ['http://www.jbc.org/article/S0021925817502598/pdf', 'a bare pdf segment'],
+    ['https://www.mdpi.com/2073-4425/12/3/358/pdf?version=1615888471', 'the same, with a query'],
+    ['https://www.ncbi.nlm.nih.gov/pmc/articles/PMC13509134/pdf/', 'the same, with a trailing slash']
+  ])('accepts %s (%s)', url => {
+    expect(looksLikePdf(url)).toBe(true);
+  });
+
+  it.each([
+    ['https://repository.example.org/items/1234', 'a landing page'],
+    ['https://onlinelibrary.wiley.com/doi/pdf/10.1002/adma.201907006', 'pdf before the last segment'],
+    ['https://example.org/view?format=pdf', 'pdf only in the query'],
+    ['https://example.org/view#paper.pdf', 'pdf only in the fragment'],
+    ['https://example.org/pdfs', 'a segment that merely starts with pdf'],
+    ['https://example.org/', 'no path at all'],
+    ['not a url', 'nothing to parse']
+  ])('rejects %s (%s)', url => {
+    expect(looksLikePdf(url)).toBe(false);
   });
 });
 

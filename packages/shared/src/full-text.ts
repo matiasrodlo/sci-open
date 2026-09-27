@@ -80,6 +80,37 @@ export function isLocator(url: string): boolean {
 }
 
 /**
+ * True when the URL's path names a PDF: its last segment ends in `.pdf`, or is
+ * `pdf` itself.
+ *
+ * The path and only the path. Normalisers used to test the whole string with
+ * `endsWith('.pdf')`, which any query string or fragment defeats — the search
+ * `crispr malaria` returned `escholarship.org/…/qt9qc3p2nq.pdf?t=ouq2fd` from
+ * OpenAIRE marked `html`, and the web app labels the copy by that kind. The
+ * query is also not evidence the other way: `?format=pdf` asks a page for a
+ * rendition it may not serve.
+ *
+ * A bare `pdf` segment is the publisher form `/article/<id>/pdf` — the same
+ * search returned `jbc.org/article/S0021925817502598/pdf` from OpenAlex, also
+ * marked `html`. Only the *last* segment counts: `pdf` earlier in the path, as
+ * in Wiley's `/doi/pdf/<doi>`, is often a viewer page around the file.
+ *
+ * Like `kind` itself this is a claim, read off the address. It does not make a
+ * copy `verified`; nothing here fetches the file.
+ */
+export function looksLikePdf(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+
+  const last = parsed.pathname.split('/').filter(Boolean).pop()?.toLowerCase() ?? '';
+  return last === 'pdf' || last.endsWith('.pdf');
+}
+
+/**
  * A `FullText` if this URL is one, `undefined` otherwise.
  *
  * `undefined` rather than a demoted value, for the same reason `httpUrl`

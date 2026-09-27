@@ -1,5 +1,5 @@
 import type { Paper, FullText, OaRoute, SourceRef } from '@open-access-explorer/shared';
-import { fullTextAt, httpUrl, stripMarkup } from '@open-access-explorer/shared';
+import { fullTextAt, httpUrl, looksLikePdf, stripMarkup } from '@open-access-explorer/shared';
 import type { OpenAirePayload } from './fetch';
 
 /**
@@ -63,18 +63,19 @@ function instanceUrls(record: any): string[] {
 }
 
 function pickFullText(record: any): FullText | undefined {
-  const urls = instanceUrls(record);
-
-  const pdf = urls.find(u => u.toLowerCase().endsWith('.pdf'));
-  const fromPdf = fullTextAt(pdf, 'pdf');
-  if (fromPdf) return fromPdf;
-
+  // Each URL is classified by its own path, so a PDF is never offered as
+  // `html` for having been listed after one `fullTextAt` threw out.
+  //
   // `urls[0]` is whatever the first instance listed, and for an OpenAIRE
   // record that is very often the DOI it is also filed under — the same string
   // this normaliser writes to `landingPage` a few lines below. `fullTextAt` is
   // what stops the landing page being counted twice, once as the address and
   // once as the copy.
-  return urls.map(u => fullTextAt(u, 'html')).find(Boolean);
+  const copies = instanceUrls(record)
+    .map(u => fullTextAt(u, looksLikePdf(u) ? 'pdf' : 'html'))
+    .filter((copy): copy is FullText => Boolean(copy));
+
+  return copies.find(copy => copy.kind === 'pdf') ?? copies[0];
 }
 
 /** Subject terms: FOS classifications and author keywords alike. */
