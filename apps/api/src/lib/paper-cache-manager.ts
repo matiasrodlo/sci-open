@@ -35,6 +35,9 @@ export class PaperCacheManager {
    * 200 while it lived and 404 once it expired. Asking about a DOI is what
    * `POST /api/search` with `{ doi }` is for.
    *
+   * `id` is the id it was asked for, when that is not `paper.id` — the key
+   * `getCachedPaper` will be asked for next time. See `recordFor` in `app.ts`.
+   *
    * `partial` is a paper some authority failed or timed out on, and is held
    * for a minute in this process rather than two hours in Redis. Held like a
    * whole one, a passing Unpaywall outage pinned the paper without the copy
@@ -43,8 +46,8 @@ export class PaperCacheManager {
    * deployment whose authority always fails (no `UNPAYWALL_EMAIL`) would ask
    * the provider again on every view.
    */
-  async cachePaperDetails(paper: Paper, options: { partial?: boolean } = {}): Promise<void> {
-    const paperKey = this.generatePaperKey(paper.id);
+  async cachePaperDetails(paper: Paper, options: { partial?: boolean; id?: string } = {}): Promise<void> {
+    const paperKey = this.generatePaperKey(options.id ?? paper.id);
     await this.cacheManager.set(
       paperKey,
       paper,

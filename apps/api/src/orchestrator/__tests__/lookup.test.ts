@@ -77,6 +77,11 @@ describe('splitPaperId', () => {
     expect(splitPaperId('2404.18021v2')).toEqual({ provider: 'arxiv', nativeId: '2404.18021v2' });
   });
 
+  it('reads an old OpenAlex link, which carried the full URL, as the id records carry', () => {
+    expect(splitPaperId('openalex:https://openalex.org/W2741809807')).toEqual({ provider: 'openalex', nativeId: 'W2741809807' });
+    expect(splitPaperId('openalex:W2741809807')).toEqual({ provider: 'openalex', nativeId: 'W2741809807' });
+  });
+
   it('names no provider for an unprefixed id that is not one', () => {
     expect(splitPaperId('something')).toEqual({ nativeId: 'something' });
   });
@@ -170,6 +175,16 @@ describe('lookupPaper — what counts as found', () => {
 
     expect(await lookupPaper('openalex:W0000000000', { providers: [openalex] })).toBeNull();
     expect(openalex.lookedUp).toHaveLength(1);
+  });
+
+  it('finds the record behind an old OpenAlex link', async () => {
+    // fetchWork stripped the URL and the record came back as `W…`, which the
+    // match then compared against the URL and refused: a 404 for every such link.
+    const openalex = provider('openalex', [from('openalex', 'W2741809807')], true);
+    const found = await lookupPaper('openalex:https://openalex.org/W2741809807', { providers: [openalex] });
+
+    expect(found?.id).toBe('openalex:W2741809807');
+    expect(openalex.lookedUp[0]!.nativeId).toBe('W2741809807');
   });
 
   it('compares DOIs without regard to case', async () => {

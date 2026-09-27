@@ -42,6 +42,19 @@ const PROVIDER_ALIASES: Partial<Record<ProviderId, ProviderId>> = { medrxiv: 'bi
 /** An id with no `source:` prefix that is unambiguously an arXiv identifier. */
 const BARE_ARXIV_ID = /^\d{4}\.\d{4,5}(v\d+)?$/;
 
+/**
+ * Older spellings of a native id, and what records carry now.
+ *
+ * The old paper endpoint wrote OpenAlex's full URL into the id, so a link made
+ * then reads `openalex:https://openalex.org/W…`. `fetchWork` strips the URL
+ * before asking, and the record comes back as `W…` — which `matches` then
+ * compared against the URL and refused, so every such link answered 404 while
+ * the fetch below it was written to serve them.
+ */
+const LEGACY_PREFIXES: Partial<Record<ProviderId, RegExp>> = {
+  openalex: /^https?:\/\/(?:www\.)?openalex\.org\//i
+};
+
 const DEFAULT_TIMEOUT_MS = 15000;
 
 /**
@@ -81,10 +94,9 @@ export function splitPaperId(id: string): PaperRef {
     return BARE_ARXIV_ID.test(id) ? { provider: 'arxiv', nativeId: id } : { nativeId: id };
   }
 
-  return {
-    provider: id.slice(0, separator) as ProviderId,
-    nativeId: id.slice(separator + 1)
-  };
+  const provider = id.slice(0, separator) as ProviderId;
+  const nativeId = id.slice(separator + 1);
+  return { provider, nativeId: nativeId.replace(LEGACY_PREFIXES[provider] ?? /^$/, '') };
 }
 
 export type LookupOptions = {

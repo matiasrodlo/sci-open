@@ -389,7 +389,11 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
     // the record is held briefly rather than for hours — the rule the search
     // path applies to a set a provider failed on. See `cachePaperDetails`.
     const complete = !reports.some(report => report.status === 'error' || report.status === 'timeout');
-    await paperCacheManager.cachePaperDetails(paper, { partial: !complete });
+    // Under the id it was asked for, which is the key read above. `paper.id`
+    // is the record's own spelling, and a lookup accepts others — a bare arXiv
+    // id, another case, an old OpenAlex URL — so keyed by that, every request
+    // spelled another way missed and paid for the lookup and enrichment again.
+    await paperCacheManager.cachePaperDetails(paper, { partial: !complete, id });
 
     // The fields the authorities actually wrote, which is the only number
     // that says whether asking them was worth the requests.

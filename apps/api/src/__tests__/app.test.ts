@@ -357,6 +357,21 @@ describe('GET /api/v2/paper/:id', () => {
     expect((await paperAt('europepmc:404')).statusCode).toBe(404);
   });
 
+  it('holds a paper under the id it was asked for, however that was spelled', async () => {
+    // Held under `paper.id`, a request spelled another way — here a case the
+    // provider accepts — missed every time and paid for the lookup again.
+    const lookups: string[] = [];
+    const held = paper({ ...record(7), id: 'europepmc:PMC7', sources: [ref('europepmc', { nativeId: 'PMC7', rank: 0 })] });
+    build({}, provider([held], async ({ nativeId }) => {
+      lookups.push(nativeId);
+      return nativeId.toLowerCase() === 'pmc7' ? held : null;
+    }).entry);
+
+    expect((await paperAt('europepmc:pmc7')).headers['x-cache-hit']).toBe('false');
+    expect((await paperAt('europepmc:pmc7')).headers['x-cache-hit']).toBe('true');
+    expect(lookups).toEqual(['pmc7']);
+  });
+
   it('holds a paper an authority failed on for a minute in memory, not two hours in Redis', async () => {
     // Held like a whole one, a passing Unpaywall outage pinned the paper
     // without the copy Unpaywall would have found, for the PDF route too.
