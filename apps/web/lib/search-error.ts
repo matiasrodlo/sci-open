@@ -68,8 +68,14 @@ export function queryProblem(error: unknown): QueryProblem | undefined {
   const { response } = (error ?? {}) as HttpErrorish;
   if (response?.status !== 400) return undefined;
 
-  const body = response.data as { error?: unknown; position?: unknown } | undefined;
+  const body = response.data as { error?: unknown; position?: unknown; code?: unknown } | undefined;
   if (typeof body?.error !== 'string' || !body.error.trim()) return undefined;
+  // Fastify's own 400 — the schema refusing a field, a body that is not JSON —
+  // also carries `error`, and there it is only the status text "Bad Request".
+  // Read as the parser's message, a 600-character query was shown as a
+  // syntax error reading "Bad Request". Fastify's always carries a `code`,
+  // which `clientError` never sends.
+  if (typeof body.code === 'string') return undefined;
 
   return {
     message: body.error,

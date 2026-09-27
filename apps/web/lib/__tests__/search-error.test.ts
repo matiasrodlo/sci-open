@@ -108,6 +108,18 @@ describe('a query that would not parse', () => {
     expect(queryProblem(rejected(undefined))).toBeUndefined();
   });
 
+  it('stays a bad address when the 400 is the schema refusing a field', () => {
+    // Fastify's own body, verbatim from the API for a query over 500 characters.
+    const schema = rejected({
+      statusCode: 400,
+      code: 'FST_ERR_VALIDATION',
+      error: 'Bad Request',
+      message: 'body/q must NOT have more than 500 characters'
+    });
+    expect(queryProblem(schema)).toBeUndefined();
+    expect(classifySearchError(schema)).toBe('bad-request');
+  });
+
   it('is not read from any status other than 400', () => {
     expect(queryProblem({ response: { status: 500, data: { error: 'Unbalanced (' } } })).toBeUndefined();
   });
