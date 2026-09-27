@@ -295,9 +295,11 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
    * the id. A provider's failure is thrown as a `PaperLookupError` carrying the
    * status it deserves — see `lookupErrorStatus`.
    */
-  async function recordFor(id: string): Promise<{ paper: Paper; cached: boolean; fieldsEnriched: number } | null> {
+  async function recordFor(
+    id: string
+  ): Promise<{ paper: Paper; cached: boolean; complete: boolean; fieldsEnriched: number } | null> {
     const cached = await paperCacheManager.getCachedPaper(id);
-    if (cached) return { paper: cached, cached: true, fieldsEnriched: 0 };
+    if (cached) return { paper: cached, cached: true, complete: true, fieldsEnriched: 0 };
 
     // A second lookup by DOI used to sit here, gated on `id.includes('10.')`.
     // That test is looser than it reads — an arXiv id like `arxiv:2310.12345`
@@ -352,11 +354,16 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
      */
     const { papers: [paper], reports } = await enrichPage([found], { userAgent, cache: new AuthorityCache(authorityFacts), ...enrichWith });
     stats.recordAuthorities(reports);
-    await paperCacheManager.cachePaperDetails(paper);
+
+    // An authority that failed may have held something this paper lacks, so
+    // the record is held briefly rather than for hours — the rule the search
+    // path applies to a set a provider failed on. See `cachePaperDetails`.
+    const complete = !reports.some(report => report.status === 'error' || report.status === 'timeout');
+    await paperCacheManager.cachePaperDetails(paper, { partial: !complete });
 
     // The fields the authorities actually wrote, which is the only number
     // that says whether asking them was worth the requests.
-    return { paper, cached: false, fieldsEnriched: reports.reduce((total, report) => total + report.applied, 0) };
+    return { paper, cached: false, complete, fieldsEnriched: reports.reduce((total, report) => total + report.applied, 0) };
   }
 
   /** Answers a failed `recordFor`: the provider's status for its failures, 500 for ours. */
@@ -399,7 +406,7 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
     }
 
     const responseTime = Date.now() - startTime;
-    reply.header('Cache-Control', 'public, max-age=600');
+    reply.header('Cache-Control', record.complete ? 'public, max-age=600' : 'no-store');
     reply.header('X-Cache-Hit', record.cached ? 'true' : 'false');
     reply.header('X-Response-Time', responseTime.toString());
     fastify.log.info({

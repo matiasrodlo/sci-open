@@ -34,10 +34,22 @@ export class PaperCacheManager {
    * prefix and the lookup returns null, so the entry made the endpoint answer
    * 200 while it lived and 404 once it expired. Asking about a DOI is what
    * `POST /api/search` with `{ doi }` is for.
+   *
+   * `partial` is a paper some authority failed or timed out on, and is held
+   * for a minute in this process rather than two hours in Redis. Held like a
+   * whole one, a passing Unpaywall outage pinned the paper without the copy
+   * Unpaywall would have found — and the PDF route, which reads the same
+   * entry, answered "no copy is known" — for two hours. Not held at all, a
+   * deployment whose authority always fails (no `UNPAYWALL_EMAIL`) would ask
+   * the provider again on every view.
    */
-  async cachePaperDetails(paper: Paper): Promise<void> {
+  async cachePaperDetails(paper: Paper, options: { partial?: boolean } = {}): Promise<void> {
     const paperKey = this.generatePaperKey(paper.id);
-    await this.cacheManager.set(paperKey, paper, CacheStrategy.PAPER_DETAILS);
+    await this.cacheManager.set(
+      paperKey,
+      paper,
+      options.partial ? CacheStrategy.PAPER_DETAILS_PARTIAL : CacheStrategy.PAPER_DETAILS
+    );
   }
 
   /**

@@ -53,10 +53,12 @@ import { log } from './logger';
 
 export enum CacheStrategy {
   SEARCH_RESULTS = 'search_results',
-  PAPER_DETAILS = 'paper_details'
+  PAPER_DETAILS = 'paper_details',
+  /** A paper some authority failed on. See `PaperCacheManager.cachePaperDetails`. */
+  PAPER_DETAILS_PARTIAL = 'paper_details_partial'
 }
 
-/** TTL in seconds per level. */
+/** TTL in seconds per level. An `l2` of zero keeps the entry out of Redis. */
 export interface CacheConfig {
   l1: number;
   l2: number;
@@ -79,7 +81,11 @@ export interface CacheMetrics {
 
 const STRATEGY_CONFIGS: Record<CacheStrategy, CacheConfig> = {
   [CacheStrategy.SEARCH_RESULTS]: { l1: 300, l2: 3600 },
-  [CacheStrategy.PAPER_DETAILS]: { l1: 600, l2: 7200 }
+  [CacheStrategy.PAPER_DETAILS]: { l1: 600, l2: 7200 },
+  // Memory only, and briefly: in Redis it would be promoted back into L1 under
+  // whichever strategy the reader asked with, and outlive the minute it was
+  // written for.
+  [CacheStrategy.PAPER_DETAILS_PARTIAL]: { l1: 60, l2: 0 }
 };
 
 /**
@@ -221,7 +227,7 @@ export class CacheManager {
 
       this.l1.set(key, serialized, config.l1);
 
-      if (this.l2Usable()) {
+      if (config.l2 > 0 && this.l2Usable()) {
         try {
           await this.l2.setex(L2_KEY_PREFIX + key, config.l2, serialized);
           this.resetL2();

@@ -8,6 +8,7 @@ import { loadConfig } from '../config';
 import { CacheManager } from '../lib/cache-manager';
 import { log } from '../lib/logger';
 import type { ProviderEntry } from '../orchestrator/registry';
+import type { AuthorityEntry } from '../authorities';
 import { paper, ref } from '../orchestrator/__tests__/helpers';
 
 /**
@@ -107,12 +108,19 @@ function provider(
 
 let app: FastifyInstance | undefined;
 
-function build(env: Record<string, string> = {}, entry: ProviderEntry = provider().entry) {
+function build(
+  env: Record<string, string> = {},
+  entry: ProviderEntry = provider().entry,
+  authorities: AuthorityEntry[] = []
+) {
   const config = configWith(env);
   const cache = new CacheManager(config.redisUrl, config.cache.maxBytes, config.cache.redisCooldownMs);
-  app = buildApp({ config, cache, providers: [entry], authorities: [], logger: false });
+  app = buildApp({ config, cache, providers: [entry], authorities, logger: false });
   return { app, cache };
 }
+
+/** What the fake Redis holds, by key. */
+const redisKeys = (cache: CacheManager) => [...((cache as any).l2.store as Map<string, string>).keys()];
 
 const search = (body: object) => app!.inject({ method: 'POST', url: '/api/search', payload: body });
 
@@ -329,6 +337,33 @@ describe('GET /api/v2/paper/:id', () => {
   it('answers 404 for an id nobody holds', async () => {
     build();
     expect((await paperAt('europepmc:404')).statusCode).toBe(404);
+  });
+
+  it('holds a paper an authority failed on for a minute in memory, not two hours in Redis', async () => {
+    // Held like a whole one, a passing Unpaywall outage pinned the paper
+    // without the copy Unpaywall would have found, for the PDF route too.
+    const unpaywall = (lookup: AuthorityEntry['lookup']): AuthorityEntry => ({
+      id: 'unpaywall',
+      capabilities: { fields: ['fullText'], authoritative: ['fullText'] },
+      pass: 0,
+      lookup
+    });
+
+    const failing = build({}, provider().entry, [unpaywall(async () => { throw new Error('Unpaywall 503'); })]);
+    const first = await paperAt('europepmc:1');
+    expect(first.statusCode).toBe(200);
+    expect(first.headers['cache-control']).toBe('no-store');
+    expect(redisKeys(failing.cache)).toEqual([]);
+    // Still held briefly, so a deployment whose authority always fails does
+    // not ask the provider again on every view.
+    expect((await paperAt('europepmc:1')).headers['x-cache-hit']).toBe('true');
+    await app!.close();
+    app = undefined;
+
+    const answering = build({}, provider().entry, [unpaywall(async () => null)]);
+    const whole = await paperAt('europepmc:1');
+    expect(whole.headers['cache-control']).toBe('public, max-age=600');
+    expect(redisKeys(answering.cache)).toHaveLength(1);
   });
 });
 
