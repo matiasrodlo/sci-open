@@ -112,6 +112,13 @@ describe('normalize — full text', () => {
     expect(find('W3').fullText).toBeUndefined();
   });
 
+  it('does not report a graphical abstract as a copy, from either field', () => {
+    // `best_oa_location.pdf_url` is not a PDF by construction: four of 618
+    // measured were Elsevier figures answering 200 image/jpeg, each repeated in
+    // `oa_url`. Rejecting it in one field alone would bring it back as `html`.
+    expect(find('W7').fullText).toBeUndefined();
+  });
+
   /**
    * `oa_url` used to be called a PDF only when the whole string ended in
    * `.pdf`, so a query string or fragment was enough to have the web app label

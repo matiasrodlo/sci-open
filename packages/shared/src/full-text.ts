@@ -110,6 +110,39 @@ export function looksLikePdf(url: string): boolean {
   return last === 'pdf' || last.endsWith('.pdf');
 }
 
+/** Raster and vector image extensions, matched on the path's last segment. */
+const IMAGE = /\.(?:jpe?g|png|gif|bmp|webp|tiff?|svg)$/;
+
+/**
+ * True when the URL's path names an image, which is not a copy of a paper in
+ * any format.
+ *
+ * Measured 2026-09-04 over 1,500 OpenAlex works, 618 of which carry
+ * `best_oa_location.pdf_url`: four held an Elsevier graphical abstract —
+ * `ars.els-cdn.com/content/image/1-s2.0-S0160412017312321-fx1_lrg.jpg` — and
+ * all four answered 200 `image/jpeg`. That is not a blocked PDF or an
+ * interstitial; the field simply holds a figure, and all four repeated it in
+ * `oa_url`, so a check on one field alone lets it back in through the other.
+ * Unpaywall's `url_for_pdf` is where OpenAlex's field comes from, which is why
+ * this sits in `fullTextAt` rather than in one normaliser.
+ *
+ * Read off the path like `looksLikePdf`, so `…/download?file=figure.jpg` is not
+ * an image. A path with no extension says nothing either way and is kept: most
+ * real PDF endpoints — `arxiv.org/pdf/1605.08695`, `…/article/<id>/pdf` — carry
+ * none.
+ */
+export function isImage(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+
+  const last = parsed.pathname.split('/').filter(Boolean).pop()?.toLowerCase() ?? '';
+  return IMAGE.test(last);
+}
+
 /**
  * A `FullText` if this URL is one, `undefined` otherwise.
  *
@@ -125,6 +158,6 @@ export function looksLikePdf(url: string): boolean {
  */
 export function fullTextAt(url: unknown, kind: FullTextKind): FullText | undefined {
   const usable = httpUrl(url);
-  if (!usable || isLocator(usable)) return undefined;
+  if (!usable || isLocator(usable) || isImage(usable)) return undefined;
   return { url: usable, kind, verified: false };
 }

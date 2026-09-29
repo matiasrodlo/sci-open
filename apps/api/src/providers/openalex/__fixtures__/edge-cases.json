@@ -1,6 +1,6 @@
 {
   "_comment": "Hand-built, unlike recorded.json. Shapes the recorded page does not contain: a preprint, a record with no DOI, an inverted index with a repeated word, and a record that cannot be read.",
-  "meta": { "count": 6 },
+  "meta": { "count": 7 },
   "results": [
     {
       "_case": "a repeated word must be emitted at every position it occupies",
@@ -77,6 +77,25 @@
       },
       "open_access": { "is_oa": true, "oa_status": "gold", "oa_url": "https://example.org/markup.pdf" },
       "abstract_inverted_index": { "<p>": [0], "Yields": [1], "were": [2], "&gt;": [3], "40%.": [4] }
+    },
+    {
+      "_case": "a graphical abstract in pdf_url, echoed into oa_url. Both URLs are as OpenAlex gave them; the file answers 200 image/jpeg.",
+      "id": "https://openalex.org/W7",
+      "doi": "https://doi.org/10.1000/figure",
+      "title": "A record whose only PDF is a figure",
+      "type": "article",
+      "publication_year": 2018,
+      "cited_by_count": 0,
+      "authorships": [],
+      "primary_location": { "source": { "display_name": "A Journal" } },
+      "open_access": {
+        "is_oa": true,
+        "oa_status": "bronze",
+        "oa_url": "https://ars.els-cdn.com/content/image/1-s2.0-S0160412017312321-fx1_lrg.jpg"
+      },
+      "best_oa_location": {
+        "pdf_url": "https://ars.els-cdn.com/content/image/1-s2.0-S0160412017312321-fx1_lrg.jpg"
+      }
     }
   ]
 }

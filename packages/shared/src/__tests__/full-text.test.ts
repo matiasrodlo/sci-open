@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fullTextAt, isLocator, looksLikePdf } from '../full-text';
+import { fullTextAt, isImage, isLocator, looksLikePdf } from '../full-text';
 
 /**
  * `passesPolicy` admits a paper on `fullText` being present, and the header
@@ -100,6 +100,33 @@ describe('URLs whose path names a PDF', () => {
     ['not a url', 'nothing to parse']
   ])('rejects %s (%s)', url => {
     expect(looksLikePdf(url)).toBe(false);
+  });
+});
+
+/**
+ * A figure is not a copy in any format. Four of 618 OpenAlex `pdf_url` values
+ * measured were Elsevier graphical abstracts, all answering 200 image/jpeg;
+ * the numbers are in `full-text.ts`.
+ */
+describe('URLs whose path names an image', () => {
+  it.each([
+    ['https://ars.els-cdn.com/content/image/1-s2.0-S0160412017312321-fx1_lrg.jpg', 'the graphical abstract measured'],
+    ['https://example.org/figure.PNG', 'in capitals'],
+    ['https://example.org/figure.jpeg?w=800', 'a query string'],
+    ['https://example.org/scan.tif', 'a scan']
+  ])('rejects %s (%s)', url => {
+    expect(isImage(url)).toBe(true);
+    // Whatever kind the provider claimed for it.
+    expect(fullTextAt(url, 'pdf')).toBeUndefined();
+  });
+
+  it.each([
+    ['https://example.org/download?file=figure.jpg', 'an image only in the query'],
+    ['https://arxiv.org/pdf/1605.08695', 'no extension, which is most real PDF endpoints'],
+    ['https://example.org/images/paper.pdf', 'image only in an earlier segment'],
+    ['not a url', 'nothing to parse']
+  ])('accepts %s (%s)', url => {
+    expect(isImage(url)).toBe(false);
   });
 });
 
