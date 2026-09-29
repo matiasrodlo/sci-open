@@ -23,7 +23,15 @@ export default defineConfig({
       // module resolution and not globbing.
       '{lib,components,app}/**/*.test.ts?(x)'
     ],
-    testTimeout: 5000
+    testTimeout: 5000,
+    // `vitest run --coverage`, over every source file rather than only the ones
+    // a test imports, so a component nothing renders reports 0%.
+    coverage: {
+      provider: 'v8',
+      include: ['{app,components,lib}/**/*.{ts,tsx}'],
+      exclude: ['**/__tests__/**'],
+      reporter: ['text-summary', 'json-summary', 'html']
+    }
   },
   resolve: {
     alias: { '@': path.resolve(__dirname, '.') }
