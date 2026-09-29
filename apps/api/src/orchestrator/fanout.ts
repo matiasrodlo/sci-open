@@ -99,6 +99,22 @@ export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOut
     const startedAt = Date.now();
     const nativeQuery = provider.translate(query, { openAccessOnly });
 
+    /**
+     * Nothing of this query the provider can express — a wildcard its API
+     * refuses, an `OR` with such a wildcard in it. Every provider's `search`
+     * already answers an empty translation without a request, so asking would
+     * only have reported `ok` with nothing retrieved, which the coverage panel
+     * prints as "0" — a claim about the source's holdings that it never made.
+     * This is the same case `plan` skips for a query with nothing left to
+     * search, found one step later because only `translate` knows it.
+     */
+    if (!nativeQuery) {
+      return {
+        papers: [],
+        report: { provider: provider.id, status: 'skipped', retrieved: 0, latency: 0, skipReason: 'cannot express this query' }
+      };
+    }
+
     const run = async () => {
       const work = (signal: AbortSignal) =>
         provider.search({

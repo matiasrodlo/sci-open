@@ -57,6 +57,30 @@ function quote(phrase: string): string {
 }
 
 /**
+ * Whether OpenAlex will run this wildcard term on `title_and_abstract.search.exact`.
+ *
+ * Only there: the stemmed `title_and_abstract.search` answers any `*` or `?`
+ * with **HTTP 400**, "Wildcards (* or ?) require the exact (no-stem) field" —
+ * which every wildcard search met, so none of them was ever complete, and none
+ * was held. The rules of the exact field are undocumented and were measured
+ * against the live API on 2026-09-29:
+ *
+ *   gen*  gene*ing  abc*def*  gen**  g?ne  ge?e  x_y*   answered
+ *   *ing  ?ene          400, "Leading wildcards are not supported"
+ *   ge*  gen?m*  ge?e*  400, "A * wildcard needs at least 3 leading characters"
+ *   covid-19*  c++*     400: the engine splits at the punctuation and the `*`
+ *                       is left on a fragment too short to carry it
+ *
+ * So letters, digits and `_` with no wildcard first, and three of them, with
+ * no `?` among them, ahead of any `*`.
+ */
+function exactRunnable(term: string): boolean {
+  if (!/^[A-Za-z0-9_*?]+$/.test(term) || /^[*?]/.test(term)) return false;
+  const star = term.indexOf('*');
+  return star === -1 || /^[A-Za-z0-9_]{3,}$/.test(term.slice(0, star));
+}
+
+/**
  * A `type:` filter selecting the works `normalize` gives one of these stages.
  *
  * `unknown` is every type `STAGES` does not name — `dataset`, `review`,
@@ -107,8 +131,17 @@ export function toParams(query: Query, options: TranslateOptions = {}): OpenAlex
 
   // OpenAlex's search honours quoted phrases; bare terms are already required,
   // so there is nothing to spell out for them.
+  const words = query.terms.map(t => t.trim()).filter(Boolean);
+  const wildcards = words.filter(word => /[*?]/.test(word));
+  const exact = wildcards.filter(exactRunnable);
+
+  // A wildcard term it cannot run is left out, which widens the search when the
+  // terms are all required. When they are alternatives it narrows — the one
+  // left out could have matched on its own — so then OpenAlex is not asked.
+  if (query.join === 'OR' && exact.length < wildcards.length) return {};
+
   const search = filterSafe(
-    [...query.terms.map(t => t.trim()), ...query.phrases.map(quote)].filter(Boolean).join(' ')
+    [...words.filter(word => !/[*?]/.test(word)), ...query.phrases.map(quote)].filter(Boolean).join(' ')
   );
 
   /**
@@ -118,7 +151,7 @@ export function toParams(query: Query, options: TranslateOptions = {}): OpenAlex
    * alone is a perfectly valid filter — for the entire open-access corpus. A
    * query with no words would have fanned out and started reading it.
    */
-  if (!search) return {};
+  if (!search && exact.length === 0) return {};
 
   /**
    * `title_and_abstract.search`, not the `search` parameter.
@@ -139,7 +172,12 @@ export function toParams(query: Query, options: TranslateOptions = {}): OpenAlex
    * filter form returns `relevance_score` and orders by it, which is what the
    * rank fusion in `orchestrator/rank.ts` reads.
    */
-  filters.push(`title_and_abstract.search:${search}`);
+  if (search) filters.push(`title_and_abstract.search:${search}`);
+  // A second filter, ANDed with the first as every OpenAlex filter is:
+  // `title_and_abstract.search:cancer,title_and_abstract.search.exact:gen*`
+  // answered 950,916 open works against 19,268,710 for `gen*` alone. Words in
+  // one value are ANDed too: `crispr gen*` answered 78,486.
+  if (exact.length > 0) filters.push(`title_and_abstract.search.exact:${exact.join(' ')}`);
 
   return { filter: filters.join(',') };
 }

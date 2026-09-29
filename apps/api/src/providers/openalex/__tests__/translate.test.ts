@@ -93,6 +93,40 @@ describe('toParams — the scope of the search', () => {
   });
 });
 
+/**
+ * The stemmed `title_and_abstract.search` answers any wildcard with HTTP 400,
+ * so every wildcard search used to lose OpenAlex. The exact field takes them,
+ * under rules measured against the live API on 2026-09-29.
+ */
+describe('toParams — wildcards', () => {
+  it('sends a wildcard to the exact field, beside the stemmed search', () => {
+    expect(toParams(query({ terms: ['crispr', 'gen*'] })).filter)
+      .toBe('title_and_abstract.search:crispr,title_and_abstract.search.exact:gen*');
+    expect(toParams(query({ terms: ['gen*', 'g?ne'] })).filter)
+      .toBe('title_and_abstract.search.exact:gen* g?ne');
+  });
+
+  it('sends every wildcard OpenAlex answers', () => {
+    for (const term of ['gen*', 'gene*ing', 'abc*def*', 'g?ne', 'ge?e', 'x_y*']) {
+      expect(toParams(query({ terms: [term] })).filter).toBe(`title_and_abstract.search.exact:${term}`);
+    }
+  });
+
+  it('leaves out a required wildcard OpenAlex refuses, which only widens the search', () => {
+    for (const term of ['*ing', '?ene', 'ge*', 'gen?m*', 'ge?e*', 'covid-19*', 'c++*']) {
+      expect(toParams(query({ terms: ['crispr', term] })).filter).toBe('title_and_abstract.search:crispr');
+    }
+  });
+
+  it('asks nothing when the refused wildcard is one of several alternatives', () => {
+    expect(toParams(query({ terms: ['crispr', '*ing'], join: 'OR' }))).toEqual({});
+  });
+
+  it('asks nothing when a refused wildcard was all there was', () => {
+    expect(toParams(query({ terms: ['*ing'] }), { openAccessOnly: true })).toEqual({});
+  });
+});
+
 describe('translate — the cache key', () => {
   it('carries the year bounds, so a bounded search is not served from an unbounded one', () => {
     const unbounded = translate(query({ terms: ['crispr'] }));

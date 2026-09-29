@@ -81,6 +81,31 @@ function scoped(value: string): string {
   return `(${FIELDS.map(field => `${field}:${value}`).join(' OR ')})`;
 }
 
+/**
+ * Whether arXiv can be sent this term: any term without a wildcard, and none
+ * with one.
+ *
+ * arXiv matches a wildcard against its stemmed index, so what it returns
+ * depends on where a stem happens to end. Measured with `ti:` against the live
+ * API on 2026-09-29:
+ *
+ *   generation 137,709   gener* 143,707   generat* 38
+ *   genome       1,610   genom*   1,618   gen?me    0
+ *   *z  ?ene             HTTP 500, every time
+ *
+ * `generat*` asks for more than `generation` and gets 38 records, because
+ * "generation" is indexed as "gener" and no stem begins "generat". That is a
+ * narrowing nothing downstream can undo, and it reports itself as a result —
+ * worse than the 500, which at least failed where it could be seen. There is no
+ * telling in advance where a stem ends, so no wildcard is safe to send.
+ *
+ * A wildcard term is left out instead, which widens the query — the direction
+ * `render-query.ts` allows — and `matchesQuery` applies it to what comes back.
+ */
+function runnable(term: string): boolean {
+  return !/[*?]/.test(term);
+}
+
 export type TranslateOptions = {
   /**
    * Accepted and ignored. arXiv is a preprint repository — every record it
@@ -117,7 +142,8 @@ const QUERY_FIELDS: Partial<Record<QueryField, readonly string[]>> = {
 const DIALECT: Dialect = {
   fields: field => QUERY_FIELDS[field] ?? [],
   scope: (field, value) => `${field}:${value}`,
-  term: text => text.trim(),
+  // Empty for a wildcard term, which `renderExpression` then drops. See `runnable`.
+  term: text => (runnable(text.trim()) ? text.trim() : ''),
   phrase: text => quote(text),
   years: range => submittedDate(range),
   // arXiv has no DOI index — the same fact `capabilities.doiLookup` declares.
@@ -138,7 +164,13 @@ const DIALECT: Dialect = {
 function flatClauses(query: Query): string[] {
   const clauses: string[] = [];
 
-  const terms = query.terms.filter(t => t.trim()).map(t => scoped(t.trim()));
+  const words = query.terms.map(t => t.trim()).filter(Boolean);
+  const kept = words.filter(runnable);
+  // Leaving out a required term widens the query; leaving out one of several
+  // alternatives narrows it, since that one could have matched on its own. So
+  // an OR arXiv cannot run all of is not asked at all — `render-query.ts`
+  // drops an OR branch whole for the same reason.
+  const terms = (query.join === 'OR' && kept.length < words.length ? [] : kept).map(scoped);
   const phrases = query.phrases.filter(p => p.trim()).map(p => scoped(quote(p)));
 
   if (terms.length > 0) {
@@ -161,8 +193,11 @@ export function translate(query: Query, _options: TranslateOptions = {}): string
   // No DOI clause: arXiv has no DOI index, which `capabilities.doiLookup`
   // declares, so the orchestrator never routes a DOI lookup here.
   const rendered = query.expression ? renderExpression(query.expression, DIALECT) : undefined;
-  if (rendered) clauses.push(rendered);
-  else clauses.push(...flatClauses(query));
+  const searched = rendered ? [rendered] : flatClauses(query);
+  // Nothing left to search for asks nothing. A date range on its own would ask
+  // arXiv for everything submitted in it, and read the first 600 at random.
+  if (searched.length === 0) return '';
+  clauses.push(...searched);
 
   const { from, to } = query.years ?? {};
   if (from !== undefined || to !== undefined) {

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Query } from '@open-access-explorer/shared';
+import { parseExpression } from '@open-access-explorer/shared';
 import { translate } from '../translate';
 
 const query = (over: Partial<Query>): Query => ({ terms: [], phrases: [], join: 'AND', ...over });
@@ -68,6 +69,34 @@ describe('translate — year bounds', () => {
 
   it('emits no date clause when neither bound is set', () => {
     expect(translate(query({ terms: ['x'], years: {} }))).toBe('(ti:x OR abs:x)');
+  });
+});
+
+/**
+ * arXiv matches a wildcard against its stemmed index, so the answer depends on
+ * where a stem ends: measured on 2026-09-29, `ti:generation` found 137,709 and
+ * `ti:generat*` 38, and `ti:gen?me` nothing at all. A leading wildcard answers
+ * HTTP 500. None of that can be predicted per term, so no wildcard is sent.
+ */
+describe('translate — wildcards, which arXiv is never sent', () => {
+  it('leaves out a required wildcard term, which only widens the search', () => {
+    for (const term of ['gen*', 'generat*', 'gen?me', '*z', '?ene', 'covid-19*']) {
+      expect(translate(query({ terms: ['crispr', term] }))).toBe('(ti:crispr OR abs:crispr)');
+    }
+  });
+
+  it('asks nothing when the wildcard is one of several alternatives', () => {
+    // Sending `crispr` alone would drop every record only the other side matched.
+    expect(translate(query({ terms: ['crispr', 'gen*'], join: 'OR' }))).toBe('');
+  });
+
+  it('asks nothing when no word is left, rather than the whole of a date range', () => {
+    expect(translate(query({ terms: ['*z'], years: { from: 2022, to: 2023 } }))).toBe('');
+  });
+
+  it('drops a fielded clause it cannot run', () => {
+    const expression = parseExpression('TI=*z AND AU=Doudna');
+    expect(translate(query({ expression }))).toBe('au:Doudna');
   });
 });
 

@@ -56,6 +56,22 @@ describe('fanOut', () => {
     expect(skipped?.skipReason).toMatch(/keywordSearch/);
   });
 
+  it('skips a provider that can express none of the query, rather than reporting it empty', async () => {
+    // A wildcard the provider's API refuses leaves its translation empty. Asked
+    // anyway, it would answer `ok` with nothing retrieved — a "0" in the panel
+    // for a question it was never put.
+    const search = vi.fn(async () => ({ papers: [], skipped: [] }));
+    const mute = { ...stubProvider('openalex', search), translate: () => '' };
+    const { reports } = await fanOut(plan(QUERY, [ok('europepmc', 1), mute]), base);
+
+    expect(search).not.toHaveBeenCalled();
+    expect(reports.find(r => r.provider === 'openalex')).toMatchObject({
+      status: 'skipped', retrieved: 0, skipReason: 'cannot express this query'
+    });
+    // A skip is not a failure, so the set is still whole.
+    expect(isComplete(reports)).toBe(true);
+  });
+
   it('records a failure as an error without losing the providers that worked', async () => {
     const providers = [ok('europepmc', 3), stubProvider('ncbi', async () => { throw new Error('upstream 500'); })];
     const { papers, reports } = await fanOut(plan(QUERY, providers), base);
