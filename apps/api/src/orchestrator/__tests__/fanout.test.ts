@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { Query } from '@open-access-explorer/shared';
-import { fanOut, isComplete } from '../fanout';
+import type { ProviderReport, Query } from '@open-access-explorer/shared';
+import { fanOut, isComplete, onlyRefused } from '../fanout';
 import { plan } from '../plan';
 import { ProviderCache } from '../provider-cache';
 import type { ProviderEntry } from '../registry';
@@ -83,6 +83,35 @@ describe('fanOut', () => {
     expect(isComplete(reports)).toBe(false);
   });
 
+  it('records a 400 or 422 as the provider refusing the query', async () => {
+    // As OpenAlex's own error carries it, and as an axios error does.
+    const refusals = [
+      Object.assign(new Error('OpenAlex 400: Wildcards (* or ?) require the exact field'), { status: 400 }),
+      Object.assign(new Error('Unprocessable'), { status: 422 }),
+      Object.assign(new Error('Request failed with status code 400'), { response: { status: 400 } })
+    ];
+    for (const error of refusals) {
+      const { reports } = await fanOut(plan(QUERY, [stubProvider('openalex', async () => { throw error; })]), base);
+      expect(reports[0]).toMatchObject({ status: 'error', refused: true });
+    }
+  });
+
+  it('calls nothing else a refusal, since a retry may be answered', async () => {
+    const failures: ProviderEntry['search'][] = [
+      // Rate-limited, and a server error: both may be answered next time.
+      async () => { throw Object.assign(new Error('OpenAlex 429: budget'), { status: 429 }); },
+      async () => { throw Object.assign(new Error('Request failed with status code 500'), { response: { status: 500 } }); },
+      // A status in the message is not read: guessing from text is how a 503
+      // page that mentions a 400 becomes a set held for half an hour.
+      async () => { throw new Error('HTTP 400'); },
+      () => new Promise<never>(() => {})
+    ];
+    for (const failure of failures) {
+      const { reports } = await fanOut(plan(QUERY, [stubProvider('ncbi', failure)]), { ...base, timeoutMs: 20 });
+      expect(reports[0]!.refused).toBeUndefined();
+    }
+  });
+
   it('distinguishes a timeout from an error', async () => {
     // A timeout may mean a healthy but slow provider, which is worth retrying;
     // a 400 is not. The old shape reported both as an empty result.
@@ -149,5 +178,25 @@ describe('fanOut', () => {
     ]);
 
     expect(search).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('onlyRefused', () => {
+  const report = (over: Partial<ProviderReport>): ProviderReport =>
+    ({ provider: 'ncbi', status: 'ok', retrieved: 1, latency: 1, ...over });
+  const refused = report({ provider: 'openalex', status: 'error', retrieved: 0, error: 'OpenAlex 400', refused: true });
+
+  it('is true when every provider that did not answer refused the query', () => {
+    expect(onlyRefused([report({}), refused, report({ status: 'skipped' })])).toBe(true);
+  });
+
+  it('is false when anything that failed might answer a retry', () => {
+    expect(onlyRefused([refused, report({ status: 'timeout', retrieved: 0 })])).toBe(false);
+    expect(onlyRefused([refused, report({ status: 'error', retrieved: 0, error: 'HTTP 503' })])).toBe(false);
+  });
+
+  it('is false when nothing failed, so it never stands in for `isComplete`', () => {
+    expect(onlyRefused([])).toBe(false);
+    expect(onlyRefused([report({})])).toBe(false);
   });
 });

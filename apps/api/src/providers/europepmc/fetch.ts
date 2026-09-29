@@ -66,9 +66,13 @@ export type EuropePmcPayload = {
  * empty result set still reports `hitCount: 0`, so it is not caught here.
  */
 export class EuropePmcUnavailableError extends Error {
-  constructor(detail: string) {
+  /** The HTTP status, when the failure was one. The fan-out reads it to tell a refused query from a failed one. */
+  readonly status: number | undefined;
+
+  constructor(detail: string, status?: number) {
     super(`Europe PMC returned no search response: ${detail}`);
     this.name = 'EuropePmcUnavailableError';
+    this.status = status;
   }
 }
 
@@ -114,7 +118,7 @@ export async function fetchPage(
   // would reach `assertSearchResponse` as a malformed body and be reported as
   // Europe PMC returning nonsense rather than as Europe PMC saying no.
   if (response.status >= 400) {
-    throw new EuropePmcUnavailableError(`HTTP ${response.status}`);
+    throw new EuropePmcUnavailableError(`HTTP ${response.status}`, response.status);
   }
 
   const payload = response.data ?? {};

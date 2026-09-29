@@ -159,6 +159,13 @@ provider's bad minute is not worth serving for the next half hour, and serving
 it is what left the frontend's retry answered from the entry it was trying to
 get past.
 
+The exception is a provider that refused the query outright — HTTP 400 or 422,
+read from the status its error carries. A retry meets the same refusal, so
+declining to hold the set bought nothing and cost a fan-out on every page, with
+`total` moving as the reader paged; that set is held, and still reported
+`complete: false`. A provider whose translation of the query comes out empty —
+a wildcard its API cannot run — is not asked at all, and is reported `skipped`.
+
 ### Paper Details
 
 ```

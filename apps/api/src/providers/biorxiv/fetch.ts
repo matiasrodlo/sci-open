@@ -62,7 +62,8 @@ export async function fetchByDoi(doi: string, options: FetchOptions): Promise<Se
         // it rather than throwing. Anything else is a real failure.
         if (response.status === 404) return { server, collection: [] };
         if (response.status >= 400) {
-          throw new Error(`bioRxiv ${response.status} from ${server}`);
+          // With its status, so the fan-out can tell a refused query from a failed one.
+          throw Object.assign(new Error(`bioRxiv ${response.status} from ${server}`), { status: response.status });
         }
 
         return { server, collection: response.data?.collection ?? [] };

@@ -111,6 +111,26 @@ describe('ResultSetCache', () => {
     expect(work).toHaveBeenCalledTimes(2);
   });
 
+  it('holds a set whose only gap is a provider that refused the query', async () => {
+    // Asking again gets the same 400, so resolving again would only repeat the
+    // fan-out and let `total` move while the reader pages.
+    const cache = new ResultSetCache();
+    const refusal = { provider: 'openalex' as const, status: 'error' as const, retrieved: 0, latency: 1, error: 'OpenAlex 400', refused: true };
+    const work = vi.fn(async () => set({ complete: false, reports: [refusal] }));
+
+    await cache.resolve('k', work);
+    expect((await cache.resolve('k', work)).cached).toBe(true);
+    expect(work).toHaveBeenCalledTimes(1);
+
+    // …but not when something beside it may answer a retry.
+    const other = new ResultSetCache();
+    const timedOut = { provider: 'ncbi' as const, status: 'timeout' as const, retrieved: 0, latency: 1, error: 'budget' };
+    const mixed = vi.fn(async () => set({ complete: false, reports: [refusal, timedOut] }));
+    await other.resolve('k', mixed);
+    await other.resolve('k', mixed);
+    expect(mixed).toHaveBeenCalledTimes(2);
+  });
+
   it('lets a set go when it expires', async () => {
     let now = 0;
     const cache = new ResultSetCache({ ttlMs: 1000, now: () => now });

@@ -29,6 +29,13 @@ export type ProviderReport = {
   totalHits?: number;
   /** Present when `status` is `error` or `timeout`. */
   error?: string;
+  /**
+   * True when the `error` was the provider refusing the query itself — HTTP 400
+   * or 422 — rather than failing to answer it. The set is incomplete either
+   * way, but asking again gets the same refusal, where a timeout or a 5xx may
+   * well be answered next time; so a refusal is no reason not to hold the set.
+   */
+  refused?: boolean;
   latency: number;
   /** Why it was not asked. Present when `status` is `skipped`. */
   skipReason?: string;

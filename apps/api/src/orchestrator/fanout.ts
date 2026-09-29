@@ -158,15 +158,37 @@ export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOut
           provider: provider.id,
           // A timeout is not an error: the provider may be fine and simply
           // slower than this request could wait for. Retrying it is
-          // reasonable; retrying a 400 is not.
+          // reasonable; retrying a 400 is not — which `refused` records.
           status: timedOut ? 'timeout' : 'error',
           retrieved: 0,
           error: error instanceof Error ? error.message : String(error),
+          ...(!timedOut && refusedQuery(error) ? { refused: true } : {}),
           latency: Date.now() - startedAt
         }
       };
     }
   }
+}
+
+/** What an API answers a request it will never run: malformed, or unprocessable. */
+const REFUSALS = new Set([400, 422]);
+
+/**
+ * Whether a provider's failure was it refusing the query, as opposed to failing
+ * to answer it.
+ *
+ * Read off a status the error carries — every provider's error raised for an
+ * HTTP status carries it as `status`, and an axios error on its response — and
+ * not guessed at from a message. An error that carries none, such as a 200
+ * with a body that is not a result page, counts as a failure to answer: how
+ * every failure was treated before, and the side to be wrong on, since it costs
+ * a repeated fan-out where the other mistake would hold a set a retry could
+ * have completed.
+ */
+function refusedQuery(error: unknown): boolean {
+  const { status, response } = (error ?? {}) as { status?: unknown; response?: { status?: unknown } };
+  const code = typeof status === 'number' ? status : response?.status;
+  return typeof code === 'number' && REFUSALS.has(code);
 }
 
 /**
@@ -177,4 +199,23 @@ export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOut
  */
 export function isComplete(reports: readonly ProviderReport[]): boolean {
   return reports.every(r => r.status === 'ok' || r.status === 'skipped');
+}
+
+/**
+ * True when some provider did not answer, and every one that did not refused
+ * the query outright.
+ *
+ * Such a set is incomplete — `total` is a lower bound, exactly as it is after a
+ * timeout — and it is also the set every later resolution would produce, since
+ * a refusal is an answer about the query and not about the provider's minute.
+ * Declining to hold it bought nothing and cost a great deal: every page and
+ * every repeat re-ran the fan-out, and `total` moved while a reader paged —
+ * which is what every wildcard search did while OpenAlex was sent wildcards it
+ * answers with a 400.
+ *
+ * False when nothing failed, so it is not a second spelling of `isComplete`.
+ */
+export function onlyRefused(reports: readonly ProviderReport[]): boolean {
+  const failed = reports.filter(r => r.status === 'error' || r.status === 'timeout');
+  return failed.length > 0 && failed.every(r => r.refused === true);
 }

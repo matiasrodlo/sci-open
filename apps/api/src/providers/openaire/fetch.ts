@@ -27,9 +27,13 @@ import type { OpenAireParams } from './translate';
 const DEFAULT_BASE_URL = 'https://api.openaire.eu/graph/v1';
 
 export class OpenAireUnavailableError extends Error {
-  constructor(detail: string) {
+  /** The HTTP status, when the failure was one. The fan-out reads it to tell a refused query from a failed one. */
+  readonly status: number | undefined;
+
+  constructor(detail: string, status?: number) {
     super(`OpenAIRE returned no search response: ${detail}`);
     this.name = 'OpenAireUnavailableError';
+    this.status = status;
   }
 }
 
@@ -75,7 +79,7 @@ export async function fetchPage(
   });
 
   if (response.status >= 400) {
-    throw new OpenAireUnavailableError(`HTTP ${response.status}`);
+    throw new OpenAireUnavailableError(`HTTP ${response.status}`, response.status);
   }
 
   const payload = response.data ?? {};
@@ -111,7 +115,7 @@ export async function fetchProduct(
 
   if (response.status === 404) return null;
   if (response.status >= 400) {
-    throw new OpenAireUnavailableError(`HTTP ${response.status}`);
+    throw new OpenAireUnavailableError(`HTTP ${response.status}`, response.status);
   }
 
   return response.data ?? null;

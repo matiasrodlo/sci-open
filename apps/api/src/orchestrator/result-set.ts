@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import type { Paper, ProviderReport, Query } from '@open-access-explorer/shared';
 import { SingleFlight } from '../lib/single-flight';
 import type { Facets } from './facet';
+import { onlyRefused } from './fanout';
 import type { PolicyOptions, UserFilters } from './policy';
 import type { RescueReport } from './rescue';
 import type { FacetQueries } from './source-facets';
@@ -123,7 +124,9 @@ export type ResultSetCacheOptions = {
  * so pages stay consistent only while a reader is served by one of them.
  *
  * Only complete sets are kept: one missing a provider is returned and resolved
- * again next time, so a retry can reach the provider that failed.
+ * again next time, so a retry can reach the provider that failed. The exception
+ * is a provider that refused the query outright, which a retry will not reach
+ * either — see `onlyRefused`.
  */
 export class ResultSetCache {
   private readonly entries = new Map<string, { set: ResultSet; bytes: number; expiresAt: number }>();
@@ -162,7 +165,7 @@ export class ResultSetCache {
 
     const { value, coalesced } = await this.flights.run(key, async () => {
       const set = await work();
-      if (set.complete) this.write(key, set);
+      if (set.complete || onlyRefused(set.reports)) this.write(key, set);
       return set;
     });
     return { set: value, cached: coalesced };

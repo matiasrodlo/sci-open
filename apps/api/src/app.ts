@@ -242,7 +242,7 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
         })
       );
 
-      if (!worthCaching(searchResult) && !coalesced) {
+      if (!worthCaching(responseV2) && !coalesced) {
         // A degraded set is returned but not held — see `worthCaching`. The
         // answer is still worth having; `complete` is in the response so the
         // UI can say what it is.
@@ -276,7 +276,7 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
        */
       reply.header(
         'Cache-Control',
-        worthCaching(searchResult) ? 'public, max-age=300' : 'no-store'
+        worthCaching(responseV2) ? 'public, max-age=300' : 'no-store'
       );
       // Whether the set was held — the page itself is presented every time.
       reply.header('X-Cache-Hit', coalesced ? 'coalesced' : fromCache ? 'true' : 'false');

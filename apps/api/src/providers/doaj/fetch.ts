@@ -13,9 +13,13 @@ const DEFAULT_BASE_URL = 'https://doaj.org/api';
 
 /** DOAJ answered, but not with a result page. */
 export class DoajUnavailableError extends Error {
-  constructor(detail: string) {
+  /** The HTTP status, when the failure was one. The fan-out reads it to tell a refused query from a failed one. */
+  readonly status: number | undefined;
+
+  constructor(detail: string, status?: number) {
     super(`DOAJ returned no search response: ${detail}`);
     this.name = 'DoajUnavailableError';
+    this.status = status;
   }
 }
 
@@ -136,7 +140,7 @@ export async function fetchArticle(
     // below stays for a client that does throw.
     if (response.status === 404) return { results: [], total: 0 };
     if (response.status >= 400) {
-      throw new DoajUnavailableError(`HTTP ${response.status}`);
+      throw new DoajUnavailableError(`HTTP ${response.status}`, response.status);
     }
 
     const article = response.data;

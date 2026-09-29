@@ -21,9 +21,13 @@ const ARTICLE_TYPES =
   'article_type:"Research Article" OR article_type:"Meta-Analysis" OR article_type:"Systematic Review"';
 
 export class PlosUnavailableError extends Error {
-  constructor(detail: string) {
+  /** The HTTP status, when the failure was one. The fan-out reads it to tell a refused query from a failed one. */
+  readonly status: number | undefined;
+
+  constructor(detail: string, status?: number) {
     super(`PLOS returned no search response: ${detail}`);
     this.name = 'PlosUnavailableError';
+    this.status = status;
   }
 }
 
@@ -62,7 +66,7 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
   });
 
   if (response.status >= 400) {
-    throw new PlosUnavailableError(`HTTP ${response.status}`);
+    throw new PlosUnavailableError(`HTTP ${response.status}`, response.status);
   }
 
   const payload = response.data ?? {};
@@ -128,7 +132,7 @@ export async function fetchFacets(nativeQuery: string, options: FacetFetchOption
   });
 
   if (response.status >= 400) {
-    throw new PlosUnavailableError(`HTTP ${response.status}`);
+    throw new PlosUnavailableError(`HTTP ${response.status}`, response.status);
   }
 
   const payload = response.data ?? {};

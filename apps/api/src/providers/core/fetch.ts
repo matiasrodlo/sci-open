@@ -15,9 +15,13 @@ const DEFAULT_BASE_URL = 'https://api.core.ac.uk/v3';
 
 /** CORE answered, but not with a result page. */
 export class CoreUnavailableError extends Error {
-  constructor(detail: string) {
+  /** The HTTP status, when the failure was one. The fan-out reads it to tell a refused query from a failed one. */
+  readonly status: number | undefined;
+
+  constructor(detail: string, status?: number) {
     super(`CORE returned no search response: ${detail}`);
     this.name = 'CoreUnavailableError';
+    this.status = status;
   }
 }
 
@@ -67,7 +71,7 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
   // answers 401 here, and reporting that as "body carried nothing" would name
   // the wrong cause.
   if (response.status >= 400) {
-    throw new CoreUnavailableError(`HTTP ${response.status}`);
+    throw new CoreUnavailableError(`HTTP ${response.status}`, response.status);
   }
 
   const payload = response.data ?? {};

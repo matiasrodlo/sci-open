@@ -416,7 +416,9 @@ be: each page resolved the set again, and the rescue — which runs against a
 wall-clock budget — reached a different number of papers each time. Presenting
 a page is then a sort, a slice and twenty enrichments answered from the
 authority cache. A set that reported itself `complete: false` is not held, and
-is sent with `no-store`, so a retry reaches the provider that failed.
+is sent with `no-store`, so a retry reaches the provider that failed — unless
+every provider that failed refused the query outright (HTTP 400 or 422), which
+a retry would meet again.
 
 Search used to have a per-page response cache in Redis as well. It went because
 it could not be kept consistent with the sets: a page computed from one set

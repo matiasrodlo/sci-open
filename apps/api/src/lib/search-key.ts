@@ -1,4 +1,5 @@
-import type { SearchParams, SearchResponse } from '@open-access-explorer/shared';
+import type { ProviderReport, SearchParams } from '@open-access-explorer/shared';
+import { onlyRefused } from '../orchestrator/fanout';
 
 /**
  * The identity of a search request — query, page, sort and filters — which
@@ -69,7 +70,14 @@ function normalizeFilters(filters: SearchParams['filters']): Array<[string, unkn
  * fan-out on every page of every broad search. What it reached is held with
  * the set, and the authorities' answers outlive it in `AuthorityFactsCache`,
  * so the next resolution of the same search starts further along.
+ *
+ * Nor is a provider that refused the query outright a reason, for the same
+ * kind of reason: asking again gets the same refusal. `onlyRefused` is the
+ * rule, and `ResultSetCache` applies it too, so the route and the cache cannot
+ * disagree about which sets are held. It needs the per-provider reports, which
+ * only the version 2 response carries; without them this falls back to
+ * `complete` alone.
  */
-export function worthCaching(result: SearchResponse): boolean {
-  return result.complete !== false;
+export function worthCaching(result: { complete?: boolean; providers?: readonly ProviderReport[] }): boolean {
+  return result.complete !== false || onlyRefused(result.providers ?? []);
 }

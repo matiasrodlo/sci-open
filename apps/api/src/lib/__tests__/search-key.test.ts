@@ -56,4 +56,11 @@ describe('worthCaching', () => {
     // Only an explicit false is evidence of a degraded read.
     expect(worthCaching(response())).toBe(true);
   });
+
+  it('holds an answer whose only gap is a refusal, which a retry would meet again', () => {
+    const refused = { provider: 'openalex' as const, status: 'error' as const, retrieved: 0, latency: 1, refused: true };
+    const timedOut = { provider: 'ncbi' as const, status: 'timeout' as const, retrieved: 0, latency: 1 };
+    expect(worthCaching({ complete: false, providers: [refused] })).toBe(true);
+    expect(worthCaching({ complete: false, providers: [refused, timedOut] })).toBe(false);
+  });
 });

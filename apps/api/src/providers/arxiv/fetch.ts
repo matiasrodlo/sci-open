@@ -65,7 +65,9 @@ async function get(
   // below would take an error page as a feed with no entries — a provider
   // saying no, reported as a provider with nothing to say.
   if (response.status >= 400) {
-    throw new Error(`arXiv ${response.status}`);
+    // The status rides along so the fan-out can tell a refused query from a
+    // failed one.
+    throw Object.assign(new Error(`arXiv ${response.status}`), { status: response.status });
   }
 
   return parseStringPromise(response.data);

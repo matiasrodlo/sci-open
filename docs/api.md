@@ -186,7 +186,7 @@ The web app reads this version. Version 1 stays for other clients.
   complete: boolean;              // false when a provider failed or timed out
   bounded: boolean;               // true when the rescue pass was cut short
   countsFromSources: boolean;
-  providers: ProviderReport[];    // status, retrieved, totalHits, latency, error, skipReason, facetError
+  providers: ProviderReport[];    // status, retrieved, totalHits, latency, error, refused, skipReason, facetError
   authorities: AuthorityReport[]; // asked, answered, applied — for this page
   duration: number;
 }
