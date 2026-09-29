@@ -104,6 +104,74 @@ describe('matching a record against a fielded query', () => {
   });
 });
 
+/**
+ * A wildcard used to become `\w*` in a regular expression, and a term carrying
+ * several made the match exponential in their number: one search stalled the
+ * API's event loop for everyone. These pin both halves of the fix — that it is
+ * fast, and that it answers exactly as the expression did.
+ */
+describe('wildcards at any count', () => {
+  it('answers a term full of wildcards without trying every split of the word', () => {
+    // Took 1.3 s for this one title under the old expression, and ~6x more for
+    // each two stars added. The bound is generous; the answer is microseconds.
+    const title = 'Tumour microenvironment heterogeneity in colorectal adenocarcinoma';
+    const started = Date.now();
+    expect(check(`TI=${'*'.repeat(12)}z`, { title })).toBe(false);
+    expect(check(`TI=${'*'.repeat(12)}a`, { title })).toBe(true);
+    expect(Date.now() - started).toBeLessThan(250);
+  });
+
+  it('still finds a word after an earlier one failed the wildcards', () => {
+    // "bar" is the first candidate and fails; "baz" is found after it.
+    expect(check('TI=b*z', { title: 'A bar and a baz' })).toBe(true);
+    expect(check('TI=b*z', { title: 'A bar and a bat' })).toBe(false);
+  });
+
+  it('lets several wildcards share one word', () => {
+    expect(check('TI=*a*a*a*', { title: 'Banana' })).toBe(true);
+    expect(check('TI=*a*a*a*a*', { title: 'Banana' })).toBe(false);
+  });
+
+  it('matches the literal text around a wildcard, case aside', () => {
+    expect(check('TI=covid-1*', { title: 'COVID-19 outcomes' })).toBe(true);
+    expect(check('TI=covid-1*', { title: 'COVID-29 outcomes' })).toBe(false);
+    expect(check('TI=CRISPR*')).toBe(true);
+    expect(check('TI=C++*', { title: 'C++11 features' })).toBe(true);
+  });
+
+  /**
+   * The expression it replaced, kept as the reference. Safe to run here and
+   * only here: the terms are at most six characters, so it has too few stars
+   * to be slow.
+   */
+  const reference = (term: string, text: string): boolean => {
+    const body = term
+      .split(/([*?])/)
+      .map(part => (part === '*' ? '\\w*' : part === '?' ? '\\w' : part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+      .join('');
+    const wordish = (char: string | undefined) => char !== undefined && /[\w*?]/.test(char);
+    const open = wordish(term[0]) ? '\\b' : '';
+    const close = wordish(term[term.length - 1]) ? '\\b' : '';
+    return new RegExp(`${open}${body}${close}`, 'i').test(text);
+  };
+
+  it('answers exactly as the expression did, over thousands of random terms', () => {
+    // Seeded, so a failure names a case that reproduces.
+    let seed = 20260929;
+    const random = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
+    const pick = (alphabet: string, length: number) =>
+      Array.from({ length }, () => alphabet[Math.floor(random() * alphabet.length)]).join('');
+
+    for (let i = 0; i < 5000; i++) {
+      // Word and non-word characters, ASCII and not, and both wildcards.
+      const term = pick('aB_1*?-+.é', 1 + Math.floor(random() * 6));
+      const title = pick('abAB_1 -+.éÉ', Math.floor(random() * 14));
+      expect({ term, title, match: check(`TI=${term}`, { title }) })
+        .toEqual({ term, title, match: reference(term, title) });
+    }
+  });
+});
+
 describe('the operators', () => {
   it('requires both sides of an AND', () => {
     expect(check('TI=crispr AND AU=Doudna')).toBe(true);
