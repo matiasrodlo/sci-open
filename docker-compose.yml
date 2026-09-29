@@ -156,7 +156,18 @@ services:
       # Where the API is, read per request rather than baked at build time.
       # Deliberately not NEXT_PUBLIC_*: that prefix is what makes Next
       # substitute a value into the bundle at compile time.
-      - API_ORIGIN=${API_ORIGIN:-http://api:4000}
+      #
+      # Fixed here rather than read from `.env`, for the reason `REDIS_URL` is
+      # fixed on the api service: this web talks to the api service on the
+      # compose network, whatever the host file says. It used to be taken from
+      # `.env` with this address as the fallback — and `.env`, copied from
+      # `docs/env.example` by the README's Quick Start, sets
+      # `API_ORIGIN=http://localhost:4000` for the dev servers, so the fallback
+      # never applied and the container forwarded every request to itself.
+      # Measured: every search answered 502, "The API is unreachable", while all
+      # three services reported healthy — web's check fetches `/`, which never
+      # calls the API. `compose-env.test.ts` holds this line in place.
+      - API_ORIGIN=http://api:4000
     restart: unless-stopped
     depends_on:
       api:

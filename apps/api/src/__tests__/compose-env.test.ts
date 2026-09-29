@@ -76,28 +76,33 @@ function settingsReadBySource(): Set<string> {
 }
 
 /**
- * The names in the `api` service's `environment:` block.
+ * One service's `environment:` block, each name with the value as written.
  *
  * Parsed by hand rather than with a YAML library: the assertion is about one
  * block of one file whose shape is fixed, and adding a dependency to the
  * service in order to test its deployment file would be the larger cost.
  */
-function settingsPassedByCompose(): Set<string> {
+function composeEnvironment(service: string): Map<string, string> {
   const lines = readFileSync(join(ROOT, 'docker-compose.yml'), 'utf8').split('\n');
 
-  const start = lines.findIndex(line => line.startsWith('  api:'));
-  expect(start, 'docker-compose.yml has an `api` service').toBeGreaterThan(-1);
+  const start = lines.findIndex(line => line.startsWith(`  ${service}:`));
+  expect(start, `docker-compose.yml has a \`${service}\` service`).toBeGreaterThan(-1);
 
   // The next service at the same indentation ends the block.
   const after = lines.findIndex((line, i) => i > start && /^ {2}\S/.test(line));
   const block = lines.slice(start, after === -1 ? lines.length : after);
 
-  const passed = new Set<string>();
+  const environment = new Map<string, string>();
   for (const line of block) {
-    const match = line.match(/^\s+- ([A-Z0-9_]+)=/);
-    if (match) passed.add(match[1]!);
+    const match = line.match(/^\s+- ([A-Z0-9_]+)=(.*)$/);
+    if (match) environment.set(match[1]!, match[2]!);
   }
-  return passed;
+  return environment;
+}
+
+/** The names in the `api` service's `environment:` block. */
+function settingsPassedByCompose(): Set<string> {
+  return new Set(composeEnvironment('api').keys());
 }
 
 describe('docker-compose passes what the service reads', () => {
@@ -136,5 +141,48 @@ describe('docker-compose passes what the service reads', () => {
       .sort();
 
     expect(unused, 'exempted in NOT_PASSED but read by nothing').toEqual([]);
+  });
+});
+
+/**
+ * The other way a container gets its environment wrong: handed the host's.
+ *
+ * `.env` is written for the dev servers, which run on the host — the README's
+ * Quick Start copies it from `docs/env.example`, where `API_ORIGIN` and
+ * `REDIS_URL` both name `localhost`. Compose fills `${…}` from the same file,
+ * so a setting interpolated from it reaches a container meaning the container
+ * itself. `API_ORIGIN` was, with the right address only as a fallback that the
+ * example's value always pre-empted: the web container forwarded every request
+ * to its own port 4000, and every search answered 502 while all three services
+ * reported healthy.
+ */
+describe('docker-compose does not hand a container the host\'s addresses', () => {
+  /** What `docs/env.example` points at this machine: right for `pnpm dev`, wrong in a container. */
+  function hostLocalSettings(): Set<string> {
+    const local = new Set<string>();
+    for (const line of readFileSync(join(ROOT, 'docs', 'env.example'), 'utf8').split('\n')) {
+      const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
+      if (match && /\b(localhost|127\.0\.0\.1)\b/.test(match[2]!)) local.add(match[1]!);
+    }
+    return local;
+  }
+
+  it('interpolates none of the settings the example points at localhost', () => {
+    const local = hostLocalSettings();
+    // Not vacuous: these two are what the example is written with.
+    expect([...local]).toEqual(expect.arrayContaining(['API_ORIGIN', 'REDIS_URL']));
+
+    const interpolated = readFileSync(join(ROOT, 'docker-compose.yml'), 'utf8')
+      .split('\n')
+      .filter(line => !line.trimStart().startsWith('#'))
+      .flatMap(line => [...line.matchAll(/\$\{([A-Z0-9_]+)/g)].map(match => match[1]!));
+
+    expect(interpolated.filter(name => local.has(name)).sort(), 'filled from the host .env').toEqual([]);
+  });
+
+  it('points the web container at the api service', () => {
+    // Dropping the line is the same failure by another route: the web's own
+    // default, in `lib/fetcher.ts` and the proxy, is `http://localhost:4000`.
+    expect(composeEnvironment('web').get('API_ORIGIN')).toBe('http://api:4000');
   });
 });

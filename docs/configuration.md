@@ -324,9 +324,21 @@ either, which forwards search and paper details in both versions
 
 ## Docker Compose
 
-The `docker-compose.yml` provides local services:
+`docker-compose.yml` runs three services:
 
-- **Redis** (port 6379) - Cache backend
+- **redis** — the cache, published on `127.0.0.1:6379` for the dev servers
+- **api** — built from `apps/api/Dockerfile`, published on `127.0.0.1:4000`
+- **web** — built from `apps/web/Dockerfile`, published on port 3000
+
+Settings reach the containers from `.env`, except the ones compose fixes
+itself: `NODE_ENV` and `PORT` on both services, and the two addresses —
+`REDIS_URL` (`redis://redis:6379`) and `API_ORIGIN` (`http://api:4000`). In
+`.env` both addresses name `localhost`, which is right for the dev servers on
+the host and wrong inside a container, where it means the container itself:
+with `.env`'s `API_ORIGIN` the web container forwarded every request to its own
+port, and every search failed while all three services reported healthy.
+`apps/api/src/__tests__/compose-env.test.ts` fails if either is read from `.env`
+again.
 
 Start all services:
 
