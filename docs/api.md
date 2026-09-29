@@ -238,8 +238,10 @@ runs only on a cache miss.
 }
 ```
 
-`bestPdfUrl` is absent when no copy is known — there is no `pdf` object and no
-status field. This response has never had one; the shape documented here until
+`bestPdfUrl` is absent when no PDF is known. A copy that is a web page — a
+repository or reader page — is not reported under it, since the field promises
+a file; `landingPage` still carries the link, and version 2 returns the copy
+with its `kind`. There is no `pdf` object and no status field. This response has never had one; the shape documented here until
 phase 13 described a `{ record, pdf }` wrapper the endpoint never returned, and
 a frontend that believed it crashed on every record without a PDF.
 

@@ -141,9 +141,40 @@ describe('toOARecord', () => {
     expect(record.oaStatus).toBe('published');
   });
 
-  it('advertises the full text copy as the best pdf url', () => {
+  it('advertises a pdf copy as the best pdf url', () => {
     expect(toOARecord(paper()).bestPdfUrl).toBe('https://example.org/paper.pdf');
     expect('bestPdfUrl' in toOARecord(bare())).toBe(false);
+  });
+
+  /**
+   * `bestPdfUrl` is a promise of a file, and it used to be made for whatever
+   * `fullText` held. Measured 2026-09-04: 21 of 100 results offered one backed
+   * by a `kind` other than `pdf`, and none of 84 such URLs served a PDF.
+   */
+  describe('a copy that is not a file', () => {
+    const htmlCopy = { url: 'https://repositorio.unal.edu.co/handle/unal/81443', kind: 'html' as const, verified: false };
+
+    it.each(['html', 'xml'] as const)('does not report an %s copy as a pdf', kind => {
+      const record = toOARecord(paper({ fullText: { ...htmlCopy, kind } }));
+      expect('bestPdfUrl' in record).toBe(false);
+    });
+
+    it('leaves the reader the landing page', () => {
+      // All 21 measured had one, and on 17 it was this same URL.
+      const record = toOARecord(paper({ fullText: htmlCopy, landingPage: htmlCopy.url }));
+      expect(record.landingPage).toBe(htmlCopy.url);
+    });
+
+    it('still offers a pdf that a publisher merely refuses to serve a robot', () => {
+      // A 403 is the opposite diagnosis from a landing page: the file is there
+      // and the fetch was refused.
+      const blocked = {
+        url: 'https://onlinelibrary.wiley.com/doi/pdfdirect/10.1002/advs.202206433',
+        kind: 'pdf' as const,
+        verified: false
+      };
+      expect(toOARecord(paper({ fullText: blocked })).bestPdfUrl).toBe(blocked.url);
+    });
   });
 
   it('keeps a zero citation count, which is a measurement rather than a gap', () => {

@@ -51,6 +51,7 @@ export function toOARecord(paper: Paper): OARecord {
   }
 
   const oaStatus = legacyStatusOf(paper);
+  const bestPdfUrl = pdfUrlOf(paper);
 
   // The old shape has one source per record, so a merged paper is reported
   // under the provider that supplied the record it was merged onto. The rest
@@ -67,7 +68,7 @@ export function toOARecord(paper: Paper): OARecord {
     source: primary.provider,
     sourceId: primary.nativeId,
     ...(oaStatus !== undefined ? { oaStatus } : {}),
-    ...(paper.fullText !== undefined ? { bestPdfUrl: paper.fullText.url } : {}),
+    ...(bestPdfUrl !== undefined ? { bestPdfUrl } : {}),
     ...(paper.landingPage !== undefined ? { landingPage: paper.landingPage } : {}),
     ...(paper.topics.length > 0 ? { topics: paper.topics } : {}),
     ...(paper.language !== undefined ? { language: paper.language } : {}),
@@ -80,4 +81,34 @@ export function toOARecord(paper: Paper): OARecord {
 /** The legacy status a paper is reported under, or nothing. */
 function legacyStatusOf(paper: Paper): LegacyOaStatus | undefined {
   return paper.stage === 'unknown' ? undefined : LEGACY_FROM_STAGE[paper.stage];
+}
+
+/**
+ * The copy, but only when it is one a caller can download.
+ *
+ * `bestPdfUrl` used to be `paper.fullText.url` with no condition on it, which
+ * undid every normaliser upstream: `FullText.kind` exists because a provider
+ * offering a reader page is not offering a file, and CORE, DOAJ and OpenAlex
+ * all work that distinction out and then handed it to a field whose name is a
+ * promise of a file. Version 2 and the web app read `kind` directly; this is
+ * the same honesty for the clients still on version 1.
+ *
+ * Measured 2026-09-04 against the running pipeline over five queries, 100
+ * results: 21 offered a `bestPdfUrl` backed by a `kind` other than `pdf`, and
+ * none served one. Widened to 84 such URLs from OpenAlex, DOAJ and OpenAIRE,
+ * still none — they answer 200 `text/html`, being repository handle pages, PMC
+ * article pages and DOI resolvers, so a reader's own browser gets a web page
+ * too.
+ *
+ * A `kind: 'pdf'` URL that answers 403 is a different case and is still
+ * offered: the file is there and the fetch was refused, which
+ * `statusForUpstream` in the API's `lib/pdf-proxy.ts` reports as such.
+ *
+ * Nothing is stranded. All 21 carried a `landingPage`, on 17 of them the very
+ * same URL, so the link is still on the record under the field that describes
+ * it honestly. The `html` copy has no field of its own in this shape, and
+ * adding one is a change to the published contract.
+ */
+function pdfUrlOf(paper: Paper): string | undefined {
+  return paper.fullText?.kind === 'pdf' ? paper.fullText.url : undefined;
 }
