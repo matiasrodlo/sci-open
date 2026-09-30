@@ -129,19 +129,43 @@ export function toParams(query: Query, options: TranslateOptions = {}): OpenAlex
     return filters.length > 0 ? { filter: filters.join(',') } : {};
   }
 
-  // OpenAlex's search honours quoted phrases; bare terms are already required,
-  // so there is nothing to spell out for them.
   const words = query.terms.map(t => t.trim()).filter(Boolean);
   const wildcards = words.filter(word => /[*?]/.test(word));
   const exact = wildcards.filter(exactRunnable);
 
-  // A wildcard term it cannot run is left out, which widens the search when the
-  // terms are all required. When they are alternatives it narrows — the one
-  // left out could have matched on its own — so then OpenAlex is not asked.
-  if (query.join === 'OR' && exact.length < wildcards.length) return {};
+  /**
+   * An OR with a wildcard in it is not asked.
+   *
+   * The wildcards go to a second filter, and OpenAlex ANDs its filters, so
+   * `a OR gen*` could only be sent as `a AND gen*` — or as `a` alone, with the
+   * wildcard left out. Both read less than the query means, and the records
+   * only the missing side matched would never be read. A wildcard OpenAlex
+   * cannot run at all is the same case: leaving out a required term widens the
+   * search, and leaving out an alternative narrows it.
+   */
+  if (query.join === 'OR' && wildcards.length > 0) return {};
 
+  /**
+   * The words and phrases, joined as the query joins them.
+   *
+   * They were always joined with a space, which OpenAlex reads as AND — so
+   * `TS=cancer OR TS=zebrafish` asked the largest provider for papers with
+   * both, and every OR search read from it only the overlap of its sides. The
+   * local evaluator cannot put back what was never read. `OR` inside the value
+   * is honoured, measured against the live API on 2026-09-29, open works:
+   *
+   *   cancer 2,774,546   zebrafish 65,249   cancer zebrafish 4,548
+   *   cancer OR zebrafish 2,835,247 — the union exactly, 2,774,546 + 65,249 − 4,548
+   *   zebrafish OR "gene editing" 89,321 — again the union, phrase and all
+   *
+   * Upper case only: `zebrafish or "gene editing"` answered 386, the overlap,
+   * with `or` read as a word. OpenAlex honours quoted phrases either way, and
+   * returns its `relevance_score` for an OR as for anything else.
+   */
   const search = filterSafe(
-    [...words.filter(word => !/[*?]/.test(word)), ...query.phrases.map(quote)].filter(Boolean).join(' ')
+    [...words.filter(word => !/[*?]/.test(word)), ...query.phrases.map(quote)]
+      .filter(Boolean)
+      .join(query.join === 'OR' ? ' OR ' : ' ')
   );
 
   /**

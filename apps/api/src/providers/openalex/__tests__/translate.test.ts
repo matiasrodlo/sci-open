@@ -35,6 +35,24 @@ describe('toParams — search and filters', () => {
       .toBe('title_and_abstract.search:crispr "gene editing"');
   });
 
+  it('asks for alternatives as alternatives, not for their overlap', () => {
+    // A space is AND to OpenAlex, so `cancer OR zebrafish` used to read the
+    // 4,548 works with both instead of the 2,835,247 with either.
+    expect(toParams(query({ terms: ['cancer', 'zebrafish'], join: 'OR' })).filter)
+      .toBe('title_and_abstract.search:cancer OR zebrafish');
+    expect(toParams(query({ terms: ['zebrafish'], phrases: ['gene editing'], join: 'OR' })).filter)
+      .toBe('title_and_abstract.search:zebrafish OR "gene editing"');
+  });
+
+  it('keeps OR beside the filters it is combined with', () => {
+    expect(toParams(query({ terms: ['cancer', 'zebrafish'], join: 'OR', years: { from: 2020 } }), { openAccessOnly: true }).filter)
+      .toBe('is_oa:true,publication_year:2020-9999,title_and_abstract.search:cancer OR zebrafish');
+  });
+
+  it('writes no OR for a single alternative', () => {
+    expect(toParams(query({ terms: ['cancer'], join: 'OR' })).filter).toBe('title_and_abstract.search:cancer');
+  });
+
   it('asks for open access as a filter OpenAlex applies upstream', () => {
     expect(toParams(query({ terms: ['x'] }), { openAccessOnly: true }).filter)
       .toBe('is_oa:true,title_and_abstract.search:x');
@@ -118,8 +136,11 @@ describe('toParams — wildcards', () => {
     }
   });
 
-  it('asks nothing when the refused wildcard is one of several alternatives', () => {
+  it('asks nothing when a wildcard is one of several alternatives', () => {
+    // Refused, it would be left out — the other side alone. Runnable, it goes
+    // to a second filter, and filters are ANDed — the overlap. Both narrow.
     expect(toParams(query({ terms: ['crispr', '*ing'], join: 'OR' }))).toEqual({});
+    expect(toParams(query({ terms: ['crispr', 'gen*'], join: 'OR' }))).toEqual({});
   });
 
   it('asks nothing when a refused wildcard was all there was', () => {
