@@ -39,7 +39,39 @@ const EARLIEST = '2000-01-01T00:00:00Z';
 const LATEST = '9999-12-31T23:59:59Z';
 
 function quote(phrase: string): string {
-  return `"${phrase.replace(/"/g, ' ').replace(/\s+/g, ' ').trim()}"`;
+  // Inside quotes a backslash is still an escape: `"gene\editing"` found
+  // nothing where `"gene\\editing"` finds the 51 `"gene editing"` does.
+  return `"${phrase.replace(/"/g, ' ').replace(/\s+/g, ' ').trim().replace(/\\/g, '\\\\')}"`;
+}
+
+/**
+ * The characters Solr's query parser reads as syntax, less `*` and `?` — the
+ * grammar's wildcards, which are sent as wildcards — and less the whitespace,
+ * parentheses and quotes a term cannot contain, since the grammar splits on
+ * them.
+ */
+const SOLR_SYNTAX = /[\\+\-!:^[\]{}~|&/]/g;
+
+/**
+ * A term as text rather than as query syntax.
+ *
+ * Nothing was escaped, so whatever a term carried reached the parser as syntax.
+ * Measured against api.plos.org with `title:` on 2026-09-30:
+ *
+ *   [crispr]  crispr{}  a:b  -crispr  +crispr  !crispr   HTTP 400
+ *   a\b                           0 results: the backslash escaped the `b`
+ *   crispr~  crispr^2             a fuzzy search (884, against 445), a boost
+ *
+ * The 400s took PLOS out of the search, reported as its failure. Escaped, each
+ * asks for the text it spells: `\[crispr\]`, `\-crispr` and `\!crispr` all find
+ * the 445 that `crispr` does, and `a\\b` finds 51.
+ *
+ * A term with no letter or digit in it is left out instead. Escaped, `-` asks
+ * for nothing and finds nothing — narrower than the query, where leaving it out
+ * widens it, and `matchesQuery` applies it to what comes back.
+ */
+function escaped(term: string): string {
+  return /[\p{L}\p{N}]/u.test(term) ? term.replace(SOLR_SYNTAX, '\\$&') : '';
 }
 
 /**
@@ -92,7 +124,8 @@ const EVERY_FIELD = ['title', 'abstract', 'subject', 'author', 'journal'] as con
 const DIALECT: Dialect = {
   fields: field => QUERY_FIELDS[field] ?? [],
   scope: (field, value) => `${field}:${value}`,
-  term: text => text.trim(),
+  // Empty for a term with nothing to search for, which `renderExpression` drops.
+  term: text => escaped(text.trim()),
   phrase: text => quote(text),
   years: range => publicationDate(range),
   // `id`, not `doi` — see the note in `translate`.
@@ -104,7 +137,15 @@ const DIALECT: Dialect = {
 /** The query as it reached this provider before the grammar existed. */
 function flatClauses(query: Query): string[] {
   const clauses: string[] = [];
-  const terms = query.terms.filter(t => t.trim()).map(t => scoped(t.trim()));
+
+  const words = query.terms.map(t => t.trim()).filter(Boolean);
+  const kept = words.map(escaped).filter(Boolean);
+  // Leaving out a required term widens the query; leaving out an alternative
+  // narrows it. So an OR with a term left out is not asked at all — phrases
+  // included, which are sent below as required.
+  if (query.join === 'OR' && kept.length < words.length) return [];
+
+  const terms = kept.map(scoped);
   const phrases = query.phrases.filter(p => p.trim()).map(p => scoped(quote(p)));
 
   if (terms.length > 0) {
@@ -137,8 +178,11 @@ export function translate(query: Query, _options: TranslateOptions = {}): string
     clauses.push(`id:${quote(query.doi)}`);
   } else {
     const rendered = query.expression ? renderExpression(query.expression, DIALECT) : undefined;
-    if (rendered) clauses.push(rendered);
-    else clauses.push(...flatClauses(query));
+    const searched = rendered ? [rendered] : flatClauses(query);
+    // Nothing left to search for asks nothing. A date range on its own would
+    // ask PLOS for everything published in it.
+    if (searched.length === 0) return '';
+    clauses.push(...searched);
   }
 
   const { from, to } = query.years ?? {};

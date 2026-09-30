@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Query } from '@open-access-explorer/shared';
+import { parseExpression } from '@open-access-explorer/shared';
 import { translate } from '../translate';
 import { journalName } from '../index';
 
@@ -75,6 +76,61 @@ describe('translate — the scope of the search', () => {
   it('leaves a DOI lookup on the id field, which is where a PLOS DOI lives', () => {
     expect(translate(query({ doi: '10.1371/journal.pone.0253351' })))
       .toBe('id:"10.1371/journal.pone.0253351"');
+  });
+});
+
+/**
+ * A term carries whatever a reader typed short of whitespace, parentheses and
+ * quotes, and none of it was escaped. Measured against api.plos.org on
+ * 2026-09-30: `[crispr]`, `crispr{}`, `a:b`, `-crispr`, `+crispr` and `!crispr`
+ * all answered HTTP 400, which took PLOS out of the search; escaped, each finds
+ * the text it spells.
+ */
+describe('translate — Solr syntax in a term', () => {
+  const scopedTo = (value: string) => `(title:${value} OR abstract:${value} OR subject:${value})`;
+
+  it('escapes what the parser refused', () => {
+    const cases: Array<[string, string]> = [
+      ['[crispr]', '\\[crispr\\]'],
+      ['crispr{}', 'crispr\\{\\}'],
+      ['a:b', 'a\\:b'],
+      ['-crispr', '\\-crispr'],
+      ['+crispr', '\\+crispr'],
+      ['!crispr', '\\!crispr']
+    ];
+    for (const [term, sent] of cases) {
+      expect(translate(query({ terms: [term] }))).toBe(scopedTo(sent));
+    }
+  });
+
+  it('escapes what the parser read as an operator instead of text', () => {
+    // A lone backslash escaped the next letter and found nothing; `~` asked
+    // for a fuzzy match and `^` for a boost.
+    expect(translate(query({ terms: ['a\\b'] }))).toBe(scopedTo('a\\\\b'));
+    expect(translate(query({ terms: ['crispr~'] }))).toBe(scopedTo('crispr\\~'));
+    expect(translate(query({ terms: ['crispr^2'] }))).toBe(scopedTo('crispr\\^2'));
+    expect(translate(query({ terms: ['covid-19'] }))).toBe(scopedTo('covid\\-19'));
+  });
+
+  it('leaves the wildcards as wildcards', () => {
+    expect(translate(query({ terms: ['gen*'] }))).toBe(scopedTo('gen*'));
+    expect(translate(query({ terms: ['gen?me'] }))).toBe(scopedTo('gen?me'));
+  });
+
+  it('escapes a backslash inside a phrase, where it is still an escape', () => {
+    expect(translate(query({ phrases: ['gene\\editing'] }))).toBe(scopedTo('"gene\\\\editing"'));
+  });
+
+  it('leaves out a term with nothing to search for, which only widens the query', () => {
+    // Escaped, `-` asks for nothing and finds nothing.
+    expect(translate(query({ terms: ['crispr', '-'] }))).toBe(scopedTo('crispr'));
+    expect(translate(query({ terms: ['crispr', '-'], join: 'OR' }))).toBe('');
+    expect(translate(query({ terms: ['-'], years: { from: 2020 } }))).toBe('');
+  });
+
+  it('escapes a fielded clause as it does a bare term', () => {
+    const expression = parseExpression('TI=[crispr] AND AU=Doudna');
+    expect(translate(query({ expression }))).toBe('(title:\\[crispr\\] AND author:Doudna)');
   });
 });
 
