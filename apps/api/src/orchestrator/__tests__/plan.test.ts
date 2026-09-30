@@ -93,6 +93,17 @@ describe('a query no keyword-only provider can answer', () => {
     expect(skipped).toEqual([]);
   });
 
+  it('skips it when the author is an alternative rather than a requirement', () => {
+    // Asked for `crispr`, it would miss every Doudna paper that does not say
+    // "crispr" — which the OR says are wanted, and nothing downstream recovers.
+    const { planned, skipped } = plan(parseQuery('TS=crispr OR AU=Doudna'), providers);
+
+    expect(ids(planned)).toEqual(['europepmc']);
+    expect(skipped).toEqual([
+      { provider: 'openaire', reason: 'takes keywords only, with no way to name a field' }
+    ]);
+  });
+
   it('does not skip a provider that can express the field', () => {
     expect(ids(plan(parseQuery('AU=Doudna'), [entry('europepmc', caps())]).planned)).toEqual(['europepmc']);
   });

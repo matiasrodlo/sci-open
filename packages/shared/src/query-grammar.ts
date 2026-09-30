@@ -505,17 +505,38 @@ function sameValue(a: QueryValue, b: QueryValue): boolean {
   return a.text.toLowerCase() === (b as { text: string }).text.toLowerCase();
 }
 
-/** Every positive leaf anywhere in the tree, for when nothing is required. */
-function positiveLeaves(node: QueryNode): QueryValue[] {
+/**
+ * Leaves at least one of which is in every record the tree matches — what an
+ * OR of them has to name — or `undefined` when there are none. For when nothing
+ * is required.
+ *
+ * This used to collect every flattenable leaf in the tree and stop there, which
+ * under an `or` quietly dropped a branch holding none: `TS=crispr OR AU=Doudna`
+ * flattened to `crispr`, and a provider that reads only the flat form never
+ * read Doudna's papers that do not say "crispr". The branch had not been
+ * widened into body text; it had been deleted, and deleting an alternative is a
+ * narrowing — the one thing `flatten` may not do.
+ *
+ * So an `or` is covered only when every branch is, and a branch that body text
+ * cannot stand in for — an author, a venue, a publisher, a year, a DOI, a
+ * negation — leaves it uncovered. An `and` needs only one covered child, since
+ * it matches only where all of its children do; all of them are kept, which is
+ * wider still.
+ */
+function coveringLeaves(node: QueryNode): QueryValue[] | undefined {
   switch (node.kind) {
     case 'clause':
-      if (!flattenable(node.field)) return [];
-      return [node.value];
-    case 'and':
-    case 'or':
-      return node.nodes.flatMap(positiveLeaves);
+      return flattenable(node.field) ? [node.value] : undefined;
+    case 'and': {
+      const covered = node.nodes.map(coveringLeaves).filter((leaves): leaves is QueryValue[] => leaves !== undefined);
+      return covered.length > 0 ? covered.flat() : undefined;
+    }
+    case 'or': {
+      const covered = node.nodes.map(coveringLeaves);
+      return covered.every(leaves => leaves !== undefined) ? (covered as QueryValue[][]).flat() : undefined;
+    }
     case 'not':
-      return [];
+      return undefined;
   }
 }
 
@@ -562,13 +583,19 @@ export type Flattened = {
  * orchestrator can only filter what it was given.
  *
  * So the required leaves are joined with `AND` when there are any — the tightest
- * honest query — and everything positive is joined with `OR` when there are
- * none, which is the widest. `a OR b` takes the second path; `TS=crispr NOT
- * AU=Doudna` takes the first and reaches the provider as plain `crispr`.
+ * honest query — and when there are none, leaves covering every alternative
+ * are joined with `OR`, which is the widest. `a OR b` takes the second path;
+ * `TS=crispr NOT AU=Doudna` takes the first and reaches the provider as plain
+ * `crispr`.
+ *
+ * A tree with an alternative that nothing can stand in for flattens to
+ * nothing — see `coveringLeaves` — as a query that is entirely field-scoped
+ * always did. A provider that can read only the flat form is then skipped with
+ * its reason, rather than asked a narrower question than the one typed.
  */
 export function flatten(node: QueryNode): Flattened {
   const required = requiredLeaves(node);
-  const values = required.length > 0 ? required : positiveLeaves(node);
+  const values = required.length > 0 ? required : coveringLeaves(node) ?? [];
   const join: QueryJoin = required.length > 0 ? 'AND' : 'OR';
 
   const terms: string[] = [];

@@ -201,6 +201,27 @@ describe('parseQuery: what the providers are handed', () => {
     expect(q.join).toBe('OR');
   });
 
+  it('leaves the flat form empty when an alternative has nothing body text can stand in for', () => {
+    // `crispr` alone was handed over, and a provider reading only the flat form
+    // never read the Doudna, Nature, 2020 or non-cas9 papers the OR also wants.
+    for (const input of ['TS=crispr OR AU=Doudna', 'TS=crispr OR SO=Nature', 'TS=crispr OR PY=2020', 'TS=crispr OR NOT TS=cas9']) {
+      const q = parseQuery(input);
+      expect({ input, terms: q.terms, phrases: q.phrases }).toEqual({ input, terms: [], phrases: [] });
+    }
+  });
+
+  it('keeps an OR whose every alternative has a word in it', () => {
+    const q = parseQuery('TS=crispr OR (TS=cas9 AND AU=Doudna)');
+    expect(q.terms).toEqual(['crispr', 'cas9']);
+    expect(q.join).toBe('OR');
+  });
+
+  it('still requires what surrounds such an OR', () => {
+    const q = parseQuery('(TS=crispr OR AU=Doudna) AND TS=cas9');
+    expect(q.terms).toEqual(['cas9']);
+    expect(q.join).toBe('AND');
+  });
+
   it('keeps only what every branch of an OR requires', () => {
     // `a` is required either way; `b` and `c` are alternatives.
     const q = parseQuery('(a AND b) OR (a AND c)');
