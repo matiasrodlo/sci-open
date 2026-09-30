@@ -1,5 +1,5 @@
 import type { Query, QueryField } from '@open-access-explorer/shared';
-import { renderExpression, type Dialect } from '../render-query';
+import { cannotSend, flatTerms, renderExpression, type Dialect } from '../render-query';
 
 /**
  * Query -> the DOAJ article search string. Pure, and the only place that knows
@@ -65,10 +65,30 @@ const EVERY_FIELD = [
   'bibjson.author.name', 'bibjson.journal.title', 'bibjson.journal.publisher'
 ] as const;
 
+/**
+ * A term as DOAJ is sent it, or `''` for a wildcard, which it cannot run.
+ *
+ * `escape` turned `*` and `?` into literal characters, so a wildcard was
+ * searched as text. Measured with `bibjson.title:` on 2026-09-30:
+ *
+ *   generation 51,814   generat\* 1      genome 51,150   genom\* 87
+ *   generating  4,899   gene\*ing 2      gene   99,394   ge\*    1,691
+ *
+ * Unescaped, DOAJ refuses every one of them — HTTP 400 — so there is no form
+ * of a wildcard it answers. In a title, abstract, author, journal or publisher
+ * clause the term is left out, which widens the query, and `matchesQuery`
+ * applies it to what comes back; as a topic term, which `matchesQuery` never
+ * convicts on, DOAJ is not asked at all — see `cannotSend` and `flatTerms`.
+ */
+function sendable(term: string): string {
+  return /[*?]/.test(term) ? '' : escape(term);
+}
+
 const DIALECT: Dialect = {
   fields: field => QUERY_FIELDS[field] ?? [],
   scope: (field, value) => `${field}:${value}`,
-  term: text => escape(text.trim()),
+  // Empty for a wildcard, which `renderExpression` then drops.
+  term: text => sendable(text.trim()),
   phrase: text => quoted(text),
   years: ({ from, to }) => `bibjson.year:[${from ?? EARLIEST} TO ${to ?? LATEST}]`,
   doi: value => `bibjson.identifier.id:"${escape(value)}"`,
@@ -79,7 +99,12 @@ const DIALECT: Dialect = {
 /** The query as it reached this provider before the grammar existed. */
 function flatClauses(query: Query): string[] {
   const clauses: string[] = [];
-  const terms = query.terms.filter(t => t.trim()).map(t => anyField(escape(t.trim())));
+
+  // A flat query with a wildcard in it is not asked at all. See `flatTerms`.
+  const kept = flatTerms(query, sendable);
+  if (!kept) return [];
+
+  const terms = kept.map(anyField);
   const phrases = query.phrases.filter(p => p.trim()).map(p => anyField(quoted(p)));
 
   if (terms.length > 0) {
@@ -111,9 +136,15 @@ export function translate(query: Query, _options: TranslateOptions = {}): string
     return `bibjson.identifier.id:"${escape(query.doi)}"`;
   }
 
+  // A topic term this provider cannot send, and cannot leave out, asks nothing.
+  // See `cannotSend`.
+  if (query.expression && cannotSend(query.expression, DIALECT)) return '';
   const rendered = query.expression ? renderExpression(query.expression, DIALECT) : undefined;
-  if (rendered) clauses.push(rendered);
-  else clauses.push(...flatClauses(query));
+  const searched = rendered ? [rendered] : flatClauses(query);
+  // Nothing left to search for asks nothing. A year range on its own would ask
+  // DOAJ for everything published in it.
+  if (searched.length === 0) return '';
+  clauses.push(...searched);
 
   const { from, to } = query.years ?? {};
   if (from !== undefined || to !== undefined) {

@@ -1,5 +1,5 @@
 import type { PaperStage, Query, QueryField, YearRange } from '@open-access-explorer/shared';
-import { renderExpression, type Dialect } from '../render-query';
+import { cannotSend, flatTerms, renderExpression, type Dialect } from '../render-query';
 
 /**
  * Query -> the Europe PMC query string. Pure, and the only place that knows
@@ -117,13 +117,30 @@ const FIELDS: Partial<Record<QueryField, readonly string[]>> = {
   venue: ['JOURNAL']
 };
 
+/**
+ * A term with its wildcards in the form Europe PMC runs faithfully.
+ *
+ * `*` does — measured with `TITLE:` on 2026-09-30, each wildcard finding more
+ * than the words it stands for, anywhere in the word and after as little as
+ * two letters:
+ *
+ *   generation 141,320   generat* 231,555    genome 182,141   genom* 314,356
+ *   generating  18,384   gene*ing  19,036    gene   677,867   ge*  3,045,411
+ *   generation or regeneration 217,855       *generation 284,719
+ *
+ * `?` does not: `gen?me` found 1. So it is sent as `*` — "any run" is a
+ * superset of "one character", as `gen*me` confirms at 182,307, and
+ * `matchesQuery` holds the result to one. A bare term needs no other
+ * escaping: the tokenizer already refused it the characters that would.
+ */
+function wildcards(term: string): string {
+  return term.replace(/\?/g, '*');
+}
+
 const DIALECT: Dialect = {
   fields: field => FIELDS[field] ?? [],
   scope: (field, value) => `${field}:${value}`,
-  // Wildcards pass through: Europe PMC supports `*` natively. A bare term
-  // needs no escaping — the tokenizer already refused it the characters that
-  // would need it.
-  term: text => text.trim(),
+  term: text => wildcards(text.trim()),
   phrase: text => quote(text),
   years: range => yearRange(range),
   doi: value => `DOI:${quote(value)}`,
@@ -137,7 +154,7 @@ function flatClauses(query: Query): string[] {
 
   // Phrases are always required; only bare terms honour `join`.
   const phrases = query.phrases.filter(p => p.trim()).map(p => scoped(quote(p)));
-  const terms = query.terms.filter(t => t.trim()).map(t => scoped(t.trim()));
+  const terms = (flatTerms(query, wildcards) ?? []).map(scoped);
 
   if (terms.length > 0) {
     const joined = terms.join(` ${query.join} `);
@@ -177,9 +194,15 @@ export function translate(query: Query, options: TranslateOptions = {}): string 
     // receive when there is not. `renderExpression` returning nothing means
     // none of the query could be expressed here, which the flat form —
     // deliberately wider than the query — still can.
+    // A topic term this provider cannot send, and cannot leave out, asks nothing.
+    // See `cannotSend`.
+    if (query.expression && cannotSend(query.expression, DIALECT)) return '';
     const rendered = query.expression ? renderExpression(query.expression, DIALECT) : undefined;
-    if (rendered) clauses.push(rendered);
-    else clauses.push(...flatClauses(query));
+    const searched = rendered ? [rendered] : flatClauses(query);
+    // Nothing left to search for asks nothing. The filters below on their own
+    // would ask for every open-access paper Europe PMC holds.
+    if (searched.length === 0) return '';
+    clauses.push(...searched);
   }
 
   // Range syntax, not comparison operators. Europe PMC accepts

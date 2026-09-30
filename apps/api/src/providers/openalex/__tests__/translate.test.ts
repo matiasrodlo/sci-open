@@ -130,9 +130,11 @@ describe('toParams — wildcards', () => {
     }
   });
 
-  it('leaves out a required wildcard OpenAlex refuses, which only widens the search', () => {
+  it('asks nothing when a wildcard is one OpenAlex refuses', () => {
+    // Left out, it would widen the search for good if it was a topic term —
+    // `matchesQuery` never convicts on one — and the flat form cannot say.
     for (const term of ['*ing', '?ene', 'ge*', 'gen?m*', 'ge?e*', 'covid-19*', 'c++*']) {
-      expect(toParams(query({ terms: ['crispr', term] })).filter).toBe('title_and_abstract.search:crispr');
+      expect(toParams(query({ terms: ['crispr', term] }))).toEqual({});
     }
   });
 

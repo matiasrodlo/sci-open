@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Query } from '@open-access-explorer/shared';
+import { parseExpression } from '@open-access-explorer/shared';
 import { translate } from '../translate';
 
 const query = (over: Partial<Query>): Query => ({ terms: [], phrases: [], join: 'AND', ...over });
@@ -70,5 +71,33 @@ describe('translate — DOI', () => {
 
   it('escapes characters the query parser would read as operators', () => {
     expect(translate(query({ terms: ['a:b'] }))).toContain('a\\:b');
+  });
+});
+
+/**
+ * Measured with `bibjson.title:` on 2026-09-30: escaped, a wildcard is literal
+ * text — `generat\*` found 1 against 51,814 for `generation` — and unescaped,
+ * DOAJ refuses every one with HTTP 400. There is no form of one it answers.
+ */
+describe('translate — wildcards', () => {
+  const anyField = (v: string) => `(bibjson.title:${v} OR bibjson.abstract:${v} OR bibjson.keywords:${v})`;
+
+  it('asks nothing of a flat query carrying a wildcard, rather than searching for it as text', () => {
+    for (const term of ['generat*', 'gen?me', '*generation']) {
+      expect(translate(query({ terms: ['crispr', term] }))).toBe('');
+    }
+  });
+
+  it('leaves out a title wildcard, which the evaluator applies, and asks nothing for a topic one', () => {
+    // A title clause `matchesQuery` can check on the records that come back;
+    // a topic clause it never convicts on, so leaving one out widens for good.
+    expect(translate(query({ expression: parseExpression('TS=crispr AND TI=gen*') }))).toBe(anyField('crispr'));
+    expect(translate(query({ expression: parseExpression('TS=crispr AND TS=gen*') }))).toBe('');
+  });
+
+
+  it('asks nothing when the wildcard is an alternative, or all there was', () => {
+    expect(translate(query({ terms: ['crispr', 'gen*'], join: 'OR' }))).toBe('');
+    expect(translate(query({ terms: ['gen*'], years: { from: 2020 } }))).toBe('');
   });
 });

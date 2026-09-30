@@ -1,4 +1,5 @@
 import type { Query } from '@open-access-explorer/shared';
+import { flatTerms } from '../render-query';
 
 /**
  * Query -> OpenAIRE's request parameters.
@@ -76,7 +77,14 @@ export function toParams(query: Query, options: TranslateOptions = {}): OpenAire
   // endpoint. Quoting a phrase would be expressible here, but it would narrow
   // what this provider returns relative to what it returned before, and that
   // is a separate decision from which endpoint to ask.
-  const search = [...query.terms, ...query.phrases].map(t => t.trim()).filter(Boolean).join(' ');
+  //
+  // A query with a wildcard in it is not asked: the search has no wildcards.
+  // Measured on 2026-09-30, `generation` 6,825,154 and `generat*` 3,793,
+  // `genome` 1,339,519 and `genom*` 167,992, and `*generation` exactly what
+  // `generation` finds — the `*` ignored. Nor is the wildcard left out, since
+  // the flat form does not say whether it was a topic term. See `flatTerms`.
+  const terms = flatTerms(query, term => (/[*?]/.test(term) ? '' : term));
+  const search = terms ? [...terms, ...query.phrases.map(p => p.trim())].filter(Boolean).join(' ') : '';
 
   // Published, and not the unknowns beside it, is the one narrowing OpenAIRE
   // can be asked for. A search for preprints never gets here: `normalize`
@@ -89,6 +97,10 @@ export function toParams(query: Query, options: TranslateOptions = {}): OpenAire
 
 export function translate(query: Query, options: TranslateOptions = {}): string {
   const params = toParams(query, options);
+  // Nothing to search for is nothing to send, which the fan-out reports as a
+  // skip — rather than the access and date filters alone, which read as a
+  // query and are answered with nothing.
+  if (!params.search && !params.pid) return '';
   // Sorted so the same search always serialises identically, which is what
   // makes this usable as a cache key. The comparison is a plain one rather
   // than `localeCompare`, whose ordering depends on the runtime's locale — a

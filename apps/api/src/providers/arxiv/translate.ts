@@ -1,5 +1,5 @@
 import type { Query, QueryField } from '@open-access-explorer/shared';
-import { renderExpression, type Dialect } from '../render-query';
+import { cannotSend, flatTerms, renderExpression, type Dialect } from '../render-query';
 
 /**
  * Query -> the arXiv `search_query` string. Pure, and the only place that
@@ -99,8 +99,10 @@ function scoped(value: string): string {
  * worse than the 500, which at least failed where it could be seen. There is no
  * telling in advance where a stem ends, so no wildcard is safe to send.
  *
- * A wildcard term is left out instead, which widens the query — the direction
- * `render-query.ts` allows — and `matchesQuery` applies it to what comes back.
+ * So a wildcard term is not sent. In a title, abstract or author clause it is
+ * left out, which widens the query, and `matchesQuery` applies it to what
+ * comes back; as a topic term, which `matchesQuery` never convicts on, arXiv is
+ * not asked at all — see `cannotSend` and `flatTerms`.
  */
 function runnable(term: string): boolean {
   return !/[*?]/.test(term);
@@ -164,14 +166,9 @@ const DIALECT: Dialect = {
 function flatClauses(query: Query): string[] {
   const clauses: string[] = [];
 
-  const words = query.terms.map(t => t.trim()).filter(Boolean);
-  const kept = words.filter(runnable);
-  // Leaving out a required term widens the query; leaving out one of several
-  // alternatives narrows it, since that one could have matched on its own. So
-  // an OR arXiv cannot run all of is not asked at all — phrases included, which
-  // below are sent as required and would otherwise be asked for alone.
-  // `render-query.ts` drops an OR branch whole for the same reason.
-  if (query.join === 'OR' && kept.length < words.length) return [];
+  // A flat query with a wildcard in it is not asked at all. See `flatTerms`.
+  const kept = flatTerms(query, term => (runnable(term) ? term : ''));
+  if (!kept) return [];
 
   const terms = kept.map(scoped);
   const phrases = query.phrases.filter(p => p.trim()).map(p => scoped(quote(p)));
@@ -195,6 +192,9 @@ export function translate(query: Query, _options: TranslateOptions = {}): string
 
   // No DOI clause: arXiv has no DOI index, which `capabilities.doiLookup`
   // declares, so the orchestrator never routes a DOI lookup here.
+  // A topic term this provider cannot send, and cannot leave out, asks nothing.
+  // See `cannotSend`.
+  if (query.expression && cannotSend(query.expression, DIALECT)) return '';
   const rendered = query.expression ? renderExpression(query.expression, DIALECT) : undefined;
   const searched = rendered ? [rendered] : flatClauses(query);
   // Nothing left to search for asks nothing. A date range on its own would ask

@@ -1,5 +1,5 @@
 import type { Query, QueryField } from '@open-access-explorer/shared';
-import { renderExpression, type Dialect } from '../render-query';
+import { cannotSend, flatTerms, renderExpression, type Dialect } from '../render-query';
 
 /**
  * Query -> the PLOS Solr query string. Pure, and the only place that knows
@@ -46,9 +46,9 @@ function quote(phrase: string): string {
 
 /**
  * The characters Solr's query parser reads as syntax, less `*` and `?` — the
- * grammar's wildcards, which are sent as wildcards — and less the whitespace,
- * parentheses and quotes a term cannot contain, since the grammar splits on
- * them.
+ * grammar's wildcards, which never reach it, since a term carrying one is not
+ * sent (see `sendable`) — and less the whitespace, parentheses and quotes a
+ * term cannot contain, since the grammar splits on them.
  */
 const SOLR_SYNTAX = /[\\+\-!:^[\]{}~|&/]/g;
 
@@ -66,12 +66,34 @@ const SOLR_SYNTAX = /[\\+\-!:^[\]{}~|&/]/g;
  * asks for the text it spells: `\[crispr\]`, `\-crispr` and `\!crispr` all find
  * the 445 that `crispr` does, and `a\\b` finds 51.
  *
- * A term with no letter or digit in it is left out instead. Escaped, `-` asks
- * for nothing and finds nothing — narrower than the query, where leaving it out
- * widens it, and `matchesQuery` applies it to what comes back.
+ * A term with no letter or digit in it is not sent: escaped, `-` asks for
+ * nothing and finds nothing, which is narrower than the query. What happens
+ * instead is `sendable`'s.
  */
 function escaped(term: string): string {
   return /[\p{L}\p{N}]/u.test(term) ? term.replace(SOLR_SYNTAX, '\\$&') : '';
+}
+
+/**
+ * A term as PLOS is sent it, or `''` for one it cannot run faithfully.
+ *
+ * No wildcard. PLOS matches one against its stemmed index, as arXiv does, so
+ * what comes back depends on where a stem ends. Measured with `title:` on
+ * 2026-09-30:
+ *
+ *   generation 5,436   generat* 1       generating 5,436   gene*ing 0
+ *   genome     9,367   genom*   9,397   gen?me         0   *generation 1
+ *
+ * `generating` finding exactly what `generation` does is the stemmer showing:
+ * both are indexed as "gener", and no stem begins "generat".
+ *
+ * A term this returns nothing for is not sent. In a title, abstract, author or
+ * journal clause it is left out, which widens the query, and `matchesQuery`
+ * applies it to what comes back; as a topic term, which `matchesQuery` never
+ * convicts on, PLOS is not asked at all — see `cannotSend` and `flatTerms`.
+ */
+function sendable(term: string): string {
+  return /[*?]/.test(term) ? '' : escaped(term);
 }
 
 /**
@@ -125,7 +147,7 @@ const DIALECT: Dialect = {
   fields: field => QUERY_FIELDS[field] ?? [],
   scope: (field, value) => `${field}:${value}`,
   // Empty for a term with nothing to search for, which `renderExpression` drops.
-  term: text => escaped(text.trim()),
+  term: text => sendable(text.trim()),
   phrase: text => quote(text),
   years: range => publicationDate(range),
   // `id`, not `doi` — see the note in `translate`.
@@ -138,12 +160,9 @@ const DIALECT: Dialect = {
 function flatClauses(query: Query): string[] {
   const clauses: string[] = [];
 
-  const words = query.terms.map(t => t.trim()).filter(Boolean);
-  const kept = words.map(escaped).filter(Boolean);
-  // Leaving out a required term widens the query; leaving out an alternative
-  // narrows it. So an OR with a term left out is not asked at all — phrases
-  // included, which are sent below as required.
-  if (query.join === 'OR' && kept.length < words.length) return [];
+  // A flat query with a term it cannot run is not asked at all. See `flatTerms`.
+  const kept = flatTerms(query, sendable);
+  if (!kept) return [];
 
   const terms = kept.map(scoped);
   const phrases = query.phrases.filter(p => p.trim()).map(p => scoped(quote(p)));
@@ -177,6 +196,9 @@ export function translate(query: Query, _options: TranslateOptions = {}): string
     // every PLOS DOI lookup answered with an arbitrary page of the corpus.
     clauses.push(`id:${quote(query.doi)}`);
   } else {
+    // A topic term this provider cannot send, and cannot leave out, asks nothing.
+    // See `cannotSend`.
+    if (query.expression && cannotSend(query.expression, DIALECT)) return '';
     const rendered = query.expression ? renderExpression(query.expression, DIALECT) : undefined;
     const searched = rendered ? [rendered] : flatClauses(query);
     // Nothing left to search for asks nothing. A date range on its own would

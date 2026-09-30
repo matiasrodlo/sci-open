@@ -134,14 +134,23 @@ export function toParams(query: Query, options: TranslateOptions = {}): OpenAlex
   const exact = wildcards.filter(exactRunnable);
 
   /**
-   * An OR with a wildcard in it is not asked.
+   * A wildcard OpenAlex cannot run is not left out: OpenAlex is not asked.
+   *
+   * Left out, it would widen the search, and the widening is undone only where
+   * `matchesQuery` convicts a record that lacks the term — which it never does
+   * for a `topic` term, and the flat form no longer says which field a term
+   * came from. Measured on 2026-09-30 for `TS=crispr AND TS=*generation`: asked
+   * for `crispr` alone, OpenAlex returned 14% papers containing a
+   * `*generation` word. See `flatTerms`.
+   */
+  if (exact.length < wildcards.length) return {};
+
+  /**
+   * Nor is an OR with a wildcard in it.
    *
    * The wildcards go to a second filter, and OpenAlex ANDs its filters, so
-   * `a OR gen*` could only be sent as `a AND gen*` — or as `a` alone, with the
-   * wildcard left out. Both read less than the query means, and the records
-   * only the missing side matched would never be read. A wildcard OpenAlex
-   * cannot run at all is the same case: leaving out a required term widens the
-   * search, and leaving out an alternative narrows it.
+   * `a OR gen*` could only be sent as `a AND gen*`, which reads less than the
+   * query means: the records only the other side matched would never be read.
    */
   if (query.join === 'OR' && wildcards.length > 0) return {};
 

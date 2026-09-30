@@ -112,18 +112,28 @@ describe('translate — Solr syntax in a term', () => {
     expect(translate(query({ terms: ['covid-19'] }))).toBe(scopedTo('covid\\-19'));
   });
 
-  it('leaves the wildcards as wildcards', () => {
-    expect(translate(query({ terms: ['gen*'] }))).toBe(scopedTo('gen*'));
-    expect(translate(query({ terms: ['gen?me'] }))).toBe(scopedTo('gen?me'));
+  it('asks nothing of a flat query carrying a wildcard, which its stemmed index answers wrongly', () => {
+    // Measured on 2026-09-30: `title:generat*` found 1 where `title:generation`
+    // found 5,436, and `title:gen?me` nothing.
+    expect(translate(query({ terms: ['crispr', 'generat*'] }))).toBe('');
+    expect(translate(query({ terms: ['gen?me'] }))).toBe('');
+    expect(translate(query({ terms: ['crispr', 'gen*'], join: 'OR' }))).toBe('');
+  });
+
+it('leaves out a title wildcard, which the evaluator applies, and asks nothing for a topic one', () => {
+    // A title clause `matchesQuery` can check on the records that come back;
+    // a topic clause it never convicts on, so leaving one out widens for good.
+    expect(translate(query({ expression: parseExpression('TS=crispr AND TI=generat*') }))).toBe(scopedTo('crispr'));
+    expect(translate(query({ expression: parseExpression('TS=crispr AND TS=generat*') }))).toBe('');
   });
 
   it('escapes a backslash inside a phrase, where it is still an escape', () => {
     expect(translate(query({ phrases: ['gene\\editing'] }))).toBe(scopedTo('"gene\\\\editing"'));
   });
 
-  it('leaves out a term with nothing to search for, which only widens the query', () => {
+  it('asks nothing of a flat query carrying a term with nothing to search for', () => {
     // Escaped, `-` asks for nothing and finds nothing.
-    expect(translate(query({ terms: ['crispr', '-'] }))).toBe(scopedTo('crispr'));
+    expect(translate(query({ terms: ['crispr', '-'] }))).toBe('');
     expect(translate(query({ terms: ['crispr', '-'], join: 'OR' }))).toBe('');
     expect(translate(query({ terms: ['-'], years: { from: 2020 } }))).toBe('');
   });

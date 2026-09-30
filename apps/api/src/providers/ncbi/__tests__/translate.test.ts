@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Query } from '@open-access-explorer/shared';
+import { parseExpression } from '@open-access-explorer/shared';
 import { translate } from '../translate';
 
 const query = (over: Partial<Query>): Query => ({ terms: [], phrases: [], join: 'AND', ...over });
@@ -106,5 +107,45 @@ describe('translate — the publication type', () => {
 
   it('adds nothing when unknown papers are wanted too', () => {
     expect(translate(query({ terms: ['ai'], stages: ['published', 'unknown'] }))).toBe(base);
+  });
+});
+
+/**
+ * Measured with `[ti]` on 2026-09-30, from PubMed's own `querytranslation`:
+ * `*generation` becomes "generation" (126,489, where generation or
+ * regeneration is 191,916), and `gen*` becomes "gen" (6,788, where `gene` alone
+ * is 587,970) — a leading `*`, or one with fewer than four characters before
+ * it, is dropped without a word. `?` is not a wildcard: `gen?me` found 70.
+ */
+describe('translate — wildcards', () => {
+  const scoped = (v: string) => `(${v}[tiab] OR ${v}[mh])`;
+
+  it('sends a truncation PubMed runs', () => {
+    for (const term of ['generat*', 'genom*', 'gene*ing']) {
+      expect(translate(query({ terms: [term] }))).toBe(scoped(term));
+    }
+  });
+
+  it('sends `?` as `*` when four characters come before it', () => {
+    expect(translate(query({ terms: ['genom?'] }))).toBe(scoped('genom*'));
+  });
+
+  it('asks nothing of a flat query carrying a wildcard it would drop', () => {
+    for (const term of ['*generation', 'gen*', 'ge*', 'gen?me', 'covid-19*']) {
+      expect(translate(query({ terms: ['crispr', term] }))).toBe('');
+    }
+  });
+
+  it('leaves out a title wildcard, which the evaluator applies, and asks nothing for a topic one', () => {
+    // A title clause `matchesQuery` can check on the records that come back;
+    // a topic clause it never convicts on, so leaving one out widens for good.
+    expect(translate(query({ expression: parseExpression('TS=crispr AND TI=gen*') }))).toBe(scoped('crispr'));
+    expect(translate(query({ expression: parseExpression('TS=crispr AND TS=gen*') }))).toBe('');
+  });
+
+
+  it('asks nothing when that wildcard is one of several alternatives, or all there was', () => {
+    expect(translate(query({ terms: ['crispr', 'gen*'], join: 'OR' }))).toBe('');
+    expect(translate(query({ terms: ['gen*'] }), { openAccessOnly: true })).toBe('');
   });
 });

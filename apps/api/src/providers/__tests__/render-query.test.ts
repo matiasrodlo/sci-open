@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseExpression, type QueryField } from '@open-access-explorer/shared';
-import { renderExpression, type Dialect } from '../render-query';
+import { cannotSend, flatTerms, renderExpression, type Dialect } from '../render-query';
 
 /**
  * The walk that turns a parsed query into one provider's syntax, and the one
@@ -99,5 +99,63 @@ describe('what a provider cannot express', () => {
     // The caller falls back to the flat `terms`/`phrases` — the query this
     // provider would have received before the grammar existed.
     expect(render('PY=2020', { years: () => undefined })).toBeUndefined();
+  });
+});
+
+describe('flatTerms', () => {
+  const flat = (terms: string[], join: 'AND' | 'OR' = 'AND') => ({ terms, phrases: [], join });
+  const noWildcards = (term: string) => (/[*?]/.test(term) ? '' : term);
+
+  it('sends nothing when a term cannot be sent, since the flat form cannot say it was safe to leave out', () => {
+    expect(flatTerms(flat(['crispr', 'gen*', 'cas9']), noWildcards)).toBeUndefined();
+    expect(flatTerms(flat(['crispr', 'cas9']), noWildcards)).toEqual(['crispr', 'cas9']);
+  });
+
+  it('sends nothing of an OR with a term left out, since that narrows it', () => {
+    expect(flatTerms(flat(['crispr', 'gen*'], 'OR'), noWildcards)).toBeUndefined();
+    expect(flatTerms(flat(['crispr', 'cas9'], 'OR'), noWildcards)).toEqual(['crispr', 'cas9']);
+  });
+
+  it('sends terms in the form the provider needs', () => {
+    expect(flatTerms(flat([' gen?me ']), term => term.replace(/\?/g, '*'))).toEqual(['gen*me']);
+  });
+});
+
+/**
+ * Leaving a term out widens the query, and that is safe only where
+ * `matchesQuery` applies the term to what comes back. It convicts a record
+ * lacking a title, abstract, author, venue or publisher clause; it never
+ * convicts one lacking a topic or `all` term. Measured on 2026-09-30:
+ * `TS=crispr AND TS=*generation`, with the wildcard left out, came back 30%
+ * papers containing it.
+ */
+describe('a term the provider cannot send', () => {
+  const noWildcards = dialect({ term: text => (/[*?]/.test(text) ? '' : text.trim()) });
+  const blocked = (input: string) => cannotSend(parseExpression(input), noWildcards);
+
+  it('is left out of a clause the evaluator can apply afterwards', () => {
+    expect(blocked('TS=crispr AND TI=gen*')).toBe(false);
+    expect(renderExpression(parseExpression('TS=crispr AND TI=gen*'), noWildcards)).toBe('(TI:crispr OR AB:crispr)');
+  });
+
+  it('blocks the provider when it is a topic or all term the query requires', () => {
+    expect(blocked('TS=crispr AND TS=gen*')).toBe(true);
+    expect(blocked('crispr gen*')).toBe(true);
+    expect(blocked('ALL=gen* AND TI=crispr')).toBe(true);
+    expect(blocked('TS=crispr OR TS=gen*')).toBe(true);
+  });
+
+  it('does not block it under a NOT, where leaving the term out widens and presence still convicts', () => {
+    expect(blocked('TS=crispr NOT TS=gen*')).toBe(false);
+    // Negated twice, it is required again.
+    expect(blocked('TS=crispr NOT (TS=a NOT TS=gen*)')).toBe(true);
+  });
+
+  it('drops a whole negated group rather than part of it, which would narrow', () => {
+    // `NOT (a)` would exclude every `a` record, including those without the
+    // wildcard that the query keeps.
+    expect(renderExpression(parseExpression('TS=x NOT (TI=a AND TI=gen*)'), noWildcards)).toBe('(TI:x OR AB:x)');
+    expect(renderExpression(parseExpression('TS=x NOT (TI=a AND TI=b)'), noWildcards))
+      .toBe('((TI:x OR AB:x) AND NOT ((TI:a AND TI:b)))');
   });
 });

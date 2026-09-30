@@ -1,5 +1,5 @@
 import type { Query, QueryField } from '@open-access-explorer/shared';
-import { renderExpression, type Dialect } from '../render-query';
+import { cannotSend, flatTerms, renderExpression, type Dialect } from '../render-query';
 
 /**
  * Query -> a PubMed search term. Pure, and the only place that knows this
@@ -77,11 +77,41 @@ const QUERY_FIELDS: Partial<Record<QueryField, readonly string[]>> = {
 
 const EVERY_FIELD = ['tiab', 'mh', 'au', 'ta'] as const;
 
+/**
+ * A term as PubMed truncates it faithfully, or `''` where it would not.
+ *
+ * Measured with `[ti]` on 2026-09-30:
+ *
+ *   generation 126,489   generat*  195,694    genome 157,590   genom* 269,962
+ *   generating  10,662   gene*ing   12,301
+ *   gen?me          70   — `?` is not a wildcard here
+ *   *generation 126,489  — translated as "generation": the leading `*` is
+ *                          dropped, where generation or regeneration is 191,916
+ *   gen* 6,788, ge* 5,474 — translated as "gen" and "ge": with fewer than four
+ *                          characters before it the `*` is dropped, silently
+ *                          (gene alone is 587,970)
+ *
+ * PubMed reports each of those in its `querytranslation` and nowhere a reader
+ * would see it. So `?` is sent as `*` — a superset of "one character", which
+ * `matchesQuery` holds to one — and a wildcard term is sent only with four
+ * letters or digits ahead of its first `*`. Any other is not sent: in a title,
+ * abstract, author or journal clause it is left out, which widens the query,
+ * and `matchesQuery` applies it to what comes back; as a topic term, which
+ * `matchesQuery` never convicts on, PubMed is not asked at all — see
+ * `cannotSend` and `flatTerms`.
+ */
+function truncated(term: string): string {
+  if (!/[*?]/.test(term)) return term;
+  const stars = term.replace(/\?/g, '*');
+  return /^[A-Za-z0-9]{4,}[A-Za-z0-9*]*$/.test(stars) ? stars : '';
+}
+
 const DIALECT: Dialect = {
   fields: field => QUERY_FIELDS[field] ?? [],
   // The tag follows the value here, where every other provider prefixes it.
   scope: (field, value) => `${value}[${field}]`,
-  term: text => text.trim(),
+  // Empty for a wildcard PubMed would not run, which `renderExpression` drops.
+  term: text => truncated(text.trim()),
   phrase: text => quote(text),
   years: ({ from, to }) => `${from ?? EARLIEST}:${to ?? LATEST}[PDAT]`,
   doi: value => `${quote(value)}[DOI]`,
@@ -92,7 +122,13 @@ const DIALECT: Dialect = {
 /** The query as it reached this provider before the grammar existed. */
 function flatClauses(query: Query): string[] {
   const clauses: string[] = [];
-  const terms = query.terms.filter(t => t.trim()).map(t => scoped(t.trim()));
+
+  // A flat query with a wildcard it would not run is not asked at all. See
+  // `flatTerms`.
+  const kept = flatTerms(query, truncated);
+  if (!kept) return [];
+
+  const terms = kept.map(scoped);
   const phrases = query.phrases.filter(p => p.trim()).map(p => scoped(quote(p)));
 
   if (terms.length > 0) {
@@ -119,9 +155,15 @@ export function translate(query: Query, options: TranslateOptions = {}): string 
     // otherwise try to tokenise.
     clauses.push(`${quote(query.doi)}[DOI]`);
   } else {
+    // A topic term this provider cannot send, and cannot leave out, asks nothing.
+    // See `cannotSend`.
+    if (query.expression && cannotSend(query.expression, DIALECT)) return '';
     const rendered = query.expression ? renderExpression(query.expression, DIALECT) : undefined;
-    if (rendered) clauses.push(rendered);
-    else clauses.push(...flatClauses(query));
+    const searched = rendered ? [rendered] : flatClauses(query);
+    // Nothing left to search for asks nothing. The filters below on their own
+    // would ask for every open-access paper PubMed holds.
+    if (searched.length === 0) return '';
+    clauses.push(...searched);
   }
 
   const { from, to } = query.years ?? {};

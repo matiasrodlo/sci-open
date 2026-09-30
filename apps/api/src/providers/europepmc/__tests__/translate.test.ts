@@ -203,3 +203,28 @@ describe('translate — the publication type', () => {
       .toBe(`${base} AND SRC:PPR AND OPEN_ACCESS:y`);
   });
 });
+
+/**
+ * Measured with `TITLE:` on 2026-09-30: every `*` found more than the words it
+ * stands for — `generat*` 231,555 against `generation` 141,320, `*generation`
+ * 284,719 against generation or regeneration 217,855, `ge*` 3,045,411 — and
+ * `gen?me` found 1, against 182,141 for `genome`.
+ */
+describe('translate — wildcards', () => {
+  const scoped = (v: string) => `(TITLE_ABS:${v} OR MESH:${v} OR KW:${v})`;
+
+  it('sends `*` as it is, which Europe PMC runs anywhere in a word', () => {
+    for (const term of ['generat*', 'gene*ing', '*generation', 'ge*']) {
+      expect(translate(query({ terms: [term] }))).toBe(scoped(term));
+    }
+  });
+
+  it('sends `?` as `*`, a superset of one character, which it does not run', () => {
+    expect(translate(query({ terms: ['gen?me'] }))).toBe(scoped('gen*me'));
+    expect(translate(parseQuery('TI=gen?me'))).toBe('TITLE:gen*me');
+  });
+
+  it('asks nothing rather than the open-access filter on its own', () => {
+    expect(translate(query({}), { openAccessOnly: true })).toBe('');
+  });
+});

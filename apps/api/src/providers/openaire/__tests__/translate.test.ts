@@ -95,3 +95,20 @@ describe('toParams — the publication type', () => {
     expect(toParams(query({ doi: '10.1/x', stages: ['published'] }))).not.toHaveProperty('isPeerReviewed');
   });
 });
+
+/**
+ * OpenAIRE's search has no wildcards. Measured on 2026-09-30: `generat*` found
+ * 3,793 where `generation` found 6,825,154, and `*generation` exactly what
+ * `generation` did — the `*` ignored.
+ */
+describe('toParams — wildcards', () => {
+  it('sends nothing when a wildcard is required, rather than the rest of the query', () => {
+    expect(toParams(query({ terms: ['crispr', 'generat*'] })).search).toBe('');
+    expect(translate(query({ terms: ['crispr', 'generat*'] }))).toBe('');
+  });
+
+  it('sends nothing when the wildcard is an alternative, or all there was', () => {
+    expect(translate(query({ terms: ['crispr', 'gen*'], join: 'OR' }), { openAccessOnly: true })).toBe('');
+    expect(translate(query({ terms: ['gen*'] }), { openAccessOnly: true })).toBe('');
+  });
+});

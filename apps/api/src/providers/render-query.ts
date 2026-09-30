@@ -1,4 +1,4 @@
-import type { QueryField, QueryNode, YearRange } from '@open-access-explorer/shared';
+import type { Query, QueryField, QueryNode, YearRange } from '@open-access-explorer/shared';
 
 /**
  * The parsed query -> one provider's native query string.
@@ -59,6 +59,71 @@ export type Dialect = {
   supportsNot: boolean;
 };
 
+/**
+ * The flat query's terms as one provider can send them, or `undefined` when
+ * one of them cannot be — and then nothing of the flat query can.
+ *
+ * `send` returns a term in the form the provider runs faithfully, or `''` for
+ * one it cannot: a wildcard its index would answer wrongly, a term with nothing
+ * in it to search for. No term is left out. Leaving out one of several
+ * alternatives narrows the query; leaving out a required one widens it, which
+ * would be safe only if `matchesQuery` applied it afterwards — and the flat
+ * form no longer says which field a term came from, so it may be a `topic`
+ * term, whose absence is never convicted. See `cannotSend`.
+ */
+export function flatTerms(query: Query, send: (term: string) => string): string[] | undefined {
+  const words = query.terms.map(term => term.trim()).filter(Boolean);
+  const sent = words.map(send).filter(Boolean);
+  return sent.length < words.length ? undefined : sent;
+}
+
+/**
+ * Whether `matchesQuery` convicts a record that lacks a clause on this field.
+ *
+ * It does for a title, an abstract, an author, a venue or a publisher — this
+ * service holds the whole of each — and it does not for `topic` or `all`,
+ * which reach indexes it holds no copy of: a miss there is `unknown`, and the
+ * record is kept (see `matchesClause`). So a clause on the first kind can be
+ * left out of a provider's query and applied to what comes back; one on the
+ * second cannot, because nothing that comes back without it is ever removed.
+ */
+function convictable(field: QueryField): boolean {
+  return field !== 'topic' && field !== 'all';
+}
+
+/**
+ * True when the tree requires something this provider cannot send and cannot
+ * leave out: a term in a `topic` or `all` clause, outside any `NOT`, that
+ * `dialect.term` has no faithful form of — a wildcard its index answers
+ * wrongly, a term with nothing in it to search for.
+ *
+ * Left out, the term widens the query and the widening is never undone. It was
+ * left out, and measured on 2026-09-30 for `TS=crispr AND TS=*generation`: the
+ * providers asked for `crispr` alone returned 7–18% papers containing a
+ * `*generation` word, against Europe PMC's 597 of 600, and the search was 30%
+ * papers that match it. A provider in that position is not asked; `translate`
+ * returns nothing, which reports it skipped.
+ *
+ * Checked before rendering, not during, because a render that fails falls back
+ * to the flat form, which would ask the widened question anyway.
+ */
+export function cannotSend(node: QueryNode, dialect: Dialect, negated = false): boolean {
+  switch (node.kind) {
+    case 'clause':
+      return (
+        !negated &&
+        !convictable(node.field) &&
+        node.value.kind === 'term' &&
+        dialect.term(node.value.text) === ''
+      );
+    case 'and':
+    case 'or':
+      return node.nodes.some(child => cannotSend(child, dialect, negated));
+    case 'not':
+      return cannotSend(node.node, dialect, !negated);
+  }
+}
+
 function renderClause(node: Extract<QueryNode, { kind: 'clause' }>, dialect: Dialect): string | undefined {
   const { field, value } = node;
 
@@ -68,6 +133,9 @@ function renderClause(node: Extract<QueryNode, { kind: 'clause' }>, dialect: Dia
 
   if (field === 'doi') return dialect.doi(value.text);
 
+  // A term this provider cannot send is left out, which only widens the query
+  // where `matchesQuery` can apply it afterwards. Where it cannot, `cannotSend`
+  // has already kept the provider from being asked.
   const rendered = value.kind === 'phrase' ? dialect.phrase(value.text) : dialect.term(value.text);
   if (!rendered) return undefined;
 
@@ -87,26 +155,31 @@ function renderClause(node: Extract<QueryNode, { kind: 'clause' }>, dialect: Dia
  * because how tightly negation binds is the one thing these dialects do not
  * agree on.
  */
-export function renderExpression(node: QueryNode, dialect: Dialect): string | undefined {
+export function renderExpression(node: QueryNode, dialect: Dialect, negated = false): string | undefined {
   switch (node.kind) {
     case 'clause':
       return renderClause(node, dialect);
 
     case 'and': {
+      const parts = node.nodes.map(child => renderExpression(child, dialect, negated));
       // A child that cannot be rendered is simply not required of the
-      // provider. Every remaining child still is, so this stays a subset of
-      // the records the query describes being asked for.
-      const parts = node.nodes
-        .map(child => renderExpression(child, dialect))
-        .filter((part): part is string => part !== undefined);
-      if (parts.length === 0) return undefined;
-      return parts.length === 1 ? parts[0]! : `(${parts.join(' AND ')})`;
+      // provider. Every remaining child still is, so this stays a superset of
+      // the records the query describes.
+      //
+      // Not under a `NOT`, where it turns round: `NOT (a AND b)` rendered as
+      // `NOT (a)` excludes every `a` record, including the ones without `b`
+      // that the query keeps. There the whole group is dropped, and the `NOT`
+      // with it, which widens instead.
+      if (negated && parts.some(part => part === undefined)) return undefined;
+      const present = parts.filter((part): part is string => part !== undefined);
+      if (present.length === 0) return undefined;
+      return present.length === 1 ? present[0]! : `(${present.join(' AND ')})`;
     }
 
     case 'or': {
       // All or nothing. See the header: an `OR` missing a branch asks for less
       // than the query does, and the dropped branch's records are then gone.
-      const parts = node.nodes.map(child => renderExpression(child, dialect));
+      const parts = node.nodes.map(child => renderExpression(child, dialect, negated));
       if (parts.some(part => part === undefined)) return undefined;
       const present = parts as string[];
       return present.length === 1 ? present[0]! : `(${present.join(' OR ')})`;
@@ -114,7 +187,7 @@ export function renderExpression(node: QueryNode, dialect: Dialect): string | un
 
     case 'not': {
       if (!dialect.supportsNot) return undefined;
-      const inner = renderExpression(node.node, dialect);
+      const inner = renderExpression(node.node, dialect, !negated);
       return inner === undefined ? undefined : `NOT (${inner})`;
     }
   }

@@ -79,11 +79,19 @@ describe('translate — year bounds', () => {
  * HTTP 500. None of that can be predicted per term, so no wildcard is sent.
  */
 describe('translate — wildcards, which arXiv is never sent', () => {
-  it('leaves out a required wildcard term, which only widens the search', () => {
+  it('asks nothing of a flat query carrying a wildcard', () => {
     for (const term of ['gen*', 'generat*', 'gen?me', '*z', '?ene', 'covid-19*']) {
-      expect(translate(query({ terms: ['crispr', term] }))).toBe('(ti:crispr OR abs:crispr)');
+      expect(translate(query({ terms: ['crispr', term] }))).toBe('');
     }
   });
+
+  it('leaves out a title wildcard, which the evaluator applies, and asks nothing for a topic one', () => {
+    // A title clause `matchesQuery` can check on the records that come back;
+    // a topic clause it never convicts on, so leaving one out widens for good.
+    expect(translate(query({ expression: parseExpression('TS=crispr AND TI=gen*') }))).toBe('(ti:crispr OR abs:crispr)');
+    expect(translate(query({ expression: parseExpression('TS=crispr AND TS=gen*') }))).toBe('');
+  });
+
 
   it('asks nothing when the wildcard is one of several alternatives', () => {
     // Sending `crispr` alone would drop every record only the other side matched.
