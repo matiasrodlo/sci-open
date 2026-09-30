@@ -88,6 +88,8 @@ describe('translate — wildcards, which arXiv is never sent', () => {
   it('asks nothing when the wildcard is one of several alternatives', () => {
     // Sending `crispr` alone would drop every record only the other side matched.
     expect(translate(query({ terms: ['crispr', 'gen*'], join: 'OR' }))).toBe('');
+    // …and nor a phrase alone, which is one alternative among three here.
+    expect(translate(query({ terms: ['crispr', 'gen*'], phrases: ['gene editing'], join: 'OR' }))).toBe('');
   });
 
   it('asks nothing when no word is left, rather than the whole of a date range', () => {
