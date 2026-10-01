@@ -3,27 +3,42 @@
 @tailwind utilities;
 
 @layer base {
+  /*
+   * The palette is OpenAlex's: near-black type and controls on white, with
+   * colour kept for the three things a reader scans a list for — a title to
+   * open (blue), who wrote it (green) and where it appeared (amber). Neutral
+   * greys everywhere else, so that colour on the page always means one of those.
+   */
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 0 0% 4%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 0 0% 4%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --popover-foreground: 0 0% 4%;
+    --primary: 0 0% 4%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 0 0% 4%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 40%;
+    --accent: 240 5% 96%;
+    --accent-foreground: 0 0% 4%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 90%;
+    --input: 0 0% 83%;
+    --ring: 221 83% 53%;
     --radius: 0.5rem;
+
+    /* The bands a page alternates between, a step off white. */
+    --subtle: 0 0% 98%;
+    /* Titles and links. */
+    --link: 221 83% 53%;
+    /* People. */
+    --author: 163 94% 24%;
+    /* Journals, repositories and other venues. */
+    --venue: 26 90% 37%;
   }
 
   /*
@@ -48,28 +63,36 @@
    * a half-applied theme rather than a working toggle. Adding a real one means
    * changing `darkMode` to `'class'` and moving these tokens then; two copies
    * free to drift in the meantime bought nothing toward it.
+   *
+   * The count is no longer twenty: the four role colours below the shadcn set
+   * are redefined here too, lightened so they keep their contrast on black.
    */
   @media (prefers-color-scheme: dark) {
     :root {
-      --background: 222.2 84% 4.9%;
-      --foreground: 210 40% 98%;
-      --card: 222.2 84% 4.9%;
-      --card-foreground: 210 40% 98%;
-      --popover: 222.2 84% 4.9%;
-      --popover-foreground: 210 40% 98%;
-      --primary: 217.2 91.2% 59.8%;
-      --primary-foreground: 222.2 84% 4.9%;
-      --secondary: 217.2 32.6% 17.5%;
-      --secondary-foreground: 210 40% 98%;
-      --muted: 217.2 32.6% 17.5%;
-      --muted-foreground: 215 20.2% 65.1%;
-      --accent: 217.2 32.6% 17.5%;
-      --accent-foreground: 210 40% 98%;
-      --destructive: 0 62.8% 30.6%;
-      --destructive-foreground: 210 40% 98%;
-      --border: 217.2 32.6% 17.5%;
-      --input: 217.2 32.6% 17.5%;
-      --ring: 224.3 76.3% 94.1%;
+      --background: 0 0% 4%;
+      --foreground: 0 0% 98%;
+      --card: 0 0% 7%;
+      --card-foreground: 0 0% 98%;
+      --popover: 0 0% 7%;
+      --popover-foreground: 0 0% 98%;
+      --primary: 0 0% 98%;
+      --primary-foreground: 0 0% 4%;
+      --secondary: 240 4% 14%;
+      --secondary-foreground: 0 0% 98%;
+      --muted: 240 4% 14%;
+      --muted-foreground: 240 5% 65%;
+      --accent: 240 4% 14%;
+      --accent-foreground: 0 0% 98%;
+      --destructive: 0 72% 60%;
+      --destructive-foreground: 0 0% 4%;
+      --border: 240 4% 18%;
+      --input: 240 4% 26%;
+      --ring: 213 94% 68%;
+
+      --subtle: 0 0% 6%;
+      --link: 213 94% 68%;
+      --author: 158 64% 52%;
+      --venue: 43 96% 56%;
     }
   }
 }
@@ -79,6 +102,6 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
   }
 }

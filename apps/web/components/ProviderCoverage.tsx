@@ -71,9 +71,9 @@ export function ProviderCoverage({ providers, complete, bounded }: ProviderCover
   const degraded = sourceGap || bounded === true;
 
   return (
-    <div className="rounded-lg border bg-muted/20 px-4 py-3">
-      <div className="flex items-baseline justify-between gap-4 mb-2">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+    <div className="rounded-lg border bg-subtle px-4 py-3">
+      <div className="mb-2 flex items-baseline justify-between gap-4">
+        <h2 className="text-[13px] font-semibold">
           Sources searched
         </h2>
         <span className="text-xs text-muted-foreground">
@@ -81,9 +81,9 @@ export function ProviderCoverage({ providers, complete, bounded }: ProviderCover
         </span>
       </div>
 
-      <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-1.5">
+      <ul className="grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-3 xl:grid-cols-4">
         {answered.map(provider => (
-          <li key={provider.provider} className="flex items-baseline justify-between gap-2 text-sm">
+          <li key={provider.provider} className="flex items-baseline justify-between gap-2 text-[13px]">
             <span className="truncate" title={label(provider.provider)}>
               {label(provider.provider)}
             </span>
@@ -99,7 +99,7 @@ export function ProviderCoverage({ providers, complete, bounded }: ProviderCover
       {degraded && (
         <div
           role="status"
-          className="mt-3 flex items-start gap-2 rounded border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs"
+          className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-50 px-3 py-2 text-xs leading-relaxed dark:bg-amber-500/10"
         >
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" aria-hidden="true" />
           <p className="text-amber-900 dark:text-amber-200">
@@ -151,7 +151,7 @@ export function ProviderCoverage({ providers, complete, bounded }: ProviderCover
         line as a fact of the same kind.
       */}
       {coverageOf(providers).truncated && (
-        <p className="mt-2 text-xs text-muted-foreground">
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
           Each source was read to a fixed depth, so the results listed come from the top of each
           source&rsquo;s answer
           <span className="opacity-70"> — not everything that matches.</span>{' '}
@@ -162,7 +162,7 @@ export function ProviderCoverage({ providers, complete, bounded }: ProviderCover
       )}
 
       {skipped.length > 0 && (
-        <p className="mt-2 text-xs text-muted-foreground">
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
           Not searched for this query:{' '}
           {skipsByReason(providers).map(({ reason, sources }, index) => (
             <Fragment key={reason}>

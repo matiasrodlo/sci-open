@@ -57,8 +57,8 @@ export function PaginatedResults({ results, total, matching, page, pageSize }: P
   const totalPages = Math.ceil(total / pageSize);
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-4">
+    <div>
+      <div>
         {results.map(record => (
           <ResultCard key={record.id} record={record} />
         ))}
@@ -74,17 +74,18 @@ export function PaginatedResults({ results, total, matching, page, pageSize }: P
 
       <div className="flex justify-center">
         <Button
-          variant="outline"
+          variant="ghost"
+          size="sm"
           onClick={() => startRefresh(() => router.refresh())}
           disabled={refreshing}
-          className="text-sm"
+          className="text-muted-foreground"
           // A search that answered completely is answered the same way again,
           // and that is the correct outcome rather than a broken one. The
           // control is worth having for the search that did not.
           title="Run this search again, asking any source that did not answer"
         >
           <RefreshCw
-            className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`}
+            className={`mr-1.5 h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`}
             aria-hidden="true"
           />
           {refreshing ? 'Searching…' : 'Refresh results'}

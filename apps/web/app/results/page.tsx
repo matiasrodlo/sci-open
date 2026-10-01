@@ -110,73 +110,79 @@ async function ResultsContent({ searchParams }: { searchParams: ResultsSearchPar
     // The API says whether its sources were asked exactly this search.
     const matching = matchingOf(results.total, coverage, results.countsFromSources);
 
-            return (
-              <div className="space-y-8">
-                {/* Adds this search to the session's numbered history. Here
-                    rather than beside the search box because the count is only
-                    known once the search has come back.
+    return (
+      <>
+        {/* Adds this search to the session's numbered history. Here
+            rather than beside the search box because the count is only
+            known once the search has come back.
 
-                    Without a count while a facet is ticked: a set is the query
-                    it expands to, and the facet is not part of it, so a count
-                    narrowed by one is not the set's. The count it already has
-                    stands. */}
-                <RecordSearch
-                  query={query}
-                  {...(filtersNarrow(searchParamsObj.filters ?? {})
-                    ? {}
-                    : { total: matching.count, atLeast: matching.basis !== 'exact' })}
-                />
+            Without a count while a facet is ticked: a set is the query
+            it expands to, and the facet is not part of it, so a count
+            narrowed by one is not the set's. The count it already has
+            stands. */}
+        <RecordSearch
+          query={query}
+          {...(filtersNarrow(searchParamsObj.filters ?? {})
+            ? {}
+            : { total: matching.count, atLeast: matching.basis !== 'exact' })}
+        />
 
-                {/* Results Header */}
-                <div className="border-b pb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-baseline gap-3">
-                      <h1 className="text-xl font-semibold">{query}</h1>
-                      <span
-                        className="text-sm text-muted-foreground"
-                        title={matchingNote(matching)}
-                      >
-                        {totalLabel(matching)}
-                      </span>
-                    </div>
-                    <ExportButton 
-                      results={results.papers} 
-                      query={query} 
-                      totalResults={results.total}
-                      currentPage={currentPage}
-                      pageSize={pageSize}
-                    />
-                  </div>
-                </div>
-
-                {results.providers.length > 0 && (
-                  <ProviderCoverage
-                    providers={results.providers}
-                    complete={results.complete}
-                    bounded={results.bounded}
-                  />
-                )}
-
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                  {/* Facets */}
-                  <div className="lg:col-span-1">
-                    <FacetPanel facets={results.facets} />
-                  </div>
-
-                  {/* Results */}
-                  <div className="lg:col-span-3 space-y-6">
-                    <SortBar />
-                    <PaginatedResults
-                      results={results.papers}
-                      total={results.total}
-                      matching={countLabel(matching)}
-                      page={currentPage}
-                      pageSize={pageSize}
-                    />
-                  </div>
-                </div>
+        {/* The filters in a column on the left and the list beside them, as
+            OpenAlex lays out a search. The column comes second in the source
+            on purpose: on a phone the grid is one column, and a reader who
+            searched wants the count and the first results before ten
+            groups of checkboxes. */}
+        <div className="grid grid-cols-1 gap-x-10 gap-y-8 lg:grid-cols-[15rem_minmax(0,1fr)]">
+          <div className="min-w-0 lg:col-start-2 lg:row-start-1">
+            {/* Results Header */}
+            <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+              <div className="min-w-0">
+                <h1 className="break-words text-2xl font-bold tracking-tight">{query}</h1>
+                <p
+                  className="mt-1 text-sm text-muted-foreground"
+                  title={matchingNote(matching)}
+                >
+                  {totalLabel(matching)}
+                </p>
               </div>
-            );
+              <ExportButton
+                results={results.papers}
+                query={query}
+                totalResults={results.total}
+                currentPage={currentPage}
+                pageSize={pageSize}
+              />
+            </div>
+
+            {results.providers.length > 0 && (
+              <div className="mt-5">
+                <ProviderCoverage
+                  providers={results.providers}
+                  complete={results.complete}
+                  bounded={results.bounded}
+                />
+              </div>
+            )}
+
+            <div className="mt-5">
+              <SortBar />
+              <PaginatedResults
+                results={results.papers}
+                total={results.total}
+                matching={countLabel(matching)}
+                page={currentPage}
+                pageSize={pageSize}
+              />
+            </div>
+          </div>
+
+          {/* Facets */}
+          <aside className="min-w-0 lg:col-start-1 lg:row-start-1">
+            <FacetPanel facets={results.facets} />
+          </aside>
+        </div>
+      </>
+    );
   } catch (error) {
     /**
      * One panel used to cover every failure here, so a stale bookmark, a rate
@@ -208,14 +214,18 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
   const query = (params.q as string) || '';
   
   return (
-    <div className="space-y-8">
-      <Suspense fallback={<div className="h-14 bg-muted/20 rounded-lg animate-pulse" />}>
-        <SearchWithHistory initialQuery={query} />
-      </Suspense>
-      
-      <Suspense key={searchKey} fallback={<LoadingSkeleton />}>
-        <ResultsContent searchParams={params} />
-      </Suspense>
+    <div className="mx-auto max-w-6xl px-4 pt-6 sm:px-6">
+      <div className="max-w-3xl">
+        <Suspense fallback={<div className="h-11 animate-pulse rounded-lg border bg-muted/40" />}>
+          <SearchWithHistory initialQuery={query} />
+        </Suspense>
+      </div>
+
+      <div className="mt-8">
+        <Suspense key={searchKey} fallback={<LoadingSkeleton />}>
+          <ResultsContent searchParams={params} />
+        </Suspense>
+      </div>
     </div>
   );
 }

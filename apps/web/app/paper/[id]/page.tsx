@@ -8,10 +8,35 @@ import { PaperAbstract } from '@/components/paper/PaperAbstract';
 import { PaperActions } from '@/components/paper/PaperActions';
 import { PaperCitations } from '@/components/paper/PaperCitations';
 import { RelatedPapers } from '@/components/paper/RelatedPapers';
-import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { cachePaper, getCachedPaper } from '@/lib/paper-cache';
 import { getPaper } from '@/lib/fetcher';
 import type { Paper } from '@open-access-explorer/shared';
+
+/**
+ * The page's shape while the record loads: a type line, a title, a byline,
+ * and the abstract beside the actions column — so the record lands in place.
+ */
+function PaperSkeleton() {
+  return (
+    <div className="animate-pulse" role="status" aria-label="Loading">
+      <div className="space-y-4 border-b pb-8">
+        <div className="h-3 w-28 rounded bg-muted" />
+        <div className="h-9 w-4/5 rounded bg-muted" />
+        <div className="h-9 w-3/5 rounded bg-muted" />
+        <div className="h-4 w-2/3 rounded bg-muted" />
+      </div>
+      <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="space-y-3">
+          <div className="h-5 w-24 rounded bg-muted" />
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-4 rounded bg-muted" style={{ width: `${95 - i * 7}%` }} />
+          ))}
+        </div>
+        <div className="h-48 rounded-lg border bg-subtle" />
+      </div>
+    </div>
+  );
+}
 
 function PaperContent() {
   const params = useParams();
@@ -77,14 +102,14 @@ function PaperContent() {
   }, [encodedId]);
 
   if (loading) {
-    return <LoadingSkeleton />;
+    return <PaperSkeleton />;
   }
 
   if (error || !paper) {
     return (
-      <div className="text-center py-12">
-        <h3 className="text-lg font-semibold mb-2">Paper Not Found</h3>
-        <p className="text-muted-foreground">
+      <div className="py-16 text-center">
+        <h3 className="mb-1 text-lg font-semibold">Paper Not Found</h3>
+        <p className="text-sm text-muted-foreground">
           The paper you&rsquo;re looking for could not be found.
         </p>
       </div>
@@ -92,13 +117,13 @@ function PaperContent() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <article>
       {/* Paper Header with Title and Basic Info */}
       <PaperHeader paper={paper} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 mt-8">
-        {/* Main Content Area (3 columns) */}
-        <div className="lg:col-span-3">
+      <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-14">
+        {/* Main Content Area */}
+        <div className="min-w-0 space-y-10">
           {/* Abstract */}
           <PaperAbstract abstract={paper.abstract} />
 
@@ -115,22 +140,24 @@ function PaperContent() {
           <RelatedPapers topics={paper.topics} />
         </div>
 
-        {/* Sidebar (1 column) */}
-        <div className="lg:col-span-1 space-y-8">
+        {/* Sidebar */}
+        <aside className="space-y-6">
           {/* Actions (Download, Cite, Save) */}
-          <PaperActions paper={paper} />
+          <div className="rounded-lg border bg-card p-4">
+            <PaperActions paper={paper} />
+          </div>
 
           {/* Metadata */}
           <PaperMetadata paper={paper} />
-        </div>
+        </aside>
       </div>
-    </div>
+    </article>
   );
 }
 
 export default function PaperPage() {
   return (
-    <div className="container mx-auto px-6 py-12">
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <PaperContent />
     </div>
   );

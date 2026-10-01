@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AdvancedSearchBar } from '@/components/AdvancedSearchBar';
 import { SearchHistory } from '@/components/SearchHistory';
 
@@ -22,6 +22,23 @@ export function SearchWithHistory({ initialQuery }: { initialQuery: string }) {
   const [draft, setDraft] = useState(initialQuery);
 
   /**
+   * The box follows the URL.
+   *
+   * `initialQuery` is the query the page is showing results for, and it changes
+   * without anything being typed: the back button, a shared link opened in
+   * place, a restored history entry. `AdvancedSearchBar` already re-syncs from
+   * what it is handed — but it is handed `draft`, so holding the initial value
+   * here and never updating it swallowed that, and the box went on describing
+   * the previous search while the results underneath described the new one.
+   *
+   * Keyed on the prop alone, so a re-render for any other reason does not drag
+   * the box back over something half-typed.
+   */
+  useEffect(() => {
+    setDraft(initialQuery);
+  }, [initialQuery]);
+
+  /**
    * Appended rather than replacing what is there, because inserting a set is
    * almost always the middle of writing a combination — the reader has `#1 AND`
    * and wants `#2` after it. Text that does not already end in an operator gets
@@ -39,8 +56,8 @@ export function SearchWithHistory({ initialQuery }: { initialQuery: string }) {
   };
 
   return (
-    <div className="space-y-3">
-      <AdvancedSearchBar initialQuery={draft} onQueryChange={setDraft} />
+    <div className="space-y-2">
+      <AdvancedSearchBar initialQuery={draft} onQueryChange={setDraft} variant="compact" />
       <SearchHistory onInsert={insert} />
     </div>
   );

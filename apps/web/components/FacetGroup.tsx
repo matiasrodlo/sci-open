@@ -58,11 +58,11 @@ export function FacetGroup({
   const headingId = `facet-${param}-heading`;
 
   return (
-    <div role="group" aria-labelledby={headingId}>
-      <h3 id={headingId} className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
+    <div role="group" aria-labelledby={headingId} className="border-t pt-4">
+      <h3 id={headingId} className="mb-2.5 text-[13px] font-semibold text-foreground">
         {title}
       </h3>
-      <div className="space-y-2">
+      <div className="space-y-0.5">
         {options.map(option => {
           const checked = selected.includes(option.value);
           // The value goes through `encodeURIComponent` because it lands in a
@@ -70,7 +70,10 @@ export function FacetGroup({
           const id = `${param}-${encodeURIComponent(option.value)}`;
 
           return (
-            <div key={option.value} className="flex items-center space-x-2">
+            <div
+              key={option.value}
+              className="-mx-1.5 flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors hover:bg-accent"
+            >
               <Checkbox
                 id={id}
                 checked={checked}
@@ -85,13 +88,13 @@ export function FacetGroup({
               />
               <label
                 htmlFor={id}
-                className={`text-sm leading-none flex-1 cursor-pointer ${truncate ? 'truncate' : ''}`}
+                className={`min-w-0 flex-1 cursor-pointer text-[13px] leading-5 ${checked ? 'font-medium text-foreground' : 'text-foreground/85'} ${truncate ? 'truncate' : ''}`}
                 {...(truncate ? { title: option.label ?? option.value } : {})}
               >
                 {option.label ?? option.value}
               </label>
               <span
-                className="text-xs text-muted-foreground tabular-nums"
+                className="shrink-0 text-xs tabular-nums text-muted-foreground"
                 {...(option.from ? { title: sourceCountNote(option.from) } : {})}
               >
                 {option.count.toLocaleString()}

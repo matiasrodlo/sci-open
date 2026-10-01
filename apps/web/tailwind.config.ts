@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss'
+import defaultTheme from 'tailwindcss/defaultTheme'
 
 const config: Config = {
   // Was unset, so no `dark:` variant was generated at all and the complete
@@ -12,6 +13,10 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        // Inter, loaded by `next/font` in the root layout under this variable.
+        sans: ['var(--font-sans)', ...defaultTheme.fontFamily.sans],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -46,6 +51,11 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // The role colours. See the palette note in globals.css.
+        subtle: "hsl(var(--subtle))",
+        link: "hsl(var(--link))",
+        author: "hsl(var(--author))",
+        venue: "hsl(var(--venue))",
       },
       borderRadius: {
         lg: "var(--radius)",

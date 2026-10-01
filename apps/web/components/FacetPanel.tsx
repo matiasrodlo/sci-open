@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
+import { SlidersHorizontal } from 'lucide-react';
 import { FacetGroup, type FacetOption } from '@/components/FacetGroup';
 import { withFilter } from '@/lib/search-params';
 import { providerLabel } from '@/lib/provider-labels';
@@ -119,7 +120,12 @@ export function FacetPanel({ facets }: FacetPanelProps) {
   };
 
   return (
-    <div className="space-y-6" role="region" aria-label="Filter results">
+    <div className="space-y-4" role="region" aria-label="Filter results">
+      <h2 className="flex items-center gap-2 text-sm font-semibold">
+        <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+        Filters
+      </h2>
+
       <FacetGroup
         title="Publication Type"
         param="publicationType"

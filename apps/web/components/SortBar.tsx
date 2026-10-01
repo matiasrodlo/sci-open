@@ -90,21 +90,21 @@ export function SortBar() {
   const currentLabel = [...PRIMARY, ...ADDITIONAL].find(o => o.value === currentSort)?.label ?? 'Relevance';
 
   return (
-    <div className="flex items-center gap-3 pb-4 border-b">
-      <span id="sort-label" className="text-xs text-muted-foreground uppercase tracking-wide">
-        Sort:
+    <div className="flex items-center gap-3 border-b pb-3">
+      <span id="sort-label" className="shrink-0 text-[13px] text-muted-foreground">
+        Sort by
       </span>
-      <div className="flex gap-2" role="group" aria-labelledby="sort-label">
+      <div className="flex flex-wrap gap-1" role="group" aria-labelledby="sort-label">
         {PRIMARY.map(option => (
           <button
             key={option.value}
             type="button"
             onClick={() => updateSort(option.value)}
             aria-pressed={currentSort === option.value}
-            className={`text-sm px-3 py-1 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+            className={`rounded-md px-2.5 py-1 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
               currentSort === option.value
                 ? 'bg-foreground text-background'
-                : 'text-muted-foreground hover:text-foreground'
+                : 'text-muted-foreground hover:bg-accent hover:text-foreground'
             }`}
           >
             {option.label}
@@ -119,11 +119,13 @@ export function SortBar() {
             aria-haspopup="menu"
             aria-expanded={open}
             aria-label={`More sort options, currently sorted by ${currentLabel}`}
-            className={`text-sm px-3 py-1 rounded transition-colors flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-              inDropdown ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'
+            className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              inDropdown ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
             }`}
           >
-            More
+            {/* The chosen option by name when it is one of these, or the
+                pill that lights up says only "More". */}
+            {inDropdown ? currentLabel : 'More'}
             <ChevronDown className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
           </button>
 
@@ -132,7 +134,7 @@ export function SortBar() {
               ref={panelRef}
               role="menu"
               aria-label="More sort options"
-              className="absolute top-full left-0 mt-1 bg-background border border-border rounded-md shadow-lg z-50 min-w-[200px] py-1"
+              className="absolute left-0 top-full z-50 mt-1 min-w-[200px] rounded-lg border bg-popover py-1 shadow-lg shadow-black/5"
             >
               {ADDITIONAL.map(option => (
                 <button
@@ -141,13 +143,13 @@ export function SortBar() {
                   role="menuitemradio"
                   aria-checked={currentSort === option.value}
                   onClick={() => updateSort(option.value)}
-                  className={`w-full text-left text-sm px-3 py-2 transition-colors flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${
+                  className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${
                     currentSort === option.value
-                      ? 'bg-foreground text-background'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                      ? 'bg-accent font-medium text-foreground'
+                      : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                   }`}
                 >
-                  <option.icon className="w-4 h-4" aria-hidden="true" />
+                  <option.icon className="h-3.5 w-3.5" aria-hidden="true" />
                   {option.label}
                 </button>
               ))}

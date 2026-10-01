@@ -9,10 +9,12 @@ interface EmptyStateProps {
 export function EmptyState({ type, onNewSearch }: EmptyStateProps) {
   if (type === 'no-query') {
     return (
-      <div className="text-center py-12">
-        <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <h3 className="text-lg font-semibold mb-2">Start your search</h3>
-        <p className="text-muted-foreground mb-4">
+      <div className="py-16 text-center">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+          <Search className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+        </div>
+        <h3 className="mb-1 text-lg font-semibold">Start your search</h3>
+        <p className="mb-4 text-sm text-muted-foreground">
           Enter a DOI, title, or keywords to find open-access research papers
         </p>
         {onNewSearch && (
@@ -25,10 +27,12 @@ export function EmptyState({ type, onNewSearch }: EmptyStateProps) {
   }
 
   return (
-    <div className="text-center py-12">
-      <FileX className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-      <h3 className="text-lg font-semibold mb-2">No results found</h3>
-      <p className="text-muted-foreground mb-4">
+    <div className="py-16 text-center">
+      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+        <FileX className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+      </div>
+      <h3 className="mb-1 text-lg font-semibold">No results found</h3>
+      <p className="mb-4 text-sm text-muted-foreground">
         Try adjusting your search terms or filters to find more papers
       </p>
       {onNewSearch && (

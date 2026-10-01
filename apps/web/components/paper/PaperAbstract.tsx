@@ -12,12 +12,12 @@ export function PaperAbstract({ abstract }: PaperAbstractProps) {
   
   if (!abstract) {
     return (
-      <div className="border-t pt-6 mt-6">
-        <h2 className="text-lg font-semibold mb-4">Abstract</h2>
-        <p className="text-sm text-muted-foreground italic">
+      <section>
+        <h2 className="mb-3 text-lg font-semibold tracking-tight">Abstract</h2>
+        <p className="text-sm italic text-muted-foreground">
           No abstract available for this paper.
         </p>
-      </div>
+      </section>
     );
   }
 
@@ -27,17 +27,17 @@ export function PaperAbstract({ abstract }: PaperAbstractProps) {
     : abstract.slice(0, 500) + '...';
 
   return (
-    <div className="border-t pt-6 mt-6">
-      <h2 className="text-lg font-semibold mb-4">Abstract</h2>
-      <div className="space-y-4">
-        <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-line">
+    <section>
+      <h2 className="mb-3 text-lg font-semibold tracking-tight">Abstract</h2>
+      <div className="space-y-3">
+        <p className="max-w-[70ch] whitespace-pre-line text-[15px] leading-7 text-foreground/85">
           {displayText}
         </p>
         
         {isLongAbstract && (
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors"
+            className="inline-flex items-center gap-1 text-sm font-medium text-link hover:underline"
           >
             {isExpanded ? (
               <>
@@ -53,7 +53,7 @@ export function PaperAbstract({ abstract }: PaperAbstractProps) {
           </button>
         )}
       </div>
-    </div>
+    </section>
   );
 }
 

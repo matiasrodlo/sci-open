@@ -11,21 +11,21 @@ export function PaperMetadata({ paper }: PaperMetadataProps) {
   const sources = foundIn(paper);
 
   return (
-    <div className="space-y-6">
-      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+    <div className="rounded-lg border bg-subtle p-4">
+      <h3 className="text-[13px] font-semibold">
         Publication Details
       </h3>
-      <div className="space-y-4 text-sm">
+      <div className="mt-4 space-y-4 text-sm">
 
         {/* DOI */}
         {paper.doi && (
           <div>
-            <div className="text-xs text-muted-foreground mb-1">DOI</div>
+            <div className="mb-0.5 text-xs text-muted-foreground">DOI</div>
             <a 
               href={`https://doi.org/${paper.doi}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-primary hover:underline break-all"
+              className="break-all font-mono text-[13px] text-link hover:underline"
             >
               {paper.doi}
             </a>
@@ -35,7 +35,7 @@ export function PaperMetadata({ paper }: PaperMetadataProps) {
         {/* Publication Year */}
         {paper.year && (
           <div>
-            <div className="text-xs text-muted-foreground mb-1">Publication Year</div>
+            <div className="mb-0.5 text-xs text-muted-foreground">Publication Year</div>
             <div className="text-sm text-foreground">{paper.year}</div>
           </div>
         )}
@@ -43,7 +43,7 @@ export function PaperMetadata({ paper }: PaperMetadataProps) {
         {/* Language */}
         {paper.language && paper.language !== 'en' && (
           <div>
-            <div className="text-xs text-muted-foreground mb-1">Language</div>
+            <div className="mb-0.5 text-xs text-muted-foreground">Language</div>
             <div className="text-sm text-foreground capitalize">{paper.language}</div>
           </div>
         )}
@@ -52,7 +52,7 @@ export function PaperMetadata({ paper }: PaperMetadataProps) {
             or `preprint`: the version, under the route's name. */}
         {stage && (
           <div>
-            <div className="text-xs text-muted-foreground mb-1">Version</div>
+            <div className="mb-0.5 text-xs text-muted-foreground">Version</div>
             <div className="text-sm text-foreground">{stage}</div>
           </div>
         )}
@@ -60,7 +60,7 @@ export function PaperMetadata({ paper }: PaperMetadataProps) {
         {/* Open-access route */}
         {route && (
           <div>
-            <div className="text-xs text-muted-foreground mb-1">Open Access</div>
+            <div className="mb-0.5 text-xs text-muted-foreground">Open Access</div>
             <div className="text-sm text-foreground">{route.label}</div>
             <div className="text-xs text-muted-foreground">{route.note}</div>
           </div>
@@ -69,7 +69,7 @@ export function PaperMetadata({ paper }: PaperMetadataProps) {
         {/* The copy, and whether anyone has looked at it */}
         {paper.fullText && (
           <div>
-            <div className="text-xs text-muted-foreground mb-1">Full Text</div>
+            <div className="mb-0.5 text-xs text-muted-foreground">Full Text</div>
             <div className="text-sm text-foreground">{copyNote(paper.fullText)}</div>
           </div>
         )}
@@ -79,7 +79,7 @@ export function PaperMetadata({ paper }: PaperMetadataProps) {
             provider the id belongs to, and replaces it with that. */}
         {sources.length > 0 && (
           <div>
-            <div className="text-xs text-muted-foreground mb-1">Record From</div>
+            <div className="mb-0.5 text-xs text-muted-foreground">Record From</div>
             <div className="text-sm text-foreground">{sources.join(', ')}</div>
           </div>
         )}

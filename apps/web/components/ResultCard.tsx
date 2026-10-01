@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, ExternalLink, Eye, FileText, Quote } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import type { Paper } from '@open-access-explorer/shared';
+import { ExternalLink, FileCheck, FileText, FlaskConical } from 'lucide-react';
+import type { Paper, PaperStage } from '@open-access-explorer/shared';
 import { accessRoute, copyLabel, copyNote, foundIn, notableStage } from '@/lib/access';
 import { openExternal } from '@/lib/external-link';
 import { cachePaper } from '@/lib/paper-cache';
 import Link from 'next/link';
+import { Byline } from '@/components/Byline';
 
 interface ResultCardProps {
   record: Paper;
@@ -15,6 +15,22 @@ interface ResultCardProps {
 
 /** Sources named on a card before the rest are counted instead. */
 const SOURCES_SHOWN = 3;
+
+/** Authors named on a card before the rest are "et al.". */
+const AUTHORS_SHOWN = 3;
+
+/**
+ * The glyph in the margin, which OpenAlex uses for a work's type. The type a
+ * record here carries reliably is its version, so that is what it shows — a
+ * flask for a preprint, a ticked page for an accepted manuscript, a plain one
+ * for everything else.
+ */
+const STAGE_ICONS: Record<PaperStage, typeof FileText> = {
+  preprint: FlaskConical,
+  accepted: FileCheck,
+  published: FileText,
+  unknown: FileText
+};
 
 export function ResultCard({ record }: ResultCardProps) {
   const [doiCopied, setDoiCopied] = useState(false);
@@ -63,157 +79,122 @@ export function ResultCard({ record }: ResultCardProps) {
     setDownloadError(openExternal(copy?.url) ? null : 'This copy’s link could not be opened');
   };
 
-  return (
-    <article className="group py-6 border-b last:border-b-0">
-      <div className="space-y-3">
-        {/* Title */}
-        <div className="flex items-start justify-between gap-4">
-          <Link 
-            href={`/paper/${encodeURIComponent(record.id)}`} 
-            onClick={handlePaperClick} 
-            className="flex-1"
-          >
-            <h3 className="text-base font-semibold leading-tight group-hover:text-primary transition-colors cursor-pointer">
-              {record.title}
-            </h3>
-          </Link>
-        </div>
-        
-        {/* Authors */}
-        {record.authors && record.authors.length > 0 && (
-          <div className="text-sm text-foreground">
-            {record.authors.slice(0, 3).join('; ')}
-            {record.authors.length > 3 && (
-              <span className="text-muted-foreground"> et al.</span>
-            )}
-          </div>
-        )}
-        
-        {/* Venue, Year, and Citations */}
-        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          {record.venue && (
-            <span className="italic">{record.venue}</span>
-          )}
-          {record.year && (
-            <span>({record.year})</span>
-          )}
-          {record.citationCount !== undefined && record.citationCount > 0 && (
-            <div className="flex items-center gap-1">
-              <Quote className="h-3 w-3" aria-hidden="true" />
-              <span>{record.citationCount.toLocaleString()}</span>
-            </div>
-          )}
-          {record.doi && (
-            <span className="font-mono text-xs">DOI</span>
-          )}
-        </div>
+  const StageIcon = STAGE_ICONS[record.stage] ?? FileText;
 
-        {/* How it is open, which version it is, and who returned it: what
-            the paper carries beyond the one source version 1 kept. */}
-        {(route || stage || sources.length > 0) && (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+  return (
+    <article className="flex gap-3 border-b py-5 last:border-b-0">
+      <StageIcon className="mt-[3px] h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+
+      <div className="min-w-0 flex-1">
+        {/* How it is open and which version it is, where the type sits on an
+            OpenAlex list. Uppercased by CSS, so the words are still the
+            words: "Gold OA", "Preprint". */}
+        {(route || stage) && (
+          <div className="mb-1 flex flex-wrap items-center gap-x-1.5 text-[11px] font-medium uppercase leading-4 tracking-wider text-muted-foreground">
             {route && (
-              <span className="font-medium text-green-700 dark:text-green-400" title={route.note}>
+              <span className="text-green-700 dark:text-green-400" title={route.note}>
                 {route.label}
               </span>
             )}
-            {stage && <span className="font-medium">{stage}</span>}
-            {sources.length > 0 && (
-              <span title={sources.join(', ')}>
-                Found in {sources.slice(0, SOURCES_SHOWN).join(', ')}
-                {sources.length > SOURCES_SHOWN && ` +${sources.length - SOURCES_SHOWN}`}
-              </span>
-            )}
+            {route && stage && <span aria-hidden="true">·</span>}
+            {stage && <span>{stage}</span>}
           </div>
         )}
-        
-        {/* Abstract */}
+
+        <div className="flex items-start justify-between gap-4">
+          <h3 className="min-w-0 text-base leading-snug">
+            <Link
+              href={`/paper/${encodeURIComponent(record.id)}`}
+              onClick={handlePaperClick}
+              className="text-link hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+            >
+              {record.title}
+            </Link>
+          </h3>
+
+          {/* The copy, as the outlined badge OpenAlex gives a PDF. */}
+          {copy && (
+            <button
+              type="button"
+              onClick={handleOpenCopy}
+              className="shrink-0 rounded-md border border-foreground/80 px-2 py-0.5 text-[13px] font-semibold leading-5 transition-colors hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              aria-label={`Open the ${copy.kind === 'pdf' ? 'PDF' : 'full text'} of ${record.title} in a new tab`}
+              title={copyNote(copy)}
+            >
+              {copyLabel(copy)}
+            </button>
+          )}
+        </div>
+
+        <p className="mt-1 text-sm leading-relaxed text-foreground/80 empty:hidden">
+          <Byline year={record.year} authors={record.authors ?? []} venue={record.venue} shown={AUTHORS_SHOWN} />
+        </p>
+
         {record.abstract && (
-          <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
             {record.abstract}
           </p>
         )}
-        
-        {/* Topics */}
+
+        {/* What the record carries beyond its byline: how often it is cited,
+            who returned it, and the two things a reader takes away from a
+            list — the publisher's page and the DOI. */}
+        <div
+          className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground"
+          role="group"
+          aria-label={`Actions for ${record.title}`}
+        >
+          {record.citationCount !== undefined && record.citationCount > 0 && (
+            <span>Cited by {record.citationCount.toLocaleString()}</span>
+          )}
+          {sources.length > 0 && (
+            <span title={sources.join(', ')}>
+              Found in {sources.slice(0, SOURCES_SHOWN).join(', ')}
+              {sources.length > SOURCES_SHOWN && ` +${sources.length - SOURCES_SHOWN}`}
+            </span>
+          )}
+          {record.landingPage && (
+            <button
+              type="button"
+              onClick={() => openExternal(record.landingPage)}
+              className="inline-flex items-center gap-1 rounded-sm font-medium text-foreground/80 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={`Open the publisher page for ${record.title} in a new tab`}
+            >
+              Source
+              <ExternalLink className="h-3 w-3" aria-hidden="true" />
+            </button>
+          )}
+          {record.doi && (
+            <button
+              type="button"
+              onClick={handleCopyDOI}
+              className="rounded-sm font-mono font-medium text-foreground/80 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={`Copy the DOI of ${record.title}`}
+              title={doiCopied ? 'DOI copied to clipboard!' : `Copy ${record.doi}`}
+            >
+              <span aria-live="polite">{doiCopied ? 'Copied!' : 'DOI'}</span>
+            </button>
+          )}
+        </div>
+
         {record.topics && record.topics.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
             {record.topics.slice(0, 4).map((topic, index) => (
-              <span
-                key={index}
-                className="text-xs px-2 py-1 bg-muted/50 text-muted-foreground rounded"
-              >
+              <span key={index} className="rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
                 {topic}
               </span>
             ))}
             {record.topics.length > 4 && (
-              <span className="text-xs px-2 py-1 text-muted-foreground">
+              <span className="px-1 py-0.5 text-xs text-muted-foreground">
                 +{record.topics.length - 4}
               </span>
             )}
           </div>
         )}
-        
-        {/* Error Message */}
+
         {downloadError && (
-          <p className="text-xs text-destructive" role="alert">{downloadError}</p>
+          <p className="mt-2 text-xs text-destructive" role="alert">{downloadError}</p>
         )}
-        
-        {/* Actions */}
-        <div className="flex items-center gap-3 pt-2" role="group" aria-label={`Actions for ${record.title}`}>
-          <Link href={`/paper/${encodeURIComponent(record.id)}`} onClick={handlePaperClick}>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 text-xs hover:bg-muted"
-              aria-label={`Details for ${record.title}`}
-            >
-              <Eye className="h-3 w-3 mr-1.5" aria-hidden="true" />
-              Details
-            </Button>
-          </Link>
-          
-          {copy && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleOpenCopy}
-              className="h-8 text-xs hover:bg-muted"
-              aria-label={`Open the ${copy.kind === 'pdf' ? 'PDF' : 'full text'} of ${record.title} in a new tab`}
-              title={copyNote(copy)}
-            >
-              {copy.kind === 'pdf'
-                ? <Download className="h-3 w-3 mr-1.5" aria-hidden="true" />
-                : <FileText className="h-3 w-3 mr-1.5" aria-hidden="true" />}
-              {copyLabel(copy)}
-            </Button>
-          )}
-          
-          {record.landingPage && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => openExternal(record.landingPage)}
-              className="h-8 text-xs hover:bg-muted"
-              aria-label={`Open the publisher page for ${record.title} in a new tab`}
-            >
-              <ExternalLink className="h-3 w-3 mr-1.5" aria-hidden="true" />
-              Source
-            </Button>
-          )}
-          
-          {record.doi && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCopyDOI}
-              className="h-8 text-xs hover:bg-muted font-mono"
-              aria-label={`Copy the DOI of ${record.title}`}
-              title={doiCopied ? 'DOI copied to clipboard!' : 'Click to copy DOI'}
-            >
-              <span aria-live="polite">{doiCopied ? 'Copied!' : 'DOI'}</span>
-            </Button>
-          )}
-        </div>
       </div>
     </article>
   );

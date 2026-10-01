@@ -26,13 +26,13 @@ export function PaperCitations({ citationCount, doi }: PaperCitationsProps) {
   };
 
   return (
-    <div className="border-t pt-6 mt-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Citations</h2>
+    <section>
+      <div className="mb-3 flex items-center justify-between gap-4">
+        <h2 className="text-lg font-semibold tracking-tight">Citations</h2>
         {doi && (
           <button
             onClick={handleViewCitations}
-            className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors"
+            className="inline-flex items-center gap-1 text-sm font-medium text-link hover:underline"
           >
             View on Google Scholar
             <ExternalLink className="h-3.5 w-3.5" />
@@ -40,13 +40,13 @@ export function PaperCitations({ citationCount, doi }: PaperCitationsProps) {
         )}
       </div>
       
-      <div className="inline-flex items-center gap-2 text-sm">
-        <span className="text-2xl font-semibold">{citationCount}</span>
+      <div className="inline-flex items-baseline gap-2 text-sm">
+        <span className="text-4xl font-bold tracking-tight">{citationCount}</span>
         <span className="text-muted-foreground">
           {citationCount === 1 ? 'citation' : 'citations'}
         </span>
       </div>
-    </div>
+    </section>
   );
 }
 

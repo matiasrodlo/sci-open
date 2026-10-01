@@ -30,8 +30,8 @@ export function RelatedPapers({ topics }: RelatedPapersProps) {
   }
 
   return (
-    <section className="border-t pt-6 mt-6" aria-labelledby="related-topics-heading">
-      <h2 id="related-topics-heading" className="text-lg font-semibold mb-1">
+    <section aria-labelledby="related-topics-heading">
+      <h2 id="related-topics-heading" className="mb-1 text-lg font-semibold tracking-tight">
         Related topics
       </h2>
       <p className="text-sm text-muted-foreground mb-4">
@@ -42,7 +42,7 @@ export function RelatedPapers({ topics }: RelatedPapersProps) {
           <li key={topic}>
             <Link
               href={`/results?q=${encodeURIComponent(topic)}`}
-              className="inline-block rounded-full border px-3 py-1 text-sm text-muted-foreground transition-colors hover:border-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-block rounded-md border bg-card px-2.5 py-1 text-[13px] text-foreground/85 transition-colors hover:border-foreground/60 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {topic}
             </Link>

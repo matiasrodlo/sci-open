@@ -1,7 +1,7 @@
 import type { Paper } from '@open-access-explorer/shared';
-import { ExternalLink, Quote } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { ExternalLink } from 'lucide-react';
 import Link from 'next/link';
+import { Byline } from '@/components/Byline';
 import { externalHref } from '@/lib/external-link';
 import { accessRoute, landingLabel, notableStage } from '@/lib/access';
 
@@ -9,115 +9,74 @@ interface PaperHeaderProps {
   paper: Paper;
 }
 
+/** Authors named in the header before the rest are "et al.". */
+const AUTHORS_SHOWN = 10;
+
 export function PaperHeader({ paper }: PaperHeaderProps) {
   const route = accessRoute(paper.oaStatus);
   const stage = notableStage(paper.stage);
   const landingPage = externalHref(paper.landingPage);
 
   return (
-    <div className="bg-card border-b pb-8 space-y-5">
-      {/* How it is open, which version it is, and the DOI. The first badge
-          read "Open Access" whenever the record had a version, because
-          version 1 kept the version in the field named for the route. */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {route && (
-          <Badge
-            variant="outline"
-            className="text-xs font-medium border-green-500/20 text-green-700 dark:text-green-400"
-            title={route.note}
-          >
-            {route.label}
-          </Badge>
-        )}
-        {stage && (
-          <Badge variant="outline" className="text-xs font-medium border-muted-foreground/20">
-            {stage}
-          </Badge>
-        )}
-        {paper.doi && (
-          <Badge variant="outline" className="font-mono text-xs border-muted-foreground/20 text-muted-foreground">
-            {paper.doi}
-          </Badge>
-        )}
-      </div>
+    <header className="space-y-4 border-b pb-8">
+      {/* How it is open and which version it is, above the title where
+          OpenAlex names a work's type. The first of these read "Open Access"
+          whenever the record had a version, because version 1 kept the
+          version in the field named for the route. */}
+      {(route || stage) && (
+        <div className="flex flex-wrap items-center gap-x-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          {route && (
+            <span className="text-green-700 dark:text-green-400" title={route.note}>
+              {route.label}
+            </span>
+          )}
+          {route && stage && <span aria-hidden="true">·</span>}
+          {stage && <span>{stage}</span>}
+        </div>
+      )}
 
-      {/* Title */}
-      <h1 className="text-3xl md:text-4xl font-semibold leading-tight text-foreground tracking-tight">
+      <h1 className="text-3xl font-bold leading-tight tracking-[-0.02em] text-foreground md:text-4xl">
         {paper.title}
       </h1>
 
-      {/* Authors */}
-      {paper.authors && paper.authors.length > 0 && (
-        <div className="text-base text-foreground">
-          {paper.authors.slice(0, 10).join('; ')}
-          {paper.authors.length > 10 && <span className="text-muted-foreground"> et al.</span>}
-        </div>
-      )}
+      <p className="text-[15px] leading-relaxed text-foreground/80 empty:hidden">
+        <Byline year={paper.year} authors={paper.authors ?? []} venue={paper.venue} shown={AUTHORS_SHOWN} />
+      </p>
 
-      {/* Venue, Year, and Citations */}
-      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-        {paper.venue && (
-          <span className="italic">{paper.venue}</span>
-        )}
-        {paper.year && (
-          <span className="font-medium">({paper.year})</span>
-        )}
+      {/* The identifiers and counts, as the quiet row under a byline. */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
         {paper.citationCount !== undefined && paper.citationCount > 0 && (
-          <div className="flex items-center gap-1.5">
-            <Quote className="h-4 w-4" />
-            <span className="font-medium">{paper.citationCount.toLocaleString()}</span>
-            <span className="text-xs">
-              {paper.citationCount === 1 ? 'citation' : 'citations'}
-            </span>
-          </div>
+          <span>
+            Cited by <span className="font-semibold text-foreground">{paper.citationCount.toLocaleString()}</span>
+          </span>
+        )}
+        {paper.doi && (
+          <span className="font-mono text-xs">{paper.doi}</span>
         )}
         {paper.language && paper.language !== 'en' && (
-          <Badge variant="outline" className="text-xs border-muted-foreground/20">
+          <span className="rounded-md border px-1.5 py-0.5 text-xs font-medium">
             {paper.language.toUpperCase()}
-          </Badge>
+          </span>
         )}
-      </div>
+        {/* Screened the same way `openExternal` screens a click target: React
+            renders a `javascript:` href with a warning rather than refusing
+            it, and this URL comes from provider metadata.
 
-      {/* Topics/Keywords */}
-      {paper.topics && paper.topics.length > 0 && (
-        <div className="flex flex-wrap gap-2 pt-2">
-          {paper.topics.slice(0, 8).map((topic, idx) => (
-            <span 
-              key={idx} 
-              className="text-xs px-2.5 py-1 bg-muted/50 text-muted-foreground rounded-md"
-            >
-              {topic}
-            </span>
-          ))}
-          {paper.topics.length > 8 && (
-            <span className="text-xs px-2.5 py-1 bg-muted/50 text-muted-foreground rounded-md">
-              +{paper.topics.length - 8} more
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Landing Page Link. Screened the same way `openExternal` screens a
-          click target: React renders a `javascript:` href with a warning rather
-          than refusing it, and this URL comes from provider metadata.
-
-          Named for where it goes. It said "View on" the provider that returned
-          the record, which is often not where the page is: OpenAlex records a
-          DOI link, which leads to the publisher. */}
-      {landingPage && (
-        <div className="pt-2">
-          <Link 
+            Named for where it goes. It said "View on" the provider that
+            returned the record, which is often not where the page is:
+            OpenAlex records a DOI link, which leads to the publisher. */}
+        {landingPage && (
+          <Link
             href={landingPage}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1 text-link hover:underline"
           >
-            <ExternalLink className="h-3.5 w-3.5" />
             {landingLabel(landingPage)}
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </header>
   );
 }
-

@@ -73,10 +73,12 @@ export function SearchError({ failure, problem }: { failure: SearchFailure; prob
   const { icon: Icon, title, detail } = COPY[failure];
 
   return (
-    <div className="text-center py-12" role="alert">
-      <Icon className="h-12 w-12 text-muted-foreground mx-auto mb-4" aria-hidden="true" />
-      <h3 className="text-lg font-semibold mb-2">{title}</h3>
-      <p className="text-muted-foreground mb-4 mx-auto max-w-prose">{detail}</p>
+    <div className="py-16 text-center" role="alert">
+      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+        <Icon className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+      </div>
+      <h3 className="mb-1 text-lg font-semibold">{title}</h3>
+      <p className="mx-auto mb-4 max-w-prose text-sm leading-relaxed text-muted-foreground">{detail}</p>
 
       {/*
         * The parser's own words, where there are any.
@@ -87,7 +89,7 @@ export function SearchError({ failure, problem }: { failure: SearchFailure; prob
         * reader, who is counting characters and not array indices.
         */}
       {problem && (
-        <p className="mb-4 mx-auto max-w-prose font-mono text-sm text-foreground">
+        <p className="mx-auto mb-4 max-w-prose rounded-md bg-muted px-3 py-2 font-mono text-sm text-foreground">
           {problem.message}
           {problem.position !== undefined && (
             <span className="text-muted-foreground"> (at character {problem.position + 1})</span>
@@ -104,7 +106,7 @@ export function SearchError({ failure, problem }: { failure: SearchFailure; prob
       {!isRetryable(failure) && (
         <Link
           href="/"
-          className="text-sm font-medium underline underline-offset-4 hover:text-foreground"
+          className="text-sm font-medium text-link hover:underline"
         >
           Start a new search
         </Link>

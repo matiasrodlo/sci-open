@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { History, Plus } from 'lucide-react';
+import { ChevronDown, History, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { HISTORY_CHANGED, clearHistory, readHistory, type SearchSet } from '@/lib/search-history';
 
@@ -49,19 +49,23 @@ export function SearchHistory({ onInsert }: { onInsert: (reference: string) => v
   if (sets.length === 0) return null;
 
   return (
-    <section className="rounded-lg border bg-card" aria-labelledby="search-history-heading">
-      <div className="flex items-center justify-between px-4 py-2">
+    <section className={open ? 'rounded-lg border bg-card' : ''} aria-labelledby="search-history-heading">
+      <div className={`flex items-center justify-between ${open ? 'px-4 py-2' : ''}`}>
         <button
           type="button"
           onClick={() => setOpen(o => !o)}
-          className="flex items-center gap-2 text-sm font-medium"
+          className="flex items-center gap-1.5 rounded-md text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-expanded={open}
           aria-controls="search-history-list"
         >
-          <History className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <History className="h-3.5 w-3.5" aria-hidden="true" />
           <span id="search-history-heading">
             Search history ({sets.length})
           </span>
+          <ChevronDown
+            className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`}
+            aria-hidden="true"
+          />
         </button>
 
         {open && (
@@ -91,7 +95,7 @@ export function SearchHistory({ onInsert }: { onInsert: (reference: string) => v
                 <button
                   type="button"
                   onClick={() => onInsert(`#${set.number}`)}
-                  className="flex shrink-0 items-center gap-1 rounded border px-2 py-0.5 font-mono text-xs hover:bg-accent"
+                  className="flex shrink-0 items-center gap-1 rounded-md border px-2 py-0.5 font-mono text-xs transition-colors hover:border-foreground/50 hover:bg-accent"
                   aria-label={`Add #${set.number} to the search box`}
                 >
                   <Plus className="h-3 w-3" aria-hidden="true" />#{set.number}

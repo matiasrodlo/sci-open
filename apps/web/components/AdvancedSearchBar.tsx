@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Search } from 'lucide-react';
 import { QueryParseError, expandSets } from '@open-access-explorer/shared';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { readHistory, rememberLabel, setTexts } from '@/lib/search-history';
+import { cn } from '@/lib/utils';
 
 interface AdvancedSearchProps {
   initialQuery?: string;
@@ -20,6 +21,13 @@ interface AdvancedSearchProps {
    * typed since.
    */
   onQueryChange?: (query: string) => void;
+  /**
+   * `hero` is the home page's box: the input on its own line, and beneath it
+   * a toolbar naming the field tags beside the button. `compact` is one row,
+   * for the top of a results page, where the reader has already searched
+   * once and the room is the results'.
+   */
+  variant?: 'hero' | 'compact';
 }
 
 /**
@@ -43,7 +51,7 @@ interface AdvancedSearchProps {
  * could not do at all — its worked example made arXiv answer HTTP 400 and the
  * reader was told nothing.
  */
-export function AdvancedSearchBar({ initialQuery = '', onSearch, onQueryChange }: AdvancedSearchProps) {
+export function AdvancedSearchBar({ initialQuery = '', onSearch, onQueryChange, variant = 'hero' }: AdvancedSearchProps) {
   const router = useRouter();
   const [query, setQuery] = useState(initialQuery);
   /**
@@ -103,27 +111,78 @@ export function AdvancedSearchBar({ initialQuery = '', onSearch, onQueryChange }
     }
   };
 
+  const input = (
+    <input
+      type="search"
+      aria-label="Search open-access papers"
+      placeholder="Search papers, or paste a Web of Science query"
+      value={query}
+      onChange={(e) => {
+        setQuery(e.target.value);
+        // The complaint was about the text that is being replaced. Leaving
+        // it up tells the reader their correction is broken too, before
+        // anything has looked at it.
+        setProblem(undefined);
+        onQueryChange?.(e.target.value);
+      }}
+      onKeyDown={handleKeyDown}
+      className={cn(
+        'w-full min-w-0 bg-transparent text-base text-foreground placeholder:text-muted-foreground focus:outline-none',
+        variant === 'hero' ? 'px-4 pb-2 pt-4' : 'h-11 pl-10 pr-2'
+      )}
+      aria-invalid={problem ? true : undefined}
+      aria-describedby={problem ? 'search-set-problem' : undefined}
+    />
+  );
+
+  const button = (
+    <Button
+      onClick={handleSearch}
+      size="sm"
+      className="gap-1.5 px-3.5"
+      disabled={!query.trim()}
+    >
+      <Search className="h-3.5 w-3.5" aria-hidden="true" />
+      Search
+    </Button>
+  );
+
   return (
-    <div className="w-full space-y-4">
-      <div className="relative">
-        <Search
-          className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground"
-          aria-hidden="true"
-        />
-        <Input
-          type="search"
-          aria-label="Search open-access papers"
-          placeholder="crispr gene editing — or TS=(crispr OR cas9) NOT AU=Doudna"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            onQueryChange?.(e.target.value);
-          }}
-          onKeyDown={handleKeyDown}
-          className="pl-12 h-14 text-base"
-          aria-invalid={problem ? true : undefined}
-          aria-describedby={problem ? 'search-set-problem' : undefined}
-        />
+    <div className="w-full space-y-2">
+      {/* The box draws the focus ring rather than the input inside it, so the
+          ring goes round the button too: they are one control to the eye. */}
+      <div
+        className={cn(
+          'rounded-lg border bg-card transition-shadow focus-within:shadow-[0_0_0_1px_hsl(var(--foreground))]',
+          problem ? 'border-destructive' : 'border-foreground/70'
+        )}
+      >
+        {variant === 'hero' ? (
+          <>
+            {input}
+            <div className="flex items-center justify-between gap-3 px-3 pb-3 pl-4">
+              <p className="min-w-0 truncate text-xs text-muted-foreground">
+                Words, or field tags{' '}
+                <code className="font-mono text-foreground/80">TS=</code>{' '}
+                <code className="font-mono text-foreground/80">AU=</code>{' '}
+                <code className="font-mono text-foreground/80">PY=</code> with AND, OR, NOT ·{' '}
+                <Link href="/#syntax" className="text-link hover:underline">
+                  Syntax
+                </Link>
+              </p>
+              {button}
+            </div>
+          </>
+        ) : (
+          <div className="relative flex items-center gap-2 pr-1.5">
+            <Search
+              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+            {input}
+            {button}
+          </div>
+        )}
       </div>
 
       {problem && (
@@ -131,16 +190,6 @@ export function AdvancedSearchBar({ initialQuery = '', onSearch, onQueryChange }
           {problem}
         </p>
       )}
-
-      <Button
-        onClick={handleSearch}
-        size="lg"
-        className="w-full h-12 text-base font-semibold gap-2"
-        disabled={!query.trim()}
-      >
-        <Search className="h-5 w-5" aria-hidden="true" />
-        Search
-      </Button>
     </div>
   );
 }
