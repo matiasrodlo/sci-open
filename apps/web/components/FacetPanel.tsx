@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronDown, SlidersHorizontal } from 'lucide-react';
 import { FacetGroup, type FacetOption } from '@/components/FacetGroup';
@@ -26,6 +26,12 @@ const PUBLISHER_LABELS: Record<string, string> = {
   'Oxford University Press': 'Oxford UP',
   'Cambridge University Press': 'Cambridge UP'
 };
+
+/**
+ * Where the panel notes the search it is about to open, so it can open again
+ * there. See `setFilter`.
+ */
+const OPEN_FOR = 'facet-panel-open-for';
 
 /** The parameters the groups below write, for counting what is ticked. */
 const PARAMS = ['publicationType', 'year', 'venue', 'publisher', 'topics'] as const;
@@ -68,7 +74,20 @@ export function FacetPanel({ facets }: FacetPanelProps) {
    * five groups cannot disagree about either.
    */
   const setFilter = (param: string, values: string[]) => {
-    router.push(`/results?${withFilter(searchParams, param, values).toString()}`);
+    const next = withFilter(searchParams, param, values).toString();
+    // The results below are a new boundary for every search, so this panel is
+    // mounted afresh by the tick that changed it — and closed, on a phone,
+    // after every one. Ticking three filters meant opening the panel three
+    // times. The search the tick opens is noted, and the panel that mounts
+    // there opens again; any other search starts folded.
+    if (open) {
+      try {
+        sessionStorage.setItem(OPEN_FOR, next);
+      } catch {
+        // Storage refused: the panel folds, as it did.
+      }
+    }
+    router.push(`/results?${next}`);
   };
 
   const selected = (param: string) => searchParams.getAll(param);
@@ -76,6 +95,19 @@ export function FacetPanel({ facets }: FacetPanelProps) {
   // Folded on a narrow screen until asked for. See the button below.
   const [open, setOpen] = useState(false);
   const active = PARAMS.reduce((count, param) => count + selected(param).length, 0);
+
+  // Read after mounting rather than in the initial state, which the server
+  // renders without storage. Left in place rather than taken: the panel being
+  // replaced can render once more with the new address before it goes, and
+  // taking the note there would leave none for the panel that replaces it.
+  // Reloading that one search opens the panel too, which is where it was.
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(OPEN_FOR) === searchParams.toString()) setOpen(true);
+    } catch {
+      // Storage refused: folded.
+    }
+  }, [searchParams]);
 
   /**
    * Roll the stage counts up into the two publication types.

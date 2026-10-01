@@ -45,15 +45,27 @@ describe('an author as a link to a search', () => {
     }
   });
 
-  it('searches each word of the name, leaving out initials', () => {
-    expect(queryOf(fieldSearchHref('author', 'Jennifer A. Doudna'))).toBe('AU=Jennifer AND AU=Doudna');
-    expect(queryOf(fieldSearchHref('author', 'Forstmann, B.U.'))).toBe('AU=Forstmann');
+  it('quotes the name, leaving out initials beside a written-out forename', () => {
+    expect(queryOf(fieldSearchHref('author', 'Jennifer A. Doudna'))).toBe('AU="Jennifer Doudna"');
     // No space after the comma, as one source writes it.
-    expect(queryOf(fieldSearchHref('author', 'Crom-Ottens,Astrid F.'))).toBe('AU=Crom-Ottens AND AU=Astrid');
+    expect(queryOf(fieldSearchHref('author', 'Crom-Ottens,Astrid F.'))).toBe('AU="Crom-Ottens Astrid"');
+  });
+
+  it('keeps the first initial where it is all the name has besides the surname', () => {
+    expect(queryOf(fieldSearchHref('author', 'Forstmann, B.U.'))).toBe('AU="Forstmann B"');
+    expect(queryOf(fieldSearchHref('author', 'J. Doudna'))).toBe('AU="Doudna J"');
+    expect(authorLinkFinds('J. Doudna', ['Jennifer A. Doudna'])).toBe(true);
+    expect(authorLinkFinds('J. Doudna', ['Samuel Doudna'])).toBe(false);
   });
 
   it('does not find a different person who shares a surname', () => {
     expect(authorLinkFinds('Jennifer A. Doudna', ['Doudna, Samuel'])).toBe(false);
+  });
+
+  it('does not find two co-authors who share the words of the name between them', () => {
+    // As one clause per word it did: 7 of the first 20 results for Wei Wang.
+    expect(authorLinkFinds('Wei Wang', ['Wei Zhang', 'Li Wang'])).toBe(false);
+    expect(authorLinkFinds('Wei Wang', ['Wang Wei'])).toBe(true);
   });
 
   it('reads a name word that looks like grammar as a name', () => {
@@ -63,7 +75,7 @@ describe('an author as a link to a search', () => {
     expect(authorLinkFinds('Near Patel', ['Patel, Near'])).toBe(true);
     expect(authorLinkFinds('O"Brien (Pat)', ['Pat OBrien'])).toBe(true);
     // A `*` is dropped, not run as a wildcard: `Sm*` would match every Smith.
-    expect(queryOf(fieldSearchHref('author', 'Sm*'))).toBe('AU=Sm');
+    expect(queryOf(fieldSearchHref('author', 'Sm*'))).toBe('AU="Sm"');
     expect(authorLinkFinds('Sm*', ['John Smith'])).toBe(false);
   });
 

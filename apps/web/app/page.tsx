@@ -81,7 +81,7 @@ const SYNTAX: Array<{ tag: string; name: string; note: string; example?: string;
   {
     tag: 'AU=',
     name: 'Author',
-    note: 'A name in any order: "Doudna, Jennifer" finds her however a source wrote it.',
+    note: 'A name in any order, with or without initials: "Doudna, Jennifer" also matches "Doudna JA".',
     example: 'AU="Doudna, Jennifer"',
     icon: User
   },

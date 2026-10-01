@@ -47,6 +47,6 @@ describe('the byline', () => {
   it('links each name to its search', () => {
     const { container } = render(<p><Byline authors={['Jennifer A. Doudna']} venue="eLife" shown={3} /></p>);
     const hrefs = Array.from(container.querySelectorAll('a')).map(a => decodeURIComponent(a.getAttribute('href')!));
-    expect(hrefs).toEqual(['/results?q=AU=Jennifer AND AU=Doudna', '/results?q=SO="eLife"']);
+    expect(hrefs).toEqual(['/results?q=AU="Jennifer Doudna"', '/results?q=SO="eLife"']);
   });
 });

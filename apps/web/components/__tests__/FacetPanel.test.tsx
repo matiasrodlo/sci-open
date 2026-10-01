@@ -209,4 +209,23 @@ describe('the panel on a narrow screen', () => {
 
     expect(screen.getByRole('button', { name: /Filters/ }).textContent).toContain('2 selected');
   });
+
+  it('opens again on the search a tick opened, and on no other', () => {
+    render(<FacetPanel facets={facets()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Filters/ }));
+    fireEvent.click(within(screen.getByRole('group', { name: /Year/ })).getAllByRole('checkbox')[0]!);
+    const target = push.mock.calls[0]![0] as string;
+    cleanup();
+
+    // The panel the tick's navigation mounts.
+    new URLSearchParams(target.slice(target.indexOf('?') + 1)).forEach((value, key) => searchParams.append(key, value));
+    render(<FacetPanel facets={facets()} />);
+    expect(screen.getByRole('button', { name: /Filters/ }).getAttribute('aria-expanded')).toBe('true');
+    cleanup();
+
+    // A different search.
+    searchParams.append('venue', 'Nature');
+    render(<FacetPanel facets={facets()} />);
+    expect(screen.getByRole('button', { name: /Filters/ }).getAttribute('aria-expanded')).toBe('false');
+  });
 });

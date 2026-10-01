@@ -17,33 +17,38 @@ export function fieldSearchHref(field: 'author' | 'venue', name: string): string
 }
 
 /**
- * An author as each word of their name, rather than as the name.
+ * An author as their name, quoted, which the search matches as a name: every
+ * word of it in one author's name, in any order and however the source
+ * punctuated it. See `nameMatcher` in the shared package.
  *
  * The sources do not agree on how to write one. PubMed gives "Doudna Jennifer
- * A", bioRxiv "Doudna, Jennifer", most of the rest "Jennifer A. Doudna" — and an
- * author is a narrow field, so a record whose list does not contain the phrase
- * is ruled out rather than kept. The link used to be the phrase as the card
- * happened to spell it, and measured on one author it found 0, 7, 24 or 30
- * papers depending on which source's card was clicked, against 195 for the
- * surname alone. Every word, each its own clause, matches all of those
- * spellings.
+ * A", bioRxiv "Doudna, Jennifer", most of the rest "Jennifer A. Doudna". The
+ * first links were the card's spelling as a phrase matched word for word, and
+ * found 0, 7, 24 or 30 of one author's papers depending on which card was
+ * clicked. The second were each word as its own clause, `AU=Wei AND AU=Wang`,
+ * which matched every spelling and also two different co-authors who shared
+ * the words between them: 7 of the first 20 results for that name had no Wei
+ * Wang on them. Quoted, it is one person again — none of the first 20 — and
+ * found more, 2,291 against 2,096.
  *
- * Initials are dropped because they are what the spellings disagree on most —
- * "A.", "JA", nothing at all — and a surname with a forename is specific enough
- * without them. What this gives up is order: two co-authors who share the words
- * between them match too, which is rare, and a record that matches is at least
- * by someone with that name.
+ * Initials are dropped where a forename is written out: they are what the
+ * spellings disagree on most, and Europe PMC finds 123 papers for "Jennifer A.
+ * Doudna" against 153 for "Jennifer Doudna". Where the name is a surname and
+ * initials alone — "Doudna JA", "J. Doudna" — the first initial stays, after
+ * the surname, because it is all that tells one Doudna from another.
  */
 function authorQuery(name: string): QueryNode | undefined {
   const seen = new Set<string>();
-  const words = name
+  const cleaned = name
     .split(/[\s,;]+/)
-    // Quotes and brackets would end the word early and `*` and `?` are
-    // wildcards. No name needs them.
+    // Quotes would end the phrase early, and a name needs none of the rest.
     .map(word => word.replace(/["()*?]/g, ''))
     // Something other than punctuation: a stray "&" or "-" is not a name.
     // Tested this way round so a name in a script without letter case counts.
-    .filter(word => /[^!-/:-@[-`{-~‐–—’]/.test(word) && !isInitial(word))
+    .filter(word => /[^!-/:-@[-`{-~‐–—’]/.test(word));
+
+  const names = cleaned
+    .filter(word => !isInitial(word))
     .filter(word => {
       const key = word.toLowerCase();
       if (seen.has(key)) return false;
@@ -51,14 +56,12 @@ function authorQuery(name: string): QueryNode | undefined {
       return true;
     });
 
-  if (words.length === 0) return undefined;
+  if (names.length === 0) return undefined;
 
-  const clauses: QueryNode[] = words.map(text => ({
-    kind: 'clause',
-    field: 'author',
-    value: { kind: 'term', text }
-  }));
-  return clauses.length === 1 ? clauses[0] : { kind: 'and', nodes: clauses };
+  // An initial is letters, stops and hyphens only. See `isInitial`.
+  const initial = cleaned.find(isInitial)?.replace(/[.\-‐]/g, '').charAt(0);
+  const text = names.length === 1 && initial ? `${names[0]} ${initial.toUpperCase()}` : names.join(' ');
+  return { kind: 'clause', field: 'author', value: { kind: 'phrase', text } };
 }
 
 /** A lone letter, or letters each followed by a stop: "A", "A.", "B.U.", "J.-P.". */
