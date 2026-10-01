@@ -149,3 +149,27 @@ describe('translate — wildcards', () => {
     expect(translate(query({ terms: ['gen*'] }), { openAccessOnly: true })).toBe('');
   });
 });
+
+/**
+ * PubMed keeps authors as names, and parses one out of an unquoted run of
+ * words in either order. A word alone matches only as a surname, and a quoted
+ * run only as itself.
+ */
+describe('translate: an author named by several words', () => {
+  const q = (input: string) => translate(query({ expression: parseExpression(input) }));
+
+  it('sends the words as a name, unquoted, beside the words', () => {
+    // Measured with the open-access filter: 0 for the words alone, 169 with
+    // the name. See `withAuthorName`.
+    expect(q('AU=Jennifer AND AU=Doudna')).toBe('((Jennifer[au] AND Doudna[au]) OR Jennifer Doudna[au])');
+  });
+
+  it('sends a quoted author as a name too, which quoted it finds nothing for', () => {
+    expect(q('AU="Jennifer Doudna"')).toBe('("Jennifer Doudna"[au] OR Jennifer Doudna[au])');
+  });
+
+  it('does not send a name holding a word PubMed would read as an operator', () => {
+    // `Ana Or[au]` unquoted would be `Ana OR [au]`.
+    expect(q('AU=Ana AND AU=Or')).toBe('(Ana[au] AND Or[au])');
+  });
+});

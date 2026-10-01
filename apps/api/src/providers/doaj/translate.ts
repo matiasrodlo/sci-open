@@ -1,5 +1,5 @@
 import type { Query, QueryField } from '@open-access-explorer/shared';
-import { cannotSend, flatTerms, renderExpression, type Dialect } from '../render-query';
+import { cannotSend, flatTerms, nameAsWords, renderExpression, type Dialect } from '../render-query';
 
 /**
  * Query -> the DOAJ article search string. Pure, and the only place that knows
@@ -93,7 +93,10 @@ const DIALECT: Dialect = {
   years: ({ from, to }) => `bibjson.year:[${from ?? EARLIEST} TO ${to ?? LATEST}]`,
   doi: value => `bibjson.identifier.id:"${escape(value)}"`,
   unscoped: value => `(${EVERY_FIELD.map(field => `${field}:${value}`).join(' OR ')})`,
-  supportsNot: true
+  supportsNot: true,
+  // DOAJ indexes an author's name word by word, so a name is its words. See
+  // `nameAsWords`.
+  authorName: words => nameAsWords(words, DIALECT)
 };
 
 /** The query as it reached this provider before the grammar existed. */

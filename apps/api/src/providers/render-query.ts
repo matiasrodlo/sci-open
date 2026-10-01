@@ -57,6 +57,17 @@ export type Dialect = {
   unscoped(value: string): string;
   /** False where the API has no negation. The clause is then dropped, not faked. */
   supportsNot: boolean;
+  /**
+   * One person, from the words of their name in the order they were written,
+   * as this index finds a person — or `undefined` where these words cannot be
+   * sent as a name.
+   *
+   * Only for an index that keeps authors as names rather than as words, where
+   * each word of `AU=Jennifer AND AU=Doudna` on its own finds nothing. See
+   * `withAuthorName`; a dialect without one renders author clauses as it
+   * renders every other.
+   */
+  authorName?(words: readonly string[]): string | undefined;
 };
 
 /**
@@ -149,6 +160,87 @@ function renderClause(node: Extract<QueryNode, { kind: 'clause' }>, dialect: Dia
 }
 
 /**
+ * A word of a name that is only an initial — "A", "A.", "B.U.", PubMed's "JA".
+ * The part of a name the sources write most differently, or leave off.
+ */
+export function isInitial(word: string): boolean {
+  const letters = word.replace(/[.\-‐]/g, '');
+  return letters.length <= 1 || (letters.length <= 3 && /^[A-Z]+$/.test(letters));
+}
+
+/**
+ * A name as its words, each required on the author field, for an index that
+ * keeps authors word by word — a dialect's `authorName` where the index has no
+ * notion of a name. Initials are left out: a source that writes the forename
+ * has no "J" to match, and `matchesQuery` checks the initial where it matters.
+ *
+ * Measured live on 2026-10-01 for the phrase a Web of Science author search
+ * carries, "Doudna, Jennifer": DOAJ found 0 for the phrase and 59 for the
+ * words, PLOS 0 and 93. Each word is a word of the phrase, so this only ever
+ * asks for more.
+ */
+export function nameAsWords(words: readonly string[], dialect: Dialect): string | undefined {
+  const natives = dialect.fields('author');
+  const names = words.filter(word => !isInitial(word));
+  if (names.length === 0 || natives.length === 0) return undefined;
+
+  const clauses: string[] = [];
+  for (const word of names) {
+    const term = dialect.term(word);
+    if (!term) return undefined;
+    const scoped = natives.map(native => dialect.scope(native, term));
+    clauses.push(scoped.length === 1 ? scoped[0]! : `(${scoped.join(' OR ')})`);
+  }
+  return clauses.length === 1 ? clauses[0] : `(${clauses.join(' AND ')})`;
+}
+
+/**
+ * The word an author clause names, when it names one outright: a bare term on
+ * `author`, with no wildcard in it. A wildcard is a pattern, not part of a
+ * name, and is left to render as a clause of its own.
+ */
+function authorWord(node: QueryNode): string | undefined {
+  if (node.kind !== 'clause' || node.field !== 'author' || node.value.kind !== 'term') return undefined;
+  const text = node.value.text.trim();
+  return text && !/[*?]/.test(text) ? text : undefined;
+}
+
+/**
+ * `literal`, or that and the same words sent as one person's name.
+ *
+ * Europe PMC and PubMed keep authors as names — "Doudna JA" — and match a bare
+ * word only as a surname. So the shape an author link takes, one clause per
+ * word of the name, found nothing in either: measured live on 2026-10-01 with
+ * the open-access filter, `AUTH:Jennifer AND AUTH:Doudna` is 0 where
+ * `AUTH:Doudna` is 155, and `Jennifer[au] AND Doudna[au]` is 0 against 172.
+ * Asked for the words as a name, each parses it itself, in either order and
+ * with or without initials: Europe PMC's `AUTH:"Jennifer Doudna"` and
+ * `AUTH:"Doudna Jennifer"` are both 153, PubMed's unquoted `Jennifer
+ * Doudna[au]` and `Doudna Jennifer[au]` both 169, and `Jennifer A. Doudna[au]`
+ * 162.
+ *
+ * The name is ORed with the literal clauses rather than put in their place,
+ * which is what keeps this a widening: whatever the words matched before, they
+ * still match. That matters when the words are not one person —
+ * `AU=Doudna AND AU=Charpentier` is two co-authors, the name "Doudna
+ * Charpentier" finds no one, and the literal half still returns the 6 papers
+ * the two wrote together, measured on both indexes. `matchesQuery` holds what
+ * comes back to the words, as it did before.
+ *
+ * Never under a `NOT`, where widening the clause would narrow the query.
+ * Commas are dropped from the words: Europe PMC finds `"Doudna Jennifer"` and
+ * nothing for `"Doudna, Jennifer"`, which is how bioRxiv writes the name.
+ */
+function withAuthorName(literal: string | undefined, words: readonly string[], dialect: Dialect): string | undefined {
+  if (!literal || !dialect.authorName) return literal;
+  const parts = words.flatMap(word => word.split(',')).map(word => word.trim()).filter(Boolean);
+  if (parts.length < 2) return literal;
+  const name = dialect.authorName(parts);
+  if (!name || name === literal) return literal;
+  return `(${literal} OR ${name})`;
+}
+
+/**
  * Every composite below wraps itself, so nothing here re-wraps its children: a
  * child is either an atom that needs no parentheses or a group that already
  * carries its own. `NOT` is the exception and always brackets what it negates,
@@ -157,10 +249,38 @@ function renderClause(node: Extract<QueryNode, { kind: 'clause' }>, dialect: Dia
  */
 export function renderExpression(node: QueryNode, dialect: Dialect, negated = false): string | undefined {
   switch (node.kind) {
-    case 'clause':
-      return renderClause(node, dialect);
+    case 'clause': {
+      const rendered = renderClause(node, dialect);
+      // A phrase on `author` is a name already: `AU="Jennifer Doudna"`, which
+      // PubMed finds nothing for quoted. See `withAuthorName`.
+      if (negated || node.field !== 'author' || node.value.kind !== 'phrase') return rendered;
+      return withAuthorName(rendered, node.value.text.split(/\s+/), dialect);
+    }
 
     case 'and': {
+      // The words of one person's name, each its own clause — the shape an
+      // author link takes — rendered together, so the name can be sent beside
+      // them. The other children render as before. See `withAuthorName`.
+      const words = negated || !dialect.authorName ? [] : node.nodes.map(authorWord);
+      const named = words.filter((word): word is string => word !== undefined);
+      if (named.length >= 2) {
+        const literal = node.nodes
+          .filter((_, index) => words[index] !== undefined)
+          .map(child => renderExpression(child, dialect, negated))
+          .filter((part): part is string => part !== undefined);
+        const group = withAuthorName(
+          literal.length === 0 ? undefined : literal.length === 1 ? literal[0] : `(${literal.join(' AND ')})`,
+          named,
+          dialect
+        );
+        const rest = node.nodes
+          .filter((_, index) => words[index] === undefined)
+          .map(child => renderExpression(child, dialect, negated));
+        const present = [group, ...rest].filter((part): part is string => part !== undefined);
+        if (present.length === 0) return undefined;
+        return present.length === 1 ? present[0]! : `(${present.join(' AND ')})`;
+      }
+
       const parts = node.nodes.map(child => renderExpression(child, dialect, negated));
       // A child that cannot be rendered is simply not required of the
       // provider. Every remaining child still is, so this stays a superset of

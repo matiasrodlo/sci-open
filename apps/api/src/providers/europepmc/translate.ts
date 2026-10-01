@@ -145,7 +145,10 @@ const DIALECT: Dialect = {
   years: range => yearRange(range),
   doi: value => `DOI:${quote(value)}`,
   unscoped: value => value,
-  supportsNot: true
+  supportsNot: true,
+  // Quoted, which Europe PMC reads as a name in either order — measured, with
+  // the figures, in `withAuthorName`.
+  authorName: words => `AUTH:${quote(words.join(' '))}`
 };
 
 /** The query as it reached this provider before the grammar existed. */

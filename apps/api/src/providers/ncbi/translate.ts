@@ -116,7 +116,15 @@ const DIALECT: Dialect = {
   years: ({ from, to }) => `${from ?? EARLIEST}:${to ?? LATEST}[PDAT]`,
   doi: value => `${quote(value)}[DOI]`,
   unscoped: value => `(${EVERY_FIELD.map(field => `${value}[${field}]`).join(' OR ')})`,
-  supportsNot: true
+  supportsNot: true,
+  // Unquoted, or PubMed takes the words as a literal string and parses no
+  // name out of them: `"Jennifer Doudna"[au]` is 0 and `Jennifer Doudna[au]`
+  // 169 — see `withAuthorName`. Unquoted, a word PubMed reads as syntax would
+  // change the query, so a name holding one is not sent as a name.
+  authorName: words =>
+    words.every(word => /^[^()[\]"]+$/.test(word) && !/^(AND|OR|NOT)$/i.test(word))
+      ? `${words.join(' ')}[au]`
+      : undefined
 };
 
 /** The query as it reached this provider before the grammar existed. */

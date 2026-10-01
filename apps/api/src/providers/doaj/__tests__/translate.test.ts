@@ -101,3 +101,22 @@ describe('translate — wildcards', () => {
     expect(translate(query({ terms: ['gen*'], years: { from: 2020 } }))).toBe('');
   });
 });
+
+/**
+ * DOAJ keeps an author's name word by word, and a quoted name matched only the
+ * records that wrote it that way round — none, for the phrase a Web of Science
+ * author search carries.
+ */
+describe('translate: an author phrase', () => {
+  const q = (input: string) => translate(query({ expression: parseExpression(input) }));
+
+  it('asks for the words of the name beside the phrase', () => {
+    // Measured: 0 for the phrase, 59 for the words.
+    expect(q('AU="Doudna, Jennifer"'))
+      .toBe('(bibjson.author.name:"Doudna, Jennifer" OR (bibjson.author.name:Doudna AND bibjson.author.name:Jennifer))');
+  });
+
+  it('leaves an author link, already words, as it was', () => {
+    expect(q('AU=Jennifer AND AU=Doudna')).toBe('(bibjson.author.name:Jennifer AND bibjson.author.name:Doudna)');
+  });
+});

@@ -133,6 +133,17 @@ describe('translate: the fielded grammar', () => {
     expect(q('AU=Doudna')).toBe('AUTH:Doudna');
   });
 
+  it('sends the words of an author link as a name, beside the words', () => {
+    // Europe PMC matches a bare AUTH word only as a surname, so the words alone
+    // found nothing: measured 0 for `AUTH:Jennifer AND AUTH:Doudna` against
+    // 153 for the quoted name. See `withAuthorName`.
+    expect(q('AU=Jennifer AND AU=Doudna')).toBe('((AUTH:Jennifer AND AUTH:Doudna) OR AUTH:"Jennifer Doudna")');
+    // bioRxiv's spelling, which Europe PMC finds nothing for with the comma in.
+    expect(q('AU="Doudna, Jennifer"')).toBe('(AUTH:"Doudna, Jennifer" OR AUTH:"Doudna Jennifer")');
+    // A quoted name it already reads as one is left alone.
+    expect(q('AU="Jennifer Doudna"')).toBe('AUTH:"Jennifer Doudna"');
+  });
+
   it('maps each tag to its own index', () => {
     expect(q('TI=crispr')).toBe('TITLE:crispr');
     expect(q('AB=crispr')).toBe('ABSTRACT:crispr');

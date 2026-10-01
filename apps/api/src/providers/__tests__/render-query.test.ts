@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseExpression, type QueryField } from '@open-access-explorer/shared';
-import { cannotSend, flatTerms, renderExpression, type Dialect } from '../render-query';
+import { cannotSend, flatTerms, nameAsWords, renderExpression, type Dialect } from '../render-query';
 
 /**
  * The walk that turns a parsed query into one provider's syntax, and the one
@@ -157,5 +157,54 @@ describe('a term the provider cannot send', () => {
     expect(renderExpression(parseExpression('TS=x NOT (TI=a AND TI=gen*)'), noWildcards)).toBe('(TI:x OR AB:x)');
     expect(renderExpression(parseExpression('TS=x NOT (TI=a AND TI=b)'), noWildcards))
       .toBe('((TI:x OR AB:x) AND NOT ((TI:a AND TI:b)))');
+  });
+});
+
+/**
+ * An index that keeps authors as names, where each word of a name on its own
+ * finds nothing. The words are sent as a name too — beside the literal
+ * clauses, never instead of them, which is what keeps it a widening.
+ */
+describe('sending the words of a name as a name', () => {
+  const named = { authorName: (words: readonly string[]) => `NAME:"${words.join(' ')}"` };
+
+  it('ORs the name with the words, so whatever they matched they still match', () => {
+    expect(render('AU=Jennifer AND AU=Doudna', named))
+      .toBe('((AU:Jennifer AND AU:Doudna) OR NAME:"Jennifer Doudna")');
+  });
+
+  it('keeps the rest of the query required beside it', () => {
+    expect(render('TS=crispr AND AU=Jennifer AND AU=Doudna', named))
+      .toBe('(((AU:Jennifer AND AU:Doudna) OR NAME:"Jennifer Doudna") AND (TI:crispr OR AB:crispr))');
+  });
+
+  it('treats an author phrase as a name, without its commas', () => {
+    expect(render('AU="Doudna, Jennifer"', named)).toBe('(AU:"Doudna, Jennifer" OR NAME:"Doudna Jennifer")');
+  });
+
+  it('does not repeat a name that is already the literal clause', () => {
+    const same = { phrase: (text: string) => `"${text}"`, authorName: (words: readonly string[]) => `AU:"${words.join(' ')}"` };
+    expect(render('AU="Jennifer Doudna"', same)).toBe('AU:"Jennifer Doudna"');
+  });
+
+  it('never widens under a NOT, where it would narrow the query', () => {
+    expect(render('TS=x NOT (AU=Jennifer AND AU=Doudna)', named)).not.toContain('NAME:');
+    expect(render('TS=x NOT AU="Jennifer Doudna"', named)).not.toContain('NAME:');
+  });
+
+  it('leaves a single word, and a wildcard, as clauses of their own', () => {
+    expect(render('AU=Doudna', named)).toBe('AU:Doudna');
+    expect(render('AU=Jennifer AND AU=Doud*', named)).toBe('(AU:Jennifer AND AU:Doud*)');
+  });
+
+  it('can say a name as its words, without the initials, for an index that has no names', () => {
+    const words = { authorName: (w: readonly string[]) => nameAsWords(w, dialect()) };
+    expect(render('AU="Doudna, Jennifer A."', words)).toBe('(AU:"Doudna, Jennifer A." OR (AU:Doudna AND AU:Jennifer))');
+    expect(nameAsWords(['J.', 'A.'], dialect())).toBeUndefined();
+  });
+
+  it('sends the words alone where the dialect cannot say the name, or has no way to', () => {
+    expect(render('AU=Jennifer AND AU=Doudna', { authorName: () => undefined })).toBe('(AU:Jennifer AND AU:Doudna)');
+    expect(render('AU=Jennifer AND AU=Doudna')).toBe('(AU:Jennifer AND AU:Doudna)');
   });
 });

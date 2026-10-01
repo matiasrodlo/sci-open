@@ -44,7 +44,8 @@ AU=(Doudna OR Charpentier) AND PY=2020-2024
 TI="gene editing" AND SO=Nature
 ```
 
-Quoted text is a phrase — the same words, adjacent and in order. `*` stands for
+Quoted text is a phrase — the same words, adjacent and in order — except after
+`AU=`, where it is a name and its order does not matter (see below). `*` stands for
 the rest of a word and `?` for one character, both within a single word:
 `gen*` matches "genome", `gen?` matches "gene" but not "genome".
 
@@ -95,6 +96,23 @@ positively rule out. A record whose abstract this service never received is not
 excluded by an `AB=` clause it cannot be tested against, and a topic word absent
 from the stored title and abstract is not taken as proof — the source matched it
 against indexes, like MeSH headings and full text, that are not reproduced here.
+
+An author is matched whichever order and punctuation a source wrote the name
+in. That holds for the words of a name as the web app links one —
+`AU=Jennifer AND AU=Doudna` — and for a quoted name, which is how a Web of
+Science author search is written: `AU="Doudna, Jennifer"` is a name rather than
+a run of words, so each of its words has to be in one author's name, in any
+order. Initials are used only where no forename is given — `AU="Doudna J"`
+needs a forename or initial beginning with J — because sources disagree on
+them more than on anything else.
+
+To the sources, each name is sent in whatever form their index finds people
+by. Europe PMC and PubMed keep authors as names and match a lone word only as
+a surname, so they are sent the words as one name; OpenAlex, DOAJ and PLOS
+keep them word by word, so they are sent the words of a quoted name. Either is
+added beside what was asked rather than put in its place: two co-authors
+searched as `AU=Doudna AND AU=Charpentier` still find the papers they wrote
+together.
 
 **Request:**
 ```json

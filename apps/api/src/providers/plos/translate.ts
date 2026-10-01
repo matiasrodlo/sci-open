@@ -1,5 +1,5 @@
 import type { Query, QueryField } from '@open-access-explorer/shared';
-import { cannotSend, flatTerms, renderExpression, type Dialect } from '../render-query';
+import { cannotSend, flatTerms, nameAsWords, renderExpression, type Dialect } from '../render-query';
 
 /**
  * Query -> the PLOS Solr query string. Pure, and the only place that knows
@@ -153,7 +153,10 @@ const DIALECT: Dialect = {
   // `id`, not `doi` — see the note in `translate`.
   doi: value => `id:${quote(value)}`,
   unscoped: value => `(${EVERY_FIELD.map(field => `${field}:${value}`).join(' OR ')})`,
-  supportsNot: true
+  supportsNot: true,
+  // PLOS indexes an author's name word by word, so a name is its words. See
+  // `nameAsWords`.
+  authorName: words => nameAsWords(words, DIALECT)
 };
 
 /** The query as it reached this provider before the grammar existed. */

@@ -1,5 +1,6 @@
 import type { PaperStage, Query, QueryField, QueryNode, QueryValue } from '@open-access-explorer/shared';
 import { fieldsUsed } from '@open-access-explorer/shared';
+import { isInitial } from '../render-query';
 import { STAGES } from './normalize';
 
 /**
@@ -202,6 +203,25 @@ function clauseValue(value: QueryValue): string | undefined {
   return filterSafe(value.text) || undefined;
 }
 
+/**
+ * An author phrase as the words of the name, unquoted, or nothing where it has
+ * no word to send but initials.
+ *
+ * Quoted, `raw_author_name.search` wants the words adjacent and in that order,
+ * and the sources OpenAlex reads write a name every way round. Measured live
+ * on 2026-10-01 over open works: `"Doudna Jennifer"` 13, `"Jennifer Doudna"`
+ * 37, and unquoted — which OpenAlex reads as every word required — 488 in
+ * either order. Initials are left out for the same reason: `Doudna J` is 191,
+ * the records that happen to give her as an initial, where `matchesQuery`
+ * accepts the 488 that give her forename. Every word sent is a word of the
+ * phrase, so this asks for more than the phrase did and never less.
+ */
+function authorPhraseValue(text: string): string | undefined {
+  const names = text.split(/[\s,]+/).filter(word => word && !isInitial(word));
+  if (names.length === 0 || names.some(word => /[*?]/.test(word))) return undefined;
+  return filterSafe(names.join(' ')) || undefined;
+}
+
 /** The `AND` spine, flattened — the clauses every result must satisfy. */
 function conjuncts(node: QueryNode): QueryNode[] {
   return node.kind === 'and' ? node.nodes.flatMap(conjuncts) : [node];
@@ -254,7 +274,11 @@ function fieldFilters(expression: QueryNode): string[] {
   for (const node of conjuncts(expression)) {
     if (node.kind === 'clause') {
       const key = FIELD_FILTERS[node.field];
-      const value = clauseValue(node.value);
+      // Only here, on a required clause: inside an `OR` the words would sit
+      // beside a `|`, and how OpenAlex groups the two has not been measured.
+      const value =
+        (node.field === 'author' && node.value.kind === 'phrase' && authorPhraseValue(node.value.text)) ||
+        clauseValue(node.value);
       if (key && value) filters.push(`${key}:${value}`);
       continue;
     }

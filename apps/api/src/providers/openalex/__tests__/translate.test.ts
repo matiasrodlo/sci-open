@@ -210,6 +210,19 @@ describe('toParams — the fielded grammar', () => {
     expect(filter('AU=Doudna')).toBe('raw_author_name.search:Doudna');
   });
 
+  it('asks for an author phrase as the words of the name, which it finds in any order', () => {
+    // Quoted, the words had to be adjacent and in this order: 13 papers for
+    // "Doudna Jennifer" against 488 for the words. See `authorPhraseValue`.
+    expect(filter('AU="Doudna, Jennifer"')).toBe('raw_author_name.search:Doudna Jennifer');
+    // An initial is left out, and checked by `matchesQuery` instead.
+    expect(filter('AU="Doudna J"')).toBe('raw_author_name.search:Doudna');
+    // Nothing but initials is sent as the phrase it was.
+    expect(filter('AU="J. A."')).toBe('raw_author_name.search:"J. A."');
+    // Inside an OR the phrase stays quoted, beside the `|`.
+    expect(filter('AU=("Doudna, Jennifer" OR Charpentier)'))
+      .toBe('raw_author_name.search:"Doudna Jennifer"|Charpentier');
+  });
+
   it('maps each field OpenAlex has a key for', () => {
     expect(filter('TI=crispr')).toBe('title.search:crispr');
     expect(filter('AB=crispr')).toBe('abstract.search:crispr');

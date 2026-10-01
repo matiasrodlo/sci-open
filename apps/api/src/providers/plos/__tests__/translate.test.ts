@@ -152,3 +152,23 @@ describe('journalName', () => {
     expect(journalName('plos computational biology')).toBe('PLOS Computational Biology');
   });
 });
+
+/**
+ * PLOS keeps an author's name word by word, and a quoted name matched only the
+ * records that wrote it that way round — none, for the phrase a Web of Science
+ * author search carries.
+ */
+describe('translate: an author phrase', () => {
+  const q = (input: string) => translate(query({ expression: parseExpression(input) }));
+
+  it('asks for the words of the name beside the phrase', () => {
+    // Measured: 0 for the phrase, 93 for the words.
+    expect(q('AU="Doudna, Jennifer"')).toBe('(author:"Doudna, Jennifer" OR (author:Doudna AND author:Jennifer))');
+    // An initial is left out of the words.
+    expect(q('AU="Doudna J"')).toBe('(author:"Doudna J" OR author:Doudna)');
+  });
+
+  it('leaves an author link, already words, as it was', () => {
+    expect(q('AU=Jennifer AND AU=Doudna')).toBe('(author:Jennifer AND author:Doudna)');
+  });
+});
