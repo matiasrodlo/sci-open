@@ -61,6 +61,51 @@ describe('matching a record against a fielded query', () => {
     expect(check('TI="genome editing"', { title: 'Genome   editing' })).toBe(true);
   });
 
+  it('matches a phrase that ends in punctuation, beginning with itself', () => {
+    // `\b` after `)` needs a word character next, so this matched nothing.
+    const venue = 'Bioinformatics (Oxford, England)';
+    expect(check(`SO="${venue}"`, { venue })).toBe(true);
+    expect(check('AU="Forstmann, B.U."', { authors: ['Forstmann, B.U.'] })).toBe(true);
+  });
+
+  it('matches an author phrase as a name, however the source wrote it', () => {
+    // Web of Science writes an author "Doudna, Jennifer"; the sources write
+    // her every other way. As a run of words, the search found nothing.
+    for (const author of ['Jennifer A. Doudna', 'Doudna Jennifer A', 'Jennifer Doudna', 'Doudna, Jennifer']) {
+      expect(check('AU="Doudna, Jennifer"', { authors: [author] }), author).toBe(true);
+    }
+    expect(check('AU="Marta Sanvicente-Garcia"', { authors: ['Sanvicente-García, Marta'] })).toBe(true);
+  });
+
+  it('holds an author phrase to one person', () => {
+    // Both words, but on two co-authors.
+    expect(check('AU="Jennifer Doudna"', { authors: ['Jennifer Smith', 'Samuel Doudna'] })).toBe(false);
+    expect(check('AU="Jennifer Doudna"', { authors: ['Jennifer Smith'] })).toBe(false);
+  });
+
+  it('uses an initial only where it is all that tells two people apart', () => {
+    expect(check('AU="Doudna J"', { authors: ['Jennifer A. Doudna'] })).toBe(true);
+    expect(check('AU="Doudna J"', { authors: ['Doudna JA'] })).toBe(true);
+    expect(check('AU="Doudna J"', { authors: ['Samuel Doudna'] })).toBe(false);
+    // A forename written out is enough; a middle initial a source left off is
+    // not held against it.
+    expect(check('AU="Jennifer A. Doudna"', { authors: ['Jennifer Doudna'] })).toBe(true);
+  });
+
+  it('keeps a phrase in any other field as a run of words, in order', () => {
+    expect(check('TI="editing genome"')).toBe(false);
+    expect(check('SO="Nature Genetics"', { venue: 'Genetics Nature' })).toBe(false);
+  });
+
+  it('matches a phrase that opens with a letter outside ASCII', () => {
+    expect(check('TI="Évaluation des risques"', { title: 'Évaluation des risques sanitaires' })).toBe(true);
+  });
+
+  it('still holds a phrase to word boundaries where its edge is a word', () => {
+    expect(check('TI="genome edit"')).toBe(false);
+    expect(check('TI="enome editing"')).toBe(false);
+  });
+
   it('holds a term to word boundaries', () => {
     // The old flat path had no notion of a word, so `gene` matched "genome".
     expect(check('TI=gene')).toBe(false);

@@ -206,16 +206,91 @@ function globMatches(glob: string, word: string): boolean {
   return g === glob.length;
 }
 
-/** A phrase: the same words, adjacent and in order, whatever the spacing was. */
+/**
+ * A phrase: the same words, adjacent and in order, whatever the spacing was.
+ *
+ * Bounded only at an edge that is a word character, as `termMatcher` is. It
+ * used to put `\b` at both ends unconditionally, and `\b` after `)` or `.`
+ * demands a word character next — so a phrase ending in one could not match
+ * anything, not even itself. `SO="Bioinformatics (Oxford, England)"`, which is
+ * how PubMed names that journal, found nothing on a search over its own
+ * records; so did `AU="Forstmann, B.U."`, and a phrase opening with a letter
+ * outside ASCII, which `\w` does not count.
+ */
 function phrasePattern(text: string): RegExp {
-  const words = text.trim().split(/\s+/).map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  return new RegExp(`\\b${words.join('\\s+')}\\b`, 'i');
+  const trimmed = text.trim();
+  const words = trimmed.split(/\s+/).map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const open = /^\w/.test(trimmed) ? '\\b' : '';
+  const close = /\w$/.test(trimmed) ? '\\b' : '';
+  return new RegExp(`${open}${words.join('\\s+')}${close}`, 'i');
 }
 
-function matchesValue(value: QueryValue, haystacks: readonly string[]): boolean {
+/** A word of a name as two sources might both write it: lower case, no accents. */
+function foldName(word: string): string {
+  return word.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+/**
+ * The words of a name, apart from the punctuation sources disagree on, and
+ * sorted into names and initials.
+ *
+ * An initial is a lone letter, or a short run of capitals: "A.", "B.U." and
+ * PubMed's "JA". "Li" and "Wu" are names, and stay names, because they are not
+ * written in capitals.
+ */
+function nameWords(text: string): { names: string[]; initials: string[] } {
+  const names: string[] = [];
+  const initials: string[] = [];
+  for (const raw of text.split(/[\s,;-]+/)) {
+    const word = raw.replace(/\./g, '');
+    if (!word) continue;
+    if (word.length === 1 || (word.length <= 3 && /^[A-Z]+$/.test(word))) {
+      initials.push(...foldName(word).split(''));
+    } else {
+      names.push(foldName(word));
+    }
+  }
+  return { names, initials };
+}
+
+/**
+ * An author phrase, as a name rather than as a run of words.
+ *
+ * As a run of words, `AU="Doudna, Jennifer"` matched only a record that wrote
+ * the name exactly so — bioRxiv's spelling — and every other source writes it
+ * another way: "Jennifer A. Doudna", PubMed's "Doudna Jennifer A". The sources
+ * were asked for the name and returned it, and this then dropped all of it, so
+ * the search found nothing. A Web of Science author search is written
+ * "Doudna, Jennifer", so that is the phrase a pasted query carries.
+ *
+ * As a name: every name in the phrase is a word of one author's name, in any
+ * order and whatever the accents and punctuation. Initials are not held
+ * against a name that has its forename written out — sources disagree on them
+ * more than on anything — and are what tells one Doudna from another when the
+ * phrase has nothing else: "Doudna J" needs a forename or initial beginning
+ * with J.
+ *
+ * A phrase of initials alone names nobody, and is matched as words.
+ */
+function nameMatcher(text: string): ((author: string) => boolean) | undefined {
+  const wanted = nameWords(text);
+  if (wanted.names.length === 0) return undefined;
+
+  return author => {
+    const { names, initials } = nameWords(author);
+    if (!wanted.names.every(name => names.includes(name))) return false;
+    if (wanted.names.length > 1 || wanted.initials.length === 0) return true;
+    const first = wanted.initials[0]!;
+    return initials.includes(first) || names.some(name => !wanted.names.includes(name) && name.startsWith(first));
+  };
+}
+
+function matchesValue(field: QueryField, value: QueryValue, haystacks: readonly string[]): boolean {
   if (value.kind === 'years') return false;
 
   if (value.kind === 'phrase') {
+    const name = field === 'author' ? nameMatcher(value.text) : undefined;
+    if (name) return haystacks.some(name);
     const pattern = phrasePattern(value.text);
     return haystacks.some(text => pattern.test(text));
   }
@@ -242,7 +317,7 @@ function matchesClause(paper: Paper, field: QueryField, value: QueryValue): Matc
   const haystacks = textOf(paper, field);
   if (haystacks === undefined) return 'unknown';
 
-  if (matchesValue(value, haystacks)) return true;
+  if (matchesValue(field, value, haystacks)) return true;
 
   // A miss on `topic` or `all` is not a finding.
   //
