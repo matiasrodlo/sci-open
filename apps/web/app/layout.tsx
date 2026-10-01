@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import Link from 'next/link'
 import { LockOpen } from 'lucide-react'
-import { AUTHORITIES, SEARCHED_SOURCES } from '@/lib/provider-labels'
+import { AUTHORITIES, SOURCES } from '@/lib/provider-labels'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
@@ -69,8 +69,8 @@ export default function RootLayout({
                   <span className="font-bold tracking-tight">Open Access Explorer</span>
                 </div>
                 <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
-                  One search across {SEARCHED_SOURCES.length} scholarly sources, kept to the
-                  papers that are open access.
+                  Open-access papers from {SOURCES.slice(0, 3).join(', ')} and other scholarly
+                  sources, in one search.
                 </p>
               </div>
 

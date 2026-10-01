@@ -24,11 +24,17 @@ export function providerLabel(id: string): string {
 }
 
 /**
- * The sources a search is sent to, in the order the home page names them.
+ * Every source a record can come from, in the order the home page names them.
+ *
+ * Not every one of them is sent every search. A source is asked only what it
+ * can answer — bioRxiv and medRxiv take a DOI and nothing else, and others are
+ * skipped for queries they would run badly — and the results page says which
+ * were asked. So this is a list of where papers come from, and the page that
+ * shows it does not count it as "searched together".
  *
  * A record keyed on `ProviderId` rather than a list, so a provider added to
  * the shared type is a compile error here until it is placed — the page that
- * says what is searched cannot quietly fall behind what is. The numbers are
+ * names the sources cannot quietly fall behind them. The numbers are
  * only the order: the large general indexes first, then the subject and
  * preprint servers, then the aggregators.
  *
@@ -36,7 +42,7 @@ export function providerLabel(id: string): string {
  * tags each record with the one that answered — but it is a source a reader
  * would look for by name, and its records carry that name.
  */
-const SEARCH_ORDER: Record<ProviderId, number> = {
+const SOURCE_ORDER: Record<ProviderId, number> = {
   openalex: 1,
   europepmc: 2,
   ncbi: 3,
@@ -50,8 +56,8 @@ const SEARCH_ORDER: Record<ProviderId, number> = {
   datacite: 11,
 };
 
-export const SEARCHED_SOURCES: readonly string[] = (Object.keys(SEARCH_ORDER) as ProviderId[])
-  .sort((a, b) => SEARCH_ORDER[a] - SEARCH_ORDER[b])
+export const SOURCES: readonly string[] = (Object.keys(SOURCE_ORDER) as ProviderId[])
+  .sort((a, b) => SOURCE_ORDER[a] - SOURCE_ORDER[b])
   .map(providerLabel);
 
 /**

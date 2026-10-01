@@ -136,14 +136,11 @@ export function ResultCard({ record }: ResultCardProps) {
           </p>
         )}
 
-        {/* What the record carries beyond its byline: how often it is cited,
-            who returned it, and the two things a reader takes away from a
-            list — the publisher's page and the DOI. */}
-        <div
-          className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground"
-          role="group"
-          aria-label={`Actions for ${record.title}`}
-        >
+        {/* What the record carries beyond its byline — how often it is
+            cited and who returned it — and then the two things a reader takes
+            away from a list: the publisher's page and the DOI. Only those two
+            are the group of actions; the facts beside them are not. */}
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           {record.citationCount !== undefined && record.citationCount > 0 && (
             <span>Cited by {record.citationCount.toLocaleString()}</span>
           )}
@@ -153,27 +150,31 @@ export function ResultCard({ record }: ResultCardProps) {
               {sources.length > SOURCES_SHOWN && ` +${sources.length - SOURCES_SHOWN}`}
             </span>
           )}
-          {record.landingPage && (
-            <button
-              type="button"
-              onClick={() => openExternal(record.landingPage)}
-              className="inline-flex items-center gap-1 rounded-sm font-medium text-foreground/80 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={`Open the publisher page for ${record.title} in a new tab`}
-            >
-              Source
-              <ExternalLink className="h-3 w-3" aria-hidden="true" />
-            </button>
-          )}
-          {record.doi && (
-            <button
-              type="button"
-              onClick={handleCopyDOI}
-              className="rounded-sm font-mono font-medium text-foreground/80 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={`Copy the DOI of ${record.title}`}
-              title={doiCopied ? 'DOI copied to clipboard!' : `Copy ${record.doi}`}
-            >
-              <span aria-live="polite">{doiCopied ? 'Copied!' : 'DOI'}</span>
-            </button>
+          {(record.landingPage || record.doi) && (
+            <span className="inline-flex items-center gap-x-4" role="group" aria-label={`Actions for ${record.title}`}>
+              {record.landingPage && (
+                <button
+                  type="button"
+                  onClick={() => openExternal(record.landingPage)}
+                  className="inline-flex items-center gap-1 rounded-sm font-medium text-foreground/80 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={`Open the publisher page for ${record.title} in a new tab`}
+                >
+                  Source
+                  <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                </button>
+              )}
+              {record.doi && (
+                <button
+                  type="button"
+                  onClick={handleCopyDOI}
+                  className="rounded-sm font-mono font-medium text-foreground/80 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={`Copy the DOI of ${record.title}`}
+                  title={doiCopied ? 'DOI copied to clipboard!' : `Copy ${record.doi}`}
+                >
+                  <span aria-live="polite">{doiCopied ? 'Copied!' : 'DOI'}</span>
+                </button>
+              )}
+            </span>
           )}
         </div>
 

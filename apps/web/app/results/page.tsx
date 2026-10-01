@@ -127,35 +127,40 @@ async function ResultsContent({ searchParams }: { searchParams: ResultsSearchPar
             : { total: matching.count, atLeast: matching.basis !== 'exact' })}
         />
 
-        {/* The filters in a column on the left and the list beside them, as
-            OpenAlex lays out a search. The column comes second in the source
-            on purpose: on a phone the grid is one column, and a reader who
-            searched wants the count and the first results before ten
-            groups of checkboxes. */}
-        <div className="grid grid-cols-1 gap-x-10 gap-y-8 lg:grid-cols-[15rem_minmax(0,1fr)]">
-          <div className="min-w-0 lg:col-start-2 lg:row-start-1">
-            {/* Results Header */}
-            <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-              <div className="min-w-0">
-                <h1 className="break-words text-2xl font-bold tracking-tight">{query}</h1>
-                <p
-                  className="mt-1 text-sm text-muted-foreground"
-                  title={matchingNote(matching)}
-                >
-                  {totalLabel(matching)}
-                </p>
-              </div>
-              <ExportButton
-                results={results.papers}
-                query={query}
-                totalResults={results.total}
-                currentPage={currentPage}
-                pageSize={pageSize}
-              />
-            </div>
+        {/* Results Header — above both columns, so the query and its count
+            are the first thing under the search box at every width. */}
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+          <div className="min-w-0">
+            <h1 className="break-words text-2xl font-bold tracking-tight">{query}</h1>
+            <p
+              className="mt-1 text-sm text-muted-foreground"
+              title={matchingNote(matching)}
+            >
+              {totalLabel(matching)}
+            </p>
+          </div>
+          <ExportButton
+            results={results.papers}
+            query={query}
+            totalResults={results.total}
+            currentPage={currentPage}
+            pageSize={pageSize}
+          />
+        </div>
 
+        {/* The filters in a column on the left and the list beside them, as
+            OpenAlex lays out a search. Filters first in the source as on the
+            screen, so the tab order is the order the reader sees; on a phone
+            they fold to one line above the results. See `FacetPanel`. */}
+        <div className="mt-6 grid grid-cols-1 gap-x-10 gap-y-5 lg:grid-cols-[15rem_minmax(0,1fr)]">
+          {/* Facets */}
+          <aside className="min-w-0">
+            <FacetPanel facets={results.facets} />
+          </aside>
+
+          <div className="min-w-0">
             {results.providers.length > 0 && (
-              <div className="mt-5">
+              <div className="mb-5">
                 <ProviderCoverage
                   providers={results.providers}
                   complete={results.complete}
@@ -164,22 +169,18 @@ async function ResultsContent({ searchParams }: { searchParams: ResultsSearchPar
               </div>
             )}
 
-            <div className="mt-5">
-              <SortBar />
-              <PaginatedResults
-                results={results.papers}
-                total={results.total}
-                matching={countLabel(matching)}
-                page={currentPage}
-                pageSize={pageSize}
-              />
-            </div>
+            {/* Named for a screen reader's list of headings, where the titles
+                below would otherwise sit under "Sources searched". */}
+            <h2 className="sr-only">Results</h2>
+            <SortBar />
+            <PaginatedResults
+              results={results.papers}
+              total={results.total}
+              matching={countLabel(matching)}
+              page={currentPage}
+              pageSize={pageSize}
+            />
           </div>
-
-          {/* Facets */}
-          <aside className="min-w-0 lg:col-start-1 lg:row-start-1">
-            <FacetPanel facets={results.facets} />
-          </aside>
         </div>
       </>
     );

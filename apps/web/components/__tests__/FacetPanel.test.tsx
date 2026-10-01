@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { render, screen, cleanup, within } from '@testing-library/react';
+import { render, screen, cleanup, within, fireEvent } from '@testing-library/react';
 import { FacetPanel } from '../FacetPanel';
 
 const { push, searchParams } = vi.hoisted(() => ({
@@ -174,5 +174,39 @@ describe('a source’s own count', () => {
     })} />);
 
     expect(group(/Publication Type/)).toEqual(['Peer Reviewed605,608+', 'Pre-print5']);
+  });
+});
+
+/**
+ * On a narrow screen the groups sit above the results, so they are folded
+ * behind one button — and a folded filter is one a reader forgets is on, so
+ * the button says how many are.
+ */
+describe('the panel on a narrow screen', () => {
+  afterEach(() => {
+    Array.from(searchParams.keys()).forEach(key => searchParams.delete(key));
+  });
+
+  const groups = () => document.getElementById('facet-groups')!;
+
+  it('folds the groups behind a button that opens them', () => {
+    render(<FacetPanel facets={facets()} />);
+    const button = screen.getByRole('button', { name: /Filters/ });
+
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    expect(groups().className).toContain('hidden');
+
+    fireEvent.click(button);
+
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(groups().className).not.toContain('hidden');
+  });
+
+  it('says how many filters are ticked', () => {
+    searchParams.append('year', '2024');
+    searchParams.append('venue', 'Nature');
+    render(<FacetPanel facets={facets()} />);
+
+    expect(screen.getByRole('button', { name: /Filters/ }).textContent).toContain('2 selected');
   });
 });

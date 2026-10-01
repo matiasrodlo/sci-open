@@ -49,8 +49,13 @@ export function SearchHistory({ onInsert }: { onInsert: (reference: string) => v
   if (sets.length === 0) return null;
 
   return (
-    <section className={open ? 'rounded-lg border bg-card' : ''} aria-labelledby="search-history-heading">
-      <div className={`flex items-center justify-between ${open ? 'px-4 py-2' : ''}`}>
+    <section aria-labelledby="search-history-heading">
+      {/* The same box open or closed. It used to gain a border and padding
+          on opening, which moved the toggle out from under the pointer that
+          had just clicked it; the list takes the border now, below. The
+          height is fixed for the same reason — "Clear" is taller than the
+          toggle and arrives with it. */}
+      <div className="flex h-7 items-center justify-between">
         <button
           type="button"
           onClick={() => setOpen(o => !o)}
@@ -81,13 +86,13 @@ export function SearchHistory({ onInsert }: { onInsert: (reference: string) => v
       </div>
 
       {open && (
-        <div id="search-history-list" className="border-t">
+        <div id="search-history-list" className="mt-1 rounded-lg border bg-card">
           <p className="px-4 py-2 text-xs text-muted-foreground">
             Combine them by number — <code className="font-mono">#1 AND #2</code>,{' '}
             <code className="font-mono">#1 NOT #3</code>.
           </p>
 
-          <ul className="divide-y">
+          <ul className="divide-y border-t">
             {/* Newest first: the set you want to combine is usually the last one
                 you ran, and a long history should not push it off the bottom. */}
             {[...sets].reverse().map(set => (

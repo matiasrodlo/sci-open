@@ -14,7 +14,7 @@ import {
   type LucideIcon
 } from 'lucide-react';
 import { AdvancedSearchBar } from '@/components/AdvancedSearchBar';
-import { AUTHORITIES, SEARCHED_SOURCES } from '@/lib/provider-labels';
+import { AUTHORITIES, SOURCES } from '@/lib/provider-labels';
 
 const searchHref = (query: string) => `/results?q=${encodeURIComponent(query)}`;
 
@@ -81,8 +81,8 @@ const SYNTAX: Array<{ tag: string; name: string; note: string; example?: string;
   {
     tag: 'AU=',
     name: 'Author',
-    note: 'A name, or several in brackets, each standing for itself.',
-    example: 'AU=(Doudna OR Charpentier)',
+    note: 'A name in any order: "Doudna, Jennifer" finds her however a source wrote it.',
+    example: 'AU="Doudna, Jennifer"',
     icon: User
   },
   {
@@ -109,7 +109,7 @@ const SYNTAX: Array<{ tag: string; name: string; note: string; example?: string;
   {
     tag: '#1 AND #2',
     name: '',
-    note: 'Every search you run is numbered in the history under the box. Combine them by number.',
+    note: 'Every search you run is numbered, in the history under the box on a results page. Combine them by number.',
     icon: Hash
   }
 ];
@@ -123,9 +123,8 @@ export default function HomePage() {
             Find research anyone can read
           </h1>
           <p className="mt-6 max-w-md text-[17px] leading-relaxed text-muted-foreground">
-            One search across {SEARCHED_SOURCES.slice(0, 4).join(', ')} and{' '}
-            {SEARCHED_SOURCES.length - 4} more scholarly sources, kept to the papers that are
-            open access.
+            Search {SOURCES.slice(0, 4).join(', ')} and other scholarly sources at once,
+            kept to the papers that are open access.
           </p>
           <div className="mt-8 max-w-lg">
             <Suspense fallback={<div className="h-[6.5rem] animate-pulse rounded-lg border bg-muted/40" />}>
@@ -169,7 +168,7 @@ export default function HomePage() {
             Sources
           </h2>
           <ul className="mx-auto mt-7 flex max-w-4xl flex-wrap items-center justify-center gap-x-10 gap-y-4">
-            {SEARCHED_SOURCES.map(name => (
+            {SOURCES.map(name => (
               <li key={name} className="text-xl font-semibold tracking-tight text-foreground/75">
                 {name}
               </li>
@@ -178,8 +177,8 @@ export default function HomePage() {
           {/* Not "searched together": a source is sent only the searches it
               can answer, and the results page names any that were not. */}
           <p className="mx-auto mt-8 max-w-2xl text-center text-sm leading-relaxed text-muted-foreground">
-            Each search goes to every source that can answer it, and the results say which
-            did. A paper with a DOI is then looked up in {AUTHORITIES.slice(0, -1).join(', ')} and{' '}
+            Each search goes to the sources that can answer it — some take only a DOI — and
+            the results say which were asked. A paper with a DOI is then looked up in {AUTHORITIES.slice(0, -1).join(', ')} and{' '}
             {AUTHORITIES[AUTHORITIES.length - 1]} — for the registrar&rsquo;s record, how it is
             open, and who cites it.
           </p>

@@ -161,13 +161,20 @@ export function AdvancedSearchBar({ initialQuery = '', onSearch, onQueryChange, 
           <>
             {input}
             <div className="flex items-center justify-between gap-3 px-3 pb-3 pl-4">
-              <p className="min-w-0 truncate text-xs text-muted-foreground">
-                Words, or field tags{' '}
-                <code className="font-mono text-foreground/80">TS=</code>{' '}
-                <code className="font-mono text-foreground/80">AU=</code>{' '}
-                <code className="font-mono text-foreground/80">PY=</code> with AND, OR, NOT ·{' '}
-                <Link href="/#syntax" className="text-link hover:underline">
-                  Syntax
+              {/* The tags are dropped on a narrow screen rather than the line
+                  truncated: truncating hid the link while leaving it in the
+                  tab order, so focus could land on something nobody could
+                  see. Underlined, because in a line of grey a blue word is
+                  a link only to a reader who can tell the two apart. */}
+              <p className="min-w-0 text-xs leading-5 text-muted-foreground">
+                <span className="hidden sm:inline">
+                  Words, or field tags{' '}
+                  <code className="font-mono text-foreground/80">TS=</code>{' '}
+                  <code className="font-mono text-foreground/80">AU=</code>{' '}
+                  <code className="font-mono text-foreground/80">PY=</code> with AND, OR, NOT ·{' '}
+                </span>
+                <Link href="/#syntax" className="text-link underline underline-offset-2 hover:no-underline">
+                  Query syntax
                 </Link>
               </p>
               {button}

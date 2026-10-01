@@ -60,8 +60,11 @@ export function Byline({
   venue?: string | undefined;
   shown: number;
 }) {
-  const named = authors.filter(name => name && name.trim());
+  const named = authors.map(name => name?.trim()).filter((name): name is string => Boolean(name));
   const listed = named.slice(0, shown);
+  // "Doudna, Jennifer, Charpentier, Emmanuelle" reads as four people, so a
+  // list holding a "Last, First" name is split on semicolons instead.
+  const semicolons = listed.some(name => name.includes(','));
 
   if (!year && listed.length === 0 && !venue) return null;
 
@@ -73,11 +76,14 @@ export function Byline({
           {year ? ' by ' : 'By '}
           {listed.map((name, index) => (
             <Fragment key={`${name}-${index}`}>
-              {index > 0 && (index === listed.length - 1 && named.length <= shown ? ' and ' : ', ')}
+              {index > 0 &&
+                (semicolons ? '; ' : index === listed.length - 1 && named.length <= shown ? ' and ' : ', ')}
               <EntityLink field="author" name={name} />
             </Fragment>
           ))}
-          {named.length > shown && <span className="text-muted-foreground">, et al.</span>}
+          {named.length > shown && (
+            <span className="text-muted-foreground">{semicolons ? '; et al.' : ', et al.'}</span>
+          )}
         </>
       )}
       {venue && (
