@@ -168,7 +168,7 @@ describe('translate: an author phrase', () => {
     expect(q('AU="Doudna J"')).toBe('(author:"Doudna J" OR author:Doudna)');
   });
 
-  it('leaves an author link, already words, as it was', () => {
+  it('leaves a name already written as its words as it was', () => {
     expect(q('AU=Jennifer AND AU=Doudna')).toBe('(author:Jennifer AND author:Doudna)');
   });
 });

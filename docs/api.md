@@ -98,13 +98,15 @@ from the stored title and abstract is not taken as proof — the source matched 
 against indexes, like MeSH headings and full text, that are not reproduced here.
 
 An author is matched whichever order and punctuation a source wrote the name
-in. That holds for the words of a name as the web app links one —
-`AU=Jennifer AND AU=Doudna` — and for a quoted name, which is how a Web of
-Science author search is written: `AU="Doudna, Jennifer"` is a name rather than
-a run of words, so each of its words has to be in one author's name, in any
-order. Initials are used only where no forename is given — `AU="Doudna J"`
-needs a forename or initial beginning with J — because sources disagree on
-them more than on anything else.
+in. A quoted author — `AU="Doudna, Jennifer"`, which is how a Web of Science
+author search is written, and how the web app links a name — is a name rather
+than a run of words: each of its words has to be in one author's name, in any
+order, or where the record gives it only as an initial, that initial, so
+"Doudna JA" matches. Initials in the query are used only where no forename is
+given — `AU="Doudna J"` needs a forename or initial beginning with J — because
+sources disagree on them more than on anything else. Unquoted,
+`AU=Jennifer AND AU=Doudna` asks for the two words anywhere in the author list,
+which two co-authors can satisfy between them.
 
 To the sources, each name is sent in whatever form their index finds people
 by. Europe PMC and PubMed keep authors as names and match a lone word only as

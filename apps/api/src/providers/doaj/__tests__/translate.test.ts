@@ -116,7 +116,7 @@ describe('translate: an author phrase', () => {
       .toBe('(bibjson.author.name:"Doudna, Jennifer" OR (bibjson.author.name:Doudna AND bibjson.author.name:Jennifer))');
   });
 
-  it('leaves an author link, already words, as it was', () => {
+  it('leaves a name already written as its words as it was', () => {
     expect(q('AU=Jennifer AND AU=Doudna')).toBe('(bibjson.author.name:Jennifer AND bibjson.author.name:Doudna)');
   });
 });

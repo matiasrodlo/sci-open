@@ -209,8 +209,9 @@ function authorWord(node: QueryNode): string | undefined {
  * `literal`, or that and the same words sent as one person's name.
  *
  * Europe PMC and PubMed keep authors as names — "Doudna JA" — and match a bare
- * word only as a surname. So the shape an author link takes, one clause per
- * word of the name, found nothing in either: measured live on 2026-10-01 with
+ * word only as a surname. So a name written one clause per word — which the
+ * web app's author links were, for a while — found nothing in either and still
+ * would, typed: measured live on 2026-10-01 with
  * the open-access filter, `AUTH:Jennifer AND AUTH:Doudna` is 0 where
  * `AUTH:Doudna` is 155, and `Jennifer[au] AND Doudna[au]` is 0 against 172.
  * Asked for the words as a name, each parses it itself, in either order and
@@ -258,9 +259,9 @@ export function renderExpression(node: QueryNode, dialect: Dialect, negated = fa
     }
 
     case 'and': {
-      // The words of one person's name, each its own clause — the shape an
-      // author link takes — rendered together, so the name can be sent beside
-      // them. The other children render as before. See `withAuthorName`.
+      // The words of one person's name, each its own clause, rendered
+      // together, so the name can be sent beside them. The other children
+      // render as before. See `withAuthorName`.
       const words = negated || !dialect.authorName ? [] : node.nodes.map(authorWord);
       const named = words.filter((word): word is string => word !== undefined);
       if (named.length >= 2) {

@@ -133,7 +133,7 @@ describe('translate: the fielded grammar', () => {
     expect(q('AU=Doudna')).toBe('AUTH:Doudna');
   });
 
-  it('sends the words of an author link as a name, beside the words', () => {
+  it('sends a name written as its words as a name, beside the words', () => {
     // Europe PMC matches a bare AUTH word only as a surname, so the words alone
     // found nothing: measured 0 for `AUTH:Jennifer AND AUTH:Doudna` against
     // 153 for the quoted name. See `withAuthorName`.
