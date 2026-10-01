@@ -225,32 +225,53 @@ function phrasePattern(text: string): RegExp {
   return new RegExp(`${open}${words.join('\\s+')}${close}`, 'i');
 }
 
+/**
+ * Letters `NFD` leaves whole, because Unicode treats them as letters of their
+ * own rather than as a letter with a mark: "Łukasz" is not "Lukasz" to it.
+ */
+const UNMARKED: Record<string, string> = {
+  ł: 'l', ø: 'o', đ: 'd', ð: 'd', ħ: 'h', ı: 'i', ŀ: 'l', ß: 'ss', æ: 'ae', œ: 'oe', þ: 'th'
+};
+
 /** A word of a name as two sources might both write it: lower case, no accents. */
 function foldName(word: string): string {
-  return word.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return word
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[łøđðħıŀßæœþ]/g, letter => UNMARKED[letter]!);
 }
 
 /**
- * The words of a name, apart from the punctuation sources disagree on, and
- * sorted into names and initials.
+ * The words of a name, apart from the punctuation sources disagree on — stops,
+ * hyphens, apostrophes straight or curly — and sorted into names and initials.
  *
  * An initial is a lone letter, or a short run of capitals: "A.", "B.U." and
  * PubMed's "JA". "Li" and "Wu" are names, and stay names, because they are not
- * written in capitals.
+ * written in capitals. On a record, though, a short run of capitals may be a
+ * surname some source wrote in capitals — "LI Wei" — so there it counts as
+ * both, and a query for "Li Wei" still finds it.
+ *
+ * `given` is how many names the text writes out, counted before hyphens split
+ * them: "Sanvicente-García M" gives one, so its initial still has a job to do.
  */
-function nameWords(text: string): { names: string[]; initials: string[] } {
+function nameWords(text: string, record = false): { names: string[]; initials: string[]; given: number } {
   const names: string[] = [];
   const initials: string[] = [];
-  for (const raw of text.split(/[\s,;-]+/)) {
-    const word = raw.replace(/\./g, '');
+  let given = 0;
+  for (const raw of text.split(/[\s,;]+/)) {
+    const word = raw.replace(/[.'’`]/g, '');
     if (!word) continue;
-    if (word.length === 1 || (word.length <= 3 && /^[A-Z]+$/.test(word))) {
-      initials.push(...foldName(word).split(''));
-    } else {
-      names.push(foldName(word));
+    const letters = word.replace(/[-‐]/g, '');
+    if (letters.length === 1 || (letters.length <= 3 && /^[A-Z]+$/.test(letters))) {
+      initials.push(...foldName(letters).split(''));
+      if (record && letters.length > 1) names.push(foldName(letters));
+      continue;
     }
+    given += 1;
+    names.push(...word.split(/[-‐]+/).filter(Boolean).map(foldName));
   }
-  return { names, initials };
+  return { names, initials, given };
 }
 
 /**
@@ -264,11 +285,16 @@ function nameWords(text: string): { names: string[]; initials: string[] } {
  * "Doudna, Jennifer", so that is the phrase a pasted query carries.
  *
  * As a name: every name in the phrase is a word of one author's name, in any
- * order and whatever the accents and punctuation. Initials are not held
- * against a name that has its forename written out — sources disagree on them
- * more than on anything — and are what tells one Doudna from another when the
- * phrase has nothing else: "Doudna J" needs a forename or initial beginning
- * with J.
+ * order and whatever the accents and punctuation — or, where the record gives
+ * that name only as an initial, the initial: "Doudna JA" and "J. A. Doudna" are
+ * her too. One name at least has to be there in full, which in practice is the
+ * surname; the record that gives a surname as an initial is the price of that,
+ * and is rare.
+ *
+ * Initials in the phrase are not held against a record that writes the
+ * forename out — sources disagree on them more than on anything — and are what
+ * tells one Doudna from another when the phrase writes out only one name:
+ * "Doudna J" needs a forename or initial beginning with J.
  *
  * A phrase of initials alone names nobody, and is matched as words.
  */
@@ -277,9 +303,11 @@ function nameMatcher(text: string): ((author: string) => boolean) | undefined {
   if (wanted.names.length === 0) return undefined;
 
   return author => {
-    const { names, initials } = nameWords(author);
-    if (!wanted.names.every(name => names.includes(name))) return false;
-    if (wanted.names.length > 1 || wanted.initials.length === 0) return true;
+    const { names, initials } = nameWords(author, true);
+    const missing = wanted.names.filter(name => !names.includes(name));
+    if (missing.length === wanted.names.length) return false;
+    if (!missing.every(name => initials.includes(name[0]!))) return false;
+    if (wanted.given > 1 || wanted.initials.length === 0) return true;
     const first = wanted.initials[0]!;
     return initials.includes(first) || names.some(name => !wanted.names.includes(name) && name.startsWith(first));
   };

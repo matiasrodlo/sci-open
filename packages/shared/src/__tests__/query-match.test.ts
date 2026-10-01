@@ -92,6 +92,34 @@ describe('matching a record against a fielded query', () => {
     expect(check('AU="Jennifer A. Doudna"', { authors: ['Jennifer Doudna'] })).toBe(true);
   });
 
+  it('finds a record that gives the forename only as an initial', () => {
+    // Europe PMC and PubMed return these for the name, and they were dropped.
+    expect(check('AU="Doudna, Jennifer"', { authors: ['Doudna JA'] })).toBe(true);
+    expect(check('AU="Doudna, Jennifer"', { authors: ['J. A. Doudna'] })).toBe(true);
+    expect(check('AU="Jean-Pierre Dupont"', { authors: ['Dupont J.-P.'] })).toBe(true);
+    // An initial that is not hers is not her.
+    expect(check('AU="Doudna, Jennifer"', { authors: ['Doudna S'] })).toBe(false);
+    // Nor is a record with no forename at all, which cannot say.
+    expect(check('AU="Doudna, Jennifer"', { authors: ['Doudna'] })).toBe(false);
+  });
+
+  it('counts a hyphenated surname as one name when deciding whether a forename was given', () => {
+    // Split at the hyphen it looked like two names written out, and the
+    // initial went unchecked.
+    expect(check('AU="Sanvicente-García M"', { authors: ['Pedro Sanvicente-García'] })).toBe(false);
+    expect(check('AU="Sanvicente-García M"', { authors: ['Marta Sanvicente-García'] })).toBe(true);
+  });
+
+  it('finds a surname a source wrote in capitals', () => {
+    expect(check('AU="Li Wei"', { authors: ['LI Wei'] })).toBe(true);
+    expect(check('AU="Li Wei"', { authors: ['Wei Zhang'] })).toBe(false);
+  });
+
+  it('folds the letters and apostrophes accents alone do not cover', () => {
+    expect(check('AU="Łukasz Nowak"', { authors: ['Lukasz Nowak'] })).toBe(true);
+    expect(check('AU="O’Brien, Pat"', { authors: ["Pat O'Brien"] })).toBe(true);
+  });
+
   it('keeps a phrase in any other field as a run of words, in order', () => {
     expect(check('TI="editing genome"')).toBe(false);
     expect(check('SO="Nature Genetics"', { venue: 'Genetics Nature' })).toBe(false);
