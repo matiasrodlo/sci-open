@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Query } from '@open-access-explorer/shared';
 import { translate, toParams } from '../translate';
+import { parseQuery } from '../../../orchestrator/parse-query';
 
 const query = (over: Partial<Query>): Query => ({ terms: [], phrases: [], join: 'AND', ...over });
 
@@ -189,5 +190,111 @@ describe('toParams — the publication type', () => {
 
   it('leaves a DOI lookup unnarrowed', () => {
     expect(toParams(query({ doi: '10.1/x', stages: ['preprint'] })).filter).not.toContain('type:');
+  });
+});
+
+/**
+ * A query that names a field.
+ *
+ * OpenAlex used to be declared unable to scope one at all, so every fielded
+ * search skipped the largest source in the fan-out. It has a `*.search` filter
+ * for four of the grammar's fields; the rest widen and are settled by
+ * `matchesQuery`. The keys are measured — see `FIELD_FILTERS`.
+ */
+describe('toParams — the fielded grammar', () => {
+  const filter = (input: string) => toParams(parseQuery(input)).filter;
+
+  it('asks the author index for an author, not the title', () => {
+    // The flat path sent this as the word "Doudna" in titles and abstracts,
+    // which is a narrower and different question.
+    expect(filter('AU=Doudna')).toBe('raw_author_name.search:Doudna');
+  });
+
+  it('maps each field OpenAlex has a key for', () => {
+    expect(filter('TI=crispr')).toBe('title.search:crispr');
+    expect(filter('AB=crispr')).toBe('abstract.search:crispr');
+    expect(filter('ALL=crispr')).toBe('default.search:crispr');
+  });
+
+  it('ANDs two requirements by repeating the key', () => {
+    expect(filter('TI=crispr AND AU=Doudna'))
+      .toBe('title.search:crispr,raw_author_name.search:Doudna');
+  });
+
+  it('states alternatives on one field with a pipe', () => {
+    expect(filter('AU=(Doudna OR Charpentier)'))
+      .toBe('raw_author_name.search:Doudna|Charpentier');
+  });
+
+  it('keeps the year bound beside the field clauses', () => {
+    expect(filter('AU=Doudna AND PY=2020-2024'))
+      .toBe('publication_year:2020-2024,raw_author_name.search:Doudna');
+  });
+
+  /**
+   * Everything below widens rather than narrowing. A clause OpenAlex cannot
+   * state is dropped from the request and applied to the merged records
+   * instead; the reverse would mean never fetching records nothing could
+   * recover.
+   */
+  it('drops a field it has no key for, keeping the rest', () => {
+    // Every `primary_location.source.*.search` candidate answers HTTP 400.
+    expect(filter('SO=Nature AND TS=genome')).toBe('title_and_abstract.search:genome');
+  });
+
+  it('asks nothing at all when it can state none of the query', () => {
+    // `fanOut` turns an empty translation into a skip, so the panel says the
+    // source was not asked rather than printing a zero it never reported.
+    expect(toParams(parseQuery('SO=Nature'))).toEqual({});
+    expect(translate(parseQuery('SO=Nature'))).toBe('');
+  });
+
+  it('drops a NOT rather than guessing what its negation matches', () => {
+    expect(filter('TS=crispr NOT AU=Doudna')).toBe('title_and_abstract.search:crispr');
+  });
+
+  it('drops an OR whose sides are different fields', () => {
+    // Separate filters are ANDed, so there is no form for this; dropping the
+    // whole OR widens, where dropping one side would silently narrow.
+    expect(filter('AU=Doudna OR TI=crispr')).toBeUndefined();
+  });
+
+  it('drops a wildcard it cannot run on these keys', () => {
+    // Only `title_and_abstract.search.exact` is known to run wildcards.
+    expect(filter('AU=Doud* AND TS=crispr')).toBe('title_and_abstract.search:crispr');
+  });
+
+  it('leaves a plain subject query on the measured flat path', () => {
+    expect(filter('crispr gene editing')).toBe('title_and_abstract.search:crispr gene editing');
+    expect(filter('TS=cancer OR TS=zebrafish')).toBe('title_and_abstract.search:cancer OR zebrafish');
+  });
+});
+
+describe('toParams — a phrase in a fielded clause', () => {
+  const filter = (input: string) => toParams(parseQuery(input)).filter;
+
+  it('quotes it, which OpenAlex honours', () => {
+    // Measured: 8,171 for the phrase against 10,866 for the bare words.
+    expect(filter('TI="gene editing"')).toBe('title.search:"gene editing"');
+  });
+
+  /**
+   * `,` and `|` keep their meaning to OpenAlex inside a quoted value, so the
+   * quotes are not an escape. The pipe is the one that bites: measured,
+   * `title.search:"gene|editing"` answers 1,763,137 where the phrase answers
+   * 8,171 — the halves OR-ed, returned 200, with nothing to mark it wrong.
+   */
+  it('strips the separators that survive the quotes', () => {
+    expect(filter('TI="gene|editing"')).toBe('title.search:"gene editing"');
+    expect(filter('TI="gene, editing"')).toBe('title.search:"gene editing"');
+  });
+
+  it('drops a clause left with nothing after stripping', () => {
+    expect(filter('AU=Doudna AND TI="|"')).toBe('raw_author_name.search:Doudna');
+  });
+
+  it('keeps alternatives separable from a phrase that contained a pipe', () => {
+    expect(filter('AU=("Jennifer Doudna" OR Charpentier)'))
+      .toBe('raw_author_name.search:"Jennifer Doudna"|Charpentier');
   });
 });

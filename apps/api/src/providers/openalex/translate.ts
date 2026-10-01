@@ -1,4 +1,5 @@
-import type { PaperStage, Query } from '@open-access-explorer/shared';
+import type { PaperStage, Query, QueryField, QueryNode, QueryValue } from '@open-access-explorer/shared';
+import { fieldsUsed } from '@open-access-explorer/shared';
 import { STAGES } from './normalize';
 
 /**
@@ -99,6 +100,177 @@ function typeFilters(stages: readonly PaperStage[]): string[] | undefined {
   return kept.length > 0 ? [`type:${kept.join('|')}`] : undefined;
 }
 
+/**
+ * OpenAlex's filter key for each field the grammar can name, and the five it
+ * has one for.
+ *
+ * Measured against the live API on 2026-09-30, since a filter key OpenAlex does
+ * not recognise is an **HTTP 400** for the whole request and so costs the
+ * largest provider in the fan-out:
+ *
+ *   title.search  abstract.search  title_and_abstract.search
+ *   raw_author_name.search  default.search                        200
+ *
+ *   primary_location.source.display_name[.search]                 400
+ *   primary_location.source.publisher.search                      400
+ *   primary_location.source.host_organization_name[.search]       400
+ *   locations.source.display_name.search                          400
+ *   host_venue.display_name.search                                400
+ *   journal.search                                                400
+ *   authorships.institutions.display_name.search                  400
+ *
+ * Ten candidates, so the absence is the finding rather than a gap in the
+ * search for one: OpenAlex has no filter that takes a venue or publisher
+ * *name*. `primary_location.source.issn` does work, which is the route if this
+ * is ever wanted — resolve the name through the `/sources` endpoint first — and
+ * that is a request per clause and a disambiguation problem, not a mapping.
+ *
+ * So `SO=` and `PU=` have no key here and are left to widen: a clause on either
+ * is dropped from the request and applied by `matchesQuery` over the merged
+ * records instead. A query that is *only* `SO=` therefore translates to
+ * nothing, and `fanOut` reports OpenAlex skipped rather than letting it answer
+ * `0` to a question it was never asked.
+ */
+const FIELD_FILTERS: Partial<Record<QueryField, string>> = {
+  topic: 'title_and_abstract.search',
+  title: 'title.search',
+  abstract: 'abstract.search',
+  author: 'raw_author_name.search',
+  all: 'default.search'
+};
+
+/**
+ * Whether the query names a field, as opposed to being words about a subject.
+ *
+ * `topic` is what an untagged word means and keeps the flat path below, which
+ * is where every measurement in this file was taken.
+ *
+ * `ALL=` counts as naming one, and that is not a technicality. The flat path
+ * sends `title_and_abstract.search`, so an explicit "search every field" would
+ * have been answered by two of them — measured on `crispr`, 136,418 against
+ * 383,293 for `default.search`. That is a quarter of a million records the
+ * query asked for and nothing would have fetched, which is the direction this
+ * translator is never allowed to be wrong in.
+ *
+ * `year` and `doi` are lifted onto `Query` before this and have filters of
+ * their own.
+ */
+function usesScopedField(expression: QueryNode): boolean {
+  return [...fieldsUsed(expression)].some(
+    field => field !== 'topic' && field !== 'year' && field !== 'doi'
+  );
+}
+
+/**
+ * One clause's value, or nothing when OpenAlex cannot carry it.
+ *
+ * Wildcards are refused rather than attempted. `title_and_abstract.search`
+ * answers any `*` or `?` with HTTP 400 and only the `.search.exact` variant
+ * runs them — and whether the other four keys have an exact variant at all is
+ * not something this code has measured. An unsent wildcard clause widens the
+ * request and `matchesQuery` applies it; a guessed filter key fails the whole
+ * search.
+ */
+function clauseValue(value: QueryValue): string | undefined {
+  if (value.kind === 'years') return undefined;
+
+  /**
+   * `filterSafe` after quoting, exactly as the flat path below does it, and for
+   * a reason the quotes do not protect against: `,` and `|` keep their meaning
+   * to OpenAlex *inside* a quoted value.
+   *
+   * Measured on the live API, `title.search` over open works:
+   *
+   *   "gene editing"   8,171   the phrase
+   *   "gene|editing"   1,763,137
+   *
+   * The pipe is read as OR between the halves, so the phrase quietly becomes a
+   * query for either word — two hundred times the records, answered 200 with
+   * nothing to say anything had gone wrong, and the whole depth budget spent on
+   * a question nobody asked. A comma parsed harmlessly in the one case measured,
+   * but it is the filter separator and is stripped on the same grounds.
+   *
+   * Stripped *before* quoting rather than after, which the flat path cannot do
+   * because it quotes each phrase and cleans the joined result once. Done the
+   * other way round, a phrase that was nothing but separators survives as
+   * `title.search:" "` — a filter asking for a quoted space — instead of
+   * disappearing and letting the clause widen.
+   */
+  if (value.kind === 'phrase') return quote(filterSafe(value.text)) || undefined;
+
+  if (/[*?]/.test(value.text)) return undefined;
+  return filterSafe(value.text) || undefined;
+}
+
+/** The `AND` spine, flattened — the clauses every result must satisfy. */
+function conjuncts(node: QueryNode): QueryNode[] {
+  return node.kind === 'and' ? node.nodes.flatMap(conjuncts) : [node];
+}
+
+/**
+ * An `OR` OpenAlex can state: alternatives on one field, which is `|` inside a
+ * single filter value. Measured — `title_and_abstract.search:crispr|cas9`
+ * answered 141,022 against 136,418 for `crispr` alone.
+ *
+ * Alternatives across *different* fields have no form here, because separate
+ * filters are ANDed. Those return nothing and the whole `OR` is dropped from
+ * the request, which widens it — never the other way round, since a branch
+ * dropped from an `OR` is records nobody would fetch and nothing could recover.
+ */
+function orFilter(node: Extract<QueryNode, { kind: 'or' }>): string | undefined {
+  const values: string[] = [];
+  let field: QueryField | undefined;
+
+  for (const child of node.nodes) {
+    if (child.kind !== 'clause') return undefined;
+    if (field !== undefined && child.field !== field) return undefined;
+    field = child.field;
+
+    const value = clauseValue(child.value);
+    if (!value) return undefined;
+    values.push(value);
+  }
+
+  const key = field ? FIELD_FILTERS[field] : undefined;
+  return key ? `${key}:${values.join('|')}` : undefined;
+}
+
+/**
+ * The fielded query as OpenAlex filters.
+ *
+ * Repeating a key is how two requirements on one field are stated, and OpenAlex
+ * ANDs them like any other pair of filters — measured, `title.search:crispr,
+ * title.search:cas9` answered 20,350 against 49,423 for `crispr` alone.
+ *
+ * `NOT` is left out even though `raw_author_name.search:!Doudna` is accepted
+ * and does reduce the count. Excluding slightly more than the query asked is
+ * the one direction that cannot be undone downstream, and exactly what `!`
+ * matches on a stemmed search field has not been measured here. The clause is
+ * dropped and `matchesQuery` applies it instead.
+ */
+function fieldFilters(expression: QueryNode): string[] {
+  const filters: string[] = [];
+
+  for (const node of conjuncts(expression)) {
+    if (node.kind === 'clause') {
+      const key = FIELD_FILTERS[node.field];
+      const value = clauseValue(node.value);
+      if (key && value) filters.push(`${key}:${value}`);
+      continue;
+    }
+
+    if (node.kind === 'or') {
+      const filter = orFilter(node);
+      if (filter) filters.push(filter);
+    }
+
+    // Anything else — a `NOT`, a nested shape with no filter form — is widened
+    // away here and settled by the evaluator.
+  }
+
+  return filters;
+}
+
 export type TranslateOptions = {
   /** Adds `is_oa:true`, which OpenAlex applies upstream. */
   openAccessOnly?: boolean;
@@ -127,6 +299,30 @@ export function toParams(query: Query, options: TranslateOptions = {}): OpenAlex
     // found 267 loosely-matching records instead of the one paper.
     filters.push(`doi:${query.doi.toLowerCase()}`);
     return filters.length > 0 ? { filter: filters.join(',') } : {};
+  }
+
+  /**
+   * A query that names a field is built from the parse, not from the flat
+   * words — because the flat form has nowhere to put a field, and sending
+   * `AU=Doudna` through it asked for the *word* "Doudna" in titles and
+   * abstracts. That is a different question, and a narrower one: a paper
+   * Doudna wrote whose title does not say so was never fetched, and nothing
+   * downstream can recover a record no provider returned. OpenAlex was
+   * declared unable to scope a field at all for that reason, which cost every
+   * fielded search the largest source in the fan-out.
+   *
+   * Left to the flat path below when no field is named, which is the common
+   * case and the one every measurement in this file was taken against.
+   */
+  if (query.expression && usesScopedField(query.expression)) {
+    const scoped = fieldFilters(query.expression);
+    // Nothing of it OpenAlex can state — `SO=Nature` on its own. Returning no
+    // params makes `translate` empty, and `fanOut` reports the provider
+    // skipped instead of letting `is_oa:true` read the open-access corpus.
+    if (scoped.length === 0) return {};
+
+    filters.push(...scoped);
+    return { filter: filters.join(',') };
   }
 
   const words = query.terms.map(t => t.trim()).filter(Boolean);

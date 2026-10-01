@@ -6,8 +6,9 @@ import type { QueryField, QueryNode, QueryValue } from './query';
  *
  * The grammar is only half of fielded search. The other half is that most of
  * the providers cannot run the query that was typed: OpenAIRE has no query
- * language at all, DOAJ cannot express `NOT`, and the ones that do all spell
- * their fields differently and index different text under them. Translating
+ * language at all, OpenAlex has no filter key for `SO=` or `PU=`, arXiv's
+ * negation is a different shape, and the ones that do all spell their fields
+ * differently and index different text under them. Translating
  * as much as each can express and hoping is how the deleted advanced-search tab
  * behaved, and it is why it was deleted.
  *

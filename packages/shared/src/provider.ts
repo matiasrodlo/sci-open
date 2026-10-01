@@ -104,17 +104,25 @@ export type ProviderCapabilities = {
    * Can scope a clause to a field — `AU=`, `SO=`, `TI=` — in its own query
    * syntax.
    *
-   * False for the two providers whose API has nowhere to put one: OpenAIRE
-   * takes keywords and no query language at all, and OpenAlex takes filters
-   * whose search keys cannot be combined with `OR` or negated.
+   * False for OpenAIRE alone, whose API takes keywords and has no query
+   * language to name a field in.
    *
-   * It decides whether the provider is asked, and only for a query that is
-   * *entirely* field-scoped. `AU=Doudna AND TS=crispr` still goes to both of
-   * them, as `crispr`, and the evaluator applies the author clause afterwards;
-   * `AU=Doudna` alone leaves them nothing to search for. Before this existed
-   * they were asked anyway, answered `retrieved: 0`, and the coverage panel
-   * printed `0 · 0` beside their names — which reads as "this source has no
-   * papers by that author" and is a statement nobody made.
+   * True does not mean *every* field. OpenAlex has a filter key for the title,
+   * the abstract, the topic and the author and none for `SO=` or `PU=`; what a
+   * provider cannot name is dropped from its request and applied to the merged
+   * records instead. This flag answers the coarser question `plan` asks — is
+   * there any point sending this provider a fielded query at all.
+   *
+   * It only decides anything for a query that is *entirely* field-scoped.
+   * `AU=Doudna AND TS=crispr` goes to every provider, as `crispr` where that
+   * is all they can take, and the evaluator applies the author clause
+   * afterwards; `AU=Doudna` alone leaves a keyword-only source nothing to
+   * search for. Before this existed it was asked anyway, answered
+   * `retrieved: 0`, and the coverage panel printed `0 · 0` beside its name —
+   * which reads as "this source has no papers by that author" and is a
+   * statement nobody made. A provider that can state *some* fields but not
+   * this one is caught the same way a step later, by `fanOut`, when its
+   * translation comes back empty.
    */
   fieldedSearch: boolean;
   /** Fields this provider actually populates. */

@@ -80,10 +80,15 @@ because `#1` standing for `a OR b` has to mean `(a OR b) AND …`.
 Worth knowing, because it explains a result count that looks generous.
 
 No source can run this grammar as written: OpenAIRE has no query language,
-arXiv's negation is a different shape, and no two index the same text under
-"title". So each source is sent as much of the query as it can express — and
-where it cannot express something, it is sent a **wider** query rather than a
-narrower one. The full query is then applied to the merged records.
+OpenAlex has no filter key for `SO=` or `PU=`, arXiv's negation is a different
+shape, and no two index the same text under "title". So each source is sent as
+much of the query as it can express — and where it cannot express something, it
+is sent a **wider** query rather than a narrower one. The full query is then
+applied to the merged records.
+
+A source that can express *nothing* of a query is not asked, and the response
+says so rather than reporting it as having matched nothing — `AU=Doudna` goes
+to the five sources with an author index and skips OpenAIRE, which has none.
 
 That last step only ever removes records, and it removes only the ones it can
 positively rule out. A record whose abstract this service never received is not

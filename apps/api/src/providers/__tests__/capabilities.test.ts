@@ -69,7 +69,11 @@ const EXPECTED: Record<ProviderId | string, Expected> = {
   // 200 is OpenAlex's own per-page cap; the provider paginates internally to
   // reach the requested depth. `publication_year:X-Y` — the `>=`/`<=` form the
   // old path emitted is rejected with HTTP 400.
-  openalex: { keywordSearch: true, fieldedSearch: false, doiLookup: true, yearFilter: true, maxPageSize: 200, reportsTotal: true, suppliesCitations: true },
+  // `fieldedSearch` is TRUE, against the comment that used to sit here saying
+  // OpenAlex could not scope a field. It has a `*.search` filter for the title,
+  // the abstract, the topic and the author — measured 2026-09-30 — and only
+  // `SO=`/`PU=` have none, which widen. See `FIELD_FILTERS` in its translate.
+  openalex: { keywordSearch: true, fieldedSearch: true, doiLookup: true, yearFilter: true, maxPageSize: 200, reportsTotal: true, suppliesCitations: true },
 
   plos: { keywordSearch: true, fieldedSearch: true, doiLookup: true, yearFilter: true, maxPageSize: 1000, reportsTotal: true, suppliesCitations: false }
 };

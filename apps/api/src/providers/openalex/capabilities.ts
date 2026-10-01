@@ -16,13 +16,19 @@ export const capabilities: ProviderCapabilities = {
   keywordSearch: true,
   doiLookup: true,
 
-  // No field search: see `fieldedSearch`. A query that is entirely
-  // field-scoped leaves this provider nothing to search for, so it is
-  // skipped with the reason rather than asked and reported as empty.
-  fieldedSearch: false,
-  skipReason: {
-    fieldedSearch: 'searches by filter, which cannot scope or negate a field'
-  },
+  /**
+   * Title, abstract, topic and author, each as its own `*.search` filter —
+   * see `FIELD_FILTERS` in `translate.ts` for the keys and the measurements
+   * behind them.
+   *
+   * True rather than exact: `SO=` and `PU=` have no filter key here, and every
+   * candidate for one answers HTTP 400. This flag only decides whether `plan`
+   * asks at all, and asking is right whenever *some* of a query can be stated.
+   * The rest is caught a step later — a query OpenAlex can say nothing about
+   * translates to an empty string, and `fanOut` reports it skipped rather than
+   * letting it answer `0` to a question it never received.
+   */
+  fieldedSearch: true,
 
   fields: [
     'title',
