@@ -25,8 +25,12 @@ bound, the coverage sentence, the handle (searches only) and the result hash
    user's cap.
 5. Screen titles and abstracts against the user's criteria. For an uncertain
    paper, `read_paper` with `view="outline"`, then its methods section.
-6. List the included papers with their DOIs in the log, so the user's
-   reference manager can import them exactly.
+6. To check for papers the query missed, follow the citations of the most
+   relevant included papers with `get_citations` (`references` backwards,
+   `cited_by` forwards), and screen what it finds the same way. Log it as a
+   citation search, with the papers it started from.
+7. Export the included papers with `export_citations`, with `save_to` if the
+   user wants a file, and list them with their DOIs in the log.
 
 Report coverage as the results give it: if a source failed, say the totals
 are lower bounds and name the sources that were missing.

@@ -335,6 +335,7 @@ MCP_HTTP_ENABLED=false
 MCP_ALLOW_UNKEYED=false
 MCP_ALLOWED_ORIGINS=
 MCP_SEARCH_DEPTH=300
+OPENCITATIONS_TOKEN=
 ```
 
 `MCP_HTTP_ENABLED=true` mounts the MCP server (`packages/mcp`) on the API at
@@ -375,8 +376,15 @@ a streamed response on as it arrives (a call that asks for progress is an SSE
 stream) and wait at least 70 seconds for an answer, the web tier's own budget
 for this route: a `verify_references` batch can take a minute.
 
+`OPENCITATIONS_TOKEN` is OpenCitations' access token, sent with the MCP
+server's `get_citations` requests. Optional: OpenCitations answers 180
+requests a minute per address without one, and a list it returns is held ten
+minutes, so paging through it asks once. The citation-count authority does
+not use it; it sends no credentials.
+
 The server's other settings over HTTP are its defaults, listed below, with
-`save_to` always refused.
+`save_to` always refused. `get_citations` and `export_citations` are opt-in
+there as on stdio: a client asks for them with `?toolsets=all`.
 
 ## MCP server (stdio)
 
@@ -391,6 +399,7 @@ the reference copy.
 |---|---|---|---|
 | `UNPAYWALL_EMAIL` | | unset (warns) | Contact sent to Unpaywall and OpenAlex in the `User-Agent` |
 | `OPENALEX_API_KEY`, `CORE_API_KEY`, `NCBI_API_KEY`, `DOAJ_API_KEY`, `DATACITE_API_KEY` | | unset | Optional provider keys, as for the API |
+| `OPENCITATIONS_TOKEN` | | unset | Optional OpenCitations token, for `get_citations` |
 | `SCI_OPEN_TOOLSETS` | `--toolsets` | `core,read` | `core`, `read`, `graph`, `export`, `all` or `default` |
 | `SCI_OPEN_TOOLS` | `--tools` | unset | Extra tools by name |
 | `SCI_OPEN_ALLOW_WRITES` | `--no-writes` | `1` | Whether `save_to` may write a file |

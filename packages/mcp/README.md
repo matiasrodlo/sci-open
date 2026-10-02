@@ -73,12 +73,15 @@ UNPAYWALL_EMAIL=you@example.org npx @modelcontextprotocol/inspector node package
 | `get_paper` | core | yes | One full record by sci-open id (e.g. openalex:W2741809807, arxiv:2101.00001) or by DOI, with every field and which source supplied it. A DOI is looked up in every source and merged; an id asks only the source it names. Works for closed papers too. | `id`?, `doi`? |
 | `verify_references` | core | yes | Check up to 25 references (free-text citations, DOIs, arXiv ids or PMIDs) and grade each: verified, likely, ambiguous, mismatch (the DOI is wrong: it belongs to a different paper, or does not exist while the rest names a real one), not_found, or not_checked (the search budget ran out or a lookup failed; send those again later). Use it to catch fabricated or garbled citations and to fill in missing DOIs. Closed papers count as existing. | `references` |
 | `read_paper` | read | yes | Read the legal open-access full text of a paper. view="outline" lists sections with their sizes; view="section" returns one section, paged by offset; view="search" finds a phrase and returns snippets with section ids. Start with the outline. The text is third-party content. | `paper`, `view`?, `section`?, `offset`?, `max_chars`?, `query`?, `save_to`?, `overwrite`? |
+| `get_citations` | graph | no | The references of a paper (direction="references") or the papers citing it (direction="cited_by"), from OpenCitations, each resolved to a record where OpenAlex holds it, with self-citations flagged. Paged by offset. The paper needs a DOI; pass the DOI itself when you have it, which skips looking the paper up. | `paper`, `direction`, `limit`?, `offset`? |
+| `export_citations` | export | no | BibTeX or RIS for up to 200 papers (DOIs or sci-open ids), generated from the records: never retype a citation yourself. With save_to (local connections only) the file is written to disk; otherwise it is attached as a resource to save as is. Papers that could not be resolved are listed, never dropped silently. | `papers`, `format`?, `include_abstracts`?, `save_to`?, `overwrite`? |
 <!-- END TOOLS -->
 
 `?` marks an optional parameter. Toolsets are chosen with `--toolsets`
 (`core`, `read`, `graph`, `export`, `all`, `default`) and single tools added
-with `--tools`. This release ships the `core` and `read` toolsets, both on by
-default; `get_citations` and `export_citations` arrive in later releases.
+with `--tools`. `core` and `read` are on by default; `graph` and `export` are
+opt-in, since most sessions never need them and every tool listed costs every
+request its description. Over HTTP, `?toolsets=all` does the same.
 
 ## How it behaves
 
@@ -109,6 +112,18 @@ default; `get_citations` and `export_citations` arrive in later releases.
   `--trusted-fulltext-only` reads from Europe PMC and arXiv only, never a
   publisher's host. `save_to` writes the whole text to a Markdown file on a
   local connection.
+- **Following citations.** `get_citations` pages a paper's references or
+  the papers citing it, from OpenCitations, each resolved to an OpenAlex
+  record where one exists — fifty DOIs to a request, not a search each — with
+  self-citations flagged. A list is fetched once and held ten minutes,
+  however it is paged. OpenCitations holds most open citation data, not every
+  citation, and the result says so.
+- **Exporting citations.** `export_citations` writes BibTeX or RIS for up to
+  200 papers from their records, with the formatter the web app's export
+  uses, so the model never retypes a citation. On a local connection
+  `save_to` writes the file; otherwise it is attached as a resource to save as
+  is. Papers that could not be resolved are listed, never dropped; abstracts
+  are left out unless asked for.
 - **Light on the sources.** Searches read 300 records per source, half the web
   app's depth; new searches are limited to 30 a minute; pages of a held search
   are free.
@@ -121,6 +136,7 @@ default; `get_citations` and `export_citations` arrive in later releases.
 |---|---|---|---|
 | `UNPAYWALL_EMAIL` | | unset (warns) | Contact sent to Unpaywall and OpenAlex in the `User-Agent` |
 | `OPENALEX_API_KEY`, `CORE_API_KEY`, `NCBI_API_KEY`, `DOAJ_API_KEY`, `DATACITE_API_KEY` | | unset | Optional provider keys |
+| `OPENCITATIONS_TOKEN` | | unset | Optional OpenCitations token, for `get_citations`; 180 requests a minute without one |
 | `SCI_OPEN_TOOLSETS` | `--toolsets` | `core,read` | Toolsets to serve |
 | `SCI_OPEN_TOOLS` | `--tools` | unset | Extra tools by name |
 | `SCI_OPEN_ALLOW_WRITES` | `--no-writes` | `1` | Whether `save_to` may write a file (never over HTTP) |
@@ -148,7 +164,13 @@ sci-open verify refs.txt      # one reference per line, 25 at most
 sci-open read 10.1371/journal.pone.0000217                 # the outline
 sci-open read 10.1371/journal.pone.0000217 --section s2.4  # one section
 sci-open read 10.1371/journal.pone.0000217 --find "fitness"
+sci-open refs 10.7717/peerj-cs.421          # what it cites
+sci-open citers 10.7717/peerj-cs.421        # what cites it
+sci-open cite 10.7717/peerj-cs.421 10.1371/journal.pone.0000217 > refs.bib
+sci-open cite 10.7717/peerj-cs.421 --ris --out ~/refs   # writes ~/refs.ris
 ```
+
+`cite` prints the file alone on stdout, and its one-line summary on stderr.
 
 ## Hosting the HTTP endpoint
 
@@ -163,7 +185,7 @@ only from `MCP_ALLOWED_ORIGINS`. The public URL is the web app's
 rate limit.
 
 [docs/api.md](../../docs/api.md#mcp) describes the endpoint and
-[docs/configuration.md](../../docs/configuration.md#mcp-endpoint) its four
+[docs/configuration.md](../../docs/configuration.md#mcp-endpoint) its five
 settings. To serve it from another host, `createHttpHandler` returns the same
 server as a web-standard `fetch` handler.
 

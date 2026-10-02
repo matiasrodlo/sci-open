@@ -21,6 +21,6 @@ description: Check every reference in a bibliography, manuscript or reference li
    - `ambiguous`: more than one paper fits. List them and ask which was meant.
    - `not_found`: no source holds it. Say that, not "fabricated": very new
      and some closed papers can be missing too.
-5. Give corrections as the matched record's DOI and metadata, never as a
-   BibTeX or RIS entry you type yourself: a retyped entry is where new errors
-   come from. A reference manager imports a DOI exactly.
+5. Offer `export_citations` for the verified and corrected entries, with
+   `save_to` if the user wants a file. Never type BibTeX or RIS yourself: a
+   retyped entry is where new errors come from.

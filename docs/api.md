@@ -369,7 +369,9 @@ not mounted (`404`) and the API logs an error at startup saying why. See
   2025-era request is answered as an SSE stream of one event. Send
   `Accept: application/json, text/event-stream`.
 - **Tools.** `?toolsets=core,read` and `?tools=…` choose them, as `--toolsets`
-  and `--tools` do on stdio. An unknown name answers `400` with the valid ones.
+  and `--tools` do on stdio; `?toolsets=all` adds `get_citations` and
+  `export_citations`, which are opt-in. An unknown name answers `400` with the
+  valid ones. `export_citations` attaches its file as an embedded resource.
 - **Limits.** The route has its own bucket of 60 requests a minute per
   client. A tool call that resolves a new result set — a search, a DOI lookup,
   a count, a page of a set no longer held — also spends the caller's
