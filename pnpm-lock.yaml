@@ -37,6 +37,9 @@ importers:
       '@fastify/rate-limit':
         specifier: ^11.2.0
         version: 11.2.0
+      '@modelcontextprotocol/node':
+        specifier: ^2.1.1
+        version: 2.1.1(@modelcontextprotocol/server@2.3.0)
       '@open-access-explorer/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -55,7 +58,13 @@ importers:
       ioredis:
         specifier: ^5.11.1
         version: 5.11.1
+      sci-open-mcp:
+        specifier: workspace:*
+        version: link:../../packages/mcp
     devDependencies:
+      '@modelcontextprotocol/client':
+        specifier: ^2.3.0
+        version: 2.3.0
       '@types/node':
         specifier: ^20.19.43
         version: 20.19.43
@@ -218,7 +227,7 @@ importers:
   packages/mcp:
     dependencies:
       '@modelcontextprotocol/server':
-        specifier: ^2.2.0
+        specifier: ^2.3.0
         version: 2.3.0
       '@open-access-explorer/core':
         specifier: workspace:*
@@ -231,7 +240,7 @@ importers:
         version: 4.6.5
     devDependencies:
       '@modelcontextprotocol/client':
-        specifier: ^2.2.0
+        specifier: ^2.3.0
         version: 2.3.0
       '@types/node':
         specifier: ^20.19.43
@@ -856,6 +865,15 @@ packages:
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
     dev: false
 
+  /@hono/node-server@1.19.17(hono@4.13.12):
+    resolution: {integrity: sha512-dSneS5qhiauZWGDCeK4o695Xd9nUNjviSZCMQrj10eetr8Uln1ucn6bbphOM6UynAMMtNIzZNSpL9vnASJwrPQ==}
+    engines: {node: '>=18.14.1'}
+    peerDependencies:
+      hono: ^4
+    dependencies:
+      hono: 4.13.12
+    dev: false
+
   /@humanwhocodes/config-array@0.13.0:
     resolution: {integrity: sha512-DZLEEqFWQFiyK6h5YIeynKx7JlvCYWL0cImfSRXZ9l4Sg2efkFGTuFf6vzXjK1cq6IYkU+Eg/JizXw+TD2vRNw==}
     engines: {node: '>=10.10.0'}
@@ -1180,6 +1198,17 @@ packages:
     engines: {node: '>=20'}
     dependencies:
       zod: 4.6.5
+
+  /@modelcontextprotocol/node@2.1.1(@modelcontextprotocol/server@2.3.0):
+    resolution: {integrity: sha512-EY92OAXN2xYL7tNS/MVsWJW1v8VHAPwl9B4Ca3pCrjmvqyC+S1C/6UHsMxF2GoFPraS5Yyg56vFz9brVpFojMA==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@modelcontextprotocol/server': ^2.3.0
+    dependencies:
+      '@hono/node-server': 1.19.17(hono@4.13.12)
+      '@modelcontextprotocol/server': 2.3.0
+      hono: 4.13.12
+    dev: false
 
   /@modelcontextprotocol/server@2.3.0:
     resolution: {integrity: sha512-+6b0LdsQLmHsvS7J6sQJ4weTpzUn61fU1JKS+321/+IyDYoHW5CR2Tgqcs6GgAAQvlesCo6yX3xttgmx+XGtJw==}
@@ -4035,6 +4064,11 @@ packages:
   /helmet@8.3.0:
     resolution: {integrity: sha512-Qgpiaws3Sm30Av8Eah6sjMCZZwjlBu+E68rhpCWBshY1lb09HtLwj5GviX0OyQIn+ulUS0iX0AxN5n3tLZzz1w==}
     engines: {node: '>=18.0.0'}
+    dev: false
+
+  /hono@4.13.12:
+    resolution: {integrity: sha512-6E2QDAc9Ick9Sq77ZrGS/dk2WUYni91aufTw6LJKpV7w8kW5/GxVUc650FOADOmlwg3K+f7Pun6XlV+pYmW6gw==}
+    engines: {node: '>=16.9.0'}
     dev: false
 
   /html-encoding-sniffer@6.0.0:

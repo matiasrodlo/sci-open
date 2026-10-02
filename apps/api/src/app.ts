@@ -26,9 +26,12 @@ import {
   lookupPaper,
   enrichPage,
   runSearch,
+  createEngine,
   type ProviderEntry,
   type AuthorityEntry
 } from '@open-access-explorer/core';
+import { createMetrics, defaultMcpConfig } from 'sci-open-mcp';
+import { mcpRoute } from './mcp-route';
 
 export type AppOptions = {
   config: Config;
@@ -324,6 +327,53 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
       return clientError(error, request.id);
     }
   };
+
+  /**
+   * The MCP server, at `/api/mcp`, when `MCP_HTTP_ENABLED=true`. See
+   * `mcp-route.ts`.
+   *
+   * Not without an OpenAlex key. Unkeyed, OpenAlex gives this process a tenth
+   * of a key's daily budget, and every MCP client would share it with the web
+   * UI — and agents search far more often than people do. A warning in a
+   * container log is read after the budget is gone, so the endpoint stays off
+   * instead; `MCP_ALLOW_UNKEYED` is the deliberate way past it, for a trial.
+   */
+  if (config.mcp.httpEnabled && !config.apiKeys.openalex && !config.mcp.allowUnkeyed) {
+    fastify.log.error(
+      'MCP_HTTP_ENABLED is true but OPENALEX_API_KEY is unset: /api/mcp stays off. ' +
+      'Set the key, or MCP_ALLOW_UNKEYED=true for a local trial.'
+    );
+  } else if (config.mcp.httpEnabled) {
+    const metrics = createMetrics(fastify.log);
+    mcpRoute(fastify, {
+      deps: {
+        // This app's caches, so MCP sets count against the same byte budgets
+        // and the same per-source stats. At an MCP depth other than
+        // `SEARCH_DEPTH` the result-set keys differ, so the web UI and MCP
+        // clients do not serve each other's sets; set the two equal to get
+        // that back, at the upstream cost the MCP depth exists to save. No
+        // keys or pool settings: the server installed both at boot.
+        engine: createEngine({
+          userAgent,
+          search: { ...config.search, depth: config.mcp.searchDepth },
+          caches: { providerCache, resultSets, authorityFacts, stats },
+          ...upstream
+        }),
+        config: { ...defaultMcpConfig(userAgent), searchDepth: config.mcp.searchDepth },
+        metrics
+      },
+      newSearchLimit,
+      allowedOrigins: config.mcp.allowedOrigins
+    });
+    // Per tool: calls, error codes, time, text returned, new result sets. Never
+    // a query or a reference.
+    fastify.get('/api/performance/mcp', admin, async () => ({
+      success: true,
+      data: metrics.snapshot(),
+      timestamp: new Date().toISOString()
+    }));
+    fastify.addHook('onClose', async () => metrics.stop());
+  }
 
   fastify.post<{ Body: SearchParams }>('/api/search', { schema: { body: searchBodySchema } }, answerSearch(1));
   fastify.post<{ Body: SearchParams }>('/api/v2/search', { schema: { body: searchBodySchema } }, answerSearch(2));

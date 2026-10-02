@@ -24,6 +24,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 # failed at that line in any fresh clone — see the phase 12 notes.
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/core/package.json ./packages/core/
+COPY packages/mcp/package.json ./packages/mcp/
 COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
 
@@ -35,6 +36,7 @@ WORKDIR /app
 # apps/web is not needed to build the API.
 COPY packages/shared ./packages/shared
 COPY packages/core ./packages/core
+COPY packages/mcp ./packages/mcp
 COPY apps/api ./apps/api
 
 # turbo's dependsOn: ["^build"] builds shared and core first.

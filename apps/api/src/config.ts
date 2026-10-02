@@ -65,6 +65,17 @@ export type Config = {
   search: SearchSettings;
   httpPool: HttpPoolSettings;
   apiKeys: ApiKeys;
+  /** The MCP endpoint, `/api/mcp`. See `mcp-route.ts`. */
+  mcp: {
+    /** `MCP_HTTP_ENABLED=true`. Mounted only with an OpenAlex key, or `allowUnkeyed`. */
+    httpEnabled: boolean;
+    /** Hostnames a browser may call the endpoint from. Empty refuses every browser `Origin`. */
+    allowedOrigins: string[];
+    /** Records read per source for MCP searches; the web UI keeps `search.depth`. */
+    searchDepth: number;
+    /** Mount without an OpenAlex key. For a local trial, never a shared deployment. */
+    allowUnkeyed: boolean;
+  };
 };
 
 export type LogLevel = 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent';
@@ -93,6 +104,7 @@ export const SETTINGS = [
   'SEARCH_DEPTH', 'SEARCH_RESCUE_LIMIT', 'SEARCH_RESCUE_BUDGET_MS', 'SEARCH_FACET_COUNTS',
   'HTTP_POOL_KEEP_ALIVE_TIMEOUT', 'HTTP_POOL_MAX_SOCKETS', 'HTTP_POOL_TIMEOUT',
   'HTTP_POOL_RETRY_ATTEMPTS', 'HTTP_POOL_RETRY_DELAY',
+  'MCP_HTTP_ENABLED', 'MCP_ALLOWED_ORIGINS', 'MCP_SEARCH_DEPTH', 'MCP_ALLOW_UNKEYED',
   ...POOLED_SERVICES.map(poolSetting),
   ...KEYED_PROVIDERS.map(provider => `${provider.toUpperCase()}_API_KEY`)
 ] as const;
@@ -296,6 +308,19 @@ export function loadConfig(env: Env = process.env): LoadedConfig {
     if (key) apiKeys[provider] = key;
   }
 
+  /**
+   * Off unless it says `true`. Anything else is a typo of one or the other,
+   * and the endpoint is the thing to leave off when unsure: it is a second
+   * way in to the same upstream budgets the web UI spends.
+   */
+  const flag = (name: string): boolean => {
+    const raw = text(name);
+    if (raw === undefined || raw === 'false') return false;
+    if (raw === 'true') return true;
+    warnings.push(`${name}=${raw} is neither true nor false; using false`);
+    return false;
+  };
+
   for (const [name, reason] of Object.entries(RETIRED)) {
     if (text(name) !== undefined) warnings.push(`${name} is no longer read (${reason}); remove it`);
   }
@@ -350,7 +375,19 @@ export function loadConfig(env: Env = process.env): LoadedConfig {
       facetCounts: facetCounts()
     },
     httpPool,
-    apiKeys
+    apiKeys,
+    mcp: {
+      httpEnabled: flag('MCP_HTTP_ENABLED'),
+      allowedOrigins: (text('MCP_ALLOWED_ORIGINS') ?? '').split(',').map(s => s.trim()).filter(Boolean),
+      /**
+       * Half the web app's depth by default. An agent runs a dozen variants of
+       * a query and reads a page or two of the last; every variant is a fresh
+       * fan-out against the same daily budgets, so it reads less of each
+       * source. See D11 in docs/mcp-implementation-manual.md.
+       */
+      searchDepth: number('MCP_SEARCH_DEPTH', 300, { max: MAX_DEPTH }),
+      allowUnkeyed: flag('MCP_ALLOW_UNKEYED')
+    }
   };
 
   return { config, warnings };

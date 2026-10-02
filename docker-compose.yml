@@ -144,6 +144,18 @@ services:
       - OPENAIRE_POOL_CONFIG=${OPENAIRE_POOL_CONFIG:-}
       - OPENCITATIONS_POOL_CONFIG=${OPENCITATIONS_POOL_CONFIG:-}
       - PLOS_POOL_CONFIG=${PLOS_POOL_CONFIG:-}
+      # The MCP server at /api/mcp, for agents. Off unless `true`, and then only
+      # with OPENALEX_API_KEY set: agents search far more often than people, and
+      # unkeyed every MCP client would share the web UI's tenth of a budget.
+      # MCP_ALLOW_UNKEYED=true mounts it anyway, for a local trial only.
+      - MCP_HTTP_ENABLED=${MCP_HTTP_ENABLED:-}
+      - MCP_ALLOW_UNKEYED=${MCP_ALLOW_UNKEYED:-}
+      # Hostnames a browser may call it from, comma-separated. Empty refuses
+      # every browser Origin; MCP clients send none and are not affected.
+      - MCP_ALLOWED_ORIGINS=${MCP_ALLOWED_ORIGINS:-}
+      # Records read per source for an MCP search. Empty uses 300, half of
+      # SEARCH_DEPTH's default, for the reason above.
+      - MCP_SEARCH_DEPTH=${MCP_SEARCH_DEPTH:-}
     restart: unless-stopped
     depends_on:
       redis:
