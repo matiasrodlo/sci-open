@@ -53,6 +53,22 @@ describe('BibTeX escaping', () => {
     expect(bibtex(record({ title: 'path a\\b' }))).toContain('a\\textbackslash{}b');
   });
 
+  it('writes a brace with no partner so the field stays balanced', () => {
+    // bibtex and biber count `\{` as a brace: a stray one ended the field
+    // early and made the rest of the entry a syntax error.
+    expect(escapeBibTeX('a } b')).toBe('a \\textbraceright{} b');
+    expect(escapeBibTeX('set {x, y')).toBe('set \\textbraceleft{}x, y');
+    expect(escapeBibTeX('} {a} {')).toBe('\\textbraceright{} \\{a\\} \\textbraceleft{}');
+
+    const field = bibtex(record({ abstract: 'Unbalanced { brace and } another } one.' })).match(/^ {2}abstract = \{(.*)\}$/m)![1]!;
+    let depth = 0;
+    for (const char of field) {
+      depth += char === '{' ? 1 : char === '}' ? -1 : 0;
+      expect(depth).toBeGreaterThanOrEqual(0);
+    }
+    expect(depth).toBe(0);
+  });
+
   it('escapes braces that were in the input', () => {
     expect(escapeBibTeX('a{b}c')).toBe('a\\{b\\}c');
   });

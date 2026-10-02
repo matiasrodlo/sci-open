@@ -127,8 +127,30 @@ const BIBTEX_ESCAPES: Record<string, string> = {
   '~': '\\textasciitilde{}'
 };
 
+/**
+ * Escapes a value for a BibTeX field.
+ *
+ * BibTeX finds the end of a field by counting braces, and a backslash does not
+ * exempt one: `\{` still counts as an opening brace. So a value with a stray
+ * brace — an abstract's typo, half a set in a title — ended its field early,
+ * and the rest of the entry was a syntax error that bibtex and biber both
+ * report and skip. Braces that pair up keep `\{`/`\}`, which every reader
+ * understands; one with no partner is written `\textbraceleft{}` or
+ * `\textbraceright{}`, which prints the same and cannot unbalance anything.
+ */
 export function escapeBibTeX(value: string): string {
-  return value.replace(/[\\{}&%$#_^~]/g, char => BIBTEX_ESCAPES[char] ?? char);
+  const unpaired = new Set<number>();
+  const open: number[] = [];
+  for (let i = 0; i < value.length; i++) {
+    if (value[i] === '{') open.push(i);
+    else if (value[i] === '}' && open.pop() === undefined) unpaired.add(i);
+  }
+  for (const i of open) unpaired.add(i);
+
+  return value.replace(/[\\{}&%$#_^~]/g, (char, at: number) => {
+    if (unpaired.has(at)) return char === '{' ? '\\textbraceleft{}' : '\\textbraceright{}';
+    return BIBTEX_ESCAPES[char] ?? char;
+  });
 }
 
 /**
