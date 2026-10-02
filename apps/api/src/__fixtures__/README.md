@@ -28,6 +28,7 @@ handful of records each — they exist to pin field mapping, not to be a corpus.
 | `ncbi-efetch.xml` | PubMed | Abstract XML for those ids |
 | `openaire.json` | OpenAIRE | Graph API, `/graph/v1/researchProducts`. Re-recorded 2026-09-25 when the provider moved off the legacy search endpoint, whose ~200 KB records meant this file held one |
 | `plos.json` | PLOS | Solr response |
+| `hal.json` | HAL | Solr response, through the open-file filter `fetch.ts` sends. Recorded 2026-10-01, when the provider was added |
 
 CORE is missing because it needs an API key; set `CORE_API_KEY` and re-record
 to add it.

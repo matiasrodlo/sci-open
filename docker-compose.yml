@@ -144,6 +144,7 @@ services:
       - OPENAIRE_POOL_CONFIG=${OPENAIRE_POOL_CONFIG:-}
       - OPENCITATIONS_POOL_CONFIG=${OPENCITATIONS_POOL_CONFIG:-}
       - PLOS_POOL_CONFIG=${PLOS_POOL_CONFIG:-}
+      - HAL_POOL_CONFIG=${HAL_POOL_CONFIG:-}
     restart: unless-stopped
     depends_on:
       redis:

@@ -119,6 +119,22 @@ async function main() {
     write('biorxiv.json', { ...r.data, collection: (r.data.collection || []).slice(0, 3) });
   });
 
+  await record('hal', async () => {
+    // The query `translate` sends for the three words, and the filter and field
+    // list `fetch.ts` sends with every request.
+    const q = QUERY.split(' ').map(t => `(title_t:${t} OR abstract_t:${t} OR keyword_t:${t})`).join(' AND ');
+    const r = await axios.get('https://api.archives-ouvertes.fr/search/', {
+      params: {
+        q, rows: 3, start: 0, wt: 'json',
+        fq: 'submitType_s:file AND openAccess_bool:true AND docType_s:(ART OR COMM OR COUV OR OUV OR REPORT OR UNDEFINED) AND NOT docSubType_s:DMP',
+        fl: 'halId_s,uri_s,doiId_s,title_s,abstract_s,authFullName_s,producedDateY_i,docType_s,journalTitle_s,' +
+          'conferenceTitle_s,bookTitle_s,journalPublisher_s,publisher_s,keyword_s,language_s,fileMain_s,openAccess_bool'
+      },
+      headers: { 'User-Agent': UA }, timeout: 30000
+    });
+    write('hal.json', { ...r.data, response: { ...r.data.response, docs: r.data.response.docs.slice(0, 3) } });
+  });
+
   await record('core', async () => {
     const key = process.env.CORE_API_KEY;
     if (!key || key.includes('your_')) {

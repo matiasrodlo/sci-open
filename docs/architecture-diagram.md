@@ -119,6 +119,7 @@ flowchart TB
     S_NCBI["PubMed"]
     S_DOAJ["DOAJ"]
     S_PLOS["PLOS"]
+    S_HAL["HAL"]
     S_OPENAIRE["OpenAIRE"]
     S_CORE["CORE"]
     S_BIO["bioRxiv / medRxiv"]

@@ -222,7 +222,7 @@ flowchart LR
   PAPERS --> M["merge keys on it"]
   PAPERS --> R["rank fuses on the rank field"]
 
-  REG -.->|"optional lookup(nativeId)"| BYID["a by-id endpoint where one exists:<br/>OpenAlex · DOAJ · OpenAIRE · CORE"]
+  REG -.->|"optional lookup(nativeId)"| BYID["a by-id endpoint where one exists:<br/>OpenAlex · DOAJ · OpenAIRE · CORE<br/>and HAL's id field"]
   REG -.->|"no lookup"| VIASEARCH["the provider's own search:<br/>arXiv, PubMed and Europe PMC index their ids;<br/>bioRxiv, DataCite and PLOS mint DOIs as ids"]
 
   classDef gate stroke:#dc2626,stroke-width:2px

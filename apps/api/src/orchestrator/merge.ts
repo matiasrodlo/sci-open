@@ -15,8 +15,13 @@ import { facetKey } from './facet-key';
 /**
  * Trust order for choosing between two values of the same field.
  *
- * Ten providers and eleven rows, because bioRxiv and medRxiv are one API that
- * reports which server answered.
+ * Eleven providers and twelve rows, because bioRxiv and medRxiv are one API
+ * that reports which server answered.
+ *
+ * HAL sits below PubMed: its records are what the author deposited, where
+ * PubMed's are curated, and a French article's first title in HAL is the
+ * French one. A merge takes a field from the first record that has one, so
+ * HAL's PDF still fills in wherever the records ranked above it carry no copy.
  *
  * It used to hold fourteen, and three of them — Crossref at 1, Unpaywall at 3,
  * OpenCitations at 14 — could never be read. `priorityOf` maps over
@@ -38,7 +43,8 @@ const PROVIDER_PRIORITY: Record<ProviderId, number> = {
   medrxiv: 8,
   doaj: 9,
   ncbi: 10,
-  datacite: 11
+  hal: 11,
+  datacite: 12
 };
 
 /**

@@ -36,7 +36,7 @@ Visit `http://localhost:3000`
 
 ## Features
 
-- **Multi-source search** across ten academic repositories
+- **Multi-source search** across eleven academic repositories
 - **PDF resolution** that rewrites hosts advertising PDFs they do not serve
 - **Consistent paging** — each search's result set is resolved once and every page is a slice of it
 - **Capability-based source selection** — a provider is asked only what its API can answer

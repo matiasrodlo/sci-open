@@ -24,8 +24,8 @@ shared package holding the types both speak.
        │    → facet → paginate → enrich
        │
        ├──► Providers — sources of results
-       │    arXiv · bioRxiv · CORE · DataCite · DOAJ
-       │    Europe PMC · PubMed · OpenAIRE · OpenAlex · PLOS
+       │    arXiv · bioRxiv · CORE · DataCite · DOAJ · Europe PMC
+       │    HAL · PubMed · OpenAIRE · OpenAlex · PLOS
        │
        ├──► Authorities — consulted about records, never a source of them
        │    Crossref · OpenAlex · OpenCitations · Unpaywall
@@ -191,7 +191,7 @@ it expired. Asking about a DOI is what `POST /api/search` with `{ doi }` is for.
 
 Step 3 is one question with two answers, decided by the provider's API rather
 than by preference: a by-id endpoint where there is one (OpenAlex, DOAJ,
-OpenAIRE, CORE), and otherwise the provider's search — which for bioRxiv,
+OpenAIRE, CORE), HAL's id field, and otherwise the provider's search — which for bioRxiv,
 DataCite and PLOS is a DOI lookup, because their native ids *are* DOIs.
 
 ## Performance

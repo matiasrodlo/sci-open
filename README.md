@@ -6,7 +6,7 @@ A modern search interface for discovering open-access research papers across lea
 
 ## Features
 
-- **Multi-source search** across ten academic repositories
+- **Multi-source search** across eleven academic repositories
 - **PDF resolution** that rewrites hosts advertising PDFs they do not serve
 - **Consistent paging** — each search's result set is resolved once and every page is a slice of it
 - **Capability-based source selection** — a provider is asked only what its API can answer
@@ -62,7 +62,7 @@ PROVIDER_CACHE_MAX_BYTES=
 ```
 
 Per-service HTTP pool tuning (`OPENALEX_POOL_CONFIG` and one for each of the
-other twelve upstreams) is optional — unset falls back to the global
+other thirteen upstreams) is optional — unset falls back to the global
 `HTTP_POOL_*` defaults. Provider API keys are optional too, except
 `UNPAYWALL_EMAIL`, which Unpaywall requires and OpenAlex rewards.
 

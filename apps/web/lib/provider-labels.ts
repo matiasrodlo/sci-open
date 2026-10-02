@@ -17,6 +17,7 @@ export const PROVIDER_LABELS: Record<string, string> = {
   datacite: 'DataCite',
   biorxiv: 'bioRxiv',
   medrxiv: 'medRxiv',
+  hal: 'HAL',
 };
 
 export function providerLabel(id: string): string {
@@ -36,7 +37,7 @@ export function providerLabel(id: string): string {
  * the shared type is a compile error here until it is placed — the page that
  * names the sources cannot quietly fall behind them. The numbers are
  * only the order: the large general indexes first, then the subject and
- * preprint servers, then the aggregators.
+ * preprint servers and HAL's open archive, then the aggregators.
  *
  * medRxiv has no provider of its own — the bioRxiv one asks both servers and
  * tags each record with the one that answered — but it is a source a reader
@@ -49,11 +50,12 @@ const SOURCE_ORDER: Record<ProviderId, number> = {
   arxiv: 4,
   biorxiv: 5,
   medrxiv: 6,
-  doaj: 7,
-  plos: 8,
-  openaire: 9,
-  core: 10,
-  datacite: 11,
+  hal: 7,
+  doaj: 8,
+  plos: 9,
+  openaire: 10,
+  core: 11,
+  datacite: 12,
 };
 
 export const SOURCES: readonly string[] = (Object.keys(SOURCE_ORDER) as ProviderId[])

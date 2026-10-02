@@ -26,7 +26,7 @@ import { PROVIDERS } from '../../orchestrator/registry';
  * output also depends on the shared helpers it calls — `stripMarkup`,
  * `normalizeDoi`, the URL screening — and a change *there* moves every
  * provider's output without touching a single `normalize.ts`. Hashing the
- * shared package here would trip all ten on any edit to it, most of which do
+ * shared package here would trip all eleven on any edit to it, most of which do
  * not touch normalisation, and a gate that cries wolf gets its numbers bumped
  * without thought. That case is still a manual judgement; this one no longer
  * is.
@@ -60,7 +60,10 @@ const PINNED: Record<string, { version: number; normalizer: string }> = {
   // Version 3: moved from the legacy search endpoint to the Graph API, a
   // different payload read by a rewritten normaliser. A version-2 entry holds
   // papers built from the legacy shape and must not be served as this one's.
-  openaire: { version: 3, normalizer: 'a1cfaaa7793d' }
+  openaire: { version: 3, normalizer: 'a1cfaaa7793d' },
+  // Version 1: new. Takes HAL's main-file URL from the payload, through
+  // `fullTextAt`, and only for an open file.
+  hal: { version: 1, normalizer: '7bae62cfdd71' }
 };
 
 const PROVIDER_DIR = join(__dirname, '..');

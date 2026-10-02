@@ -1,0 +1,113 @@
+{
+  "response": {
+    "numFound": 289,
+    "start": 0,
+    "maxScore": 40.422676,
+    "numFoundExact": true,
+    "docs": [
+      {
+        "openAccess_bool": true,
+        "title_s": [
+          "The CRISPR-Cas9 System: A New Dawn in Gene Editing"
+        ],
+        "keyword_s": [
+          "Genome editing CRISPR Gene expression ZFN Zinc Finger Nucleases TALEN Transcription",
+          "Genome editing",
+          "CRISPR",
+          "Gene expression ZFN Zinc Finger Nucleases",
+          "TALEN Transcription"
+        ],
+        "abstract_s": [
+          "The CRISPR-Cas9 (clustered regularly interspaced short palindromic repeats with CRISPR-associated protein 9) system is a genome editing system that is easy to design, highly specific, efficient, robust, and well suited for highthroughput and multiplexed gene editing for a variety of cell types and organisms. In this review we describe current applications of this new system, which is growing in popularity and is increasingly being employed to selectively control gene expression on a genome-wide scale."
+        ],
+        "journalTitle_s": "Journal of Bioanalysis & Biomedicine",
+        "journalPublisher_s": "OMICS Publishing Group",
+        "authFullName_s": [
+          "Nurul Husna Shafie",
+          "Mohamed Saleem",
+          "Emmanuel Jairaj Moses",
+          "Siti Razila",
+          "Narazah Mohd Yusoff"
+        ],
+        "language_s": [
+          "en"
+        ],
+        "halId_s": "hal-04020890",
+        "uri_s": "https://hal.science/hal-04020890v1",
+        "docType_s": "ART",
+        "doiId_s": "10.4172/1948-593x.1000109",
+        "producedDateY_i": 2014,
+        "fileMain_s": "https://hal.science/hal-04020890/document"
+      },
+      {
+        "openAccess_bool": true,
+        "title_s": [
+          "CRISPR/anti-CRISPR genome editing in Clostridium beijerinckii"
+        ],
+        "keyword_s": [
+          "Cell engineering",
+          "Genome editing",
+          "CRISPR-Cas9",
+          "Clostridium",
+          "Anti-CRISPR",
+          "Counter-selection marker"
+        ],
+        "abstract_s": [
+          "The development of CRISPR technologies has revolutionized genome editing. However, in bacteria, CRISPRbased methods can be difficult to implement due to the cytotoxicity of CRISPR-associated proteins, which often impair or entirely prevent transformation. In this work, we combine inducible expression of classical CRISPR-Cas9 components with the anti-CRISPR protein AcrIIA4 from Listeria monocytogenes to tightly regulate Cas9 activity. Using this approach, we demonstrate efficient and iterative genome editing in the genetically recalcitrant Clostridium beijerinckii DSM 6423. While deletion of upp alone was not sufficient to render the strain sensitive to 5-fluorouracil, the additional deletion of a second gene involved in the uracil salvage pathway conferred resistance to the drug and validated our gene editing strategy. Collectively, our results show that CRISPR/anti-CRISPR systems can overcome a key limitation of CRISPR-based genome editing and may offer a broadly applicable strategy for engineering otherwise intractable bacterial species."
+        ],
+        "journalTitle_s": "Journal of Biotechnology",
+        "journalPublisher_s": "Elsevier",
+        "authFullName_s": [
+          "Rémi Hocq",
+          "Gwladys Chartier",
+          "Nicolas Lopes Ferreira",
+          "François Wasels"
+        ],
+        "language_s": [
+          "en"
+        ],
+        "halId_s": "hal-05454338",
+        "uri_s": "https://ifp.hal.science/hal-05454338v1",
+        "docType_s": "ART",
+        "doiId_s": "10.1016/j.jbiotec.2025.11.002",
+        "producedDateY_i": 2026,
+        "fileMain_s": "https://ifp.hal.science/hal-05454338/document"
+      },
+      {
+        "openAccess_bool": true,
+        "title_s": [
+          "Gene Editing in Trypanosomatids: Tips and Tricks in the CRISPR-Cas9 Era"
+        ],
+        "keyword_s": [
+          "Inducible genome editing",
+          "UTR modification",
+          "Trypanosoma",
+          "Leishmania",
+          "CRISPR-Cas9",
+          "CRE-Lox"
+        ],
+        "abstract_s": [
+          "Gene editing in trypanosomatids has long been proven difficult. The development of CRISPR-Cas9 has improved this issue, opening the way to a better understanding of biological processes and drug-resistance mechanisms, and screening of drug targets. Different strategies have now been developed: either PCR- or plasmid-based, differing mainly in the nature of the donor DNA and the single guide RNA transcription. Here we review the main genetic tools available for Leishmania spp., Trypanosoma cruzi, and Trypanosoma brucei for gene tagging, single-base editing, and deletion of nonessential and essential genes. We discuss the main advantages and challenges of different strategies and how to choose 'the right cut' depending on the importance of untranslated regions. These considerations allow selection of the most accurate gene editing approach for a given functional analysis."
+        ],
+        "journalTitle_s": "Trends in Parasitology",
+        "journalPublisher_s": "Elsevier",
+        "authFullName_s": [
+          "Akila Yagoubat",
+          "Rosa Corrales",
+          "Patrick Bastien",
+          "Maude Lévêque",
+          "Yvon Sterkers"
+        ],
+        "language_s": [
+          "en"
+        ],
+        "halId_s": "hal-02920067",
+        "uri_s": "https://hal.science/hal-02920067v1",
+        "docType_s": "ART",
+        "doiId_s": "10.1016/j.pt.2020.06.005",
+        "producedDateY_i": 2020,
+        "fileMain_s": "https://hal.science/hal-02920067/document"
+      }
+    ]
+  }
+}

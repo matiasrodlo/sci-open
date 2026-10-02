@@ -1,0 +1,117 @@
+{
+  "_comment": "Hand-built, unlike the recorded hal.json, whose three records are English journal articles. Field shapes are copied from live responses on 2026-10-01: titles, abstracts, keywords and authors arrive as arrays, a title can come in two languages, and an embargoed file keeps its fileMain_s.",
+  "response": {
+    "numFound": 9,
+    "start": 0,
+    "docs": [
+      {
+        "_case": "a French article deposited with an English translation of its title and abstract",
+        "halId_s": "hal-00000001",
+        "uri_s": "https://hal.science/hal-00000001",
+        "doiId_s": "10.1000/climat.2024.1",
+        "title_s": ["Climat", "Climate"],
+        "abstract_s": ["Le climat est la distribution statistique des conditions de l'atmosphère.", "Climate is the statistical distribution of the conditions of the atmosphere."],
+        "authFullName_s": ["Marie Curie", "Pierre Curie"],
+        "producedDateY_i": 2024,
+        "docType_s": "ART",
+        "journalTitle_s": "Revue française de climatologie",
+        "journalPublisher_s": "EDP Sciences",
+        "keyword_s": ["climat", "Climate", "Climat", " gouvernance "],
+        "language_s": ["fr"],
+        "fileMain_s": "https://hal.science/hal-00000001/document",
+        "openAccess_bool": true
+      },
+      {
+        "_case": "a conference paper: no journal and no DOI, named by its conference",
+        "halId_s": "inria-00000002",
+        "uri_s": "https://inria.hal.science/inria-00000002",
+        "title_s": ["Graph neural networks for mesh refinement"],
+        "authFullName_s": ["Ada Lovelace"],
+        "producedDateY_i": 2023,
+        "docType_s": "COMM",
+        "conferenceTitle_s": "EGU General Assembly 2023",
+        "language_s": ["en"],
+        "fileMain_s": "https://inria.hal.science/inria-00000002/document",
+        "openAccess_bool": true
+      },
+      {
+        "_case": "a book chapter: the book is the venue, and its publisher comes from publisher_s",
+        "halId_s": "halshs-00000003",
+        "uri_s": "https://shs.hal.science/halshs-00000003",
+        "title_s": ["How boards work"],
+        "authFullName_s": ["Grace Hopper"],
+        "producedDateY_i": 2022,
+        "docType_s": "COUV",
+        "bookTitle_s": "Dictionnaire vécu de la gouvernance",
+        "publisher_s": ["Les Ozalids d'Humensis", "Humensis"],
+        "language_s": ["fr"],
+        "fileMain_s": "https://shs.hal.science/halshs-00000003/document",
+        "openAccess_bool": true
+      },
+      {
+        "_case": "UNDEFINED is HAL's preprint and working-paper type",
+        "halId_s": "hal-00000004",
+        "uri_s": "https://hal.science/hal-00000004",
+        "title_s": ["A working paper on <i>in vitro</i> editing"],
+        "authFullName_s": ["Rosalind Franklin"],
+        "producedDateY_i": 2025,
+        "docType_s": "UNDEFINED",
+        "language_s": ["en"],
+        "fileMain_s": "https://hal.science/hal-00000004/document",
+        "openAccess_bool": true
+      },
+      {
+        "_case": "a file under embargo: fileMain_s is present and answers HTTP 403",
+        "halId_s": "inserm-00000005",
+        "uri_s": "https://inserm.hal.science/inserm-00000005",
+        "doiId_s": "10.1000/embargo.5",
+        "title_s": ["An embargoed article"],
+        "authFullName_s": ["Barbara McClintock"],
+        "producedDateY_i": 2025,
+        "docType_s": "ART",
+        "journalTitle_s": "Journal of Embargoes",
+        "language_s": ["en"],
+        "fileMain_s": "https://inserm.hal.science/inserm-00000005/document",
+        "openAccess_bool": false
+      },
+      {
+        "_case": "a doctoral thesis: not a type this provider reads",
+        "halId_s": "tel-00000006",
+        "uri_s": "https://theses.hal.science/tel-00000006",
+        "title_s": ["Une thèse"],
+        "authFullName_s": ["Émilie du Châtelet"],
+        "producedDateY_i": 2021,
+        "docType_s": "THESE",
+        "language_s": ["fr"],
+        "fileMain_s": "https://theses.hal.science/tel-00000006/document",
+        "openAccess_bool": true
+      },
+      {
+        "_case": "no title",
+        "halId_s": "hal-00000007",
+        "uri_s": "https://hal.science/hal-00000007",
+        "title_s": ["   "],
+        "producedDateY_i": 2020,
+        "docType_s": "ART",
+        "fileMain_s": "https://hal.science/hal-00000007/document",
+        "openAccess_bool": true
+      },
+      {
+        "_case": "no HAL id",
+        "uri_s": "https://hal.science/",
+        "title_s": ["A record with no id"],
+        "producedDateY_i": 2020,
+        "docType_s": "ART",
+        "openAccess_bool": true
+      },
+      {
+        "_case": "a report with no year, language, keywords or landing page",
+        "halId_s": "hal-00000009",
+        "title_s": ["A technical report"],
+        "docType_s": "REPORT",
+        "fileMain_s": "https://hal.science/hal-00000009/document",
+        "openAccess_bool": true
+      }
+    ]
+  }
+}

@@ -36,7 +36,7 @@ TRUST_PROXY=
 `RATE_LIMIT_MAX` covers every route but one. `/api/papers/:id/pdf` has its own
 bucket, `RATE_LIMIT_DOWNLOAD_MAX`, because the two requests are expensive in
 different currencies and one number could only ever be right for one of them: a
-search costs a fan-out to ten providers and returns a few kilobytes, spending
+search costs a fan-out to eleven providers and returns a few kilobytes, spending
 other people's API quota, while a download costs one upstream request and
 streams up to fifty megabytes, spending bandwidth and holding a connection for
 as long as the publisher takes. Sharing a budget meant a reader downloading
@@ -50,7 +50,7 @@ look at. Both limits share `RATE_LIMIT_WINDOW`.
 
 Searches are priced a second time, by `RATE_LIMIT_NEW_SEARCH_MAX`, and only the
 ones that cost the sources something. A search that resolves a result set of
-its own — a new query, or a new filter on one — is a fan-out to ten providers,
+its own — a new query, or a new filter on one — is a fan-out to eleven providers,
 their facet counts, up to two hundred Unpaywall lookups in the rescue and the
 page's enrichment: some three hundred upstream requests, against quotas every
 reader shares. Paging or re-sorting a set already held, or joining one another
@@ -292,7 +292,7 @@ HTTP_POOL_RETRY_DELAY=1000
 
 # Service-specific pools (JSON), merged over the global settings above.
 # One per upstream: arxiv, biorxiv, core, crossref, datacite, doaj, europepmc,
-# ncbi, openaire, opencitations, openalex, plos, unpaywall.
+# hal, ncbi, openaire, opencitations, openalex, plos, unpaywall.
 OPENALEX_POOL_CONFIG={"maxSockets": 100}
 EUROPEPMC_POOL_CONFIG={"maxSockets": 100}
 CORE_POOL_CONFIG={"maxSockets": 60}

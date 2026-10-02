@@ -110,8 +110,8 @@ which two co-authors can satisfy between them.
 
 To the sources, each name is sent in whatever form their index finds people
 by. Europe PMC and PubMed keep authors as names and match a lone word only as
-a surname, so they are sent the words as one name; OpenAlex, DOAJ and PLOS
-keep them word by word, so they are sent the words of a quoted name. Either is
+a surname, so they are sent the words as one name; OpenAlex, DOAJ, PLOS and
+HAL keep them word by word, so they are sent the words of a quoted name. Either is
 added beside what was asked rather than put in its place: two co-authors
 searched as `AU=Doudna AND AU=Charpentier` still find the papers they wrote
 together.
@@ -233,8 +233,8 @@ Get detailed information about a specific paper.
 
 The id names the one provider that owns the record, and it is the only one
 asked. Which request that becomes depends on that provider's API: OpenAlex,
-DOAJ, OpenAIRE and CORE have a by-id endpoint; the rest are asked through their
-search, which for bioRxiv, DataCite and PLOS is a DOI lookup because their
+DOAJ, OpenAIRE and CORE have a by-id endpoint, and HAL is asked for the id on
+its own field; the rest are asked through their search, which for bioRxiv, DataCite and PLOS is a DOI lookup because their
 native ids *are* DOIs. A record that comes back under a different id is not the
 one that was asked for, and the answer is 404 rather than that record.
 

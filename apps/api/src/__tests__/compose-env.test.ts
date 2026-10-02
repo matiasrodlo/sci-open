@@ -50,7 +50,7 @@ const NOT_PASSED: Record<string, string> = {
 /**
  * Every setting the service reads: the ones `config.ts` declares, which is
  * where settings are read now, and any `process.env.X` still left in the
- * source. The declaration is what brings the thirteen `<NAME>_POOL_CONFIG`
+ * source. The declaration is what brings the fourteen `<NAME>_POOL_CONFIG`
  * settings into this check — they were read under computed names a scan for
  * `process.env.X` could not see, and compose passed none of them.
  */

@@ -75,7 +75,12 @@ const EXPECTED: Record<ProviderId | string, Expected> = {
   // `SO=`/`PU=` have none, which widen. See `FIELD_FILTERS` in its translate.
   openalex: { keywordSearch: true, fieldedSearch: true, doiLookup: true, yearFilter: true, maxPageSize: 200, reportsTotal: true, suppliesCitations: true },
 
-  plos: { keywordSearch: true, fieldedSearch: true, doiLookup: true, yearFilter: true, maxPageSize: 1000, reportsTotal: true, suppliesCitations: false }
+  plos: { keywordSearch: true, fieldedSearch: true, doiLookup: true, yearFilter: true, maxPageSize: 1000, reportsTotal: true, suppliesCitations: false },
+
+  // Asked for 10,001 rows on 2026-10-01, HAL answered 10,000: past the deepest
+  // read the orchestrator asks for, so one request reads the whole depth.
+  // `producedDateY_i:[a TO b]`, with `*` for an open end.
+  hal: { keywordSearch: true, fieldedSearch: true, doiLookup: true, yearFilter: true, maxPageSize: 10000, reportsTotal: true, suppliesCitations: false }
 };
 
 describe('provider capabilities', () => {
@@ -191,7 +196,7 @@ describe('provider capabilities', () => {
 
     expect(yielded).toEqual({
       // At or above the requested depth, so they yield all of it.
-      europepmc: 600, plos: 600, arxiv: 600, datacite: 600,
+      europepmc: 600, plos: 600, arxiv: 600, datacite: 600, hal: 600,
       // OpenAlex caps a page at 200 and paginates internally to reach 600.
       openalex: 200,
       ncbi: 500,
@@ -221,7 +226,8 @@ const STAGES_AND_FACETS: Record<string, { holds: string[]; filter: boolean; face
   ncbi: { holds: ['published', 'unknown'], filter: true, facets: ['year', 'stage'] },
   openaire: { holds: ['published', 'unknown'], filter: true, facets: ['year', 'stage'] },
   openalex: { holds: ['preprint', 'published', 'unknown'], filter: true, facets: ['year', 'stage', 'venue', 'publisher', 'topics'] },
-  plos: { holds: ['published'], filter: false, facets: ['year', 'stage', 'venue', 'publisher'] }
+  plos: { holds: ['published'], filter: false, facets: ['year', 'stage', 'venue', 'publisher'] },
+  hal: { holds: ['preprint', 'published'], filter: true, facets: ['year', 'stage', 'venue', 'publisher'] }
 };
 
 describe('publication types and counted facets', () => {

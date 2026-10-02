@@ -82,7 +82,7 @@ describe('pool configuration reaches every service it names', () => {
 
     for (const service of ['arxiv', 'biorxiv', 'core', 'doaj', 'europepmc',
                            'openaire', 'opencitations', 'plos', 'openalex',
-                           'crossref', 'unpaywall', 'datacite', 'ncbi']) {
+                           'crossref', 'unpaywall', 'datacite', 'ncbi', 'hal']) {
       const config = getServiceConfig(service);
       expect(config.maxSockets, service).toBeGreaterThan(0);
       expect(config.timeout, service).toBeGreaterThan(0);

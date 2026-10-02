@@ -11,7 +11,7 @@ import type { AuthorityId } from './authority';
  */
 
 /**
- * A source that returns *records* — the ten the fan-out asks, and the only ones
+ * A source that returns *records* — the eleven the fan-out asks, and the only ones
  * that can appear in `SourceRef`.
  *
  * Narrower than `OASource` on purpose. That union holds fourteen names, and

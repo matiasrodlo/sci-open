@@ -28,7 +28,8 @@ export const POOLED_SERVICES = [
   'europepmc',
   'openaire',
   'opencitations',
-  'plos'
+  'plos',
+  'hal'
 ] as const;
 
 export type PooledService = (typeof POOLED_SERVICES)[number];
