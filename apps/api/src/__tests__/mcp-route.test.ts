@@ -210,6 +210,17 @@ describe('POST /api/mcp', () => {
     expect(typo.json().error.message).toMatch(/^Unknown toolset "nope"\. Toolsets: core, read, graph, export\./);
   });
 
+  it('serves the opt-in tools to a URL that asks for them, and never lets them write', async () => {
+    build(ENABLED);
+    const { client } = await connect({ query: '?toolsets=all' });
+    const { tools } = await client.listTools();
+    expect(tools.map(t => t.name)).toEqual([
+      'search_papers', 'get_search_page', 'get_paper', 'verify_references', 'read_paper', 'get_citations', 'export_citations'
+    ]);
+    const refused = await client.callTool({ name: 'export_citations', arguments: { papers: ['europepmc:1'], save_to: '/tmp/sci-open-refs' } });
+    expect(textOf(refused)).toMatch(/^Error \(writes_disabled\)/);
+  });
+
   it('refuses a browser on an origin it was not told to allow', async () => {
     // A page elsewhere must not drive this endpoint from a visitor's browser.
     build({ ...ENABLED, MCP_ALLOWED_ORIGINS: 'app.example.org' });

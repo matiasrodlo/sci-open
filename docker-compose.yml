@@ -156,6 +156,9 @@ services:
       # Records read per source for an MCP search. Empty uses 300, half of
       # SEARCH_DEPTH's default, for the reason above.
       - MCP_SEARCH_DEPTH=${MCP_SEARCH_DEPTH:-}
+      # OpenCitations' access token, for the MCP server's get_citations. It
+      # works without one, at 180 requests a minute per address.
+      - OPENCITATIONS_TOKEN=${OPENCITATIONS_TOKEN:-}
     restart: unless-stopped
     depends_on:
       redis:

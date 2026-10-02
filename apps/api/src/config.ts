@@ -76,6 +76,8 @@ export type Config = {
     /** Mount without an OpenAlex key. For a local trial, never a shared deployment. */
     allowUnkeyed: boolean;
   };
+  /** OpenCitations' access token, which raises its rate limit for the MCP server's get_citations. */
+  openCitationsToken: string | undefined;
 };
 
 export type LogLevel = 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent';
@@ -104,7 +106,7 @@ export const SETTINGS = [
   'SEARCH_DEPTH', 'SEARCH_RESCUE_LIMIT', 'SEARCH_RESCUE_BUDGET_MS', 'SEARCH_FACET_COUNTS',
   'HTTP_POOL_KEEP_ALIVE_TIMEOUT', 'HTTP_POOL_MAX_SOCKETS', 'HTTP_POOL_TIMEOUT',
   'HTTP_POOL_RETRY_ATTEMPTS', 'HTTP_POOL_RETRY_DELAY',
-  'MCP_HTTP_ENABLED', 'MCP_ALLOWED_ORIGINS', 'MCP_SEARCH_DEPTH', 'MCP_ALLOW_UNKEYED',
+  'MCP_HTTP_ENABLED', 'MCP_ALLOWED_ORIGINS', 'MCP_SEARCH_DEPTH', 'MCP_ALLOW_UNKEYED', 'OPENCITATIONS_TOKEN',
   ...POOLED_SERVICES.map(poolSetting),
   ...KEYED_PROVIDERS.map(provider => `${provider.toUpperCase()}_API_KEY`)
 ] as const;
@@ -387,7 +389,8 @@ export function loadConfig(env: Env = process.env): LoadedConfig {
        */
       searchDepth: number('MCP_SEARCH_DEPTH', 300, { max: MAX_DEPTH }),
       allowUnkeyed: flag('MCP_ALLOW_UNKEYED')
-    }
+    },
+    openCitationsToken: text('OPENCITATIONS_TOKEN')
   };
 
   return { config, warnings };

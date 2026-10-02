@@ -357,7 +357,8 @@ async function routes(fastify: FastifyInstance, context: RouteContext) {
           userAgent,
           search: { ...config.search, depth: config.mcp.searchDepth },
           caches: { providerCache, resultSets, authorityFacts, stats },
-          ...upstream
+          ...upstream,
+          ...(config.openCitationsToken ? { openCitationsToken: config.openCitationsToken } : {})
         }),
         config: { ...defaultMcpConfig(userAgent), searchDepth: config.mcp.searchDepth },
         metrics
