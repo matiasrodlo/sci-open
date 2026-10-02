@@ -1,0 +1,417 @@
+{
+  "name": "get_search_page",
+  "title": "Get search page",
+  "description": "Another page of a search, by the handle search_papers returned; pages are the size that search asked for. Pages of a recent complete search are served from memory and cost the sources nothing; otherwise the search runs again, and the result says so.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "handle": {
+        "type": "string",
+        "maxLength": 4000
+      },
+      "page": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 100
+      },
+      "detail": {
+        "default": "concise",
+        "type": "string",
+        "enum": [
+          "concise",
+          "full"
+        ]
+      }
+    },
+    "required": [
+      "handle",
+      "page"
+    ],
+    "$schema": "https://json-schema.org/draft/2020-12/schema"
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "handle": {
+        "type": "string"
+      },
+      "query": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string"
+          },
+          "doi": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "total": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+      },
+      "total_is_lower_bound": {
+        "type": "boolean"
+      },
+      "page": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+      },
+      "page_size": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+      },
+      "has_more": {
+        "type": "boolean"
+      },
+      "next": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "tool": {
+                "type": "string",
+                "const": "get_search_page"
+              },
+              "handle": {
+                "type": "string"
+              },
+              "page": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "tool",
+              "handle",
+              "page"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "coverage": {
+        "type": "object",
+        "properties": {
+          "complete": {
+            "type": "boolean"
+          },
+          "bounded": {
+            "type": "boolean"
+          },
+          "answered": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "failed": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "timeout",
+                    "error"
+                  ]
+                },
+                "rate_limited": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "source",
+                "status"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "skipped": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "source",
+                "reason"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "per_source": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "retrieved": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "total_hits": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "source",
+                "status",
+                "retrieved"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "complete",
+          "bounded",
+          "answered",
+          "failed",
+          "skipped",
+          "per_source"
+        ],
+        "additionalProperties": false
+      },
+      "facets": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "string",
+                  "number"
+                ]
+              },
+              "count": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "value",
+              "count"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "results": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "doi": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "authors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "year": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "venue": {
+              "type": "string"
+            },
+            "access": {
+              "type": "string",
+              "enum": [
+                "gold",
+                "green",
+                "hybrid",
+                "bronze",
+                "closed",
+                "unknown"
+              ]
+            },
+            "stage": {
+              "type": "string",
+              "enum": [
+                "preprint",
+                "accepted",
+                "published",
+                "unknown"
+              ]
+            },
+            "full_text": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "pdf",
+                    "html",
+                    "xml"
+                  ]
+                },
+                "verified": {
+                  "type": "boolean"
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "verified"
+              ],
+              "additionalProperties": false
+            },
+            "citations": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "found_in": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "abstract": {
+              "type": "string"
+            },
+            "publisher": {
+              "type": "string"
+            },
+            "topics": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "language": {
+              "type": "string"
+            },
+            "landing_page": {
+              "type": "string"
+            },
+            "sources": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "source": {
+                    "type": "string"
+                  },
+                  "native_id": {
+                    "type": "string"
+                  },
+                  "rank": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "retrieved_at": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "source",
+                  "native_id",
+                  "rank",
+                  "retrieved_at"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "field_sources": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "authors",
+            "access",
+            "stage",
+            "found_in"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "omitted_for_size": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+      },
+      "rerun": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "handle",
+      "query",
+      "total",
+      "total_is_lower_bound",
+      "page",
+      "page_size",
+      "has_more",
+      "next",
+      "coverage",
+      "results"
+    ],
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false
+  },
+  "annotations": {
+    "title": "Get search page",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true
+  }
+}

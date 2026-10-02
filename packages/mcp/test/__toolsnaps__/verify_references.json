@@ -1,0 +1,304 @@
+{
+  "name": "verify_references",
+  "title": "Verify references",
+  "description": "Check up to 25 references (free-text citations, DOIs, arXiv ids or PMIDs) and grade each: verified, likely, ambiguous, mismatch (the DOI is wrong: it belongs to a different paper, or does not exist while the rest names a real one), not_found, or not_checked (the search budget ran out or a lookup failed; send those again later). Use it to catch fabricated or garbled citations and to fill in missing DOIs. Closed papers count as existing.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "references": {
+        "minItems": 1,
+        "maxItems": 25,
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 800
+        }
+      }
+    },
+    "required": [
+      "references"
+    ],
+    "$schema": "https://json-schema.org/draft/2020-12/schema"
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "summary": {
+        "type": "object",
+        "properties": {
+          "verified": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "likely": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "ambiguous": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "mismatch": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "not_found": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "not_checked": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "verified",
+          "likely",
+          "ambiguous",
+          "mismatch",
+          "not_found",
+          "not_checked"
+        ],
+        "additionalProperties": false
+      },
+      "results": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "input": {
+              "type": "string"
+            },
+            "verdict": {
+              "type": "string",
+              "enum": [
+                "verified",
+                "likely",
+                "ambiguous",
+                "mismatch",
+                "not_found",
+                "not_checked"
+              ]
+            },
+            "matched": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "doi": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "authors": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "year": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "venue": {
+                  "type": "string"
+                },
+                "access": {
+                  "type": "string",
+                  "enum": [
+                    "gold",
+                    "green",
+                    "hybrid",
+                    "bronze",
+                    "closed",
+                    "unknown"
+                  ]
+                },
+                "stage": {
+                  "type": "string",
+                  "enum": [
+                    "preprint",
+                    "accepted",
+                    "published",
+                    "unknown"
+                  ]
+                },
+                "full_text": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "pdf",
+                        "html",
+                        "xml"
+                      ]
+                    },
+                    "verified": {
+                      "type": "boolean"
+                    },
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "verified"
+                  ],
+                  "additionalProperties": false
+                },
+                "citations": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "found_in": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "abstract": {
+                  "type": "string"
+                },
+                "publisher": {
+                  "type": "string"
+                },
+                "topics": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "language": {
+                  "type": "string"
+                },
+                "landing_page": {
+                  "type": "string"
+                },
+                "sources": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "source": {
+                        "type": "string"
+                      },
+                      "native_id": {
+                        "type": "string"
+                      },
+                      "rank": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "retrieved_at": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "source",
+                      "native_id",
+                      "rank",
+                      "retrieved_at"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "field_sources": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "authors",
+                "access",
+                "stage",
+                "found_in"
+              ],
+              "additionalProperties": false
+            },
+            "evidence": {
+              "type": "object",
+              "properties": {
+                "matched_on": {
+                  "type": "string",
+                  "enum": [
+                    "doi",
+                    "arxiv",
+                    "pmid",
+                    "title",
+                    "none"
+                  ]
+                },
+                "title_precision": {
+                  "type": "number"
+                },
+                "year_consistent": {
+                  "type": "boolean"
+                },
+                "author_consistent": {
+                  "type": "boolean"
+                },
+                "corroborated_by": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "matched_on",
+                "corroborated_by"
+              ],
+              "additionalProperties": false
+            },
+            "issues": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "input",
+            "verdict",
+            "evidence",
+            "issues"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": [
+      "summary",
+      "results"
+    ],
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false
+  },
+  "annotations": {
+    "title": "Verify references",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true
+  }
+}

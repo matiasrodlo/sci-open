@@ -1,0 +1,179 @@
+/**
+ * A free-text reference, taken apart into what can be looked up: its
+ * identifiers, its year, its authors' surnames and its title.
+ *
+ * Grown from `test/fixtures/references.json`, one case per citation style met
+ * in the wild (APA, Vancouver, IEEE, Nature, Chicago, BibTeX, arXiv listings).
+ * A style that parses wrongly gets a case there first. The parser is
+ * deliberately conservative about authors: a surname it is not sure of would
+ * become an `author_mismatch` against a real paper, so when it cannot tell
+ * where the author list ends it reports none.
+ */
+export type ParsedReference = {
+  raw: string;
+  doi?: string;
+  arxiv?: string;
+  pmid?: string;
+  year?: number;
+  surnames: string[];
+  title?: string;
+};
+
+const DOI = /\b(10\.\d{4,9}\/[^\s"<>{}]+?)(?=[.,;)\]}]*(?:\s|$))/i;
+// The version, when cited, is part of the id; old-style ids keep their archive.
+const ARXIV = /\barxiv(?:\.org\/(?:abs|pdf)\/|[:\s/]*)(\d{4}\.\d{4,5}(?:v\d+)?|[a-z-]+(?:\.[a-z]{2})?\/\d{7}(?:v\d+)?)/i;
+const PMID = /\bPMID[:\s]*(\d{5,9})\b/i;
+const URL = /\bhttps?:\/\/\S+/gi;
+const YEAR = /\b(1[89]\d{2}|20\d{2})[a-z]?\b/;
+const PAREN_YEAR = /\((1[89]\d{2}|20\d{2})[a-z]?\)\.?/;
+const QUOTED = /["“”«»]([^"“”«»]{10,})["“”«»]/;
+const BIBTEX = /@\w+\s*\{|\b(?:title|author)\s*=\s*[{"]/i;
+
+/** Words that join or abbreviate names rather than being them. */
+const JOINERS = new Set(['and', '&', 'et', 'al', 'al.', 'jr', 'jr.']);
+/** Lower-case parts of surnames: de la Cruz, van der Waals. */
+const PARTICLES = new Set(['van', 'von', 'de', 'der', 'den', 'da', 'di', 'del', 'della', 'la', 'le', 'du', 'dos', 'das', 'ter', 'ten', 'bin', 'al-']);
+
+export function parseReference(raw: string): ParsedReference {
+  const text = raw.replace(/\s+/g, ' ').trim();
+  if (BIBTEX.test(text)) return parseBibtex(raw, text);
+
+  const doi = text.match(DOI)?.[1]?.replace(/[.,;]+$/, '');
+  const arxiv = text.match(ARXIV)?.[1];
+  const pmid = text.match(PMID)?.[1];
+
+  // What is left once the identifiers are out: the citation itself.
+  const rest = text
+    .replace(URL, ' ')
+    .replace(/\b(?:doi|https?:\/\/(?:dx\.)?doi\.org\/)\s*:?\s*/gi, ' ')
+    .replace(DOI, ' ')
+    .replace(ARXIV, ' ')
+    .replace(PMID, ' ')
+    .replace(/\s+([.,;:])/g, '$1')
+    // An identifier taken out of `Title. arXiv:…, 2017.` leaves `Title., 2017.`
+    .replace(/([.,;:])(?:\s*[.,;:])+/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const parenYear = rest.match(PAREN_YEAR)?.[1];
+  const yearText = parenYear ?? rest.match(YEAR)?.[1];
+  const year = yearText ? Number(yearText) : undefined;
+
+  const quoted = rest.match(QUOTED)?.[1];
+  const split = splitAuthors(rest);
+  const title = clean(quoted ?? (split ? firstSentence(split.after)[0] : undefined) ?? guessTitle(rest, yearText));
+  const surnames = split ? surnamesIn(split.authors) : quoted ? surnamesIn(rest.slice(0, rest.search(QUOTED))) : [];
+
+  return {
+    raw,
+    ...(doi ? { doi } : {}),
+    ...(arxiv ? { arxiv } : {}),
+    ...(pmid ? { pmid } : {}),
+    ...(year ? { year } : {}),
+    surnames,
+    ...(title ? { title } : {})
+  };
+}
+
+/**
+ * Where the author list ends, in the styles that put it first:
+ * - APA, `Names (2017). Title.` — the year in brackets right after them;
+ * - Chicago, `Names. 1962. Title.` — a bare year closing the first sentence;
+ * - `Name et al. Title.` — Nature and most journals with long author lists;
+ * - Vancouver, `Surname AB, Surname C. Title.` — initials without stops;
+ * - a first sentence that is nothing but names, as arXiv listings write it.
+ * Undefined when none of them fits: then nothing is known about the authors.
+ */
+function splitAuthors(text: string): { authors: string; after: string } | undefined {
+  const paren = text.match(PAREN_YEAR);
+  if (paren && paren.index !== undefined && looksLikeNames(text.slice(0, paren.index))) {
+    return { authors: text.slice(0, paren.index), after: text.slice(paren.index + paren[0].length) };
+  }
+
+  const [first, after] = firstSentence(text);
+  const chicago = first.match(/^(.*?)[.,]?\s+(1[89]\d{2}|20\d{2})[a-z]?$/);
+  if (chicago && looksLikeNames(chicago[1]!)) return { authors: chicago[1]!, after };
+
+  const etAl = text.match(/^(.{2,200}?\bet al)\.?\s+/i);
+  if (etAl && looksLikeNames(etAl[1]!)) return { authors: etAl[1]!, after: text.slice(etAl[0].length) };
+
+  const name = String.raw`\p{Lu}[\p{L}'’-]+(?:\s+\p{Lu}[\p{L}'’-]+)*\s+\p{Lu}{1,3}`;
+  const vancouver = text.match(new RegExp(String.raw`^((?:${name},\s*)*${name}(?:,?\s+et al)?)\.\s+`, 'u'));
+  if (vancouver) return { authors: vancouver[1]!, after: text.slice(vancouver[0].length) };
+
+  if (after && looksLikeNames(first) && /,|\band\b|&/.test(first)) return { authors: first, after };
+  return undefined;
+}
+
+/** Every word a name or an initial, and nothing a title would hold. */
+function looksLikeNames(text: string): boolean {
+  const words = text.split(/[\s,;]+/).filter(Boolean).filter(w => !JOINERS.has(w.toLowerCase()));
+  return words.length > 0 && words.every(w =>
+    /^\p{Lu}[\p{L}'’-]*\.?$/u.test(w) || /^(\p{Lu}\.)+(-\p{Lu}\.)*$/u.test(w) || PARTICLES.has(w.toLowerCase()));
+}
+
+/** The text up to the first full stop that does not close an initial, and the rest. */
+function firstSentence(text: string): [string, string] {
+  for (const match of text.matchAll(/[.?!](?=\s|$)/g)) {
+    const at = match.index!;
+    // `J.` and `A.` are initials; `Cas9.` and `need.` end a sentence.
+    if (/(?:^|[\s.(-])\p{Lu}$/u.test(text.slice(0, at))) continue;
+    return [text.slice(0, at).trim(), text.slice(at + 1).trim()];
+  }
+  return [text.trim(), ''];
+}
+
+function surnamesIn(authors: string): string[] {
+  const words = authors.match(/\p{Lu}[\p{L}'’-]+/gu) ?? [];
+  return words
+    // Initials written together (JD, FHC) are not names.
+    .filter(w => !/^\p{Lu}{1,3}$/u.test(w))
+    .map(w => w.toLowerCase())
+    .filter(w => !JOINERS.has(w))
+    .slice(0, 6);
+}
+
+/** BibTeX's own fields: no guessing where the title is. */
+function parseBibtex(raw: string, text: string): ParsedReference {
+  const field = (name: string): string | undefined => {
+    const match = text.match(new RegExp(String.raw`\b${name}\s*=\s*(?:\{((?:[^{}]|\{[^{}]*\})*)\}|"([^"]*)"|(\d+))`, 'i'));
+    const value = match?.[1] ?? match?.[2] ?? match?.[3];
+    return value?.replace(/[{}]/g, '').trim() || undefined;
+  };
+  const doi = field('doi')?.replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, '');
+  const arxiv = field('eprint')?.match(/^(\d{4}\.\d{4,5}(?:v\d+)?)$/)?.[1];
+  const yearText = field('year')?.match(/\d{4}/)?.[0];
+  const title = clean(field('title'));
+  const surnames = (field('author') ?? '')
+    .split(/\s+and\s+/i)
+    .map(name => (name.includes(',') ? name.split(',')[0]! : name.split(' ').pop() ?? ''))
+    .map(name => name.trim().toLowerCase())
+    .filter(Boolean)
+    .slice(0, 6);
+  return {
+    raw,
+    ...(doi ? { doi } : {}),
+    ...(arxiv ? { arxiv } : {}),
+    ...(yearText ? { year: Number(yearText) } : {}),
+    surnames,
+    ...(title ? { title } : {})
+  };
+}
+
+/** The manual's fallback: the longest sentence-like segment that is neither
+ * the author list nor the venue and volume. */
+function guessTitle(text: string, year?: string): string | undefined {
+  const segments = text
+    .split(/(?<=[.?!])\s+|\(\d{4}[a-z]?\)/)
+    .map(s => s.trim().replace(/^[.,;:\s]+|[.,;:\s]+$/g, ''))
+    .filter(s => s.length >= 15)
+    .filter(s => !looksLikeNames(s))
+    .filter(s => !/\b\d+\s*\(\d+\)|\bpp?\.\s*\d+|\bvol\.?\s*\d+|\d+\s*[:;]\s*\d+/i.test(s))
+    .filter(s => s !== year);
+  return segments.sort((a, b) => b.length - a.length)[0];
+}
+
+function clean(title: string | undefined): string | undefined {
+  const trimmed = title?.replace(/^[\s"'“”«»]+|[\s"'“”«».,;:]+$/g, '').trim();
+  return trimmed && trimmed.length >= 3 && /\p{L}/u.test(trimmed) ? trimmed : undefined;
+}

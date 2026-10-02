@@ -1,0 +1,5163 @@
+{
+ "searches": {
+  "{\"q\":\"TS=crispr\",\"page\":1}": {
+   "papers": [
+    {
+     "id": "plos:10.1371/journal.pcbi.1005891",
+     "doi": "10.1371/journal.pcbi.1005891",
+     "title": "Optimal number of spacers in CRISPR arrays",
+     "authors": [
+      "Alexander Martynov",
+      "Konstantin Severinov",
+      "Iaroslav Ispolatov"
+     ],
+     "year": 2017,
+     "venue": "PLOS Computational Biology",
+     "publisher": "Public Library of Science",
+     "abstract": "Prokaryotic organisms survive under constant pressure of viruses. CRISPR-Cas system provides its prokaryotic host with an adaptive immune defense against viruses that have been previously encountered. It consists of two components: Cas-proteins that cleave the foreign DNA and CRISPR array that suits as a virus recognition key. CRISPR array consists of a series of spacers, short pieces of DNA that originate from and match the corresponding parts of viral DNA called protospacers. Here we estimate the number of spacers in a CRISPR array of a prokaryotic cell which maximizes its protection against a viral attack. The optimality follows from a competition between two trends: too few distinct spacers make host vulnerable to an attack by a virus with mutated corresponding protospacers, while an excessive variety of spacers dilutes the number of the CRISPR complexes armed with the most recent and thus most useful spacers. We first evaluate the optimal number of spacers in a simple scenario of an infection by a single viral species and later consider a more general case of multiple viral species. We find that depending on such parameters as the concentration of CRISPR-Cas interference complexes and its preference to arm with more recently acquired spacers, the rate of viral mutation, and the number of viral species, the predicted optimal number of spacers lies within a range that agrees with experimentally-observed values. Author summary: CRISPR-Cas systems provide adaptive immunity defense in bacteria and archaea against viruses. They function by accumulating in prokaryotic genome an array of spacers, or fragments of virus DNA from previous attacks. By matching spacers to corresponding parts of viral DNA called protospacers, a CRISPR-Cas system identifies and destroys intruder DNA. Here we theoretically estimate the number of spacers that maximizes prokaryotic host cell survival. This optimum emerges from a competition between two trends: More spacers allow a prokaryotic cell to hedge against mutations in viral protospacers. However, the older spacers loose efficiency as corresponding protospacers mutate. For a limited pool of CRISPR-Cas molecular machines, keeping too many spacers leaves fewer of such machines armed with more efficient young (most recently acquired) spacers. We have shown that a higher efficiency of CRISPR-Cas system allows a prokaryotic cell to utilize more spacers, increasing the optimal number of spacers. On contrary, a higher viral mutation rate makes older spacers useless and favors shorter arrays. A higher diversity in viral species reduces the efficiency of CRISPR-Cas but does not necessary lead to longer arrays. Our study provides a new viewpoint at a variety of the observed array spacer number and could be used as a base for evolutionary models of host-phage coexistence.",
+     "topics": [
+      "CRISPR",
+      "Evolutionary immunology",
+      "Viral evolution",
+      "Genetic interference",
+      "Genomics",
+      "Microbial mutation",
+      "Virions",
+      "Viral transmission and infection",
+      "q-bio.PE",
+      "CRISPR and Genetic Engineering",
+      "Viral Infections and Immunology Research",
+      "Evolution and Genetic Dynamics"
+     ],
+     "language": "en",
+     "oaStatus": "gold",
+     "stage": "published",
+     "fullText": {
+      "url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pcbi.1005891&type=printable",
+      "kind": "pdf",
+      "verified": false
+     },
+     "landingPage": "https://doi.org/10.1371/journal.pcbi.1005891",
+     "sources": [
+      {
+       "provider": "plos",
+       "nativeId": "10.1371/journal.pcbi.1005891",
+       "rank": 6,
+       "retrievedAt": "2026-10-02T20:22:57.959Z",
+       "latency": 1193
+      },
+      {
+       "provider": "arxiv",
+       "nativeId": "1705.10424v1",
+       "rank": 11,
+       "retrievedAt": "2026-10-02T20:22:57.349Z",
+       "latency": 583
+      }
+     ],
+     "fieldSources": {
+      "topics": "arxiv",
+      "citationCount": "crossref"
+     },
+     "retrievedAt": "2026-10-02T20:22:57.959Z",
+     "citationCount": 67
+    },
+    {
+     "id": "openaire:doi_dedup___::a061ae228ce6355be5e1e27211d6eecb",
+     "doi": "10.1371/journal.pone.0199473",
+     "title": "CRISPR/Cas-based customization of pooled CRISPR libraries",
+     "authors": [
+      "Jiyeon Kweon",
+      "Da-eun Kim",
+      "An-Hee Jang",
+      "Yongsub Kim"
+     ],
+     "year": 2018,
+     "venue": "PLOS ONE",
+     "publisher": "Public Library of Science (PLoS)",
+     "abstract": "Pooled CRISPR libraries are widely used in high-throughput screening to study various biological processes. Various pooled CRISPR libraries have been shared for CRISPR screens and useful tools have been developed to construct researcher's own libraries, however, many researchers are struggling to create their own pooled CRISPR libraries: it is a time-consuming, labor-intensive, and expensive process. In this study, we develop a simple method to customize conventional pooled CRISPR libraries using the CRISPR/Cas9 system. We show that conventional pooled CRISPR libraries can be modified by eliminating gRNAs that target positive genes, enabling the identification of unknown target genes in CRISPR screening. CRISPR/Cas9 system can be applied as a precise tool for customizing conventional pooled CRISPR libraries and will broaden the scope of high-throughput screening technology.",
+     "topics": [
+      "0301 basic medicine",
+      "0303 health sciences",
+      "Hypoxanthine Phosphoribosyltransferase",
+      "Base Sequence",
+      "Science",
+      "Q",
+      "R",
+      "High-Throughput Screening Assays",
+      "03 medical and health sciences",
+      "HEK293 Cells",
+      "Ribonucleoproteins",
+      "CRISPR-Associated Protein 9",
+      "Medicine",
+      "Humans",
+      "CRISPR-Cas Systems",
+      "Research Article",
+      "Gene Library",
+      "HeLa Cells",
+      "DNA libraries",
+      "cDNA libraries",
+      "Guide RNA",
+      "CRISPR",
+      "Genetic screens",
+      "Polymerase chain reaction",
+      "Library screening",
+      "CRISPR and Genetic Engineering"
+     ],
+     "language": "eng",
+     "oaStatus": "gold",
+     "stage": "published",
+     "fullText": {
+      "url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0199473&type=printable",
+      "kind": "html",
+      "verified": false
+     },
+     "landingPage": "https://doi.org/10.1371/journal.pone.0199473",
+     "sources": [
+      {
+       "provider": "openaire",
+       "nativeId": "doi_dedup___::a061ae228ce6355be5e1e27211d6eecb",
+       "rank": 28,
+       "retrievedAt": "2026-10-02T20:23:01.512Z",
+       "latency": 4745
+      },
+      {
+       "provider": "plos",
+       "nativeId": "10.1371/journal.pone.0199473",
+       "rank": 1,
+       "retrievedAt": "2026-10-02T20:22:57.959Z",
+       "latency": 1193
+      }
+     ],
+     "fieldSources": {
+      "topics": "plos",
+      "citationCount": "crossref"
+     },
+     "retrievedAt": "2026-10-02T20:23:01.512Z",
+     "citationCount": 9
+    },
+    {
+     "id": "openaire:doi_dedup___::9359c98c84e4a947e8b2dec860a05bdf",
+     "doi": "10.1371/journal.pone.0184281",
+     "title": "CRISPR-FOCUS: A web server for designing focused CRISPR screening experiments",
+     "authors": [
+      "Qingyi Cao",
+      "Jian Ma",
+      "Chen-Hao Chen",
+      "Han Xu",
+      "Zhi Chen",
+      "Wei Li",
+      "X. Shirley Liu"
+     ],
+     "year": 2017,
+     "venue": "PLOS ONE",
+     "publisher": "Public Library of Science (PLoS)",
+     "abstract": "The recently developed CRISPR screen technology, based on the CRISPR/Cas9 genome editing system, enables genome-wide interrogation of gene functions in an efficient and cost-effective manner. Although many computational algorithms and web servers have been developed to design single-guide RNAs (sgRNAs) with high specificity and efficiency, algorithms specifically designed for conducting CRISPR screens are still lacking. Here we present CRISPR-FOCUS, a web-based platform to search and prioritize sgRNAs for CRISPR screen experiments. With official gene symbols or RefSeq IDs as the only mandatory input, CRISPR-FOCUS filters and prioritizes sgRNAs based on multiple criteria, including efficiency, specificity, sequence conservation, isoform structure, as well as genomic variations including Single Nucleotide Polymorphisms and cancer somatic mutations. CRISPR-FOCUS also provides pre-defined positive and negative control sgRNAs, as well as other necessary sequences in the construct (e.g., U6 promoters to drive sgRNA transcription and RNA scaffolds of the CRISPR/Cas9). These features allow users to synthesize oligonucleotides directly based on the output of CRISPR-FOCUS. Overall, CRISPR-FOCUS provides a rational and high-throughput approach for sgRNA library design that enables users to efficiently conduct a focused screen experiment targeting up to thousands of genes. (CRISPR-FOCUS is freely available at http://cistrome.org/crispr-focus/).",
+     "topics": [
+      "0301 basic medicine",
+      "Genetic Screens",
+      "Molecular biology",
+      "Gene Identification and Analysis",
+      "RNA, Guide, CRISPR-Cas Systems",
+      "Synthetic Genome Editing",
+      "Genome Engineering",
+      "Database and Informatics Methods",
+      "User-Computer Interface",
+      "DNA library construction",
+      "Genomic Library Screening",
+      "0303 health sciences",
+      "Mammalian Genomics",
+      "000",
+      "Q",
+      "Crispr",
+      "R",
+      "Genomics",
+      "Genomic Databases",
+      "Genomic Library Construction",
+      "3. Good health",
+      "Engineering and Technology",
+      "Medicine",
+      "Synthetic Biology",
+      "Sequence Analysis",
+      "Biotechnology",
+      "Research Article",
+      "570",
+      "Bioinformatics",
+      "Science",
+      "Bioengineering",
+      "Library Screening",
+      "DNA construction",
+      "03 medical and health sciences",
+      "Sequence Motif Analysis",
+      "Genetics",
+      "Genetic Testing",
+      "Molecular Biology Techniques",
+      "Molecular Biology Assays and Analysis Techniques",
+      "Internet",
+      "Biology and life sciences",
+      "Base Sequence",
+      "Computational Biology",
+      "Synthetic Genomics",
+      "Genome Analysis",
+      "Biological Databases",
+      "Synthetic Bioengineering",
+      "Animal Genomics",
+      "CRISPR-Cas Systems",
+      "CRISPR",
+      "Genetic screens",
+      "Mammalian genomics",
+      "Single nucleotide polymorphisms",
+      "Library screening",
+      "Genomic library screening",
+      "Cancers and neoplasms",
+      "CRISPR and Genetic Engineering",
+      "Advanced biosensing and bioanalysis techniques",
+      "RNA and protein synthesis mechanisms"
+     ],
+     "language": "eng",
+     "oaStatus": "gold",
+     "stage": "published",
+     "fullText": {
+      "url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0184281&type=printable",
+      "kind": "html",
+      "verified": false
+     },
+     "landingPage": "https://doi.org/10.1371/journal.pone.0184281",
+     "sources": [
+      {
+       "provider": "openaire",
+       "nativeId": "doi_dedup___::9359c98c84e4a947e8b2dec860a05bdf",
+       "rank": 75,
+       "retrievedAt": "2026-10-02T20:23:01.512Z",
+       "latency": 4745
+      },
+      {
+       "provider": "plos",
+       "nativeId": "10.1371/journal.pone.0184281",
+       "rank": 0,
+       "retrievedAt": "2026-10-02T20:22:57.959Z",
+       "latency": 1193
+      }
+     ],
+     "fieldSources": {
+      "topics": "plos",
+      "citationCount": "crossref"
+     },
+     "retrievedAt": "2026-10-02T20:23:01.512Z",
+     "citationCount": 23
+    },
+    {
+     "id": "openalex:W2804566227",
+     "doi": "10.1080/10717544.2018.1474964",
+     "title": "Delivering CRISPR: a review of the challenges and approaches",
+     "authors": [
+      "Christopher A. Lino",
+      "Jason C. Harper",
+      "James P. Carney",
+      "Jerilyn A. Timlin"
+     ],
+     "year": 2018,
+     "venue": "Drug Delivery",
+     "publisher": "Taylor & Francis",
+     "abstract": "Gene therapy has long held promise to correct a variety of human diseases and defects. Discovery of the Clustered Regularly-Interspaced Short Palindromic Repeats (CRISPR), the mechanism of the CRISPR-based prokaryotic adaptive immune system (CRISPR-associated system, Cas), and its repurposing into a potent gene editing tool has revolutionized the field of molecular biology and generated excitement for new and improved gene therapies. Additionally, the simplicity and flexibility of the CRISPR/Cas9 site-specific nuclease system has led to its widespread use in many biological research areas including development of model cell lines, discovering mechanisms of disease, identifying disease targets, development of transgene animals and plants, and transcriptional modulation. In this review, we present the brief history and basic mechanisms of the CRISPR/Cas9 system and its predecessors (ZFNs and TALENs), lessons learned from past human gene therapy efforts, and recent modifications of CRISPR/Cas9 to provide functions beyond gene editing. We introduce several factors that influence CRISPR/Cas9 efficacy which must be addressed before effective in vivo human gene therapy can be realized. The focus then turns to the most difficult barrier to potential in vivo use of CRISPR/Cas9, delivery. We detail the various cargos and delivery vehicles reported for CRISPR/Cas9, including physical delivery methods (e.g. microinjection; electroporation), viral delivery methods (e.g. adeno-associated virus (AAV); full-sized adenovirus and lentivirus), and non-viral delivery methods (e.g. liposomes; polyplexes; gold particles), and discuss their relative merits. We also examine several technologies that, while not currently reported for CRISPR/Cas9 delivery, appear to have promise in this field. The therapeutic potential of CRISPR/Cas9 is vast and will only increase as the technology and its delivery improves.",
+     "topics": [
+      "CRISPR and Genetic Engineering",
+      "Innovation and Socioeconomic Development",
+      "Mosquito-borne diseases and control",
+      "Animals",
+      "Clustered Regularly Interspaced Short Palindromic Repeats",
+      "Gene Editing",
+      "Gene Transfer Techniques",
+      "Genetic Therapy",
+      "Humans",
+      "CRISPR",
+      "Cas9",
+      "drug delivery",
+      "history",
+      "overview",
+      "prospective",
+      "review"
+     ],
+     "language": "en",
+     "citationCount": 1235,
+     "oaStatus": "gold",
+     "stage": "published",
+     "landingPage": "https://doi.org/10.1080/10717544.2018.1474964",
+     "sources": [
+      {
+       "provider": "openalex",
+       "nativeId": "W2804566227",
+       "rank": 47,
+       "retrievedAt": "2026-10-02T20:23:02.199Z",
+       "latency": 5432
+      },
+      {
+       "provider": "ncbi",
+       "nativeId": "29801422",
+       "rank": 10,
+       "retrievedAt": "2026-10-02T20:23:02.185Z",
+       "latency": 5419
+      }
+     ],
+     "fieldSources": {
+      "fullText": "ncbi",
+      "topics": "ncbi"
+     },
+     "retrievedAt": "2026-10-02T20:23:02.199Z",
+     "fullText": {
+      "url": "https://europepmc.org/articles/PMC6058482?pdf=render",
+      "kind": "pdf",
+      "verified": false
+     }
+    },
+    {
+     "id": "openalex:W2577994754",
+     "doi": "10.1038/nmeth.4177",
+     "title": "Pooled CRISPR screening with single-cell transcriptome readout",
+     "authors": [
+      "Paul Datlinger",
+      "André F. Rendeiro",
+      "Christian Schmidl",
+      "Thomas Krausgruber",
+      "Peter M. Traxler",
+      "Johanna Klughammer",
+      "Linda C. Schuster",
+      "Amelie Kuchler",
+      "Donát Alpár",
+      "Christoph Bock"
+     ],
+     "year": 2017,
+     "venue": "Nature Methods",
+     "publisher": "Nature Portfolio",
+     "topics": [
+      "CRISPR and Genetic Engineering",
+      "Single-cell and spatial transcriptomics",
+      "RNA and protein synthesis mechanisms",
+      "Cell Line",
+      "Cell Proliferation",
+      "Clustered Regularly Interspaced Short Palindromic Repeats",
+      "Gene Expression Profiling",
+      "HEK293 Cells",
+      "High-Throughput Nucleotide Sequencing",
+      "Humans",
+      "RNA, Guide, CRISPR-Cas Systems",
+      "Sequence Analysis, RNA",
+      "Single-Cell Analysis",
+      "Transcriptome"
+     ],
+     "language": "en",
+     "citationCount": 1201,
+     "oaStatus": "green",
+     "stage": "published",
+     "fullText": {
+      "url": "https://www.ncbi.nlm.nih.gov/pmc/articles/5334791",
+      "kind": "html",
+      "verified": false
+     },
+     "landingPage": "https://doi.org/10.1038/nmeth.4177",
+     "sources": [
+      {
+       "provider": "openalex",
+       "nativeId": "W2577994754",
+       "rank": 77,
+       "retrievedAt": "2026-10-02T20:23:02.199Z",
+       "latency": 5432
+      },
+      {
+       "provider": "ncbi",
+       "nativeId": "28099430",
+       "rank": 2,
+       "retrievedAt": "2026-10-02T20:23:02.185Z",
+       "latency": 5419
+      }
+     ],
+     "fieldSources": {
+      "abstract": "ncbi",
+      "topics": "ncbi"
+     },
+     "retrievedAt": "2026-10-02T20:23:02.199Z",
+     "abstract": "CRISPR-based genetic screens are accelerating biological discovery, but current methods have inherent limitations. Widely used pooled screens are restricted to simple readouts including cell proliferation and sortable marker proteins. Arrayed screens allow for comprehensive molecular readouts such as transcriptome profiling, but at much lower throughput. Here we combine pooled CRISPR screening with single-cell RNA sequencing into a broadly applicable workflow, directly linking guide RNA expression to transcriptome responses in thousands of individual cells. Our method for CRISPR droplet sequencing (CROP-seq) enables pooled CRISPR screens with single-cell transcriptome resolution, which will facilitate high-throughput functional dissection of complex regulatory mechanisms and heterogeneous cell populations."
+    },
+    {
+     "id": "openalex:W2062280978",
+     "doi": "10.1371/journal.pone.0011126",
+     "title": "The Small, Slow and Specialized CRISPR and Anti-CRISPR of Escherichia and Salmonella",
+     "authors": [
+      "Marie Touchon",
+      "Eduardo P. C. Rocha"
+     ],
+     "year": 2010,
+     "venue": "PLoS ONE",
+     "publisher": "Public Library of Science",
+     "abstract": "Prokaryotes thrive in spite of the vast number and diversity of their viruses. This partly results from the evolution of mechanisms to inactivate or silence the action of exogenous DNA. Among these, Clustered Regularly Interspaced Short Palindromic Repeats (CRISPR) are unique in providing adaptive immunity against elements with high local resemblance to genomes of previously infecting agents. Here, we analyze the CRISPR loci of 51 complete genomes of Escherichia and Salmonella. CRISPR are in two pairs of loci in Escherichia, one single pair in Salmonella, each pair showing a similar turnover rate, repeat sequence and putative linkage to a common set of cas genes. Yet, phylogeny shows that CRISPR and associated cas genes have different evolutionary histories, the latter being frequently exchanged or lost. In our set, one CRISPR pair seems specialized in plasmids often matching genes coding for the replication, conjugation and antirestriction machinery. Strikingly, this pair also matches the cognate cas genes in which case these genes are absent. The unexpectedly high conservation of this anti-CRISPR suggests selection to counteract the invasion of mobile elements containing functional CRISPR/cas systems. There are few spacers in most CRISPR, which rarely match genomes of known phages. Furthermore, we found that strains divergent less than 250 thousand years ago show virtually identical CRISPR. The lack of congruence between cas, CRISPR and the species phylogeny and the slow pace of CRISPR change make CRISPR poor epidemiological markers in enterobacteria. All these observations are at odds with the expectedly abundant and dynamic repertoire of spacers in an immune system aiming at protecting bacteria from phages. Since we observe purifying selection for the maintenance of CRISPR these results suggest that alternative evolutionary roles for CRISPR remain to be uncovered.",
+     "topics": [
+      "CRISPR and Genetic Engineering",
+      "Bacteriophages and microbial interactions",
+      "Vibrio bacteria research studies",
+      "0301 basic medicine",
+      "DNA, Bacterial",
+      "0303 health sciences",
+      "[SDV.BIBS] Life Sciences [q-bio]/Quantitative Methods [q-bio.QM]",
+      "Base Sequence",
+      "Science",
+      "Q",
+      "R",
+      "3. Good health",
+      "03 medical and health sciences",
+      "Salmonella",
+      "Escherichia coli",
+      "Medicine",
+      "Conserved Sequence",
+      "Genome, Bacterial",
+      "Phylogeny",
+      "Research Article",
+      "Repetitive Sequences, Nucleic Acid",
+      "CRISPR",
+      "Phylogenetics",
+      "Genetic loci",
+      "Genomics",
+      "Fish genomics",
+      "Escherichia",
+      "Bacteriophages"
+     ],
+     "language": "en",
+     "citationCount": 245,
+     "oaStatus": "gold",
+     "stage": "published",
+     "fullText": {
+      "url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0011126&type=printable",
+      "kind": "pdf",
+      "verified": false
+     },
+     "landingPage": "https://doi.org/10.1371/journal.pone.0011126",
+     "sources": [
+      {
+       "provider": "openalex",
+       "nativeId": "W2062280978",
+       "rank": 292,
+       "retrievedAt": "2026-10-02T20:23:02.199Z",
+       "latency": 5432
+      },
+      {
+       "provider": "openaire",
+       "nativeId": "doi_dedup___::7e4d0dbe6cf801710d92025902167444",
+       "rank": 166,
+       "retrievedAt": "2026-10-02T20:23:01.512Z",
+       "latency": 4745
+      },
+      {
+       "provider": "plos",
+       "nativeId": "10.1371/journal.pone.0011126",
+       "rank": 2,
+       "retrievedAt": "2026-10-02T20:22:57.959Z",
+       "latency": 1193
+      }
+     ],
+     "fieldSources": {
+      "topics": "openaire"
+     },
+     "retrievedAt": "2026-10-02T20:23:02.199Z"
+    },
+    {
+     "id": "plos:10.1371/journal.pgen.1004065",
+     "doi": "10.1371/journal.pgen.1004065",
+     "title": "A PNPase Dependent CRISPR System in Listeria",
+     "authors": [
+      "Nina Sesto",
+      "Marie Touchon",
+      "José Marques Andrade",
+      "Jiro Kondo",
+      "Eduardo P. C. Rocha",
+      "Cecilia Maria Arraiano",
+      "Cristel Archambaud",
+      "Éric Westhof",
+      "Pascale Romby",
+      "Pascale Cossart"
+     ],
+     "year": 2014,
+     "venue": "PLoS Genetics",
+     "publisher": "Public Library of Science",
+     "abstract": "The human bacterial pathogen Listeria monocytogenes is emerging as a model organism to study RNA-mediated regulation in pathogenic bacteria. A class of non-coding RNAs called CRISPRs (clustered regularly interspaced short palindromic repeats) has been described to confer bacterial resistance against invading bacteriophages and conjugative plasmids. CRISPR function relies on the activity of CRISPR associated (cas) genes that encode a large family of proteins with nuclease or helicase activities and DNA and RNA binding domains. Here, we characterized a CRISPR element (RliB) that is expressed and processed in the L. monocytogenes strain EGD-e, which is completely devoid of cas genes. Structural probing revealed that RliB has an unexpected secondary structure comprising basepair interactions between the repeats and the adjacent spacers in place of canonical hairpins formed by the palindromic repeats. Moreover, in contrast to other CRISPR-Cas systems identified in Listeria, RliB-CRISPR is ubiquitously present among Listeria genomes at the same genomic locus and is never associated with the cas genes. We showed that RliB-CRISPR is a substrate for the endogenously encoded polynucleotide phosphorylase (PNPase) enzyme. The spacers of the different Listeria RliB-CRISPRs share many sequences with temperate and virulent phages. Furthermore, we show that a cas-less RliB-CRISPR lowers the acquisition frequency of a plasmid carrying the matching protospacer, provided that trans encoded cas genes of a second CRISPR-Cas system are present in the genome. Importantly, we show that PNPase is required for RliB-CRISPR mediated DNA interference. Altogether, our data reveal a yet undescribed CRISPR system whose both processing and activity depend on PNPase, highlighting a new and unexpected function for PNPase in “CRISPRology”. Author Summary: CRISPR-Cas systems confer to bacteria and archaea an adaptive immunity that protects them against invading bacteriophages and plasmids. In this study, we characterize a CRISPR (RliB-CRISPR) that is present in all L. monocytogenes strains at the same genomic locus but is never associated with a cas operon. It is an unusual CRISPR that, as we demonstrate, has a secondary structure consisting of basepair interactions between the repeat sequence and the adjacent spacer. We show that the RliB-CRISPR is processed by the endogenously encoded polynucleotide phosphorylase enzyme (PNPase). In addition, we show that the RliB-CRISPR system requires PNPase and presence of trans encoded cas genes of a second CRISPR-Cas system, to mediate DNA interference directed against a plasmid carrying a matching protospacer. Altogether, our data reveal a novel type of CRISPR system in bacteria that requires endogenously encoded PNPase enzyme for its processing and interference activity.",
+     "topics": [
+      "RNA structure",
+      "RNA stem-loop structure",
+      "CRISPR",
+      "Genetic interference",
+      "Genomics",
+      "Listeria monocytogenes",
+      "Listeria",
+      "Bacteriophages",
+      "Bacterial Proteins",
+      "CRISPR-Cas Systems",
+      "Clustered Regularly Interspaced Short Palindromic Repeats",
+      "DNA-Binding Proteins",
+      "Genome, Bacterial",
+      "Humans",
+      "Polyribonucleotide Nucleotidyltransferase",
+      "RNA, Untranslated",
+      "RNA-Binding Proteins",
+      "CRISPR and Genetic Engineering",
+      "Listeria monocytogenes in Food Safety",
+      "Innovative Microfluidic and Catalytic Techniques Innovation"
+     ],
+     "language": "en",
+     "oaStatus": "gold",
+     "stage": "published",
+     "fullText": {
+      "url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pgen.1004065&type=printable",
+      "kind": "pdf",
+      "verified": false
+     },
+     "landingPage": "https://doi.org/10.1371/journal.pgen.1004065",
+     "sources": [
+      {
+       "provider": "plos",
+       "nativeId": "10.1371/journal.pgen.1004065",
+       "rank": 3,
+       "retrievedAt": "2026-10-02T20:22:57.959Z",
+       "latency": 1193
+      },
+      {
+       "provider": "ncbi",
+       "nativeId": "24415952",
+       "rank": 93,
+       "retrievedAt": "2026-10-02T20:23:02.185Z",
+       "latency": 5419
+      }
+     ],
+     "fieldSources": {
+      "topics": "ncbi",
+      "citationCount": "crossref"
+     },
+     "retrievedAt": "2026-10-02T20:22:57.959Z",
+     "citationCount": 82
+    },
+    {
+     "id": "openaire:doi_dedup___::3522818fae8b421a5e73c10171c87b1f",
+     "doi": "10.1371/journal.pone.0133661",
+     "title": "Occurrence and Diversity of CRISPR-Cas Systems in the Genus Bifidobacterium",
+     "authors": [
+      "Briner, Ae",
+      "LUGLI, Gabriele Andrea",
+      "MILANI, CHRISTIAN",
+      "DURANTI, Sabrina",
+      "TURRONI, FRANCESCA",
+      "Gueimonde, M",
+      "Margolles, A",
+      "VAN SINDEREN, DOUWE",
+      "VENTURA, Marco",
+      "Barrangou, R."
+     ],
+     "year": 2015,
+     "venue": "PLOS ONE",
+     "publisher": "Public Library of Science (PLoS)",
+     "abstract": "CRISPR-Cas systems constitute adaptive immune systems for antiviral defense in bacteria. We investigated the occurrence and diversity of CRISPR-Cas systems in 48 Bifidobacterium genomes to gain insights into the diversity and co-evolution of CRISPR-Cas systems within the genus and investigate CRISPR spacer content. We identified the elements necessary for the successful targeting and inference of foreign DNA in select Type II CRISPR-Cas systems, including the tracrRNA and target PAM sequence. Bifidobacterium species have a very high frequency of CRISPR-Cas occurrence (77%, 37 of 48). We found that many Bifidobacterium species have unusually large and diverse CRISPR-Cas systems that contain spacer sequences showing homology to foreign genetic elements like prophages. A large number of CRISPR spacers in bifidobacteria show perfect homology to prophage sequences harbored in the chromosomes of other species of Bifidobacterium, including some spacers that self-target the chromosome. A correlation was observed between strains that lacked CRISPR-Cas systems and the number of times prophages in that chromosome were targeted by other CRISPR spacers. The presence of prophage-targeting CRISPR spacers and prophage content may shed light on evolutionary processes and strain divergence. Finally, elements of Type II CRISPR-Cas systems, including the tracrRNA and crRNAs, set the stage for the development of genome editing and genetic engineering tools.",
+     "topics": [
+      "0301 basic medicine",
+      "570",
+      "Evolution",
+      "Science",
+      "Prophages",
+      "Adaptive immunity",
+      "576",
+      "Evolution, Molecular",
+      "03 medical and health sciences",
+      "Streptococcus thermophilus",
+      "Clustered Regularly Interspaced Short Palindromic Repeats",
+      "Endonuclease",
+      "0303 health sciences",
+      "Bacteria",
+      "Comparative genomics",
+      "4. Education",
+      "Q",
+      "R",
+      "Genetic Variation",
+      "Dna",
+      "Chromosomes, Bacterial",
+      "Classification",
+      "3. Good health",
+      "Rna",
+      "Medicine",
+      "Acquired resistance",
+      "Bifidobacterium",
+      "CRISPR-Cas Systems",
+      "Genome, Bacterial",
+      "Research Article",
+      "CRISPR",
+      "Genome analysis",
+      "Genetic interference",
+      "Genetic loci",
+      "Genomics",
+      "Bacterial genomics",
+      "Bacteriophages",
+      "DNA",
+      "CRISPR and Genetic Engineering",
+      "Insect symbiosis and bacterial influences",
+      "Evolution and Genetic Dynamics"
+     ],
+     "language": "eng",
+     "oaStatus": "gold",
+     "stage": "published",
+     "fullText": {
+      "url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0133661&type=printable",
+      "kind": "html",
+      "verified": false
+     },
+     "landingPage": "https://doi.org/10.1371/journal.pone.0133661",
+     "sources": [
+      {
+       "provider": "openaire",
+       "nativeId": "doi_dedup___::3522818fae8b421a5e73c10171c87b1f",
+       "rank": 215,
+       "retrievedAt": "2026-10-02T20:23:01.512Z",
+       "latency": 4745
+      },
+      {
+       "provider": "plos",
+       "nativeId": "10.1371/journal.pone.0133661",
+       "rank": 8,
+       "retrievedAt": "2026-10-02T20:22:57.959Z",
+       "latency": 1193
+      },
+      {
+       "provider": "ncbi",
+       "nativeId": "26230606",
+       "rank": 283,
+       "retrievedAt": "2026-10-02T20:23:02.185Z",
+       "latency": 5419
+      }
+     ],
+     "fieldSources": {
+      "topics": "plos",
+      "citationCount": "crossref"
+     },
+     "retrievedAt": "2026-10-02T20:23:01.512Z",
+     "citationCount": 89
+    },
+    {
+     "id": "plos:10.1371/journal.pcbi.1011137",
+     "doi": "10.1371/journal.pcbi.1011137",
+     "title": "CRISPR-Analytics (CRISPR-A): A platform for precise analytics and simulations for gene editing",
+     "authors": [
+      "Marta Sanvicente-García",
+      "Albert García-Valiente",
+      "Socayna Jouide",
+      "Jessica Jaraba-Wallace",
+      "Eric Bautista",
+      "Marc Escobosa",
+      "Avencia Sánchez-Mejías",
+      "Marc Güell"
+     ],
+     "year": 2023,
+     "venue": "PLOS Computational Biology",
+     "publisher": "Public Library of Science",
+     "abstract": "Gene editing characterization with currently available tools does not always give precise relative proportions among the different types of gene edits present in an edited bulk of cells. We have developed CRISPR-Analytics, CRISPR-A, which is a comprehensive and versatile genome editing web application tool and a nextflow pipeline to give support to gene editing experimental design and analysis. CRISPR-A provides a robust gene editing analysis pipeline composed of data analysis tools and simulation. It achieves higher accuracy than current tools and expands the functionality. The analysis includes mock-based noise correction, spike-in calibrated amplification bias reduction, and advanced interactive graphics. This expanded robustness makes this tool ideal for analyzing highly sensitive cases such as clinical samples or experiments with low editing efficiencies. It also provides an assessment of experimental design through the simulation of gene editing results. Therefore, CRISPR-A is ideal to support multiple kinds of experiments such as double-stranded DNA break-based engineering, base editing (BE), primer editing (PE), and homology-directed repair (HDR), without the need of specifying the used experimental approach. Author summary: Precision and accuracy are paramount for genome editing usage in sensitive applications such as clinical. This field requires reliable and traceable results to ensure the safety and viability of the resulting genomic modifications. To go in this direction, we have developed a computational platform that can simulate and analyze genome editing outcomes comprehensively and in a versatile manner. Our computational pipeline and web application, CRISPR-Analytics (CRISPR-A), expands the functionality of currently available tools. The added robustness of our tool makes it perfect for analyzing sensitive data, such as clinical samples or experiments with low editing efficiencies.",
+     "topics": [
+      "Microhomology-mediated end joining",
+      "Nucleotides",
+      "CRISPR",
+      "Genomics",
+      "Polymerase chain reaction",
+      "Nucleotide sequencing",
+      "Sequence alignment",
+      "Simulation and modeling",
+      "Gene Editing",
+      "CRISPR-Cas Systems",
+      "Clustered Regularly Interspaced Short Palindromic Repeats",
+      "Recombinational DNA Repair",
+      "DNA Breaks, Double-Stranded",
+      "CRISPR and Genetic Engineering",
+      "RNA and protein synthesis mechanisms",
+      "Genetics, Aging, and Longevity in Model Organisms"
+     ],
+     "language": "en",
+     "oaStatus": "gold",
+     "stage": "published",
+     "fullText": {
+      "url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pcbi.1011137&type=printable",
+      "kind": "pdf",
+      "verified": false
+     },
+     "landingPage": "https://doi.org/10.1371/journal.pcbi.1011137",
+     "sources": [
+      {
+       "provider": "plos",
+       "nativeId": "10.1371/journal.pcbi.1011137",
+       "rank": 4,
+       "retrievedAt": "2026-10-02T20:22:57.959Z",
+       "latency": 1193
+      },
+      {
+       "provider": "ncbi",
+       "nativeId": "37253059",
+       "rank": 137,
+       "retrievedAt": "2026-10-02T20:23:02.185Z",
+       "latency": 5419
+      }
+     ],
+     "fieldSources": {
+      "topics": "ncbi",
+      "citationCount": "crossref"
+     },
+     "retrievedAt": "2026-10-02T20:22:57.959Z",
+     "citationCount": 9
+    },
+    {
+     "id": "plos:10.1371/journal.pone.0265114",
+     "doi": "10.1371/journal.pone.0265114",
+     "title": "Optimization of CRISPR/LbCas12a-mediated gene editing in Arabidopsis",
+     "authors": [
+      "Qiang Zhang",
+      "Yan Zhang",
+      "Yiping Chai"
+     ],
+     "year": 2022,
+     "venue": "PLOS ONE",
+     "publisher": "Public Library of Science",
+     "abstract": "CRISPR/LbCas12a system (LbCpf1) has been widely used for genome modification including plant species. However, the efficiency of CRISPR/LbCas12a varied considerably in different plant species and tissues, and the editing efficiency needs to be further improved. In this study, we tried to improve the editing efficiency of CRISPR/LbCas12a in Arabidopsis by optimizing the crRNA expression strategies and Pol II promoters. Notably, the combination of tRNA-crRNA fusion strategy and RPS5A promoter in CRISPR/LbCas12a system has highest editing efficiency, while CRISPR/LbCas12a driven by EC1f-in(crR)p had the highest ratio of homozygous & bi‐allelic mutants. In addition, all homozygous & bi‐allelic mutants can be stably inherited to the next generation and have no phenotypic separation. In this study, the editing efficiency of the CRISPR/LbCas12a system was improved by selecting the optimal crRNA expression strategies and promoter of LbCas12a in Arabidopsis, which will prove useful for optimization of CRISPR/LbCas12a methods in other plants.",
+     "topics": [
+      "Genetically modified plants",
+      "Plant genomics",
+      "CRISPR",
+      "Homozygosity",
+      "Plants",
+      "Arabidopsis thaliana",
+      "Nicotiana",
+      "Rice",
+      "Arabidopsis",
+      "CRISPR-Cas Systems",
+      "Clustered Regularly Interspaced Short Palindromic Repeats",
+      "Gene Editing",
+      "Promoter Regions, Genetic",
+      "CRISPR and Genetic Engineering",
+      "Innovation and Socioeconomic Development",
+      "Genetics, Aging, and Longevity in Model Organisms"
+     ],
+     "language": "en",
+     "oaStatus": "gold",
+     "stage": "published",
+     "fullText": {
+      "url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0265114&type=printable",
+      "kind": "pdf",
+      "verified": false
+     },
+     "landingPage": "https://doi.org/10.1371/journal.pone.0265114",
+     "sources": [
+      {
+       "provider": "plos",
+       "nativeId": "10.1371/journal.pone.0265114",
+       "rank": 32,
+       "retrievedAt": "2026-10-02T20:22:57.959Z",
+       "latency": 1193
+      },
+      {
+       "provider": "ncbi",
+       "nativeId": "35333864",
+       "rank": 47,
+       "retrievedAt": "2026-10-02T20:23:02.185Z",
+       "latency": 5419
+      }
+     ],
+     "fieldSources": {
+      "topics": "ncbi",
+      "citationCount": "crossref"
+     },
+     "retrievedAt": "2026-10-02T20:22:57.959Z",
+     "citationCount": 7
+    }
+   ],
+   "total": 1738,
+   "page": 1,
+   "pageSize": 10,
+   "sort": "relevance",
+   "filters": {
+    "openAccessOnly": true
+   },
+   "facets": {
+    "source": [
+     {
+      "value": "plos",
+      "count": 300
+     },
+     {
+      "value": "ncbi",
+      "count": 300
+     },
+     {
+      "value": "europepmc",
+      "count": 300
+     },
+     {
+      "value": "openalex",
+      "count": 282
+     },
+     {
+      "value": "doaj",
+      "count": 276
+     },
+     {
+      "value": "openaire",
+      "count": 242
+     },
+     {
+      "value": "arxiv",
+      "count": 114
+     }
+    ],
+    "oaStatus": [
+     {
+      "value": "gold",
+      "count": 719
+     },
+     {
+      "value": "unknown",
+      "count": 671
+     },
+     {
+      "value": "green",
+      "count": 149
+     },
+     {
+      "value": "bronze",
+      "count": 145
+     },
+     {
+      "value": "hybrid",
+      "count": 54
+     }
+    ],
+    "stage": [
+     {
+      "value": "published",
+      "count": 64800,
+      "from": "openalex"
+     },
+     {
+      "value": "preprint",
+      "count": 13620,
+      "from": "openalex"
+     },
+     {
+      "value": "unknown",
+      "count": 34
+     }
+    ],
+    "year": [
+     {
+      "value": 2026,
+      "count": 13515,
+      "from": "openalex"
+     },
+     {
+      "value": 2025,
+      "count": 13325,
+      "from": "openalex"
+     },
+     {
+      "value": 2024,
+      "count": 10649,
+      "from": "openalex"
+     },
+     {
+      "value": 2023,
+      "count": 11278,
+      "from": "openalex"
+     },
+     {
+      "value": 2022,
+      "count": 8485,
+      "from": "openalex"
+     },
+     {
+      "value": 2021,
+      "count": 7650,
+      "from": "openalex"
+     },
+     {
+      "value": 2020,
+      "count": 7398,
+      "from": "openalex"
+     },
+     {
+      "value": 2019,
+      "count": 6201,
+      "from": "openalex"
+     },
+     {
+      "value": 2018,
+      "count": 4927,
+      "from": "openalex"
+     },
+     {
+      "value": 2017,
+      "count": 3538,
+      "from": "openalex"
+     },
+     {
+      "value": 2016,
+      "count": 2509,
+      "from": "openalex"
+     },
+     {
+      "value": 2015,
+      "count": 1353,
+      "from": "openalex"
+     },
+     {
+      "value": 2014,
+      "count": 669,
+      "from": "openalex"
+     },
+     {
+      "value": 2013,
+      "count": 298,
+      "from": "openalex"
+     },
+     {
+      "value": 2012,
+      "count": 139,
+      "from": "openalex"
+     },
+     {
+      "value": 2011,
+      "count": 89,
+      "from": "openalex"
+     },
+     {
+      "value": 2010,
+      "count": 54,
+      "from": "openalex"
+     },
+     {
+      "value": 2009,
+      "count": 28,
+      "from": "openalex"
+     },
+     {
+      "value": 2008,
+      "count": 21,
+      "from": "openalex"
+     },
+     {
+      "value": 2007,
+      "count": 20,
+      "from": "openalex"
+     },
+     {
+      "value": 2006,
+      "count": 8,
+      "from": "openalex"
+     },
+     {
+      "value": 2005,
+      "count": 5,
+      "from": "openalex"
+     },
+     {
+      "value": 2004,
+      "count": 5,
+      "from": "openalex"
+     },
+     {
+      "value": 2003,
+      "count": 6,
+      "from": "openalex"
+     },
+     {
+      "value": 2002,
+      "count": 4,
+      "from": "openalex"
+     }
+    ],
+    "venue": [
+     {
+      "value": "PLOS ONE",
+      "count": 2635,
+      "from": "plos"
+     },
+     {
+      "value": "Nature communications",
+      "count": 1493,
+      "from": "openalex"
+     },
+     {
+      "value": "Scientific reports",
+      "count": 1442,
+      "from": "openalex"
+     },
+     {
+      "value": "International journal of molecular sciences",
+      "count": 1384,
+      "from": "openalex"
+     },
+     {
+      "value": "Nucleic acids research",
+      "count": 944,
+      "from": "openalex"
+     },
+     {
+      "value": "eLife",
+      "count": 721,
+      "from": "openalex"
+     },
+     {
+      "value": "Frontiers in Plant Science",
+      "count": 683,
+      "from": "openalex"
+     },
+     {
+      "value": "Blood",
+      "count": 679,
+      "from": "openalex"
+     },
+     {
+      "value": "Proceedings of the National Academy of Sciences",
+      "count": 634,
+      "from": "openalex"
+     },
+     {
+      "value": "Neuro-Oncology",
+      "count": 592,
+      "from": "openalex"
+     },
+     {
+      "value": "Frontiers in Microbiology",
+      "count": 572,
+      "from": "openalex"
+     },
+     {
+      "value": "PLOS Genetics",
+      "count": 556,
+      "from": "plos"
+     },
+     {
+      "value": "Stem Cell Research",
+      "count": 528,
+      "from": "openalex"
+     },
+     {
+      "value": "Plant biotechnology journal",
+      "count": 507,
+      "from": "openalex"
+     },
+     {
+      "value": "Journal of Biological Chemistry",
+      "count": 488,
+      "from": "openalex"
+     },
+     {
+      "value": "Molecular Therapy",
+      "count": 476,
+      "from": "openalex"
+     },
+     {
+      "value": "Cell Reports",
+      "count": 421,
+      "from": "openalex"
+     },
+     {
+      "value": "Nature",
+      "count": 400,
+      "from": "openalex"
+     },
+     {
+      "value": "Cells",
+      "count": 394,
+      "from": "openalex"
+     },
+     {
+      "value": "PLOS Pathogens",
+      "count": 383,
+      "from": "plos"
+     },
+     {
+      "value": "Frontiers in Immunology",
+      "count": 381,
+      "from": "openalex"
+     },
+     {
+      "value": "Regular and Young Investigator Award Abstracts",
+      "count": 301,
+      "from": "openalex"
+     },
+     {
+      "value": "Plants",
+      "count": 296,
+      "from": "openalex"
+     },
+     {
+      "value": "Frontiers in Cell and Developmental Biology",
+      "count": 292,
+      "from": "openalex"
+     },
+     {
+      "value": "Molecular Therapy — Nucleic Acids",
+      "count": 292,
+      "from": "openalex"
+     }
+    ],
+    "publisher": [
+     {
+      "value": "Elsevier BV",
+      "count": 10323,
+      "from": "openalex"
+     },
+     {
+      "value": "Nature Portfolio",
+      "count": 4884,
+      "from": "openalex"
+     },
+     {
+      "value": "Multidisciplinary Digital Publishing Institute",
+      "count": 4666,
+      "from": "openalex"
+     },
+     {
+      "value": "Wiley",
+      "count": 4184,
+      "from": "openalex"
+     },
+     {
+      "value": "Public Library of Science",
+      "count": 4116,
+      "from": "plos"
+     },
+     {
+      "value": "Oxford University Press",
+      "count": 3839,
+      "from": "openalex"
+     },
+     {
+      "value": "Frontiers Media",
+      "count": 3704,
+      "from": "openalex"
+     },
+     {
+      "value": "BioMed Central",
+      "count": 2775,
+      "from": "openalex"
+     },
+     {
+      "value": "Springer Science+Business Media",
+      "count": 1873,
+      "from": "openalex"
+     },
+     {
+      "value": "Springer Nature",
+      "count": 1869,
+      "from": "openalex"
+     },
+     {
+      "value": "Cell Press",
+      "count": 1484,
+      "from": "openalex"
+     },
+     {
+      "value": "American Society for Microbiology",
+      "count": 970,
+      "from": "openalex"
+     },
+     {
+      "value": "eLife Sciences Publications Ltd",
+      "count": 725,
+      "from": "openalex"
+     },
+     {
+      "value": "National Academy of Sciences",
+      "count": 634,
+      "from": "openalex"
+     },
+     {
+      "value": "Taylor & Francis",
+      "count": 624,
+      "from": "openalex"
+     },
+     {
+      "value": "American Chemical Society",
+      "count": 621,
+      "from": "openalex"
+     },
+     {
+      "value": "American Association for Cancer Research",
+      "count": 565,
+      "from": "openalex"
+     },
+     {
+      "value": "American Association for the Advancement of Science",
+      "count": 547,
+      "from": "openalex"
+     },
+     {
+      "value": "Lippincott Williams & Wilkins",
+      "count": 419,
+      "from": "openalex"
+     },
+     {
+      "value": "The Company of Biologists",
+      "count": 380,
+      "from": "openalex"
+     },
+     {
+      "value": "Wolters Kluwer",
+      "count": 344,
+      "from": "openalex"
+     },
+     {
+      "value": "Mary Ann Liebert, Inc.",
+      "count": 331,
+      "from": "openalex"
+     },
+     {
+      "value": "Cold Spring Harbor Laboratory Press",
+      "count": 258,
+      "from": "openalex"
+     },
+     {
+      "value": "BMJ",
+      "count": 250,
+      "from": "openalex"
+     },
+     {
+      "value": "American Association of Immunologists",
+      "count": 250,
+      "from": "openalex"
+     }
+    ],
+    "topics": [
+     {
+      "value": "CRISPR and Genetic Engineering",
+      "count": 37276,
+      "from": "openalex"
+     },
+     {
+      "value": "RNA and protein synthesis mechanisms",
+      "count": 5375,
+      "from": "openalex"
+     },
+     {
+      "value": "Advanced biosensing and bioanalysis techniques",
+      "count": 4770,
+      "from": "openalex"
+     },
+     {
+      "value": "Pluripotent Stem Cells Research",
+      "count": 4704,
+      "from": "openalex"
+     },
+     {
+      "value": "Virus-based gene therapy research",
+      "count": 3317,
+      "from": "openalex"
+     },
+     {
+      "value": "CAR-T cell therapy research",
+      "count": 3256,
+      "from": "openalex"
+     },
+     {
+      "value": "RNA Interference and Gene Delivery",
+      "count": 3203,
+      "from": "openalex"
+     },
+     {
+      "value": "RNA regulation and disease",
+      "count": 2919,
+      "from": "openalex"
+     },
+     {
+      "value": "Plant Virus Research Studies",
+      "count": 2635,
+      "from": "openalex"
+     },
+     {
+      "value": "Bacteriophages and microbial interactions",
+      "count": 2572,
+      "from": "openalex"
+     },
+     {
+      "value": "RNA modifications and cancer",
+      "count": 2480,
+      "from": "openalex"
+     },
+     {
+      "value": "RNA Research and Splicing",
+      "count": 2442,
+      "from": "openalex"
+     },
+     {
+      "value": "Insect symbiosis and bacterial influences",
+      "count": 2278,
+      "from": "openalex"
+     },
+     {
+      "value": "Animal Genetics and Reproduction",
+      "count": 2200,
+      "from": "openalex"
+     },
+     {
+      "value": "Genetics, Aging, and Longevity in Model Organisms",
+      "count": 2117,
+      "from": "openalex"
+     },
+     {
+      "value": "Single-cell and spatial transcriptomics",
+      "count": 2112,
+      "from": "openalex"
+     },
+     {
+      "value": "Epigenetics and DNA Methylation",
+      "count": 2102,
+      "from": "openalex"
+     },
+     {
+      "value": "Chromosomal and Genetic Variations",
+      "count": 2063,
+      "from": "openalex"
+     },
+     {
+      "value": "Plant Molecular Biology Research",
+      "count": 1771,
+      "from": "openalex"
+     },
+     {
+      "value": "Plant tissue culture and regeneration",
+      "count": 1709,
+      "from": "openalex"
+     },
+     {
+      "value": "Bacterial Genetics and Biotechnology",
+      "count": 1655,
+      "from": "openalex"
+     },
+     {
+      "value": "Photosynthetic Processes and Mechanisms",
+      "count": 1580,
+      "from": "openalex"
+     },
+     {
+      "value": "Innovation and Socioeconomic Development",
+      "count": 1575,
+      "from": "openalex"
+     },
+     {
+      "value": "Mosquito-borne diseases and control",
+      "count": 1540,
+      "from": "openalex"
+     },
+     {
+      "value": "interferon and immune responses",
+      "count": 1507,
+      "from": "openalex"
+     }
+    ]
+   },
+   "complete": true,
+   "bounded": true,
+   "countsFromSources": true,
+   "providers": [
+    {
+     "provider": "arxiv",
+     "status": "ok",
+     "retrieved": 114,
+     "totalHits": 114,
+     "latency": 588
+    },
+    {
+     "provider": "ncbi",
+     "status": "ok",
+     "retrieved": 300,
+     "totalHits": 35170,
+     "latency": 5423,
+     "facetError": "1 count failed: NCBI returned no usable response: esearch count: API rate limit exceeded"
+    },
+    {
+     "provider": "doaj",
+     "status": "ok",
+     "retrieved": 300,
+     "totalHits": 22894,
+     "latency": 1220
+    },
+    {
+     "provider": "plos",
+     "status": "ok",
+     "retrieved": 300,
+     "totalHits": 4116,
+     "latency": 1209
+    },
+    {
+     "provider": "openaire",
+     "status": "ok",
+     "retrieved": 300,
+     "totalHits": 70573,
+     "latency": 4761
+    },
+    {
+     "provider": "openalex",
+     "status": "ok",
+     "retrieved": 300,
+     "totalHits": 92421,
+     "latency": 5442
+    },
+    {
+     "provider": "europepmc",
+     "status": "ok",
+     "retrieved": 300,
+     "totalHits": 35799,
+     "latency": 4005
+    },
+    {
+     "provider": "datacite",
+     "status": "skipped",
+     "retrieved": 0,
+     "latency": 0,
+     "skipReason": "no retrievable copies to contribute"
+    },
+    {
+     "provider": "biorxiv",
+     "status": "skipped",
+     "retrieved": 0,
+     "latency": 0,
+     "skipReason": "no keyword index"
+    },
+    {
+     "provider": "core",
+     "status": "skipped",
+     "retrieved": 0,
+     "latency": 0,
+     "skipReason": "too slow to answer in time"
+    }
+   ],
+   "authorities": [
+    {
+     "authority": "crossref",
+     "status": "ok",
+     "asked": 10,
+     "answered": 10,
+     "applied": 7,
+     "latency": 1029
+    },
+    {
+     "authority": "openalex",
+     "status": "ok",
+     "asked": 10,
+     "answered": 10,
+     "applied": 7,
+     "latency": 1455
+    },
+    {
+     "authority": "unpaywall",
+     "status": "ok",
+     "asked": 10,
+     "answered": 10,
+     "applied": 0,
+     "latency": 1084
+    },
+    {
+     "authority": "opencitations",
+     "status": "skipped",
+     "asked": 0,
+     "answered": 0,
+     "applied": 0,
+     "skipReason": "nothing on this page needed it",
+     "latency": 0
+    },
+    {
+     "authority": "preprints",
+     "status": "skipped",
+     "asked": 0,
+     "answered": 0,
+     "applied": 0,
+     "skipReason": "nothing on this page needed it",
+     "latency": 0
+    }
+   ],
+   "duration": 10951
+  },
+  "{\"q\":\"TS=crispr\",\"page\":2}": {
+   "papers": [
+    {
+     "id": "openaire:doi_dedup___::5a656a8b74ba5e2a792989932d5569f6",
+     "doi": "10.1016/j.mocell.2024.100086",
+     "title": "Genome editing using CRISPR, CAST, and Fanzor systems",
+     "authors": [
+      "Song, Beomjong",
+      "Bae, Sangsu"
+     ],
+     "year": 2024,
+     "venue": "Molecules and Cells",
+     "publisher": "Elsevier BV",
+     "abstract": "Genetic engineering technologies are essential not only for basic science but also for generating animal models for therapeutic applications. The clustered regularly interspaced short palindromic repeats (CRISPR)-CRISPR-associated protein (Cas) system, derived from adapted prokaryotic immune responses, has led to unprecedented advancements in the field of genome editing because of its ability to precisely target and edit genes in a guide RNA-dependent manner. The discovery of various types of CRISPR-Cas systems, such as CRISPR-associated transposons (CASTs), has resulted in the development of novel genome editing tools. Recently, research has expanded to systems associated with obligate mobile element guided activity (OMEGA) RNAs, including ancestral CRISPR-Cas and eukaryotic Fanzor systems, which are expected to complement the conventional CRISPR-Cas systems. In this review, we briefly introduce the features of various CRISPR-Cas systems and their application in diverse animal models.",
+     "topics": [
+      "0301 basic medicine",
+      "Gene Editing",
+      "03 medical and health sciences",
+      "DNA Transposable Elements",
+      "Animals",
+      "Humans",
+      "Clustered Regularly Interspaced Short Palindromic Repeats",
+      "Minireview",
+      "CRISPR-Cas Systems",
+      "Clustered regularly interspaced short palindromic repeats-associated protein",
+      "Clustered regularly interspaced short palindromic repeats-associated transposons",
+      "Fanzor",
+      "Genome editing",
+      "IscB",
+      "TnpB",
+      "CRISPR and Genetic Engineering",
+      "Innovation and Socioeconomic Development",
+      "Evolution and Genetic Dynamics"
+     ],
+     "language": "eng",
+     "oaStatus": "gold",
+     "stage": "published",
+     "landingPage": "https://doi.org/10.1016/j.mocell.2024.100086",
+     "sources": [
+      {
+       "provider": "openaire",
+       "nativeId": "doi_dedup___::5a656a8b74ba5e2a792989932d5569f6",
+       "rank": 142,
+       "retrievedAt": "2026-10-02T20:23:01.512Z",
+       "latency": 4745
+      },
+      {
+       "provider": "ncbi",
+       "nativeId": "38909984",
+       "rank": 8,
+       "retrievedAt": "2026-10-02T20:23:02.185Z",
+       "latency": 5419
+      }
+     ],
+     "fieldSources": {
+      "fullText": "ncbi",
+      "topics": "ncbi",
+      "citationCount": "crossref"
+     },
+     "retrievedAt": "2026-10-02T20:23:01.512Z",
+     "fullText": {
+      "url": "https://europepmc.org/articles/PMC11278801?pdf=render",
+      "kind": "pdf",
+      "verified": false
+     },
+     "citationCount": 18
+    },
+    {
+     "id": "openalex:W3004706073",
+     "doi": "10.1016/j.bj.2019.10.005",
+     "title": "CRISPR-Cas12a: Functional overview and applications",
+     "authors": [
+      "Bijoya Paul",
+      "Guillermo Montoya"
+     ],
+     "year": 2020,
+     "venue": "Biomedical Journal",
+     "publisher": "Elsevier BV",
+     "abstract": "Prokaryotes have developed an adaptive immune system called Clustered regularly interspaced short palindromic repeats (CRISPR) to combat attacks by foreign mobile genetic elements (MGEs) such as plasmids and phages. In the past decade, the widely characterized CRISPR-Cas9 enzyme has been redesigned to trigger a genome editing revolution. Class II type V CRISPR-Cas12a is a new RNA guided endonuclease that has been recently harnessed as an alternative genome editing tool, which is emerging as a powerful molecular scissor to consider in the genome editing application landscape. In this review, we aim to provide a mechanistic insight into the working mechanism of Cas12a, comparing it with Cas9, and eventually provide an overview of its current applications in genome editing and biotechnology applications.",
+     "topics": [
+      "CRISPR and Genetic Engineering",
+      "RNA regulation and disease",
+      "Insect symbiosis and bacterial influences",
+      "Animals",
+      "CRISPR-Cas Systems",
+      "Clustered Regularly Interspaced Short Palindromic Repeats",
+      "Endonucleases",
+      "Gene Editing",
+      "Humans",
+      "RNA",
+      "CRISPR-Cas12a",
+      "Endonuclease recycling",
+      "Genome editing",
+      "Indiscriminate ssDNAse",
+      "RNA guided endonucleases",
+      "crRNA biogenesis"
+     ],
+     "language": "en",
+     "citationCount": 459,
+     "oaStatus": "gold",
+     "stage": "published",
+     "fullText": {
+      "url": "https://www.sciencedirect.com/science/article/pii/S2319417019305050/pdf",
+      "kind": "pdf",
+      "verified": false
+     },
+     "landingPage": "https://doi.org/10.1016/j.bj.2019.10.005",
+     "sources": [
+      {
+       "provider": "openalex",
+       "nativeId": "W3004706073",
+       "rank": 197,
+       "retrievedAt": "2026-10-02T20:23:02.199Z",
+       "latency": 5432
+      },
+      {
+       "provider": "ncbi",
+       "nativeId": "32200959",
+       "rank": 4,
+       "retrievedAt": "2026-10-02T20:23:02.185Z",
+       "latency": 5419
+      }
+     ],
+     "fieldSources": {
+      "topics": "ncbi"
+     },
+     "retrievedAt": "2026-10-02T20:23:02.199Z"
+    },
+    {
+     "id": "plos:10.1371/journal.pone.0186241",
+     "doi": "10.1371/journal.pone.0186241",
+     "title": "Diversity and microevolution of CRISPR loci in Helicobacter cinaedi",
+     "authors": [
+      "Junko Tomida",
+      "Yuji Morita",
+      "Keigo Shibayama",
+      "Ken Kikuchi",
+      "Tomohiro Sawa",
+      "Takaaki Akaike",
+      "Yoshiaki Kawamura"
+     ],
+     "year": 2017,
+     "venue": "PLOS ONE",
+     "publisher": "Public Library of Science",
+     "abstract": "Helicobacter cinaedi is associated with nosocomial infections. The CRISPR-Cas system provides adaptive immunity against foreign genetic elements. We investigated the CRISPR-Cas system in H. cinaedi to assess the potential of the CRISPR-based microevolution of H. cinaedi strains. A genotyping method based on CRISPR spacer organization was carried out using 42 H. cinaedi strains. The results of sequence analysis showed that the H. cinaedi strains used in this study had two CRISPR loci (CRISPR1 and CRISPR2). The lengths of the consensus direct repeat sequences in CRISPR1 and CRISPR2 were both 36 bp-long, and 224 spacers were found in the 42 H. cinaedi strains. Analysis of the organization and sequence similarity of the spacers of the H. cinaedi strains showed that CRISPR arrays could be divided into 7 different genotypes. Each genotype had a different ancestral spacer, and spacer acquisition/deletion events occurred while isolates were spreading. Spacer polymorphisms of conserved arrays across the strains were instrumental for differentiating closely-related strains collected from the same hospital. MLST had little variability, while the CRISPR sequences showed remarkable diversity. Our data revealed the structural features of H. cinaedi CRISPR loci for the first time. CRISPR sequences constitute a valuable basis for genotyping, provide insights into the divergence and relatedness between closely-related strains, and reflect the microevolutionary process of H. cinaedi.",
+     "topics": [
+      "Ribosomal RNA",
+      "CRISPR",
+      "Phylogenetic analysis",
+      "Genetic loci",
+      "Nucleotide sequencing",
+      "Helicobacter",
+      "Nosocomial infections",
+      "Sequence alignment",
+      "Clustered Regularly Interspaced Short Palindromic Repeats",
+      "Evolution, Molecular",
+      "Genetic Loci",
+      "Genetic Variation",
+      "Genomics",
+      "Multilocus Sequence Typing",
+      "CRISPR and Genetic Engineering",
+      "Mycobacterium research and diagnosis"
+     ],
+     "language": "en",
+     "oaStatus": "gold",
+     "stage": "published",
+     "fullText": {
+      "url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0186241&type=printable",
+      "kind": "pdf",
+      "verified": false
+     },
+     "landingPage": "https://doi.org/10.1371/journal.pone.0186241",
+     "sources": [
+      {
+       "provider": "plos",
+       "nativeId": "10.1371/journal.pone.0186241",
+       "rank": 11,
+       "retrievedAt": "2026-10-02T20:22:57.959Z",
+       "latency": 1193
+      },
+      {
+       "provider": "ncbi",
+       "nativeId": "29028814",
+       "rank": 141,
+       "retrievedAt": "2026-10-02T20:23:02.185Z",
+       "latency": 5419
+      }
+     ],
+     "fieldSources": {
+      "topics": "ncbi",
+      "citationCount": "crossref"
+     },
+     "retrievedAt": "2026-10-02T20:22:57.959Z",
+     "citationCount": 20
+    },
+    {
+     "id": "openaire:doi_dedup___::4904d5113c353d37b385f759acadaf26",
+     "doi": "10.1089/crispr.2022.0080",
+     "title": "CRISPR Comparison Toolkit: Rapid Identification, Visualization, and Analysis of CRISPR Array Diversity",
+     "authors": [
+      "Alan J. Collins",
+      "Rachel J. Whitaker"
+     ],
+     "year": 2022,
+     "venue": "The CRISPR Journal",
+     "publisher": "SAGE Publications",
+     "abstract": "CRISPR-Cas systems provide immunity against mobile genetic elements (MGEs) through sequence-specific targeting by spacer sequences encoded in CRISPR arrays. Spacers are highly variable between microbial strains and can be acquired rapidly, making them well suited for use in strain typing of closely related organisms. However, no tools are currently available to automate the process of reconstructing strain histories using CRISPR spacers. We therefore developed the CRISPR Comparison Toolkit (CCTK) to enable analyses of array relationships. The CCTK includes tools to identify arrays, analyze relationships between arrays using CRISPRdiff and CRISPRtree, and predict targets of spacers. CRISPRdiff visualizes arrays and highlights the similarities between them. CRISPRtree infers a phylogenetic tree from array relationships and presents a hypothesis of the evolutionary history of the arrays. The CCTK unifies several CRISPR analysis tools into a single command line application, including the first tool to infer phylogenies from array relationships.",
+     "topics": [
+      "0301 basic medicine",
+      "Gene Editing",
+      "0303 health sciences",
+      "03 medical and health sciences",
+      "Clustered Regularly Interspaced Short Palindromic Repeats",
+      "CRISPR-Cas Systems",
+      "Research Articles",
+      "Phylogeny",
+      "CRISPR and Genetic Engineering",
+      "Evolution and Genetic Dynamics",
+      "Genomics and Phylogenetic Studies"
+     ],
+     "language": "eng",
+     "oaStatus": "hybrid",
+     "stage": "published",
+     "landingPage": "https://doi.org/10.1089/crispr.2022.0080",
+     "sources": [
+      {
+       "provider": "openaire",
+       "nativeId": "doi_dedup___::4904d5113c353d37b385f759acadaf26",
+       "rank": 38,
+       "retrievedAt": "2026-10-02T20:23:01.512Z",
+       "latency": 4745
+      },
+      {
+       "provider": "ncbi",
+       "nativeId": "37459160",
+       "rank": 67,
+       "retrievedAt": "2026-10-02T20:23:02.185Z",
+       "latency": 5419
+      }
+     ],
+     "fieldSources": {
+      "fullText": "ncbi",
+      "citationCount": "crossref",
+      "topics": "openalex"
+     },
+     "retrievedAt": "2026-10-02T20:23:01.512Z",
+     "fullText": {
+      "url": "https://europepmc.org/articles/PMC10457644?pdf=render",
+      "kind": "pdf",
+      "verified": false
+     },
+     "citationCount": 19
+    },
+    {
+     "id": "openalex:W2097379120",
+     "doi": "10.1371/journal.pone.0035888",
+     "title": "CRISPR Interference Directs Strand Specific Spacer Acquisition",
+     "authors": [
+      "Daan C. Swarts",
+      "Cas Mosterd",
+      "Mark W. J. van Passel",
+      "Stan J. J. Brouns"
+     ],
+     "year": 2012,
+     "venue": "PLoS ONE",
+     "publisher": "Public Library of Science",
+     "abstract": "BACKGROUND: CRISPR/Cas is a widespread adaptive immune system in prokaryotes. This system integrates short stretches of DNA derived from invading nucleic acids into genomic CRISPR loci, which function as memory of previously encountered invaders. In Escherichia coli, transcripts of these loci are cleaved into small RNAs and utilized by the Cascade complex to bind invader DNA, which is then likely degraded by Cas3 during CRISPR interference. RESULTS: We describe how a CRISPR-activated E. coli K12 is cured from a high copy number plasmid under non-selective conditions in a CRISPR-mediated way. Cured clones integrated at least one up to five anti-plasmid spacers in genomic CRISPR loci. New spacers are integrated directly downstream of the leader sequence. The spacers are non-randomly selected to target protospacers with an AAG protospacer adjacent motif, which is located directly upstream of the protospacer. A co-occurrence of PAM deviations and CRISPR repeat mutations was observed, indicating that one nucleotide from the PAM is incorporated as the last nucleotide of the repeat during integration of a new spacer. When multiple spacers were integrated in a single clone, all spacer targeted the same strand of the plasmid, implying that CRISPR interference caused by the first integrated spacer directs subsequent spacer acquisition events in a strand specific manner. CONCLUSIONS: The E. coli Type I-E CRISPR/Cas system provides resistance against bacteriophage infection, but also enables removal of residing plasmids. We established that there is a positive feedback loop between active spacers in a cluster--in our case the first acquired spacer--and spacers acquired thereafter, possibly through the use of specific DNA degradation products of the CRISPR interference machinery by the CRISPR adaptation machinery. This loop enables a rapid expansion of the spacer repertoire against an actively present DNA element that is already targeted, amplifying the CRISPR interference effect.",
+     "topics": [
+      "CRISPR and Genetic Engineering",
+      "Bacterial Genetics and Biotechnology",
+      "Vibrio bacteria research studies",
+      "Nucleotides",
+      "CRISPR",
+      "Genetic interference",
+      "Genetic loci",
+      "Point mutation",
+      "Polymerase chain reaction",
+      "Cloning",
+      "Nucleotide sequencing"
+     ],
+     "language": "en",
+     "citationCount": 396,
+     "oaStatus": "gold",
+     "stage": "published",
+     "fullText": {
+      "url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0035888&type=printable",
+      "kind": "pdf",
+      "verified": false
+     },
+     "landingPage": "https://doi.org/10.1371/journal.pone.0035888",
+     "sources": [
+      {
+       "provider": "openalex",
+       "nativeId": "W2097379120",
+       "rank": 296,
+       "retrievedAt": "2026-10-02T20:23:02.199Z",
+       "latency": 5432
+      },
+      {
+       "provider": "plos",
+       "nativeId": "10.1371/journal.pone.0035888",
+       "rank": 7,
+       "retrievedAt": "2026-10-02T20:22:57.959Z",
+       "latency": 1193
+      }
+     ],
+     "fieldSources": {
+      "topics": "plos"
+     },
+     "retrievedAt": "2026-10-02T20:23:02.199Z"
+    },
+    {
+     "id": "openalex:W2064815984",
+     "doi": "10.1126/science.1231143",
+     "title": "Multiplex Genome Engineering Using CRISPR/Cas Systems",
+     "authors": [
+      "Le Cong",
+      "F. Ann Ran",
+      "David B. T. Cox",
+      "Shuailiang Lin",
+      "Robert P. J. Barretto",
+      "Naomi Habib",
+      "Patrick D. Hsu",
+      "Xuebing Wu",
+      "Wenyan Jiang",
+      "Luciano A. Marraffini",
+      "Feng Zhang"
+     ],
+     "year": 2013,
+     "venue": "Science",
+     "publisher": "American Association for the Advancement of Science",
+     "abstract": "Functional elucidation of causal genetic variants and elements requires precise genome editing technologies. The type II prokaryotic CRISPR (clustered regularly interspaced short palindromic repeats)/Cas adaptive immune system has been shown to facilitate RNA-guided site-specific DNA cleavage. We engineered two different type II CRISPR/Cas systems and demonstrate that Cas9 nucleases can be directed by short RNAs to induce precise cleavage at endogenous genomic loci in human and mouse cells. Cas9 can also be converted into a nicking enzyme to facilitate homology-directed repair with minimal mutagenic activity. Lastly, multiple guide sequences can be encoded into a single CRISPR array to enable simultaneous editing of several sites within the mammalian genome, demonstrating easy programmability and wide applicability of the RNA-guided nuclease technology.",
+     "topics": [
+      "CRISPR and Genetic Engineering",
+      "Cytomegalovirus and herpesvirus research",
+      "Innovation and Socioeconomic Development"
+     ],
+     "language": "en",
+     "citationCount": 16048,
+     "oaStatus": "green",
+     "stage": "published",
+     "fullText": {
+      "url": "https://www.ncbi.nlm.nih.gov/pmc/articles/3795411",
+      "kind": "html",
+      "verified": false
+     },
+     "landingPage": "https://doi.org/10.1126/science.1231143",
+     "sources": [
+      {
+       "provider": "openalex",
+       "nativeId": "W2064815984",
+       "rank": 0,
+       "retrievedAt": "2026-10-02T20:23:02.199Z",
+       "latency": 5432
+      }
+     ],
+     "fieldSources": {},
+     "retrievedAt": "2026-10-02T20:23:02.199Z"
+    },
+    {
+     "id": "europepmc:42804049",
+     "doi": "10.1007/s44154-026-00339-9",
+     "title": "Plant viral suppressors HcPro and P19 inhibit CRISPR-Cas13-mediated transcript interference.",
+     "authors": [
+      "Veerendra K Sharma",
+      "Sandeep Marla",
+      "David E Cook"
+     ],
+     "year": 2026,
+     "venue": "Stress biology",
+     "abstract": "RNA plays a central role in cellular dynamics, mediating the formation of proteins from genetic information. Thus, there is great interest in technologies that can alter RNA content of a cell to achieve desired outcomes. RNA targeting CRISPR‒Cas13 enables precise, sequence-guided targeting of RNA to disrupt translation and can therefore be used for cellular engineering. However, guide RNA from CRISPR systems can silence target transcripts independent of the Cas13 protein, complicating the deployment of CRISPR-Cas13 for biotechnology. To prevent Cas13-independent silencing and encourage Cas13-mediated transcript reduction, we explored the use of viral suppressors of RNAi. Here, we report that expression of two viral suppressors of RNAi, HcPro and P19, unexpectedly blocked Cas13-mediated transcript silencing in addition to Cas13-independent RNAi-like silencing. To further understand how HcPro blocks Cas13-mediated silencing, we expressed an RNA silencing-deficient HcPro mutant for RNA-targeting assays. The results demonstrate that mutant HcPro failed to suppress Cas13-dependent silencing, indicating that HcPro RNAi suppression also interferes with Cas13 silencing. These results suggest that plant viruses may be primed to overcome engineered CRISPR-Cas13 antiviral resistance through the activity of previously evolved RNAi silencing suppressors.",
+     "topics": [
+      "RNAi",
+      "Anti-crispr",
+      "Viral Suppressors Of Rna Silencing",
+      "Gigs",
+      "Crispr-cas13",
+      "Plant Virus Research Studies",
+      "CRISPR and Genetic Engineering",
+      "interferon and immune responses"
+     ],
+     "language": "eng",
+     "citationCount": 0,
+     "oaStatus": "gold",
+     "stage": "published",
+     "fullText": {
+      "url": "https://europepmc.org/articles/PMC13620101?pdf=render",
+      "kind": "pdf",
+      "verified": false
+     },
+     "landingPage": "https://europepmc.org/articles/PMC13620101",
+     "sources": [
+      {
+       "provider": "europepmc",
+       "nativeId": "42804049",
+       "rank": 0,
+       "retrievedAt": "2026-10-02T20:23:00.761Z",
+       "latency": 3994
+      }
+     ],
+     "fieldSources": {
+      "publisher": "crossref",
+      "oaStatus": "unpaywall",
+      "topics": "openalex"
+     },
+     "retrievedAt": "2026-10-02T20:23:00.761Z",
+     "publisher": "Springer Science and Business Media LLC"
+    },
+    {
+     "id": "ncbi:38786024",
+     "doi": "10.3390/cells13100800",
+     "title": "CRISPR-Based Gene Therapies: From Preclinical to Clinical Treatments.",
+     "authors": [
+      "Laurent Marine",
+      "Geoffroy Marine",
+      "Pavani Giulia",
+      "Guiraud Simon"
+     ],
+     "year": 2024,
+     "venue": "Cells",
+     "abstract": "In recent years, clustered regularly interspaced short palindromic repeats (CRISPRs) and CRISPR-associated (Cas) protein have emerged as a revolutionary gene editing tool to treat inherited disorders affecting different organ systems, such as blood and muscles. Both hematological and neuromuscular genetic disorders benefit from genome editing approaches but face different challenges in their clinical translation. The ability of CRISPR/Cas9 technologies to modify hematopoietic stem cells ex vivo has greatly accelerated the development of genetic therapies for blood disorders. In the last decade, many clinical trials were initiated and are now delivering encouraging results. The recent FDA approval of Casgevy, the first CRISPR/Cas9-based drug for severe sickle cell disease and transfusion-dependent β-thalassemia, represents a significant milestone in the field and highlights the great potential of this technology. Similar preclinical efforts are currently expanding CRISPR therapies to other hematologic disorders such as primary immunodeficiencies. In the neuromuscular field, the versatility of CRISPR/Cas9 has been instrumental for the generation of new cellular and animal models of Duchenne muscular dystrophy (DMD), offering innovative platforms to speed up preclinical development of therapeutic solutions. Several corrective interventions have been proposed to genetically restore dystrophin production using the CRISPR toolbox and have demonstrated promising results in different DMD animal models. Although these advances represent a significant step forward to the clinical translation of CRISPR/Cas9 therapies to DMD, there are still many hurdles to overcome, such as in vivo delivery methods associated with high viral vector doses, together with safety and immunological concerns. Collectively, the results obtained in the hematological and neuromuscular fields emphasize the transformative impact of CRISPR/Cas9 for patients affected by these debilitating conditions. As each field suffers from different and specific challenges, the clinical translation of CRISPR therapies may progress differentially depending on the genetic disorder. Ongoing investigations and clinical trials will address risks and limitations of these therapies, including long-term efficacy, potential genotoxicity, and adverse immune reactions. This review provides insights into the diverse applications of CRISPR-based technologies in both preclinical and clinical settings for monogenic blood disorders and muscular dystrophy and compare advances in both fields while highlighting current trends, difficulties, and challenges to overcome.",
+     "topics": [
+      "Humans",
+      "Genetic Therapy",
+      "CRISPR-Cas Systems",
+      "Animals",
+      "Gene Editing",
+      "Muscular Dystrophy, Duchenne",
+      "Clinical Trials as Topic",
+      "Clustered Regularly Interspaced Short Palindromic Repeats",
+      "CRISPR/Cas9",
+      "Duchenne muscular dystrophy",
+      "blood disorders",
+      "neuromuscular disorders",
+      "β-hemoglobinopathies",
+      "CRISPR and Genetic Engineering",
+      "Virus-based gene therapy research",
+      "Viral Infections and Immunology Research"
+     ],
+     "language": "eng",
+     "oaStatus": "gold",
+     "stage": "published",
+     "fullText": {
+      "url": "https://europepmc.org/articles/PMC11119143?pdf=render",
+      "kind": "pdf",
+      "verified": false
+     },
+     "landingPage": "https://pubmed.ncbi.nlm.nih.gov/38786024/",
+     "sources": [
+      {
+       "provider": "ncbi",
+       "nativeId": "38786024",
+       "rank": 0,
+       "retrievedAt": "2026-10-02T20:23:02.185Z",
+       "latency": 5419
+      }
+     ],
+     "fieldSources": {
+      "publisher": "unpaywall",
+      "oaStatus": "unpaywall",
+      "citationCount": "crossref",
+      "topics": "openalex"
+     },
+     "retrievedAt": "2026-10-02T20:23:02.185Z",
+     "publisher": "MDPI AG",
+     "citationCount": 110
+    },
+    {
+     "id": "arxiv:2202.07171v1",
+     "title": "Investigating the genomic background of CRISPR-Cas genomes for CRISPR-based antimicrobials",
+     "authors": [
+      "Hyunjin Shim"
+     ],
+     "year": 2022,
+     "abstract": "CRISPR-Cas systems are an adaptive immunity that protects prokaryotes against foreign genetic elements. Genetic templates acquired during past infection events enable DNA-interacting enzymes to recognize foreign DNA for destruction. Due to the programmability and specificity of these genetic templates, CRISPR-Cas systems are potential alternative antibiotics that can be engineered to self-target antimicrobial resistance genes on the chromosome or plasmid. However, several fundamental questions remain to repurpose these tools against drug-resistant bacteria. For endogenous CRISPR-Cas self-targeting, antimicrobial resistance genes and functional CRISPR-Cas systems have to co-occur in the target cell. Furthermore, these tools have to outplay DNA repair pathways that respond to the nuclease activities of Cas proteins, even for exogenous CRISPR-Cas delivery. Here, we conduct a comprehensive survey of CRISPR-Cas genomes. First, we address the co-occurrence of CRISPR-Cas systems and antimicrobial resistance genes in the CRISPR-Cas genomes. We show that the average number of these genes varies greatly by the CRISPR-Cas type, and some CRISPR-Cas types (IE and IIIA) have over 20 genes per genome. Next, we investigate the DNA repair pathways of these CRISPR-Cas genomes, revealing that the diversity and frequency of these pathways differ by the CRISPR-Cas type. The interplay between CRISPR-Cas systems and DNA repair pathways is essential for the acquisition of new spacers in CRISPR arrays. We conduct simulation studies to demonstrate that the efficiency of these DNA repair pathways may be inferred from the time-series patterns in the RNA structure of CRISPR repeats. This bioinformatic survey of CRISPR-Cas genomes elucidates the necessity to consider multifaceted interactions between different genes and systems to design effective CRISPR-based antimicrobials.",
+     "topics": [
+      "q-bio.GN"
+     ],
+     "language": "en",
+     "oaStatus": "unknown",
+     "stage": "preprint",
+     "fullText": {
+      "url": "https://arxiv.org/pdf/2202.07171v1",
+      "kind": "pdf",
+      "verified": false
+     },
+     "landingPage": "http://arxiv.org/abs/2202.07171v1",
+     "sources": [
+      {
+       "provider": "arxiv",
+       "nativeId": "2202.07171v1",
+       "rank": 0,
+       "retrievedAt": "2026-10-02T20:22:57.349Z",
+       "latency": 583
+      }
+     ],
+     "fieldSources": {},
+     "retrievedAt": "2026-10-02T20:22:57.349Z"
+    },
+    {
+     "id": "europepmc:42655845",
+     "doi": "10.3390/vetsci13080825",
+     "title": "Establishment of RPA-CRISPR/Cas12a Detection Methods for Rapid Largemouth Bass Ranavirus Surveillance.",
+     "authors": [
+      "Haoyu Wang",
+      "Yong Zhou",
+      "Peng Chen",
+      "Liping Zhang",
+      "Wen Zhu",
+      "Mingyang Xue",
+      "Yan Meng",
+      "Zhenyu Huang",
+      "Chen Xu",
+      "Yuding Fan",
+      "Chao Pei",
+      "Nan Jiang"
+     ],
+     "year": 2026,
+     "venue": "Veterinary sciences",
+     "abstract": "The high mortality associated with largemouth bass ranavirus (LMBRaV) disease requires rapid and sensitive diagnosis methods to prevent virus spread and subsequent outbreak. The recombinase polymerase amplification combined with the CRISPR/Cas12a system (RPA-CRISPR/Cas12a) assay and RPA-CRISPR/Cas12a, coupled with lateral flow dipstick (RPA-CRISPR/Cas12a-LFD) assay for LMBRaV, were established in this study for low viral load surveillance. The major capsid protein (mcp) gene is highly conserved and is widely used as the target sequence in LMBRaV detection. First, based on the mcp gene sequence of LMBRaV, three candidate crRNAs were designed. Among them, the crRNA-2, which exhibited the highest cleavage activity, was selected through dual evaluation of fluorescence signal intensity and LFD color development. Then, the key reaction conditions for both assays were optimized as follows: LbCas12a protein concentration of 150 nM, crRNA-2 concentration of 200 nM, and ssDNA reporters' concentration of 200 nM. Moreover, specificity evaluation showed that both combined assays specifically recognized LMBRaV, with no cross-reactivity detected against other aquatic pathogens, such as CyHV-2, GSIV, ISKNV, WSSV, GCRV II or CrERV. The detection limit was 1 copy/μL of DNA sample for both RPA-CRISPR/Cas12a and RPA-CRISPR/Cas12a-LFD assays. Finally, validation using 24 clinical samples (16 positive, eight negative) showed that both LMBRaV RPA-CRISPR/Cas12a assays achieved 100% detection rate, whereas conventional PCR detected 13 positive samples (detection rate 81.26%). ddPCR served as the reference method for clinical validation. Therefore, the LMBRaV RPA-CRISPR/Cas12a assay and the RPA-CRISPR/Cas12a-LFD assay provide sensitive, specific, and easy-to-operate methods for the rapid detection of LMBRaV.",
+     "topics": [
+      "Rapid detection",
+      "Largemouth Bass",
+      "Rpa-crispr/cas12a",
+      "Lmbrav",
+      "Rpa-crispr/cas12a-lfd",
+      "Aquaculture disease management and microbiota",
+      "Ichthyology and Marine Biology",
+      "CRISPR and Genetic Engineering"
+     ],
+     "language": "eng",
+     "citationCount": 0,
+     "oaStatus": "gold",
+     "stage": "published",
+     "fullText": {
+      "url": "https://europepmc.org/articles/PMC13517407?pdf=render",
+      "kind": "pdf",
+      "verified": false
+     },
+     "landingPage": "https://europepmc.org/articles/PMC13517407",
+     "sources": [
+      {
+       "provider": "europepmc",
+       "nativeId": "42655845",
+       "rank": 1,
+       "retrievedAt": "2026-10-02T20:23:00.761Z",
+       "latency": 3994
+      }
+     ],
+     "fieldSources": {
+      "publisher": "crossref",
+      "oaStatus": "unpaywall",
+      "topics": "openalex"
+     },
+     "retrievedAt": "2026-10-02T20:23:00.761Z",
+     "publisher": "MDPI AG"
+    }
+   ],
+   "total": 1738,
+   "page": 2,
+   "pageSize": 10,
+   "sort": "relevance",
+   "filters": {
+    "openAccessOnly": true
+   },
+   "facets": {
+    "source": [
+     {
+      "value": "plos",
+      "count": 300
+     },
+     {
+      "value": "ncbi",
+      "count": 300
+     },
+     {
+      "value": "europepmc",
+      "count": 300
+     },
+     {
+      "value": "openalex",
+      "count": 282
+     },
+     {
+      "value": "doaj",
+      "count": 276
+     },
+     {
+      "value": "openaire",
+      "count": 242
+     },
+     {
+      "value": "arxiv",
+      "count": 114
+     }
+    ],
+    "oaStatus": [
+     {
+      "value": "gold",
+      "count": 719
+     },
+     {
+      "value": "unknown",
+      "count": 671
+     },
+     {
+      "value": "green",
+      "count": 149
+     },
+     {
+      "value": "bronze",
+      "count": 145
+     },
+     {
+      "value": "hybrid",
+      "count": 54
+     }
+    ],
+    "stage": [
+     {
+      "value": "published",
+      "count": 64800,
+      "from": "openalex"
+     },
+     {
+      "value": "preprint",
+      "count": 13620,
+      "from": "openalex"
+     },
+     {
+      "value": "unknown",
+      "count": 34
+     }
+    ],
+    "year": [
+     {
+      "value": 2026,
+      "count": 13515,
+      "from": "openalex"
+     },
+     {
+      "value": 2025,
+      "count": 13325,
+      "from": "openalex"
+     },
+     {
+      "value": 2024,
+      "count": 10649,
+      "from": "openalex"
+     },
+     {
+      "value": 2023,
+      "count": 11278,
+      "from": "openalex"
+     },
+     {
+      "value": 2022,
+      "count": 8485,
+      "from": "openalex"
+     },
+     {
+      "value": 2021,
+      "count": 7650,
+      "from": "openalex"
+     },
+     {
+      "value": 2020,
+      "count": 7398,
+      "from": "openalex"
+     },
+     {
+      "value": 2019,
+      "count": 6201,
+      "from": "openalex"
+     },
+     {
+      "value": 2018,
+      "count": 4927,
+      "from": "openalex"
+     },
+     {
+      "value": 2017,
+      "count": 3538,
+      "from": "openalex"
+     },
+     {
+      "value": 2016,
+      "count": 2509,
+      "from": "openalex"
+     },
+     {
+      "value": 2015,
+      "count": 1353,
+      "from": "openalex"
+     },
+     {
+      "value": 2014,
+      "count": 669,
+      "from": "openalex"
+     },
+     {
+      "value": 2013,
+      "count": 298,
+      "from": "openalex"
+     },
+     {
+      "value": 2012,
+      "count": 139,
+      "from": "openalex"
+     },
+     {
+      "value": 2011,
+      "count": 89,
+      "from": "openalex"
+     },
+     {
+      "value": 2010,
+      "count": 54,
+      "from": "openalex"
+     },
+     {
+      "value": 2009,
+      "count": 28,
+      "from": "openalex"
+     },
+     {
+      "value": 2008,
+      "count": 21,
+      "from": "openalex"
+     },
+     {
+      "value": 2007,
+      "count": 20,
+      "from": "openalex"
+     },
+     {
+      "value": 2006,
+      "count": 8,
+      "from": "openalex"
+     },
+     {
+      "value": 2005,
+      "count": 5,
+      "from": "openalex"
+     },
+     {
+      "value": 2004,
+      "count": 5,
+      "from": "openalex"
+     },
+     {
+      "value": 2003,
+      "count": 6,
+      "from": "openalex"
+     },
+     {
+      "value": 2002,
+      "count": 4,
+      "from": "openalex"
+     }
+    ],
+    "venue": [
+     {
+      "value": "PLOS ONE",
+      "count": 2635,
+      "from": "plos"
+     },
+     {
+      "value": "Nature communications",
+      "count": 1493,
+      "from": "openalex"
+     },
+     {
+      "value": "Scientific reports",
+      "count": 1442,
+      "from": "openalex"
+     },
+     {
+      "value": "International journal of molecular sciences",
+      "count": 1384,
+      "from": "openalex"
+     },
+     {
+      "value": "Nucleic acids research",
+      "count": 944,
+      "from": "openalex"
+     },
+     {
+      "value": "eLife",
+      "count": 721,
+      "from": "openalex"
+     },
+     {
+      "value": "Frontiers in Plant Science",
+      "count": 683,
+      "from": "openalex"
+     },
+     {
+      "value": "Blood",
+      "count": 679,
+      "from": "openalex"
+     },
+     {
+      "value": "Proceedings of the National Academy of Sciences",
+      "count": 634,
+      "from": "openalex"
+     },
+     {
+      "value": "Neuro-Oncology",
+      "count": 592,
+      "from": "openalex"
+     },
+     {
+      "value": "Frontiers in Microbiology",
+      "count": 572,
+      "from": "openalex"
+     },
+     {
+      "value": "PLOS Genetics",
+      "count": 556,
+      "from": "plos"
+     },
+     {
+      "value": "Stem Cell Research",
+      "count": 528,
+      "from": "openalex"
+     },
+     {
+      "value": "Plant biotechnology journal",
+      "count": 507,
+      "from": "openalex"
+     },
+     {
+      "value": "Journal of Biological Chemistry",
+      "count": 488,
+      "from": "openalex"
+     },
+     {
+      "value": "Molecular Therapy",
+      "count": 476,
+      "from": "openalex"
+     },
+     {
+      "value": "Cell Reports",
+      "count": 421,
+      "from": "openalex"
+     },
+     {
+      "value": "Nature",
+      "count": 400,
+      "from": "openalex"
+     },
+     {
+      "value": "Cells",
+      "count": 394,
+      "from": "openalex"
+     },
+     {
+      "value": "PLOS Pathogens",
+      "count": 383,
+      "from": "plos"
+     },
+     {
+      "value": "Frontiers in Immunology",
+      "count": 381,
+      "from": "openalex"
+     },
+     {
+      "value": "Regular and Young Investigator Award Abstracts",
+      "count": 301,
+      "from": "openalex"
+     },
+     {
+      "value": "Plants",
+      "count": 296,
+      "from": "openalex"
+     },
+     {
+      "value": "Frontiers in Cell and Developmental Biology",
+      "count": 292,
+      "from": "openalex"
+     },
+     {
+      "value": "Molecular Therapy — Nucleic Acids",
+      "count": 292,
+      "from": "openalex"
+     }
+    ],
+    "publisher": [
+     {
+      "value": "Elsevier BV",
+      "count": 10323,
+      "from": "openalex"
+     },
+     {
+      "value": "Nature Portfolio",
+      "count": 4884,
+      "from": "openalex"
+     },
+     {
+      "value": "Multidisciplinary Digital Publishing Institute",
+      "count": 4666,
+      "from": "openalex"
+     },
+     {
+      "value": "Wiley",
+      "count": 4184,
+      "from": "openalex"
+     },
+     {
+      "value": "Public Library of Science",
+      "count": 4116,
+      "from": "plos"
+     },
+     {
+      "value": "Oxford University Press",
+      "count": 3839,
+      "from": "openalex"
+     },
+     {
+      "value": "Frontiers Media",
+      "count": 3704,
+      "from": "openalex"
+     },
+     {
+      "value": "BioMed Central",
+      "count": 2775,
+      "from": "openalex"
+     },
+     {
+      "value": "Springer Science+Business Media",
+      "count": 1873,
+      "from": "openalex"
+     },
+     {
+      "value": "Springer Nature",
+      "count": 1869,
+      "from": "openalex"
+     },
+     {
+      "value": "Cell Press",
+      "count": 1484,
+      "from": "openalex"
+     },
+     {
+      "value": "American Society for Microbiology",
+      "count": 970,
+      "from": "openalex"
+     },
+     {
+      "value": "eLife Sciences Publications Ltd",
+      "count": 725,
+      "from": "openalex"
+     },
+     {
+      "value": "National Academy of Sciences",
+      "count": 634,
+      "from": "openalex"
+     },
+     {
+      "value": "Taylor & Francis",
+      "count": 624,
+      "from": "openalex"
+     },
+     {
+      "value": "American Chemical Society",
+      "count": 621,
+      "from": "openalex"
+     },
+     {
+      "value": "American Association for Cancer Research",
+      "count": 565,
+      "from": "openalex"
+     },
+     {
+      "value": "American Association for the Advancement of Science",
+      "count": 547,
+      "from": "openalex"
+     },
+     {
+      "value": "Lippincott Williams & Wilkins",
+      "count": 419,
+      "from": "openalex"
+     },
+     {
+      "value": "The Company of Biologists",
+      "count": 380,
+      "from": "openalex"
+     },
+     {
+      "value": "Wolters Kluwer",
+      "count": 344,
+      "from": "openalex"
+     },
+     {
+      "value": "Mary Ann Liebert, Inc.",
+      "count": 331,
+      "from": "openalex"
+     },
+     {
+      "value": "Cold Spring Harbor Laboratory Press",
+      "count": 258,
+      "from": "openalex"
+     },
+     {
+      "value": "BMJ",
+      "count": 250,
+      "from": "openalex"
+     },
+     {
+      "value": "American Association of Immunologists",
+      "count": 250,
+      "from": "openalex"
+     }
+    ],
+    "topics": [
+     {
+      "value": "CRISPR and Genetic Engineering",
+      "count": 37276,
+      "from": "openalex"
+     },
+     {
+      "value": "RNA and protein synthesis mechanisms",
+      "count": 5375,
+      "from": "openalex"
+     },
+     {
+      "value": "Advanced biosensing and bioanalysis techniques",
+      "count": 4770,
+      "from": "openalex"
+     },
+     {
+      "value": "Pluripotent Stem Cells Research",
+      "count": 4704,
+      "from": "openalex"
+     },
+     {
+      "value": "Virus-based gene therapy research",
+      "count": 3317,
+      "from": "openalex"
+     },
+     {
+      "value": "CAR-T cell therapy research",
+      "count": 3256,
+      "from": "openalex"
+     },
+     {
+      "value": "RNA Interference and Gene Delivery",
+      "count": 3203,
+      "from": "openalex"
+     },
+     {
+      "value": "RNA regulation and disease",
+      "count": 2919,
+      "from": "openalex"
+     },
+     {
+      "value": "Plant Virus Research Studies",
+      "count": 2635,
+      "from": "openalex"
+     },
+     {
+      "value": "Bacteriophages and microbial interactions",
+      "count": 2572,
+      "from": "openalex"
+     },
+     {
+      "value": "RNA modifications and cancer",
+      "count": 2480,
+      "from": "openalex"
+     },
+     {
+      "value": "RNA Research and Splicing",
+      "count": 2442,
+      "from": "openalex"
+     },
+     {
+      "value": "Insect symbiosis and bacterial influences",
+      "count": 2278,
+      "from": "openalex"
+     },
+     {
+      "value": "Animal Genetics and Reproduction",
+      "count": 2200,
+      "from": "openalex"
+     },
+     {
+      "value": "Genetics, Aging, and Longevity in Model Organisms",
+      "count": 2117,
+      "from": "openalex"
+     },
+     {
+      "value": "Single-cell and spatial transcriptomics",
+      "count": 2112,
+      "from": "openalex"
+     },
+     {
+      "value": "Epigenetics and DNA Methylation",
+      "count": 2102,
+      "from": "openalex"
+     },
+     {
+      "value": "Chromosomal and Genetic Variations",
+      "count": 2063,
+      "from": "openalex"
+     },
+     {
+      "value": "Plant Molecular Biology Research",
+      "count": 1771,
+      "from": "openalex"
+     },
+     {
+      "value": "Plant tissue culture and regeneration",
+      "count": 1709,
+      "from": "openalex"
+     },
+     {
+      "value": "Bacterial Genetics and Biotechnology",
+      "count": 1655,
+      "from": "openalex"
+     },
+     {
+      "value": "Photosynthetic Processes and Mechanisms",
+      "count": 1580,
+      "from": "openalex"
+     },
+     {
+      "value": "Innovation and Socioeconomic Development",
+      "count": 1575,
+      "from": "openalex"
+     },
+     {
+      "value": "Mosquito-borne diseases and control",
+      "count": 1540,
+      "from": "openalex"
+     },
+     {
+      "value": "interferon and immune responses",
+      "count": 1507,
+      "from": "openalex"
+     }
+    ]
+   },
+   "complete": true,
+   "bounded": true,
+   "countsFromSources": true,
+   "providers": [
+    {
+     "provider": "arxiv",
+     "status": "ok",
+     "retrieved": 114,
+     "totalHits": 114,
+     "latency": 588
+    },
+    {
+     "provider": "ncbi",
+     "status": "ok",
+     "retrieved": 300,
+     "totalHits": 35170,
+     "latency": 5423,
+     "facetError": "1 count failed: NCBI returned no usable response: esearch count: API rate limit exceeded"
+    },
+    {
+     "provider": "doaj",
+     "status": "ok",
+     "retrieved": 300,
+     "totalHits": 22894,
+     "latency": 1220
+    },
+    {
+     "provider": "plos",
+     "status": "ok",
+     "retrieved": 300,
+     "totalHits": 4116,
+     "latency": 1209
+    },
+    {
+     "provider": "openaire",
+     "status": "ok",
+     "retrieved": 300,
+     "totalHits": 70573,
+     "latency": 4761
+    },
+    {
+     "provider": "openalex",
+     "status": "ok",
+     "retrieved": 300,
+     "totalHits": 92421,
+     "latency": 5442
+    },
+    {
+     "provider": "europepmc",
+     "status": "ok",
+     "retrieved": 300,
+     "totalHits": 35799,
+     "latency": 4005
+    },
+    {
+     "provider": "datacite",
+     "status": "skipped",
+     "retrieved": 0,
+     "latency": 0,
+     "skipReason": "no retrievable copies to contribute"
+    },
+    {
+     "provider": "biorxiv",
+     "status": "skipped",
+     "retrieved": 0,
+     "latency": 0,
+     "skipReason": "no keyword index"
+    },
+    {
+     "provider": "core",
+     "status": "skipped",
+     "retrieved": 0,
+     "latency": 0,
+     "skipReason": "too slow to answer in time"
+    }
+   ],
+   "authorities": [
+    {
+     "authority": "crossref",
+     "status": "ok",
+     "asked": 9,
+     "answered": 9,
+     "applied": 6,
+     "latency": 815
+    },
+    {
+     "authority": "openalex",
+     "status": "ok",
+     "asked": 9,
+     "answered": 9,
+     "applied": 6,
+     "latency": 1066
+    },
+    {
+     "authority": "unpaywall",
+     "status": "ok",
+     "asked": 9,
+     "answered": 9,
+     "applied": 4,
+     "latency": 826
+    },
+    {
+     "authority": "opencitations",
+     "status": "skipped",
+     "asked": 0,
+     "answered": 0,
+     "applied": 0,
+     "skipReason": "nothing on this page needed it",
+     "latency": 0
+    },
+    {
+     "authority": "preprints",
+     "status": "skipped",
+     "asked": 0,
+     "answered": 0,
+     "applied": 0,
+     "skipReason": "nothing on this page needed it",
+     "latency": 0
+    }
+   ],
+   "duration": 1067
+  },
+  "{\"q\":\"TS=(\\\"base editing\\\" AND plants) AND PY=2022-2026\",\"page\":1}": {
+   "papers": [
+    {
+     "id": "openalex:W4396227318",
+     "doi": "10.1186/s12915-024-01895-0",
+     "title": "Targeted C•G-to-T•A base editing with TALE-cytosine deaminases in plants",
+     "authors": [
+      "Dingbo Zhang",
+      "Vanessa Pries",
+      "Jens Boch"
+     ],
+     "year": 2024,
+     "venue": "BMC Biology",
+     "publisher": "BioMed Central",
+     "abstract": "BACKGROUND: TALE-derived DddA-based cytosine base editors (TALE-DdCBEs) can perform efficient base editing of mitochondria and chloroplast genomes. They use transcription activator-like effector (TALE) arrays as programmable DNA-binding domains and a split version of the double-strand DNA cytidine deaminase (DddA) to catalyze C•G-to-T•A editing. This technology has not been optimized for use in plant cells. RESULTS: To systematically investigate TALE-DdCBE architectures and editing rules, we established a β-glucuronidase reporter for transient assays in Nicotiana benthamiana. We show that TALE-DdCBEs function with distinct spacer lengths between the DNA-binding sites of their two TALE parts. Compared to canonical DddA, TALE-DdCBEs containing evolved DddA variants (DddA6 or DddA11) showed a significant improvement in editing efficiency in Nicotiana benthamiana and rice. Moreover, TALE-DdCBEs containing DddA11 have broader sequence compatibility for non-TC target editing. We have successfully regenerated rice with C•G-to-T•A conversions in their chloroplast genome, as well as N. benthamiana with C•G-to-T•A editing in the nuclear genome using TALE-DdCBE. We also found that the spontaneous assembly of split DddA halves can cause undesired editing by TALE-DdCBEs in plants. CONCLUSIONS: Altogether, our results refined the targeting scope of TALE-DdCBEs and successfully applied them to target the chloroplast and nuclear genomes. Our study expands the base editing toolbox in plants and further defines parameters to optimize TALE-DdCBEs for high-fidelity crop improvement.",
+     "topics": [
+      "CRISPR and Genetic Engineering",
+      "Photosynthetic Processes and Mechanisms",
+      "Plant Virus Research Studies",
+      "Rice",
+      "Chloroplast",
+      "Deaminase",
+      "Genome Editing",
+      "Base Editors",
+      "Ddda",
+      "0301 basic medicine",
+      "Gene Editing",
+      "Nicotiana",
+      "0303 health sciences",
+      "Base editors",
+      "Dewey Decimal Classification::500 | Naturwissenschaften::570 | Biowissenschaften, Biologie",
+      "QH301-705.5",
+      "Oryza",
+      "03 medical and health sciences",
+      "Cytosine",
+      "DddA",
+      "Cytidine Deaminase",
+      "Biology (General)",
+      "Dewey Decimal Classification::600 | Technik::610 | Medizin, Gesundheit",
+      "Transcription Activator-Like Effectors",
+      "Research Article",
+      "Genome editing"
+     ],
+     "language": "en",
+     "citationCount": 15,
+     "oaStatus": "gold",
+     "stage": "published",
+     "fullText": {
+      "url": "https://link.springer.com/content/pdf/10.1186/s12915-024-01895-0.pdf",
+      "kind": "pdf",
+      "verified": false
+     },
+     "landingPage": "https://doi.org/10.1186/s12915-024-01895-0",
+     "sources": [
+      {
+       "provider": "openalex",
+       "nativeId": "W4396227318",
+       "rank": 18,
+       "retrievedAt": "2026-10-02T20:23:13.601Z",
+       "latency": 4812
+      },
+      {
+       "provider": "europepmc",
+       "nativeId": "38679734",
+       "rank": 90,
+       "retrievedAt": "2026-10-02T20:23:11.961Z",
+       "latency": 3171
+      },
+      {
+       "provider": "openaire",
+       "nativeId": "doi_dedup___::2f137c4717ab58caf6642b827c467537",
+       "rank": 17,
+       "retrievedAt": "2026-10-02T20:23:12.133Z",
+       "latency": 3344
+      },
+      {
+       "provider": "doaj",
+       "nativeId": "c8fa5c2c922b431d8245acab5d365ac8",
+       "rank": 46,
+       "retrievedAt": "2026-10-02T20:23:09.123Z",
+       "latency": 336
+      },
+      {
+       "provider": "ncbi",
+       "nativeId": "38679734",
+       "rank": 34,
+       "retrievedAt": "2026-10-02T20:23:12.874Z",
+       "latency": 4088
+      }
+     ],
+     "fieldSources": {
+      "topics": "europepmc"
+     },
+     "retrievedAt": "2026-10-02T20:23:13.601Z"
+    },
+    {
+     "id": "openalex:W4317434005",
+     "doi": "10.3390/cimb45020059",
+     "title": "Applications and Prospects of CRISPR/Cas9-Mediated Base Editing in Plant Breeding",
+     "authors": [
+      "Yizhen Li",
+      "Jing Yi Liang",
+      "Bufang Deng",
+      "Yingli Jiang",
+      "Jingyan Zhu",
+      "Like Chen",
+      "Min Li",
+      "Juan Li"
+     ],
+     "year": 2023,
+     "venue": "Current Issues in Molecular Biology",
+     "publisher": "Caister Academic Press",
+     "abstract": "The clustered regularly interspaced short palindromic repeats (CRISPR)/associated protein 9 system (Cas9) has been used at length to optimize multiple aspects of germplasm resources. However, large-scale genomic research has indicated that novel variations in crop plants are attributed to single-nucleotide polymorphisms (SNPs). Therefore, substituting single bases into a plant genome may produce desirable traits. Gene editing by CRISPR/Cas9 techniques frequently results in insertions-deletions (indels). Base editing allows precise single-nucleotide changes in the genome in the absence of double-strand breaks (DSBs) and donor repair templates (DRTs). Therefore, BEs have provided a new way of thinking about genome editing, and base editing techniques are currently being utilized to edit the genomes of many different organisms. As traditional breeding techniques and modern molecular breeding technologies complement each other, various genome editing technologies have emerged. How to realize the greater potential of BE applications is the question we need to consider. Here, we explain various base editings such as CBEs, ABEs, and CGBEs. In addition, the latest applications of base editing technologies in agriculture are summarized, including crop yield, quality, disease, and herbicide resistance. Finally, the challenges and future prospects of base editing technologies are presented. The aim is to provide a comprehensive overview of the application of BE in crop breeding to further improve BE and make the most of its value.",
+     "topics": [
+      "CRISPR and Genetic Engineering",
+      "Chromosomal and Genetic Variations",
+      "Plant tissue culture and regeneration",
+      "Plant",
+      "Crop Improvement",
+      "Genome Editing",
+      "Crispr/cas9",
+      "Base Editing",
+      "0301 basic medicine",
+      "0303 health sciences",
+      "03 medical and health sciences",
+      "base editing",
+      "QH301-705.5",
+      "genome editing",
+      "plant",
+      "Review",
+      "Biology (General)",
+      "CRISPR/Cas9",
+      "crop improvement"
+     ],
+     "language": "en",
+     "citationCount": 37,
+     "oaStatus": "gold",
+     "stage": "published",
+     "fullText": {
+      "url": "https://www.mdpi.com/1467-3045/45/2/59/pdf?version=1675058294",
+      "kind": "pdf",
+      "verified": false
+     },
+     "landingPage": "https://doi.org/10.3390/cimb45020059",
+     "sources": [
+      {
+       "provider": "openalex",
+       "nativeId": "W4317434005",
+       "rank": 3,
+       "retrievedAt": "2026-10-02T20:23:13.601Z",
+       "latency": 4812
+      },
+      {
+       "provider": "europepmc",
+       "nativeId": "36826004",
+       "rank": 51,
+       "retrievedAt": "2026-10-02T20:23:11.961Z",
+       "latency": 3171
+      },
+      {
+       "provider": "openaire",
+       "nativeId": "doi_dedup___::96e41826523c2ea363138fc28770cea3",
+       "rank": 48,
+       "retrievedAt": "2026-10-02T20:23:12.133Z",
+       "latency": 3344
+      },
+      {
+       "provider": "doaj",
+       "nativeId": "a54596cd32d74a3a9fc0351a603dbe98",
+       "rank": 38,
+       "retrievedAt": "2026-10-02T20:23:09.123Z",
+       "latency": 336
+      },
+      {
+       "provider": "ncbi",
+       "nativeId": "36826004",
+       "rank": 29,
+       "retrievedAt": "2026-10-02T20:23:12.874Z",
+       "latency": 4088
+      }
+     ],
+     "fieldSources": {
+      "topics": "europepmc"
+     },
+     "retrievedAt": "2026-10-02T20:23:13.601Z"
+    },
+    {
+     "id": "openalex:W4379648150",
+     "doi": "10.1186/s12870-023-04322-8",
+     "title": "Cytosine base editors (CBEs) for inducing targeted DNA base editing in Nicotiana benthamiana",
+     "authors": [
+      "Juan Luo",
+      "Muhammad Abid",
+      "Jing Tu",
+      "Xinxia Cai",
+      "Yi Zhang",
+      "Puxin Gao",
+      "Hongwen Huang"
+     ],
+     "year": 2023,
+     "venue": "BMC Plant Biology",
+     "publisher": "BioMed Central",
+     "abstract": "Abstract Background The base editors can introduce point mutations accurately without causing double-stranded DNA breaks or requiring donor DNA templates. Previously, cytosine base editors (CBEs) containing different deaminases are reported for precise and accurate base editing in plants. However, the knowledge of CBEs in polyploid plants is inadequate and needs further exploration. Results In the present study, we constructed three polycistronic tRNA-gRNA expression cassettes CBEs containing A3A, A3A (Y130F), and rAPOBEC1(R33A) to compare their base editing efficiency in allotetraploid N. benthamiana ( n = 4x). We used 14 target sites to compare their editing efficiency using transient transformation in tobacco plants. The sanger sequencing and deep sequencing results showed that A3A-CBE was the most efficient base editor. In addition, the results showed that A3A-CBE provided most comprehensive editing window (C 1 ~ C 17 could be edited) and had a better editing efficiency under the base background of TC. The target sites (T2 and T6) analysis in transformed N. benthamiana showed that only A3A-CBE can have C-to-T editing events and the editing efficiency of T2 was higher than T6. Additionally, no off-target events were found in transformed N. benthamiana . Conclusions All in all, we conclude that A3A-CBE is the most suitable vector for specific C to T conversion in N. benthamiana . Current findings will provide valuable insights into selecting an appropriate base editor for breeding polyploid plants.",
+     "topics": [
+      "CRISPR and Genetic Engineering",
+      "Chromosomal and Genetic Variations",
+      "Animal Genetics and Reproduction",
+      "Crispr",
+      "Cytosine Base Editor",
+      "A3a(y130f)",
+      "Rapobec1(r33a)",
+      "A3a",
+      "Polyploid Plants",
+      "0106 biological sciences",
+      "Gene Editing",
+      "Nicotiana",
+      "Cytosine base editor",
+      "A3A",
+      "Research",
+      "Botany",
+      "A3A(Y130F)",
+      "Polyploid plants",
+      "DNA",
+      "Plants",
+      "01 natural sciences",
+      "Polyploidy",
+      "Cytosine",
+      "Plant Breeding",
+      "CRISPR",
+      "rAPOBEC1(R33A)",
+      "QK1-989",
+      "CRISPR-Cas Systems"
+     ],
+     "language": "en",
+     "citationCount": 11,
+     "oaStatus": "gold",
+     "stage": "published",
+     "fullText": {
+      "url": "https://bmcplantbiol.biomedcentral.com/counter/pdf/10.1186/s12870-023-04322-8",
+      "kind": "pdf",
+      "verified": false
+     },
+     "landingPage": "https://doi.org/10.1186/s12870-023-04322-8",
+     "sources": [
+      {
+       "provider": "openalex",
+       "nativeId": "W4379648150",
+       "rank": 70,
+       "retrievedAt": "2026-10-02T20:23:13.601Z",
+       "latency": 4812
+      },
+      {
+       "provider": "europepmc",
+       "nativeId": "37286962",
+       "rank": 81,
+       "retrievedAt": "2026-10-02T20:23:11.961Z",
+       "latency": 3171
+      },
+      {
+       "provider": "openaire",
+       "nativeId": "doi_dedup___::a831f90ae3008b334066923ab7ae54f6",
+       "rank": 6,
+       "retrievedAt": "2026-10-02T20:23:12.133Z",
+       "latency": 3344
+      },
+      {
+       "provider": "doaj",
+       "nativeId": "2bf2eb5f1c0941fbaafa1b29576fd3b8",
+       "rank": 7,
+       "retrievedAt": "2026-10-02T20:23:09.123Z",
+       "latency": 336
+      },
+      {
+       "provider": "ncbi",
+       "nativeId": "37286962",
+       "rank": 38,
+       "retrievedAt": "2026-10-02T20:23:12.874Z",
+       "latency": 4088
+      }
+     ],
+     "fieldSources": {
+      "topics": "europepmc"
+     },
+     "retrievedAt": "2026-10-02T20:23:13.601Z"
+    },
+    {
+     "id": "openalex:W7148628816",
+     "doi": "10.1111/jipb.70249",
+     "title": "Enhancing CRISPR‐Cas12a base editing in plants with LbCas12a variants and introns",
+     "authors": [
+      "Yanhao Cheng",
+      "Gen Li",
+      "Man Zhou",
+      "Rushil Mandlik",
+      "Doris Wang",
+      "Yiping Qi"
+     ],
+     "year": 2026,
+     "venue": "Journal of Integrative Plant Biology",
+     "publisher": "Wiley",
+     "abstract": "Cytosine base editors (CBEs) and adenine base editors (ABEs) are powerful tools for precise genome editing in plants. Conventionally, such base editors are built upon the CRISPR-Cas9 systems where Cas9 nickases are used. To expand the base editing scope and minimize off-target effects, base editors derived from the CRISPR-Cas12a systems are desired. However, the use of deactivated Cas12a (dCas12a) in such base editors constrains the editing activity, preventing the wide use of Cas12a base editors for plant research and trait development. In this study, we demonstrate the use of an ABE based on the efficient LbCas12a-RRV variant to introduce herbicide-resistant mutations in OsACCase in rice. To improve Cas12a CBEs and ABEs, we inserted introns into the coding sequence of dLbCas12a-RRV. This intron-containing Cas12a-CBE shows substantial improvement in editing efficiency in rice, compared to the intron-less counterparts. By contrast, the improvement of ABE with the intron-containing dLbCas12a-RRV is very limited, partly due to the already high baseline editing efficiency of the intron-less dLbCas12a-RRV ABE. Testing of these base editors in poplar shows elevated C-to-T base editing by dLbCas12a-RRV-intron-CBE. For A-to-G editing, ABEs built upon dLbCas12a-RV and dLbCas12a-RRV variants showed significant improvement over ABEs derived from wild-type LbCas12a and the ttLbCas12a variant. The addition of introns to dLbCas12a-RRV does not further improve the base editing efficiency. With whole genome sequencing in rice, we evaluated genome editing specificities with these improved Cas12a base editors. Our analyses show that both intron-containing Cas12a CBE and ABE barely introduce guide RNA-dependent off-target mutations. However, they can generate guide RNA-independent off-target mutations, which are likely attributed to the high enzymatic activities of the deaminases. Collectively, our study demonstrates the successful use of a Cas12a base editor for trait development and reports improved Cas12a CBEs and ABEs for precise base editing in plants.",
+     "topics": [
+      "CRISPR and Genetic Engineering",
+      "RNA regulation and disease",
+      "Photosynthetic Processes and Mechanisms",
+      "Rice",
+      "Poplar",
+      "Adenine Base Editing",
+      "Cytosine Base Editing",
+      "Improved Cas12a Base Editors",
+      "0106 biological sciences",
+      "01 natural sciences",
+      "Oryza",
+      "Introns",
+      "CRISPR-Cas Systems",
+      "Gene Editing",
+      "Mutation",
+      "Base Sequence",
+      "Plants, Genetically Modified",
+      "adenine base editing",
+      "cytosine base editing",
+      "improved Cas12a base editors",
+      "poplar",
+      "rice"
+     ],
+     "language": "en",
+     "citationCount": 1,
+     "oaStatus": "hybrid",
+     "stage": "published",
+     "landingPage": "https://doi.org/10.1111/jipb.70249",
+     "sources": [
+      {
+       "provider": "openalex",
+       "nativeId": "W7148628816",
+       "rank": 55,
+       "retrievedAt": "2026-10-02T20:23:13.601Z",
+       "latency": 4812
+      },
+      {
+       "provider": "europepmc",
+       "nativeId": "41928060",
+       "rank": 0,
+       "retrievedAt": "2026-10-02T20:23:11.961Z",
+       "latency": 3171
+      },
+      {
+       "provider": "openaire",
+       "nativeId": "doi_________::f6ab3b4e76cd1194365968a6b0c14bee",
+       "rank": 5,
+       "retrievedAt": "2026-10-02T20:23:12.133Z",
+       "latency": 3344
+      },
+      {
+       "provider": "ncbi",
+       "nativeId": "41928060",
+       "rank": 76,
+       "retrievedAt": "2026-10-02T20:23:12.874Z",
+       "latency": 4088
+      }
+     ],
+     "fieldSources": {
+      "fullText": "europepmc",
+      "topics": "europepmc"
+     },
+     "retrievedAt": "2026-10-02T20:23:13.601Z",
+     "fullText": {
+      "url": "https://europepmc.org/articles/PMC13545857?pdf=render",
+      "kind": "pdf",
+      "verified": false
+     }
+    },
+    {
+     "id": "openalex:W4416118479",
+     "doi": "10.1016/j.omtn.2025.102771",
+     "title": "Research progress of base editing and prime editing tools based on the CRISPR/Cas system",
+     "authors": [
+      "Herui Gao",
+      "Song Gao",
+      "Guoshi Kan",
+      "Leonid N. Valentovich",
+      "Yingfeng An"
+     ],
+     "year": 2025,
+     "venue": "Molecular Therapy — Nucleic Acids",
+     "publisher": "Cell Press",
+     "abstract": "The base editor (BE) and prime editing guide RNA (pegRNA)-based prime editor (PE) technologies relying on the CRISPR/Cas system are very efficient gene editors that have been developed in recent years. The BEs include cytosine base editors (CBEs) that mediate the conversion of C to T, adenine base editors (ABEs) that mediate the conversion of A to G, glycosylase base editors (GBEs) that mediate the conversion of C to G, and the dual-base editors (DBEs) that mediate the simultaneous conversion of C to T and A to G. The BEs and PEs have been successfully applied for genome editing of various animals, plants, and microorganisms due to their advantages of high efficiency and independence of DNA double-strand breaks or donor DNA. The development process and characteristics of various BEs and PEs and their effectiveness of application are systematically introduced to provide a reference for selecting appropriate genome editing technologies. Moreover, the urgent issues that need to be addressed for more efficient and precise editing are summarized and prospected.",
+     "topics": [
+      "CRISPR and Genetic Engineering",
+      "RNA regulation and disease",
+      "Photosynthetic Processes and Mechanisms",
+      "Crispr",
+      "Adenine Base Editors",
+      "Cytosine Base Editor",
+      "Prime Editing",
+      "Mt: Rna/Dna Editing",
+      "Glycosylase Base Editor",
+      "0301 basic medicine",
+      "03 medical and health sciences",
+      "Review",
+      "MT: RNA/DNA Editing",
+      "adenine base editors",
+      "CRISPR",
+      "cytosine base editor",
+      "glycosylase base editor",
+      "prime editing",
+      "Therapeutics. Pharmacology"
+     ],
+     "language": "en",
+     "citationCount": 19,
+     "oaStatus": "gold",
+     "stage": "published",
+     "landingPage": "https://doi.org/10.1016/j.omtn.2025.102771",
+     "sources": [
+      {
+       "provider": "openalex",
+       "nativeId": "W4416118479",
+       "rank": 59,
+       "retrievedAt": "2026-10-02T20:23:13.601Z",
+       "latency": 4812
+      },
+      {
+       "provider": "europepmc",
+       "nativeId": "41404502",
+       "rank": 25,
+       "retrievedAt": "2026-10-02T20:23:11.961Z",
+       "latency": 3171
+      },
+      {
+       "provider": "openaire",
+       "nativeId": "doi_dedup___::0ac99aff26f9a7f7a554e7a46a75cb96",
+       "rank": 38,
+       "retrievedAt": "2026-10-02T20:23:12.133Z",
+       "latency": 3344
+      },
+      {
+       "provider": "doaj",
+       "nativeId": "64cc73bf6e124de5a856936b080b65c5",
+       "rank": 25,
+       "retrievedAt": "2026-10-02T20:23:09.123Z",
+       "latency": 336
+      },
+      {
+       "provider": "ncbi",
+       "nativeId": "41404502",
+       "rank": 9,
+       "retrievedAt": "2026-10-02T20:23:12.874Z",
+       "latency": 4088
+      }
+     ],
+     "fieldSources": {
+      "fullText": "europepmc",
+      "topics": "europepmc"
+     },
+     "retrievedAt": "2026-10-02T20:23:13.601Z",
+     "fullText": {
+      "url": "https://europepmc.org/articles/PMC12703980?pdf=render",
+      "kind": "pdf",
+      "verified": false
+     }
+    },
+    {
+     "id": "openalex:W4399671832",
+     "doi": "10.1038/s41467-024-49473-w",
+     "title": "High performance TadA-8e derived cytosine and dual base editors with undetectable off-target effects in plants",
+     "authors": [
+      "Tingting Fan",
+      "Yanhao Cheng",
+      "Yuechao Wu",
+      "Shishi Liu",
+      "Xu Dong Tang",
+      "Yao He",
+      "Shanyue Liao",
+      "Xuelian Zheng",
+      "Tao Zhang",
+      "Yiping Qi",
+      "Yong Zhang"
+     ],
+     "year": 2024,
+     "venue": "Nature Communications",
+     "publisher": "Nature Portfolio",
+     "abstract": "Cytosine base editors (CBEs) and adenine base editors (ABEs) enable precise C-to-T and A-to-G edits. Recently, ABE8e, derived from TadA-8e, enhances A-to-G edits in mammalian cells and plants. Interestingly, TadA-8e can also be evolved to confer C-to-T editing. This study compares engineered CBEs derived from TadA-8e in rice and tomato cells, identifying TadCBEa, TadCBEd, and TadCBEd_V106W as efficient CBEs with high purity and a narrow editing window. A dual base editor, TadDE, promotes simultaneous C-to-T and A-to-G editing. Multiplexed base editing with TadCBEa and TadDE is demonstrated in transgenic rice, with no off-target effects detected by whole genome and transcriptome sequencing, indicating high specificity. Finally, two crop engineering applications using TadDE are shown: introducing herbicide resistance alleles in OsALS and creating synonymous mutations in OsSPL14 to resist OsMIR156-mediated degradation. Together, this study presents TadA-8e derived CBEs and a dual base editor as valuable additions to the plant editing toolbox.",
+     "topics": [
+      "CRISPR and Genetic Engineering",
+      "Plant Virus Research Studies",
+      "Insect symbiosis and bacterial influences",
+      "0301 basic medicine",
+      "Gene Editing",
+      "2. Zero hunger",
+      "0303 health sciences",
+      "Science",
+      "Adenine",
+      "Q",
+      "Oryza",
+      "Plants, Genetically Modified",
+      "Article",
+      "03 medical and health sciences",
+      "Cytosine",
+      "Solanum lycopersicum",
+      "CRISPR-Cas Systems",
+      "Genome, Plant",
+      "Herbicide Resistance"
+     ],
+     "language": "en",
+     "citationCount": 54,
+     "oaStatus": "gold",
+     "stage": "published",
+     "landingPage": "https://doi.org/10.1038/s41467-024-49473-w",
+     "sources": [
+      {
+       "provider": "openalex",
+       "nativeId": "W4399671832",
+       "rank": 16,
+       "retrievedAt": "2026-10-02T20:23:13.601Z",
+       "latency": 4812
+      },
+      {
+       "provider": "europepmc",
+       "nativeId": "38877035",
+       "rank": 59,
+       "retrievedAt": "2026-10-02T20:23:11.961Z",
+       "latency": 3171
+      },
+      {
+       "provider": "openaire",
+       "nativeId": "doi_dedup___::c41bc1bd45d854f810e084c6d61e4356",
+       "rank": 12,
+       "retrievedAt": "2026-10-02T20:23:12.133Z",
+       "latency": 3344
+      },
+      {
+       "provider": "doaj",
+       "nativeId": "4d3f41c610934d3783cf74779779f267",
+       "rank": 21,
+       "retrievedAt": "2026-10-02T20:23:09.123Z",
+       "latency": 336
+      },
+      {
+       "provider": "ncbi",
+       "nativeId": "38877035",
+       "rank": 49,
+       "retrievedAt": "2026-10-02T20:23:12.874Z",
+       "latency": 4088
+      }
+     ],
+     "fieldSources": {
+      "fullText": "europepmc",
+      "topics": "openaire"
+     },
+     "retrievedAt": "2026-10-02T20:23:13.601Z",
+     "fullText": {
+      "url": "https://europepmc.org/articles/PMC11178825?pdf=render",
+      "kind": "pdf",
+      "verified": false
+     }
+    },
+    {
+     "id": "openalex:W4377090926",
+     "doi": "10.3390/biology12050741",
+     "title": "Generation of Herbicide-Resistant Soybean by Base Editing",
+     "authors": [
+      "Tao Wei",
+      "Linjian Jiang",
+      "Xiang You",
+      "Pengyu Ma",
+      "Zhen Xi",
+      "Ning Ning Wang"
+     ],
+     "year": 2023,
+     "venue": "Biology",
+     "publisher": "Multidisciplinary Digital Publishing Institute",
+     "abstract": "Weeds cause the largest yield loss in soybean production. The development of herbicide-resistant soybean germplasm is of great significance for weed control and yield improvement. In this study, we used the cytosine base editor (BE3) to develop novel herbicide-resistant soybean. We have successfully introduced base substitutions in GmAHAS3 and GmAHAS4 and obtained a heritable transgene-free soybean with homozygous P180S mutation in GmAHAS4. The GmAHAS4 P180S mutants have apparent resistance to chlorsulfuron, flucarbazone-sodium, and flumetsulam. In particular, the resistance to chlorsulfuron was more than 100 times that of with wild type TL-1. The agronomic performance of the GmAHAS4 P180S mutants showed no significant differences to TL-1 under natural growth conditions. In addition, we developed allele-specific PCR markers for the GmAHAS4 P180S mutants, which can easily discriminate homozygous, heterozygous mutants, and wild-type plants. This study demonstrates a feasible and effective way to generate herbicide-resistant soybean by using CRISPR/Cas9-mediated base editing.",
+     "topics": [
+      "Plant Virus Research Studies",
+      "CRISPR and Genetic Engineering",
+      "Plant tissue culture and regeneration",
+      "Soybean",
+      "herbicide-resistant",
+      "Base Editing",
+      "Gmahas4",
+      "base editing",
+      "QH301-705.5",
+      "Brief Report",
+      "0401 agriculture, forestry, and fisheries",
+      "04 agricultural and veterinary sciences",
+      "soybean",
+      "Biology (General)",
+      "<i>GmAHAS4</i>",
+      "GmAHAS4"
+     ],
+     "language": "en",
+     "citationCount": 23,
+     "oaStatus": "gold",
+     "stage": "published",
+     "fullText": {
+      "url": "https://www.mdpi.com/2079-7737/12/5/741/pdf?version=1684490488",
+      "kind": "pdf",
+      "verified": false
+     },
+     "landingPage": "https://doi.org/10.3390/biology12050741",
+     "sources": [
+      {
+       "provider": "openalex",
+       "nativeId": "W4377090926",
+       "rank": 43,
+       "retrievedAt": "2026-10-02T20:23:13.601Z",
+       "latency": 4812
+      },
+      {
+       "provider": "europepmc",
+       "nativeId": "37237553",
+       "rank": 46,
+       "retrievedAt": "2026-10-02T20:23:11.961Z",
+       "latency": 3171
+      },
+      {
+       "provider": "openaire",
+       "nativeId": "doi_dedup___::3de78986a718a835f5a2d4927a50a229",
+       "rank": 82,
+       "retrievedAt": "2026-10-02T20:23:12.133Z",
+       "latency": 3344
+      },
+      {
+       "provider": "doaj",
+       "nativeId": "48b6d76532a04842a5a609bbbaa040ec",
+       "rank": 20,
+       "retrievedAt": "2026-10-02T20:23:09.123Z",
+       "latency": 336
+      },
+      {
+       "provider": "ncbi",
+       "nativeId": "37237553",
+       "rank": 17,
+       "retrievedAt": "2026-10-02T20:23:12.874Z",
+       "latency": 4088
+      }
+     ],
+     "fieldSources": {
+      "topics": "europepmc"
+     },
+     "retrievedAt": "2026-10-02T20:23:13.601Z"
+    },
+    {
+     "id": "openalex:W4412918610",
+     "doi": "10.3390/plants14152290",
+     "title": "RNA-Seq Identification of Peanut Callus-Specific Promoters and Evaluation of Base-Editing Efficiency",
+     "authors": [
+      "Lulu Xue",
+      "Han Liu",
+      "Huanhuan Zhao",
+      "Pengyu Qu",
+      "Xiaona Li",
+      "Xiaobo Wang",
+      "Bingyan Huang",
+      "Ziqi Sun",
+      "Suoyi Han",
+      "Xiaodong Dai",
+      "Wenzhao Dong",
+      "Lei Shi",
+      "Xinyou Zhang"
+     ],
+     "year": 2025,
+     "venue": "Plants",
+     "publisher": "Multidisciplinary Digital Publishing Institute",
+     "abstract": "Prolonged expression of gene-editing components in CRISPR-modified plants can interfere with phenotypic analysis of target traits, increase the risk of off-target mutations, and lead to unnecessary metabolic burden. To mitigate these issues in peanut (Arachis hypogaea L.), callus-specific promoters were screened to restrict Cas9 expression to the callus stage, minimizing its activity in regenerated plants. In this study, six callus-specific genes in peanut were identified by mining RNA sequencing datasets and validating their expression profiles using quantitative reverse transcriptase PCR. The promoters of Arahy.H0FE8D, Arahy.WT3AEF, Arahy.I20Q6X, Arahy.ELJ55T, and Arahy.N9CMH4 were cloned and assessed for their expression activity. Beta-glucuronidase (GUS) histochemical staining confirmed that all five promoters were functional in peanut callus. Further investigation revealed their ability to drive cytosine base editing via a deaminase-nCas9 fusion protein, with all promoters successfully inducing precise base substitutions in peanut. Notably, PAh-H0FE8D, PAh-WT3AEF, PAh-ELJ55T, and PAh-N9CMH4 exhibited comparable or higher editing efficiencies than the commonly used cauliflower mosaic virus 35S promoter. These findings provide valuable tools for improving the biosafety of CRISPR-based genome editing in peanut breeding programs.",
+     "topics": [
+      "CRISPR and Genetic Engineering",
+      "Plant Virus Research Studies",
+      "Advanced biosensing and bioanalysis techniques",
+      "Peanut",
+      "Genome Editing Efficiency",
+      "Callus-Specific Promoter",
+      "Off-Target Reduction",
+      "Cytosine Base Editing",
+      "0106 biological sciences",
+      "Brief Report",
+      "01 natural sciences",
+      "peanut",
+      "callus-specific promoter",
+      "off-target reduction",
+      "cytosine base editing",
+      "genome editing efficiency",
+      "Botany"
+     ],
+     "language": "en",
+     "citationCount": 1,
+     "oaStatus": "gold",
+     "stage": "published",
+     "landingPage": "https://doi.org/10.3390/plants14152290",
+     "sources": [
+      {
+       "provider": "openalex",
+       "nativeId": "W4412918610",
+       "rank": 106,
+       "retrievedAt": "2026-10-02T20:23:13.601Z",
+       "latency": 4812
+      },
+      {
+       "provider": "europepmc",
+       "nativeId": "40805639",
+       "rank": 9,
+       "retrievedAt": "2026-10-02T20:23:11.961Z",
+       "latency": 3171
+      },
+      {
+       "provider": "openaire",
+       "nativeId": "doi_dedup___::fb0b7fa283ffc07321a3070e38f9859d",
+       "rank": 24,
+       "retrievedAt": "2026-10-02T20:23:12.133Z",
+       "latency": 3344
+      },
+      {
+       "provider": "doaj",
+       "nativeId": "d04a709eb8854c688a47b05664921a08",
+       "rank": 50,
+       "retrievedAt": "2026-10-02T20:23:09.123Z",
+       "latency": 336
+      },
+      {
+       "provider": "ncbi",
+       "nativeId": "40805639",
+       "rank": 48,
+       "retrievedAt": "2026-10-02T20:23:12.874Z",
+       "latency": 4088
+      }
+     ],
+     "fieldSources": {
+      "fullText": "europepmc",
+      "topics": "europepmc"
+     },
+     "retrievedAt": "2026-10-02T20:23:13.601Z",
+     "fullText": {
+      "url": "https://europepmc.org/articles/PMC12348465?pdf=render",
+      "kind": "pdf",
+      "verified": false
+     }
+    },
+    {
+     "id": "openalex:W4283724336",
+     "doi": "10.1021/acssynbio.1c00507",
+     "title": "An Intein-Mediated Split–nCas9 System for Base Editing in Plants",
+     "authors": [
+      "Guoliang Yuan",
+      "Haiwei Lu",
+      "Kuntal De",
+      "Md Mahmudul Hassan",
+      "Yang Liu",
+      "Yi Li",
+      "Wellington Muchero",
+      "Paul E. Abraham",
+      "Gerald A. Tuskan",
+      "Xiaohan Yang"
+     ],
+     "year": 2022,
+     "venue": "ACS Synthetic Biology",
+     "publisher": "American Chemical Society",
+     "abstract": "Virus-assisted delivery of the clustered regularly interspaced short palindromic repeats (CRISPR)/CRISPR-associated (Cas) system represents a promising approach for editing plant genomes. Among the CRISPR/Cas systems, CRISPR/Cas9 is most widely used; however, to pack the relatively large size of the CRISPR/Cas9 system into viral vectors with confined packaging capacity is challenging. To address this technical challenge, we developed a strategy based on split inteins that splits the required CRISPR/Cas9 components across a dual-vector system. The CRISPR/Cas reassembles into an active form following co-infection to achieve targeted genome editing in plant cells. An intein-mediated split system was adapted and optimized in plant cells by a successful demonstration of split-eYGFPuv expression. Using a plant-based biosensor, we demonstrated for the first time that the split-nCas9 can induce efficient base editing in plant cells. We identified several split sites for future biodesign strategies. Overall, this strategy provides new opportunities to bridge different CRISPR/Cas9 tools including base editor, prime editor, and CRISPR activation with virus-mediated gene editing.",
+     "topics": [
+      "CRISPR and Genetic Engineering",
+      "Plant Virus Research Studies",
+      "Insect symbiosis and bacterial influences",
+      "Biosensor",
+      "Transient gene expression",
+      "Crispr/cas9",
+      "Base Editing",
+      "Eygfpuv",
+      "Split−spncas9",
+      "0106 biological sciences",
+      "Gene Editing",
+      "CRISPR-Cas Systems",
+      "Plants",
+      "01 natural sciences",
+      "Genome, Plant",
+      "Inteins",
+      "3. Good health",
+      "CRISPR/Cas9",
+      "base editing",
+      "biosensor",
+      "eYGFPuv",
+      "split−SpnCas9",
+      "transient gene expression"
+     ],
+     "language": "en",
+     "citationCount": 25,
+     "oaStatus": "hybrid",
+     "stage": "published",
+     "landingPage": "https://doi.org/10.1021/acssynbio.1c00507",
+     "sources": [
+      {
+       "provider": "openalex",
+       "nativeId": "W4283724336",
+       "rank": 6,
+       "retrievedAt": "2026-10-02T20:23:13.601Z",
+       "latency": 4812
+      },
+      {
+       "provider": "europepmc",
+       "nativeId": "35767601",
+       "rank": 67,
+       "retrievedAt": "2026-10-02T20:23:11.961Z",
+       "latency": 3171
+      },
+      {
+       "provider": "openaire",
+       "nativeId": "doi_dedup___::8cd49064708944f684a5f33440977c4e",
+       "rank": 44,
+       "retrievedAt": "2026-10-02T20:23:12.133Z",
+       "latency": 3344
+      },
+      {
+       "provider": "ncbi",
+       "nativeId": "35767601",
+       "rank": 11,
+       "retrievedAt": "2026-10-02T20:23:12.874Z",
+       "latency": 4088
+      }
+     ],
+     "fieldSources": {
+      "fullText": "europepmc",
+      "topics": "europepmc"
+     },
+     "retrievedAt": "2026-10-02T20:23:13.601Z",
+     "fullText": {
+      "url": "https://europepmc.org/articles/PMC9295155?pdf=render",
+      "kind": "pdf",
+      "verified": false
+     }
+    },
+    {
+     "id": "openalex:W4288734496",
+     "doi": "10.1016/j.csbj.2022.07.046",
+     "title": "BEtarget: A versatile web-based tool to design guide RNAs for base editing in plants",
+     "authors": [
+      "Xianrong Xie",
+      "Fuquan Li",
+      "Xiyu Tan",
+      "Dongchang Zeng",
+      "Weizhi Liu",
+      "Wanyong Zeng",
+      "Qinlong Zhu",
+      "Yao‐Guang Liu"
+     ],
+     "year": 2022,
+     "venue": "Computational and Structural Biotechnology Journal",
+     "publisher": "Elsevier BV",
+     "abstract": "CRISPR-dependent base editors enable direct nucleotide conversion without the introduction of double-strand DNA break or donor DNA template, thus expanding the CRISPR toolbox for genetic manipulation. However, designing guide RNAs (gRNAs) for base editors to enable gene correction or inactivation is more complicated than using the CRISPR system for gene disruption. Here, we present a user-friendly web tool named BEtarget dedicated to the design of gRNA for base editing. It is currently supported by 46 plant reference genomes and 5 genomes of non-plant model organisms. BEtarget supports the design of gRNAs with different types of protospacer adjacent motifs (PAM) and integrates various functions, including automatic identification of open reading frame, prediction of potential off-target sites, annotation of codon change, and assessment of gRNA quality. Moreover, the program provides an interactive interface for users to selectively display information about the desired target sites. In brief, we have developed a flexible and versatile web-based tool to simplify complications associated with the design of base editing technology. BEtarget is freely accessible at https://skl.scau.edu.cn/betarget/.",
+     "topics": [
+      "CRISPR and Genetic Engineering",
+      "RNA and protein synthesis mechanisms",
+      "RNA regulation and disease",
+      "Crispr",
+      "Genome Editing",
+      "Orf, Open Reading Frame",
+      "Nhej, Non-homologous End Joining",
+      "Dsb, Double-strand Break",
+      "Cds, Coding Sequence",
+      "Crispr, Clustered Regularly Interspaced Short Palindromic Repeats",
+      "Base Editing",
+      "Pam, Protospacer Adjacent Motif",
+      "Grna Design",
+      "Abe, Adenine Base Editor",
+      "Cbe, Cytosine Base Editor",
+      "Grna, Guide Rna",
+      "0301 basic medicine",
+      "Base editing",
+      "gRNA design",
+      "0303 health sciences",
+      "03 medical and health sciences",
+      "CRISPR",
+      "TP248.13-248.65",
+      "Genome editing",
+      "Biotechnology",
+      "Research Article",
+      "ABE, adenine base editor",
+      "CBE, cytosine base editor",
+      "CDS, coding sequence",
+      "CRISPR, clustered regularly interspaced short palindromic repeats",
+      "DSB, double-strand break",
+      "NHEJ, non-homologous end joining",
+      "ORF, open reading frame",
+      "PAM, protospacer adjacent motif",
+      "gRNA, guide RNA"
+     ],
+     "language": "en",
+     "citationCount": 14,
+     "oaStatus": "gold",
+     "stage": "published",
+     "fullText": {
+      "url": "https://www.sciencedirect.com/science/article/pii/S2001037022003269/pdf",
+      "kind": "pdf",
+      "verified": false
+     },
+     "landingPage": "https://doi.org/10.1016/j.csbj.2022.07.046",
+     "sources": [
+      {
+       "provider": "openalex",
+       "nativeId": "W4288734496",
+       "rank": 20,
+       "retrievedAt": "2026-10-02T20:23:13.601Z",
+       "latency": 4812
+      },
+      {
+       "provider": "europepmc",
+       "nativeId": "35983232",
+       "rank": 190,
+       "retrievedAt": "2026-10-02T20:23:11.961Z",
+       "latency": 3171
+      },
+      {
+       "provider": "openaire",
+       "nativeId": "doi_dedup___::d48e67033dae4fa3b56c4f8d996b4561",
+       "rank": 59,
+       "retrievedAt": "2026-10-02T20:23:12.133Z",
+       "latency": 3344
+      },
+      {
+       "provider": "doaj",
+       "nativeId": "46ab17f4488f4e5b8dcc634fa9cf989d",
+       "rank": 19,
+       "retrievedAt": "2026-10-02T20:23:09.123Z",
+       "latency": 336
+      },
+      {
+       "provider": "ncbi",
+       "nativeId": "35983232",
+       "rank": 75,
+       "retrievedAt": "2026-10-02T20:23:12.874Z",
+       "latency": 4088
+      }
+     ],
+     "fieldSources": {
+      "topics": "europepmc"
+     },
+     "retrievedAt": "2026-10-02T20:23:13.601Z"
+    }
+   ],
+   "total": 597,
+   "page": 1,
+   "pageSize": 10,
+   "sort": "relevance",
+   "filters": {
+    "openAccessOnly": true
+   },
+   "facets": {
+    "source": [
+     {
+      "value": "europepmc",
+      "count": 300
+     },
+     {
+      "value": "openalex",
+      "count": 235
+     },
+     {
+      "value": "openaire",
+      "count": 224
+     },
+     {
+      "value": "ncbi",
+      "count": 106
+     },
+     {
+      "value": "doaj",
+      "count": 62
+     }
+    ],
+    "oaStatus": [
+     {
+      "value": "unknown",
+      "count": 253
+     },
+     {
+      "value": "gold",
+      "count": 216
+     },
+     {
+      "value": "green",
+      "count": 62
+     },
+     {
+      "value": "hybrid",
+      "count": 55
+     },
+     {
+      "value": "bronze",
+      "count": 11
+     }
+    ],
+    "stage": [
+     {
+      "value": "published",
+      "count": 542
+     },
+     {
+      "value": "unknown",
+      "count": 31
+     },
+     {
+      "value": "preprint",
+      "count": 24
+     }
+    ],
+    "year": [
+     {
+      "value": 2026,
+      "count": 253
+     },
+     {
+      "value": 2025,
+      "count": 124
+     },
+     {
+      "value": 2024,
+      "count": 68
+     },
+     {
+      "value": 2023,
+      "count": 86
+     },
+     {
+      "value": 2022,
+      "count": 66
+     }
+    ],
+    "venue": [
+     {
+      "value": "Frontiers in Plant Science",
+      "count": 35
+     },
+     {
+      "value": "Plant Biotechnology Journal",
+      "count": 33
+     },
+     {
+      "value": "International Journal of Molecular Sciences",
+      "count": 27
+     },
+     {
+      "value": "bioRxiv (Cold Spring Harbor Laboratory)",
+      "count": 16
+     },
+     {
+      "value": "Scientific reports",
+      "count": 15
+     },
+     {
+      "value": "Frontiers in Genome Editing",
+      "count": 14
+     },
+     {
+      "value": "Plants",
+      "count": 13
+     },
+     {
+      "value": "Nature communications",
+      "count": 11
+     },
+     {
+      "value": "PLANT PHYSIOLOGY",
+      "count": 11
+     },
+     {
+      "value": "Plants (Basel, Switzerland)",
+      "count": 11
+     },
+     {
+      "value": "BMC Plant Biology",
+      "count": 10
+     },
+     {
+      "value": "Research Square",
+      "count": 10
+     },
+     {
+      "value": "Journal of Integrative Plant Biology",
+      "count": 9
+     },
+     {
+      "value": "aBIOTECH",
+      "count": 7
+     },
+     {
+      "value": "Biology",
+      "count": 6
+     },
+     {
+      "value": "Genome biology",
+      "count": 6
+     },
+     {
+      "value": "New Phytologist",
+      "count": 6
+     },
+     {
+      "value": "Ecology and evolution",
+      "count": 6
+     },
+     {
+      "value": "Insects",
+      "count": 6
+     },
+     {
+      "value": "Frontiers in Genetics",
+      "count": 5
+     },
+     {
+      "value": "Horticulture Research",
+      "count": 5
+     },
+     {
+      "value": "The Plant Journal",
+      "count": 5
+     },
+     {
+      "value": "PloS one",
+      "count": 5
+     },
+     {
+      "value": "Genes",
+      "count": 5
+     },
+     {
+      "value": "Plant Communications",
+      "count": 4
+     }
+    ],
+    "publisher": [
+     {
+      "value": "Wiley",
+      "count": 57
+     },
+     {
+      "value": "Frontiers Media",
+      "count": 30
+     },
+     {
+      "value": "Multidisciplinary Digital Publishing Institute",
+      "count": 25
+     },
+     {
+      "value": "Springer Science and Business Media LLC",
+      "count": 24
+     },
+     {
+      "value": "MDPI AG",
+      "count": 21
+     },
+     {
+      "value": "Elsevier BV",
+      "count": 20
+     },
+     {
+      "value": "Frontiers Media SA",
+      "count": 16
+     },
+     {
+      "value": "Nature Portfolio",
+      "count": 15
+     },
+     {
+      "value": "Cold Spring Harbor Laboratory",
+      "count": 15
+     },
+     {
+      "value": "BioMed Central",
+      "count": 12
+     },
+     {
+      "value": "Oxford University Press",
+      "count": 12
+     },
+     {
+      "value": "Springer Science+Business Media",
+      "count": 11
+     },
+     {
+      "value": "Zenodo",
+      "count": 10
+     },
+     {
+      "value": "KeAi",
+      "count": 4
+     },
+     {
+      "value": "Informa UK Limited",
+      "count": 4
+     },
+     {
+      "value": "Research Square Platform LLC",
+      "count": 3
+     },
+     {
+      "value": "De Gruyter Open",
+      "count": 3
+     },
+     {
+      "value": "ECO-Vector LLC",
+      "count": 2
+     },
+     {
+      "value": "Maximum Academic Press",
+      "count": 2
+     },
+     {
+      "value": "Oxford University Press (OUP)",
+      "count": 2
+     },
+     {
+      "value": "Sciencedomain International",
+      "count": 2
+     },
+     {
+      "value": "Pleiades Publishing",
+      "count": 2
+     },
+     {
+      "value": "openRxiv",
+      "count": 2
+     },
+     {
+      "value": "Universitat Politècnica de València",
+      "count": 2
+     },
+     {
+      "value": "Caister Academic Press",
+      "count": 1
+     }
+    ],
+    "topics": [
+     {
+      "value": "CRISPR and Genetic Engineering",
+      "count": 185
+     },
+     {
+      "value": "Gene Editing",
+      "count": 107
+     },
+     {
+      "value": "03 medical and health sciences",
+      "count": 107
+     },
+     {
+      "value": "0301 basic medicine",
+      "count": 104
+     },
+     {
+      "value": "CRISPR-Cas Systems",
+      "count": 76
+     },
+     {
+      "value": "2. Zero hunger",
+      "count": 74
+     },
+     {
+      "value": "0303 health sciences",
+      "count": 73
+     },
+     {
+      "value": "Plant Virus Research Studies",
+      "count": 70
+     },
+     {
+      "value": "01 natural sciences",
+      "count": 61
+     },
+     {
+      "value": "0106 biological sciences",
+      "count": 58
+     },
+     {
+      "value": "Genome Editing",
+      "count": 57
+     },
+     {
+      "value": "Photosynthetic Processes and Mechanisms",
+      "count": 46
+     },
+     {
+      "value": "Genome, Plant",
+      "count": 44
+     },
+     {
+      "value": "CRISPR/Cas9",
+      "count": 42
+     },
+     {
+      "value": "Base Editing",
+      "count": 41
+     },
+     {
+      "value": "Plants, Genetically Modified",
+      "count": 35
+     },
+     {
+      "value": "Chromosomal and Genetic Variations",
+      "count": 33
+     },
+     {
+      "value": "Plant tissue culture and regeneration",
+      "count": 32
+     },
+     {
+      "value": "Genetics",
+      "count": 32
+     },
+     {
+      "value": "Plant culture",
+      "count": 30
+     },
+     {
+      "value": "Oryza",
+      "count": 27
+     },
+     {
+      "value": "Article",
+      "count": 25
+     },
+     {
+      "value": "CRISPR",
+      "count": 24
+     },
+     {
+      "value": "Insect symbiosis and bacterial influences",
+      "count": 24
+     },
+     {
+      "value": "Biotechnology",
+      "count": 24
+     }
+    ]
+   },
+   "complete": true,
+   "bounded": false,
+   "countsFromSources": false,
+   "providers": [
+    {
+     "provider": "arxiv",
+     "status": "ok",
+     "retrieved": 0,
+     "totalHits": 0,
+     "latency": 270
+    },
+    {
+     "provider": "ncbi",
+     "status": "ok",
+     "retrieved": 106,
+     "totalHits": 106,
+     "latency": 4090
+    },
+    {
+     "provider": "doaj",
+     "status": "ok",
+     "retrieved": 63,
+     "totalHits": 63,
+     "latency": 339
+    },
+    {
+     "provider": "plos",
+     "status": "ok",
+     "retrieved": 0,
+     "totalHits": 0,
+     "latency": 448
+    },
+    {
+     "provider": "openaire",
+     "status": "ok",
+     "retrieved": 268,
+     "totalHits": 268,
+     "latency": 3364
+    },
+    {
+     "provider": "openalex",
+     "status": "ok",
+     "retrieved": 299,
+     "totalHits": 333,
+     "latency": 4838
+    },
+    {
+     "provider": "europepmc",
+     "status": "ok",
+     "retrieved": 300,
+     "totalHits": 6837,
+     "latency": 3180
+    },
+    {
+     "provider": "datacite",
+     "status": "skipped",
+     "retrieved": 0,
+     "latency": 0,
+     "skipReason": "no retrievable copies to contribute"
+    },
+    {
+     "provider": "biorxiv",
+     "status": "skipped",
+     "retrieved": 0,
+     "latency": 0,
+     "skipReason": "no keyword index"
+    },
+    {
+     "provider": "core",
+     "status": "skipped",
+     "retrieved": 0,
+     "latency": 0,
+     "skipReason": "too slow to answer in time"
+    }
+   ],
+   "authorities": [
+    {
+     "authority": "crossref",
+     "status": "ok",
+     "asked": 10,
+     "answered": 10,
+     "applied": 0,
+     "latency": 845
+    },
+    {
+     "authority": "openalex",
+     "status": "ok",
+     "asked": 10,
+     "answered": 10,
+     "applied": 0,
+     "latency": 1334
+    },
+    {
+     "authority": "unpaywall",
+     "status": "ok",
+     "asked": 10,
+     "answered": 10,
+     "applied": 0,
+     "latency": 896
+    },
+    {
+     "authority": "opencitations",
+     "status": "skipped",
+     "asked": 0,
+     "answered": 0,
+     "applied": 0,
+     "skipReason": "nothing on this page needed it",
+     "latency": 0
+    },
+    {
+     "authority": "preprints",
+     "status": "skipped",
+     "asked": 0,
+     "answered": 0,
+     "applied": 0,
+     "skipReason": "nothing on this page needed it",
+     "latency": 0
+    }
+   ],
+   "duration": 9229
+  },
+  "{\"q\":\"TI=\\\"attention is all you need\\\"\",\"page\":1}": {
+   "papers": [
+    {
+     "id": "openalex:W7158626848",
+     "doi": "10.1093/bib/bbag239",
+     "title": "Correction to: Attention is all you need: utilizing attention in AI-enabled drug discovery",
+     "authors": [],
+     "year": 2026,
+     "venue": "Briefings in Bioinformatics",
+     "publisher": "Oxford University Press",
+     "topics": [
+      "Computational Drug Discovery Methods",
+      "Machine Learning in Bioinformatics",
+      "Cell Image Analysis Techniques",
+      "0202 electrical engineering, electronic engineering, information engineering",
+      "02 engineering and technology"
+     ],
+     "language": "en",
+     "citationCount": 1,
+     "oaStatus": "gold",
+     "stage": "published",
+     "landingPage": "https://doi.org/10.1093/bib/bbag239",
+     "sources": [
+      {
+       "provider": "openalex",
+       "nativeId": "W7158626848",
+       "rank": 28,
+       "retrievedAt": "2026-10-02T20:23:19.413Z",
+       "latency": 1395
+      },
+      {
+       "provider": "europepmc",
+       "nativeId": "42059664",
+       "rank": 0,
+       "retrievedAt": "2026-10-02T20:23:18.518Z",
+       "latency": 500
+      },
+      {
+       "provider": "openaire",
+       "nativeId": "doi_________::fee66494ef83470dd819c842856e3dc9",
+       "rank": 4,
+       "retrievedAt": "2026-10-02T20:23:21.274Z",
+       "latency": 3257
+      }
+     ],
+     "fieldSources": {
+      "fullText": "europepmc",
+      "topics": "openaire"
+     },
+     "retrievedAt": "2026-10-02T20:23:19.413Z",
+     "fullText": {
+      "url": "https://europepmc.org/articles/PMC13130204?pdf=render",
+      "kind": "pdf",
+      "verified": false
+     }
+    },
+    {
+     "id": "openalex:W4390678101",
+     "doi": "10.1093/bib/bbad467",
+     "title": "Attention is all you need: utilizing attention in AI-enabled drug discovery",
+     "authors": [
+      "Yang Zhang",
+      "Caiqi Liu",
+      "Mujiexin Liu",
+      "Tianyuan Liu",
+      "Hao Lin",
+      "Huang Cheng-bing",
+      "Ning Lin"
+     ],
+     "year": 2023,
+     "venue": "Briefings in Bioinformatics",
+     "publisher": "Oxford University Press",
+     "abstract": "Recently, attention mechanism and derived models have gained significant traction in drug development due to their outstanding performance and interpretability in handling complex data structures. This review offers an in-depth exploration of the principles underlying attention-based models and their advantages in drug discovery. We further elaborate on their applications in various aspects of drug development, from molecular screening and target binding to property prediction and molecule generation. Finally, we discuss the current challenges faced in the application of attention mechanisms and Artificial Intelligence technologies, including data quality, model interpretability and computational resource constraints, along with future directions for research. Given the accelerating pace of technological advancement, we believe that attention-based models will have an increasingly prominent role in future drug discovery. We anticipate that these models will usher in revolutionary breakthroughs in the pharmaceutical domain, significantly accelerating the pace of drug development.",
+     "topics": [
+      "Computational Drug Discovery Methods",
+      "Machine Learning in Materials Science",
+      "Metabolomics and Mass Spectrometry Studies",
+      "Artificial intelligence",
+      "drug discovery",
+      "Transformer",
+      "Molecular Representation",
+      "Attention Mechanism",
+      "Molecule Generation",
+      "0301 basic medicine",
+      "03 medical and health sciences",
+      "Drug Development",
+      "Artificial Intelligence",
+      "0206 medical engineering",
+      "Drug Discovery",
+      "Problem Solving Protocol",
+      "02 engineering and technology",
+      "Data Accuracy"
+     ],
+     "language": "en",
+     "citationCount": 378,
+     "oaStatus": "hybrid",
+     "stage": "published",
+     "fullText": {
+      "url": "https://academic.oup.com/bib/article-pdf/25/1/bbad467/55123365/bbad467.pdf",
+      "kind": "pdf",
+      "verified": false
+     },
+     "landingPage": "https://doi.org/10.1093/bib/bbad467",
+     "sources": [
+      {
+       "provider": "openalex",
+       "nativeId": "W4390678101",
+       "rank": 2,
+       "retrievedAt": "2026-10-02T20:23:19.413Z",
+       "latency": 1395
+      },
+      {
+       "provider": "europepmc",
+       "nativeId": "38189543",
+       "rank": 1,
+       "retrievedAt": "2026-10-02T20:23:18.518Z",
+       "latency": 500
+      },
+      {
+       "provider": "openaire",
+       "nativeId": "doi_dedup___::307fe3454ef94c6ae6952aa89dbcf80a",
+       "rank": 43,
+       "retrievedAt": "2026-10-02T20:23:21.274Z",
+       "latency": 3257
+      }
+     ],
+     "fieldSources": {
+      "topics": "europepmc"
+     },
+     "retrievedAt": "2026-10-02T20:23:19.413Z"
+    },
+    {
+     "id": "openalex:W4400867263",
+     "doi": "10.1080/15481603.2024.2380126",
+     "title": "Cross attention is all you need: relational remote sensing change detection with transformer",
+     "authors": [
+      "Kaixuan Lu",
+      "Xiao Huang",
+      "Ruiheng Xia",
+      "Pan Zhang",
+      "Junping Shen"
+     ],
+     "year": 2024,
+     "venue": "GIScience & Remote Sensing",
+     "publisher": "Taylor & Francis",
+     "abstract": "Deep-learning-based change detection methods have received wide attention, thanks to their strong capability in obtaining rich features from images. However, existing AI-based change detection (CD) methods largely rely on three functionality-enhancing modules, that is, semantic enhancement, attention mechanisms, and correspondence enhancement. The stacking of these modules leads to great model complexity. To unify these three modules into a simple pipeline, we introduce relational change detection transformer (RCDT), a novel and simple framework for remote sensing change detection tasks. The proposed RCDT consists of three major components, a weight-sharing Siamese Backbone to obtain bi-temporal features, a relational cross attention module (RCAM) that implements offset cross attention to obtain bi-temporal relation-aware features, and a features constrain module (FCM) to achieve the final refined predictions with high-resolution constraints. Extensive experiments on four different publicly available datasets suggest that our proposed RCDT exhibits superior change detection performance and great trade-off between performance and complexity compared with other competing methods. The theoretical, methodological, and experimental knowledge of this study is expected to benefit future change detection efforts that involve the cross attention mechanism.",
+     "topics": [
+      "Remote-Sensing Image Classification",
+      "Remote Sensing in Agriculture",
+      "Remote Sensing and Land Use",
+      "Environmental sciences",
+      "high-resolution imagery",
+      "0202 electrical engineering, electronic engineering, information engineering",
+      "transformer",
+      "0401 agriculture, forestry, and fisheries",
+      "Change detection",
+      "cross attention",
+      "Mathematical geography. Cartography",
+      "GE1-350",
+      "04 agricultural and veterinary sciences",
+      "02 engineering and technology",
+      "GA1-1776"
+     ],
+     "language": "en",
+     "citationCount": 31,
+     "oaStatus": "gold",
+     "stage": "published",
+     "landingPage": "https://doi.org/10.1080/15481603.2024.2380126",
+     "sources": [
+      {
+       "provider": "openalex",
+       "nativeId": "W4400867263",
+       "rank": 5,
+       "retrievedAt": "2026-10-02T20:23:19.413Z",
+       "latency": 1395
+      },
+      {
+       "provider": "openaire",
+       "nativeId": "doi_dedup___::45947e7695c31c608c1b8e1cbd8d1e61",
+       "rank": 206,
+       "retrievedAt": "2026-10-02T20:23:21.274Z",
+       "latency": 3257
+      },
+      {
+       "provider": "doaj",
+       "nativeId": "1df612d8f817479f89d17f369827dad4",
+       "rank": 0,
+       "retrievedAt": "2026-10-02T20:23:18.279Z",
+       "latency": 262
+      }
+     ],
+     "fieldSources": {
+      "topics": "openaire",
+      "fullText": "doaj"
+     },
+     "retrievedAt": "2026-10-02T20:23:19.413Z",
+     "fullText": {
+      "url": "https://www.tandfonline.com/doi/10.1080/15481603.2024.2380126",
+      "kind": "html",
+      "verified": false
+     }
+    },
+    {
+     "id": "openalex:W7124707810",
+     "doi": "10.5281/zenodo.18289747",
+     "title": "Attention is all you need",
+     "authors": [
+      "Beat Döbeli Honegger"
+     ],
+     "year": 2026,
+     "venue": "Zenodo (CERN European Organization for Nuclear Research)",
+     "publisher": "European Organization for Nuclear Research",
+     "abstract": "«Attention is all you need» («Aufmerksamkeit ist alles, was man braucht») lautet der Titel eines wissenschaftlichen Artikels, der zu den meistzitierten gehört, obwohl er noch keine zehn Jahre alt ist. Er beschreibt, wie Machine-Learning-Systeme wie ChatGPT in einem Text wichtige von unwichtigen Wörtern unterscheiden können. Das im Artikel beschriebene mathematische Verfahren ist mitverantwortlich für die massive Leistungssteigerung solcher Systeme in den letzten Jahren. «Attention» ist aber nicht nur ein aktuelles Konzept in der Informatik, sondern lässt sich auch nutzen, um die heutige Zeit zu verstehen.",
+     "topics": [
+      "Digital Innovation in Industries",
+      "Big Data and Digital Economy",
+      "Organizational Management and Change"
+     ],
+     "language": "de",
+     "citationCount": 0,
+     "oaStatus": "green",
+     "stage": "unknown",
+     "landingPage": "https://doi.org/10.5281/zenodo.18289747",
+     "sources": [
+      {
+       "provider": "openalex",
+       "nativeId": "W7124707810",
+       "rank": 32,
+       "retrievedAt": "2026-10-02T20:23:19.413Z",
+       "latency": 1395
+      },
+      {
+       "provider": "openaire",
+       "nativeId": "doi_dedup___::0a0a2293279713fb99a344b54f944628",
+       "rank": 15,
+       "retrievedAt": "2026-10-02T20:23:21.274Z",
+       "latency": 3257
+      }
+     ],
+     "fieldSources": {
+      "fullText": "openaire"
+     },
+     "retrievedAt": "2026-10-02T20:23:19.413Z",
+     "fullText": {
+      "url": "https://doebe.li/t33000",
+      "kind": "html",
+      "verified": false
+     }
+    },
+    {
+     "id": "openalex:W7124171396",
+     "doi": "10.5281/zenodo.18244865",
+     "title": "From \"Attention Is All You Need\" to \"Structure Is All You Need\"",
+     "authors": [
+      "Xinliang Wei"
+     ],
+     "year": 2026,
+     "venue": "Research Explorer (The University of Manchester)",
+     "publisher": "University of Manchester",
+     "abstract": "This record presents “From Attention Is All You Need to Structure Is All You Need”, a conceptual and systems-oriented paper arguing that structure—not any single model mechanism—is the first-order organizing principle that enables AI to scale, deploy, and remain trustworthy over time. The work develops a structural continuity thesis across three layers: Model layer (Transformers): self-attention is treated as a structural operator that makes relational structure explicit and computable at scale. Physical layer (EDA and AI hardware): electronic design automation is framed as a structural adjudication layer that determines whether structures can survive under manufacturability, power, timing, thermal, and reliability constraints. Collaboration layer (Human–AI interaction): the paper identifies a discontinuity: while structure is explicit inside models and hardware, it remains largely inexpressible at the human–AI interface under prompt-centric interaction. To address this gap, the paper introduces Structured Expression Resonance (SER) as a collaboration-oriented structural language system. SER is positioned not as a control language or a replacement for natural language, but as a method for making collaboration structure explicit, negotiable, reusable, and verifiable, enabling humans to participate in structural decision-making rather than only providing outcome-driven instructions. Overall, the paper reframes the historical significance of Transformers as an empirical signal of a broader principle: when structure is correctly expressed, intelligence becomes scalable—and argues that future progress will increasingly depend on structural competition (stability, verifiability, reuse, and alignment) rather than capability metrics alone. This work is relevant to researchers and practitioners in AI architectures, human–AI collaboration, systems engineering, and AI governance, and is intended as a theoretical foundation for subsequent SER/SCLS-based publications.",
+     "topics": [
+      "Cybernetics and Technology in Society",
+      "Architecture and Computational Design",
+      "Design Education and Practice",
+      "Prompt Engineering",
+      "Artificial intelligence",
+      "Systems Engineering",
+      "Structural Representation",
+      "Attention Mechanisms",
+      "Systems-Level AI",
+      "AI Interpretability",
+      "Computer Architecture",
+      "Machine Learning",
+      "Digital Humanities",
+      "Collaborative Intelligence",
+      "Scalable and Reliable AI Systems",
+      "Responsible and Trustworthy AI",
+      "System-level design",
+      "Transformer Models",
+      "Cognitive Systems",
+      "Human–AI Collaboration",
+      "Structured Expression Resonance (SER)",
+      "AI Scalability",
+      "Structural Continuity",
+      "AI Governance",
+      "Transformer Architecture",
+      "Structured Expression Resonance",
+      "Electronic Design Automation (EDA)",
+      "AI Reliability",
+      "Human–Computer Interaction",
+      "ResearchInstitutes_Networks_Beacons/02/07; name=Digital Futures",
+      "ResearchInstitutes_Networks_Beacons/creative_manchester; name=Creative Manchester",
+      "ResearchInstitutes_Networks_Beacons/02/13; name=Sustainable Futures",
+      "Structural Languages",
+      "Science and Technology Studies (STS)"
+     ],
+     "language": "en",
+     "citationCount": 0,
+     "oaStatus": "green",
+     "stage": "published",
+     "fullText": {
+      "url": "https://research.manchester.ac.uk/en/publications/b24d0f7c-e8a7-42cb-8334-f9e9830e5110",
+      "kind": "html",
+      "verified": false
+     },
+     "landingPage": "https://doi.org/10.5281/zenodo.18244865",
+     "sources": [
+      {
+       "provider": "openalex",
+       "nativeId": "W7124171396",
+       "rank": 51,
+       "retrievedAt": "2026-10-02T20:23:19.413Z",
+       "latency": 1395
+      },
+      {
+       "provider": "openaire",
+       "nativeId": "doi_dedup___::56a85345891b82d0bec0da91a0ede2c6",
+       "rank": 7,
+       "retrievedAt": "2026-10-02T20:23:21.274Z",
+       "latency": 3257
+      }
+     ],
+     "fieldSources": {
+      "topics": "openaire"
+     },
+     "retrievedAt": "2026-10-02T20:23:19.413Z"
+    }
+   ],
+   "total": 96,
+   "page": 1,
+   "pageSize": 5,
+   "sort": "relevance",
+   "filters": {
+    "openAccessOnly": true
+   },
+   "facets": {
+    "source": [
+     {
+      "value": "openalex",
+      "count": 56
+     },
+     {
+      "value": "openaire",
+      "count": 40
+     },
+     {
+      "value": "arxiv",
+      "count": 35
+     },
+     {
+      "value": "europepmc",
+      "count": 2
+     },
+     {
+      "value": "doaj",
+      "count": 1
+     }
+    ],
+    "oaStatus": [
+     {
+      "value": "green",
+      "count": 47
+     },
+     {
+      "value": "unknown",
+      "count": 36
+     },
+     {
+      "value": "gold",
+      "count": 8
+     },
+     {
+      "value": "hybrid",
+      "count": 3
+     },
+     {
+      "value": "bronze",
+      "count": 2
+     }
+    ],
+    "stage": [
+     {
+      "value": "preprint",
+      "count": 71
+     },
+     {
+      "value": "published",
+      "count": 13
+     },
+     {
+      "value": "unknown",
+      "count": 12
+     }
+    ],
+    "year": [
+     {
+      "value": 2026,
+      "count": 19
+     },
+     {
+      "value": 2025,
+      "count": 23
+     },
+     {
+      "value": 2024,
+      "count": 21
+     },
+     {
+      "value": 2023,
+      "count": 13
+     },
+     {
+      "value": 2022,
+      "count": 2
+     },
+     {
+      "value": 2021,
+      "count": 9
+     },
+     {
+      "value": 2020,
+      "count": 4
+     },
+     {
+      "value": 2019,
+      "count": 4
+     },
+     {
+      "value": 2017,
+      "count": 1
+     }
+    ],
+    "venue": [
+     {
+      "value": "arXiv (Cornell University)",
+      "count": 29
+     },
+     {
+      "value": "Zenodo (CERN European Organization for Nuclear Research)",
+      "count": 7
+     },
+     {
+      "value": "Briefings in Bioinformatics",
+      "count": 2
+     },
+     {
+      "value": "GIScience & Remote Sensing",
+      "count": 1
+     },
+     {
+      "value": "Research Explorer (The University of Manchester)",
+      "count": 1
+     },
+     {
+      "value": "Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing",
+      "count": 1
+     },
+     {
+      "value": "Proceedings of the 13th International Joint Conference on Natural Language Processing and the 3rd Conference of the Asia-Pacific Chapter of the Association for Computational Linguistics (Volume 1: Long Papers)",
+      "count": 1
+     },
+     {
+      "value": "2025 IEEE/CVF Winter Conference on Applications of Computer Vision (WACV)",
+      "count": 1
+     },
+     {
+      "value": "Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP)",
+      "count": 1
+     },
+     {
+      "value": "Proceedings of the AAAI Conference on Artificial Intelligence",
+      "count": 1
+     },
+     {
+      "value": "SSRN Electronic Journal",
+      "count": 1
+     },
+     {
+      "value": "Proceedings of the ACM on Management of Data",
+      "count": 1
+     },
+     {
+      "value": "Theology and Science",
+      "count": 1
+     },
+     {
+      "value": "Corporate Ownership and Control",
+      "count": 1
+     },
+     {
+      "value": "ICASSP 2021 - 2021 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)",
+      "count": 1
+     },
+     {
+      "value": "IEEE/CVF Winter Conference on Applications of Computer Vision (WACV'25), 2025, pp. 1-11",
+      "count": 1
+     },
+     {
+      "value": "IEEE Transactions on Information Forensics and Security",
+      "count": 1
+     },
+     {
+      "value": "AI & Society",
+      "count": 1
+     },
+     {
+      "value": "CoRR",
+      "count": 1
+     },
+     {
+      "value": "medRxiv",
+      "count": 1
+     },
+     {
+      "value": "Advances in Neural Information Processing Systems 37",
+      "count": 1
+     },
+     {
+      "value": "Proceedings 2026 Network and Distributed System Security Symposium",
+      "count": 1
+     }
+    ],
+    "publisher": [
+     {
+      "value": "Cornell University",
+      "count": 29
+     },
+     {
+      "value": "European Organization for Nuclear Research",
+      "count": 7
+     },
+     {
+      "value": "Association for Computational Linguistics (ACL)",
+      "count": 3
+     },
+     {
+      "value": "Oxford University Press",
+      "count": 2
+     },
+     {
+      "value": "Taylor & Francis",
+      "count": 2
+     },
+     {
+      "value": "IEEE",
+      "count": 2
+     },
+     {
+      "value": "University of Manchester",
+      "count": 1
+     },
+     {
+      "value": "Association for the Advancement of Artificial Intelligence",
+      "count": 1
+     },
+     {
+      "value": "RELX Group (Netherlands)",
+      "count": 1
+     },
+     {
+      "value": "Association for Computing Machinery",
+      "count": 1
+     },
+     {
+      "value": "Publishing house \"Virtus Interpress\"",
+      "count": 1
+     },
+     {
+      "value": "Institute of Electrical and Electronics Engineers",
+      "count": 1
+     },
+     {
+      "value": "Springer Nature",
+      "count": 1
+     },
+     {
+      "value": "Shenzhen Medical Academy of Research and Translation",
+      "count": 1
+     },
+     {
+      "value": "Neural Information Processing Systems Foundation, Inc. (NeurIPS)",
+      "count": 1
+     },
+     {
+      "value": "Internet Society",
+      "count": 1
+     }
+    ],
+    "topics": [
+     {
+      "value": "02 engineering and technology",
+      "count": 33
+     },
+     {
+      "value": "0202 electrical engineering, electronic engineering, information engineering",
+      "count": 32
+     },
+     {
+      "value": "FOS: Computer and information sciences",
+      "count": 26
+     },
+     {
+      "value": "cs.LG",
+      "count": 19
+     },
+     {
+      "value": "Topic Modeling",
+      "count": 17
+     },
+     {
+      "value": "Machine Learning (cs.LG)",
+      "count": 14
+     },
+     {
+      "value": "cs.AI",
+      "count": 14
+     },
+     {
+      "value": "Computer Science - Machine Learning",
+      "count": 11
+     },
+     {
+      "value": "Natural Language Processing Techniques",
+      "count": 10
+     },
+     {
+      "value": "Artificial Intelligence (cs.AI)",
+      "count": 10
+     },
+     {
+      "value": "cs.CL",
+      "count": 10
+     },
+     {
+      "value": "Multimodal Machine Learning Applications",
+      "count": 9
+     },
+     {
+      "value": "Computation and Language (cs.CL)",
+      "count": 8
+     },
+     {
+      "value": "Computer Science - Computation and Language",
+      "count": 7
+     },
+     {
+      "value": "Computer Science - Artificial Intelligence",
+      "count": 7
+     },
+     {
+      "value": "cs.CV",
+      "count": 7
+     },
+     {
+      "value": "Speech Recognition and Synthesis",
+      "count": 6
+     },
+     {
+      "value": "Artificial Intelligence",
+      "count": 5
+     },
+     {
+      "value": "Machine Learning",
+      "count": 5
+     },
+     {
+      "value": "Computer Vision and Pattern Recognition (cs.CV)",
+      "count": 5
+     },
+     {
+      "value": "Computer Science - Computer Vision and Pattern Recognition",
+      "count": 5
+     },
+     {
+      "value": "eess.AS",
+      "count": 5
+     },
+     {
+      "value": "cs.SD",
+      "count": 5
+     },
+     {
+      "value": "01 natural sciences",
+      "count": 4
+     },
+     {
+      "value": "Adversarial Robustness in Machine Learning",
+      "count": 4
+     }
+    ]
+   },
+   "complete": true,
+   "bounded": false,
+   "countsFromSources": false,
+   "providers": [
+    {
+     "provider": "arxiv",
+     "status": "ok",
+     "retrieved": 36,
+     "totalHits": 36,
+     "latency": 334
+    },
+    {
+     "provider": "ncbi",
+     "status": "ok",
+     "retrieved": 0,
+     "totalHits": 0,
+     "latency": 447
+    },
+    {
+     "provider": "doaj",
+     "status": "ok",
+     "retrieved": 1,
+     "totalHits": 1,
+     "latency": 262
+    },
+    {
+     "provider": "plos",
+     "status": "ok",
+     "retrieved": 0,
+     "totalHits": 0,
+     "latency": 117
+    },
+    {
+     "provider": "openaire",
+     "status": "ok",
+     "retrieved": 300,
+     "totalHits": 2240,
+     "latency": 3272
+    },
+    {
+     "provider": "openalex",
+     "status": "ok",
+     "retrieved": 98,
+     "totalHits": 98,
+     "latency": 1402
+    },
+    {
+     "provider": "europepmc",
+     "status": "ok",
+     "retrieved": 2,
+     "totalHits": 2,
+     "latency": 500
+    },
+    {
+     "provider": "datacite",
+     "status": "skipped",
+     "retrieved": 0,
+     "latency": 0,
+     "skipReason": "no retrievable copies to contribute"
+    },
+    {
+     "provider": "biorxiv",
+     "status": "skipped",
+     "retrieved": 0,
+     "latency": 0,
+     "skipReason": "no keyword index"
+    },
+    {
+     "provider": "core",
+     "status": "skipped",
+     "retrieved": 0,
+     "latency": 0,
+     "skipReason": "too slow to answer in time"
+    }
+   ],
+   "authorities": [
+    {
+     "authority": "crossref",
+     "status": "ok",
+     "asked": 5,
+     "answered": 3,
+     "applied": 1,
+     "latency": 310
+    },
+    {
+     "authority": "openalex",
+     "status": "ok",
+     "asked": 5,
+     "answered": 5,
+     "applied": 0,
+     "latency": 682
+    },
+    {
+     "authority": "unpaywall",
+     "status": "ok",
+     "asked": 5,
+     "answered": 3,
+     "applied": 0,
+     "latency": 470
+    },
+    {
+     "authority": "opencitations",
+     "status": "skipped",
+     "asked": 0,
+     "answered": 0,
+     "applied": 0,
+     "skipReason": "nothing on this page needed it",
+     "latency": 0
+    },
+    {
+     "authority": "preprints",
+     "status": "skipped",
+     "asked": 0,
+     "answered": 0,
+     "applied": 0,
+     "skipReason": "nothing on this page needed it",
+     "latency": 0
+    }
+   ],
+   "duration": 4291
+  }
+ },
+ "papers": {
+  "arxiv:1706.03762v7": {
+   "id": "arxiv:1706.03762v7",
+   "title": "Attention Is All You Need",
+   "authors": [
+    "Ashish Vaswani",
+    "Noam Shazeer",
+    "Niki Parmar",
+    "Jakob Uszkoreit",
+    "Llion Jones",
+    "Aidan N. Gomez",
+    "Lukasz Kaiser",
+    "Illia Polosukhin"
+   ],
+   "year": 2017,
+   "abstract": "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks in an encoder-decoder configuration. The best performing models also connect the encoder and decoder through an attention mechanism. We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely. Experiments on two machine translation tasks show these models to be superior in quality while being more parallelizable and requiring significantly less time to train. Our model achieves 28.4 BLEU on the WMT 2014 English-to-German translation task, improving over the existing best results, including ensembles by over 2 BLEU. On the WMT 2014 English-to-French translation task, our model establishes a new single-model state-of-the-art BLEU score of 41.8 after training for 3.5 days on eight GPUs, a small fraction of the training costs of the best models from the literature. We show that the Transformer generalizes well to other tasks by applying it successfully to English constituency parsing both with large and limited training data.",
+   "topics": [
+    "cs.CL",
+    "cs.LG"
+   ],
+   "language": "en",
+   "oaStatus": "unknown",
+   "stage": "preprint",
+   "fullText": {
+    "url": "https://arxiv.org/pdf/1706.03762v7",
+    "kind": "pdf",
+    "verified": false
+   },
+   "landingPage": "http://arxiv.org/abs/1706.03762v7",
+   "sources": [
+    {
+     "provider": "arxiv",
+     "nativeId": "1706.03762v7",
+     "rank": 0,
+     "retrievedAt": "2026-10-02T20:23:22.317Z",
+     "latency": 10
+    }
+   ],
+   "fieldSources": {},
+   "retrievedAt": "2026-10-02T20:23:22.317Z"
+  },
+  "openalex:W2071777774": {
+   "id": "openalex:W2071777774",
+   "doi": "10.1371/journal.pone.0000217",
+   "title": "Quantifying Organismal Complexity using a Population Genetic Approach",
+   "authors": [
+    "Olivier Tenaillon",
+    "Olin Silander",
+    "Jean–Philippe Uzan",
+    "Lin Chao"
+   ],
+   "year": 2007,
+   "venue": "PLoS ONE",
+   "publisher": "Public Library of Science",
+   "abstract": "BACKGROUND: Various definitions of biological complexity have been proposed: the number of genes, cell types, or metabolic processes within an organism. As knowledge of biological systems has increased, it has become apparent that these metrics are often incongruent. METHODOLOGY: Here we propose an alternative complexity metric based on the number of genetically uncorrelated phenotypic traits contributing to an organism's fitness. This metric, phenotypic complexity, is more objective than previous suggestions, as complexity is measured from a fundamental biological perspective, that of natural selection. We utilize a model linking the equilibrium fitness (drift load) of a population to phenotypic complexity. We then use results from viral evolution experiments to compare the phenotypic complexities of two viruses, the bacteriophage X174 and vesicular stomatitis virus, and to illustrate the consistency of our approach and its applicability. CONCLUSIONS/SIGNIFICANCE: Because Darwinian evolution through natural selection is the fundamental element unifying all biological organisms, we propose that our metric of complexity is potentially a more relevant metric than others, based on the count of artificially defined set of objects.",
+   "topics": [
+    "Evolution and Genetic Dynamics",
+    "Evolutionary Game Theory and Cooperation",
+    "Origins and Evolution of Life",
+    "0301 basic medicine",
+    "0303 health sciences",
+    "Likelihood Functions",
+    "Science",
+    "Q",
+    "Genetic Drift",
+    "R",
+    "General Medicine",
+    "Environment",
+    "Models, Biological",
+    "General Biochemistry, Genetics and Molecular Biology",
+    "Vesicular stomatitis Indiana virus",
+    "3. Good health",
+    "Evolution, Molecular",
+    "03 medical and health sciences",
+    "Genetics, Population",
+    "Phenotype",
+    "Escherichia coli",
+    "Medicine",
+    "Genetic Fitness",
+    "Selection, Genetic",
+    "General Agricultural and Biological Sciences",
+    "Bacteriophage phi X 174",
+    "Research Article",
+    "Genome complexity",
+    "Evolutionary genetics",
+    "Natural selection",
+    "Organismal evolution",
+    "Viral evolution",
+    "Genetics",
+    "Phenotypes",
+    "Vesicular stomatitis virus"
+   ],
+   "language": "en",
+   "citationCount": 87,
+   "oaStatus": "gold",
+   "stage": "published",
+   "fullText": {
+    "url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0000217&type=printable",
+    "kind": "pdf",
+    "verified": false
+   },
+   "landingPage": "https://doi.org/10.1371/journal.pone.0000217",
+   "sources": [
+    {
+     "provider": "openalex",
+     "nativeId": "W2071777774",
+     "rank": 0,
+     "retrievedAt": "2026-10-02T20:23:22.818Z",
+     "latency": 497
+    },
+    {
+     "provider": "europepmc",
+     "nativeId": "17299597",
+     "rank": 0,
+     "retrievedAt": "2026-10-02T20:23:22.798Z",
+     "latency": 477
+    },
+    {
+     "provider": "core",
+     "nativeId": "84982915",
+     "rank": 0,
+     "retrievedAt": "2026-10-02T20:23:23.289Z",
+     "latency": 968
+    },
+    {
+     "provider": "openaire",
+     "nativeId": "doi_dedup___::feb3a0f804d3a3228e591f0f8deea134",
+     "rank": 0,
+     "retrievedAt": "2026-10-02T20:23:22.587Z",
+     "latency": 268
+    },
+    {
+     "provider": "plos",
+     "nativeId": "10.1371/journal.pone.0000217",
+     "rank": 0,
+     "retrievedAt": "2026-10-02T20:23:22.438Z",
+     "latency": 119
+    },
+    {
+     "provider": "doaj",
+     "nativeId": "d78fdc861d7b49b7a874c554763bbb87",
+     "rank": 0,
+     "retrievedAt": "2026-10-02T20:23:22.576Z",
+     "latency": 257
+    },
+    {
+     "provider": "ncbi",
+     "nativeId": "17299597",
+     "rank": 0,
+     "retrievedAt": "2026-10-02T20:23:23.309Z",
+     "latency": 991
+    }
+   ],
+   "fieldSources": {
+    "topics": "openaire"
+   },
+   "retrievedAt": "2026-10-02T20:23:22.818Z"
+  }
+ }
+}

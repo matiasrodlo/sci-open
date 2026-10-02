@@ -1,0 +1,75 @@
+{
+  "about": "One reference per citation style met in the wild, with the fields parseReference must find. Grow it when a style fails: add the reference here first, then make the parser pass it.",
+  "cases": [
+    {
+      "style": "APA",
+      "raw": "Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, L., & Polosukhin, I. (2017). Attention is all you need. Advances in Neural Information Processing Systems, 30.",
+      "expect": { "year": 2017, "title": "Attention is all you need", "surnames": ["vaswani", "shazeer", "parmar"] }
+    },
+    {
+      "style": "APA with DOI",
+      "raw": "Doudna, J. A., & Charpentier, E. (2014). The new frontier of genome engineering with CRISPR-Cas9. Science, 346(6213), 1258096. https://doi.org/10.1126/science.1258096",
+      "expect": { "year": 2014, "doi": "10.1126/science.1258096", "title": "The new frontier of genome engineering with CRISPR-Cas9", "surnames": ["doudna", "charpentier"] }
+    },
+    {
+      "style": "Vancouver",
+      "raw": "Watson JD, Crick FHC. Molecular structure of nucleic acids; a structure for deoxyribose nucleic acid. Nature. 1953;171(4356):737-8.",
+      "expect": { "year": 1953, "title": "Molecular structure of nucleic acids; a structure for deoxyribose nucleic acid", "surnames": ["watson", "crick"] }
+    },
+    {
+      "style": "Vancouver with PMID",
+      "raw": "Jinek M, Chylinski K, Fonfara I, Hauer M, Doudna JA, Charpentier E. A programmable dual-RNA-guided DNA endonuclease in adaptive bacterial immunity. Science. 2012;337(6096):816-21. PMID: 22745249.",
+      "expect": { "year": 2012, "pmid": "22745249", "title": "A programmable dual-RNA-guided DNA endonuclease in adaptive bacterial immunity", "surnames": ["jinek", "chylinski", "fonfara"] }
+    },
+    {
+      "style": "IEEE",
+      "raw": "K. He, X. Zhang, S. Ren, and J. Sun, \"Deep residual learning for image recognition,\" in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2016, pp. 770-778.",
+      "expect": { "year": 2016, "title": "Deep residual learning for image recognition", "surnames": ["he", "zhang", "ren", "sun"] }
+    },
+    {
+      "style": "Nature",
+      "raw": "Jumper, J. et al. Highly accurate protein structure prediction with AlphaFold. Nature 596, 583–589 (2021).",
+      "expect": { "year": 2021, "title": "Highly accurate protein structure prediction with AlphaFold", "surnames": ["jumper"] }
+    },
+    {
+      "style": "arXiv listing",
+      "raw": "Ashish Vaswani, Noam Shazeer, Niki Parmar. Attention Is All You Need. arXiv:1706.03762v7, 2017.",
+      "expect": { "year": 2017, "arxiv": "1706.03762v7", "title": "Attention Is All You Need", "surnames": ["vaswani", "shazeer", "parmar"] }
+    },
+    {
+      "style": "arXiv URL",
+      "raw": "Brown et al. Language Models are Few-Shot Learners. https://arxiv.org/abs/2005.14165 (2020)",
+      "expect": { "year": 2020, "arxiv": "2005.14165", "title": "Language Models are Few-Shot Learners", "surnames": ["brown"] }
+    },
+    {
+      "style": "BibTeX",
+      "raw": "@article{lecun2015deep, title={Deep learning}, author={LeCun, Yann and Bengio, Yoshua and Hinton, Geoffrey}, journal={Nature}, volume={521}, number={7553}, pages={436--444}, year={2015}, doi={10.1038/nature14539}}",
+      "expect": { "year": 2015, "doi": "10.1038/nature14539", "title": "Deep learning", "surnames": ["lecun", "bengio", "hinton"] }
+    },
+    {
+      "style": "DOI alone",
+      "raw": "doi:10.1371/journal.pone.0000217",
+      "expect": { "doi": "10.1371/journal.pone.0000217", "surnames": [] }
+    },
+    {
+      "style": "arXiv id alone",
+      "raw": "arXiv:2101.00001",
+      "expect": { "arxiv": "2101.00001", "surnames": [] }
+    },
+    {
+      "style": "Chicago",
+      "raw": "Kuhn, Thomas S. 1962. The Structure of Scientific Revolutions. Chicago: University of Chicago Press.",
+      "expect": { "year": 1962, "title": "The Structure of Scientific Revolutions", "surnames": ["kuhn"] }
+    },
+    {
+      "style": "DOI with trailing period",
+      "raw": "Smith J, Lee K. Gut microbiota in obesity. Cell Metab. 2019;29(1):10-12. doi:10.1016/j.cmet.2018.12.001.",
+      "expect": { "year": 2019, "doi": "10.1016/j.cmet.2018.12.001", "title": "Gut microbiota in obesity", "surnames": ["smith", "lee"] }
+    },
+    {
+      "style": "Accented author",
+      "raw": "Müller, K., & Østergaard, L. (2020). Ice sheet dynamics under warming scenarios. Journal of Glaciology, 66(255), 1-14.",
+      "expect": { "year": 2020, "title": "Ice sheet dynamics under warming scenarios", "surnames": ["müller", "østergaard"] }
+    }
+  ]
+}

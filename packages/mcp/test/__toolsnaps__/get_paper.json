@@ -1,0 +1,184 @@
+{
+  "name": "get_paper",
+  "title": "Get paper",
+  "description": "One full record by sci-open id (e.g. openalex:W2741809807, arxiv:2101.00001) or by DOI, with every field and which source supplied it. A DOI is looked up in every source and merged; an id asks only the source it names. Works for closed papers too.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "maxLength": 300
+      },
+      "doi": {
+        "type": "string",
+        "maxLength": 300
+      }
+    },
+    "$schema": "https://json-schema.org/draft/2020-12/schema"
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "paper": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "doi": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "authors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "year": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "venue": {
+            "type": "string"
+          },
+          "access": {
+            "type": "string",
+            "enum": [
+              "gold",
+              "green",
+              "hybrid",
+              "bronze",
+              "closed",
+              "unknown"
+            ]
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "preprint",
+              "accepted",
+              "published",
+              "unknown"
+            ]
+          },
+          "full_text": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "pdf",
+                  "html",
+                  "xml"
+                ]
+              },
+              "verified": {
+                "type": "boolean"
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "verified"
+            ],
+            "additionalProperties": false
+          },
+          "citations": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "found_in": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "abstract": {
+            "type": "string"
+          },
+          "publisher": {
+            "type": "string"
+          },
+          "topics": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "language": {
+            "type": "string"
+          },
+          "landing_page": {
+            "type": "string"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "native_id": {
+                  "type": "string"
+                },
+                "rank": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "retrieved_at": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "source",
+                "native_id",
+                "rank",
+                "retrieved_at"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "field_sources": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "authors",
+          "access",
+          "stage",
+          "found_in"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "paper"
+    ],
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false
+  },
+  "annotations": {
+    "title": "Get paper",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true
+  }
+}
