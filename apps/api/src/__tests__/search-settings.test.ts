@@ -1,0 +1,297 @@
+import { describe, it, expect } from 'vitest';
+import type { Query, SearchParams } from '@open-access-explorer/shared';
+import { runOrchestrator, type AuthorityEntry, type ProviderEntry } from '@open-access-explorer/core';
+import { paper, ref } from '@open-access-explorer/core/testing';
+import { loadConfig } from '../config';
+
+/**
+ * The search settings, from the text an operator writes to what a search does
+ * with it.
+ *
+ * These lived beside the orchestrator's own tests until the engine moved into
+ * `packages/core`. They parse their settings with this service's `config.ts`,
+ * which stays here, so they stay here with it; the orchestrator's behaviour
+ * without configuration is tested in core.
+ */
+
+/** A provider that records what it was asked and answers `papers`. */
+function recorder(papers = pageOf(3)): { entry: ProviderEntry; calls: Array<{ query: Query; depth: number }> } {
+  const calls: Array<{ query: Query; depth: number }> = [];
+  const entry: ProviderEntry = {
+    id: 'europepmc',
+    capabilities: {
+      keywordSearch: true, fieldedSearch: true, doiLookup: true, fields: [], yearFilter: true,
+      maxPageSize: 1000, reportsTotal: true, suppliesCitations: false,
+      stages: { holds: ['published'], filter: false }, facets: []
+    },
+    translate: () => 'native',
+    normalizerVersion: 1,
+    search: async ({ query, depth }) => {
+      calls.push({ query, depth });
+      return { papers, totalHits: papers.length, skipped: [] };
+    }
+  };
+  return { entry, calls };
+}
+
+const pageOf = (n: number) =>
+  Array.from({ length: n }, (_, i) =>
+    paper({
+      id: `europepmc:${i}`,
+      title: `Study ${i}`,
+      doi: `10.1/e-${i}`,
+      year: 2020 + i,
+      venue: `Journal ${i}`,
+      sources: [ref('europepmc', { nativeId: String(i), rank: i })]
+    }));
+
+// Offline: the authorities are real I/O and nothing here is about them.
+const run = (params: SearchParams, providers: ProviderEntry[]) =>
+  runOrchestrator(params, { providers, authorities: [] });
+
+/**
+ * The search settings a server started with this environment would run with.
+ * Parsed by `config.ts`, so these tests still go from the text an operator
+ * writes to what the search does with it.
+ */
+const settingsFrom = (env: Record<string, string>) => loadConfig(env).config.search;
+
+describe('runOrchestrator: the response', () => {
+  /**
+   * The other way `total` stops being an answer, and the one `complete` cannot
+   * express.
+   *
+   * A paper failing the open-access gate on fields the authorities supply is
+   * asked about before it is dropped — but only the first `SEARCH_RESCUE_LIMIT`
+   * of them, so whatever the limit cuts off is dropped unasked and the count is
+   * short with every provider having answered. That was visible only in a debug
+   * log until it reached the response, which meant a reader was shown a bounded
+   * total with nothing to mark it as one.
+   */
+  describe('a total bounded by the rescue', () => {
+    /** Authoritative on a gated field, so `canRescue` picks it up. */
+    const rescuer: AuthorityEntry = {
+      id: 'unpaywall',
+      capabilities: { fields: ['fullText', 'oaStatus'], authoritative: ['fullText', 'oaStatus'] },
+      pass: 0,
+      lookup: async () => null
+    };
+
+    /** Fails the gate — no copy — but carries the DOI that makes it askable. */
+    const gated = (i: number) =>
+      paper({
+        id: `europepmc:${i}`,
+        doi: `10.1234/gated.${i}`,
+        sources: [ref('europepmc', { nativeId: String(i), rank: i })],
+        fullText: undefined
+      });
+
+    it('says so when the limit cut the candidate list short', async () => {
+      const { entry } = recorder([gated(1), gated(2)]);
+
+      const response = await runOrchestrator({ q: 'crispr' }, {
+        providers: [entry],
+        authorities: [rescuer],
+        settings: settingsFrom({ SEARCH_RESCUE_LIMIT: '1' })
+      });
+
+      expect(response.bounded).toBe(true);
+      // And it is not the same statement as `complete`: every provider answered.
+      expect(response.complete).toBe(true);
+    });
+
+    it('says so when the step was turned off entirely', async () => {
+      // A limit of zero is an operator's decision, but the count is a lower
+      // bound for exactly the same reason.
+      const { entry } = recorder([gated(1)]);
+
+      const response = await runOrchestrator({ q: 'crispr' }, {
+        providers: [entry],
+        authorities: [rescuer],
+        settings: settingsFrom({ SEARCH_RESCUE_LIMIT: '0' })
+      });
+
+      expect(response.bounded).toBe(true);
+    });
+
+    it('reads an empty limit as unset, not as off', async () => {
+      // `Number('')` is 0. Empty is what the sample env file and docker-compose
+      // hand the service, and it switched the step off everywhere.
+      const { entry } = recorder([gated(1), gated(2)]);
+
+      const response = await runOrchestrator({ q: 'crispr' }, {
+        providers: [entry],
+        authorities: [rescuer],
+        settings: settingsFrom({ SEARCH_RESCUE_LIMIT: '' })
+      });
+
+      expect(response.bounded).toBe(false);
+    });
+
+    it('is false when every candidate was asked about', async () => {
+      const { entry } = recorder([gated(1), gated(2)]);
+
+      const response = await runOrchestrator({ q: 'crispr' }, {
+        providers: [entry],
+        authorities: [rescuer],
+        settings: settingsFrom({ SEARCH_RESCUE_LIMIT: '50' })
+      });
+
+      expect(response.bounded).toBe(false);
+    });
+
+    it('is false when there was nothing to ask about', async () => {
+      // Every paper passes the gate, so the rescue never runs.
+      const { entry } = recorder();
+
+      expect((await run({ q: 'crispr' }, [entry])).bounded).toBe(false);
+    });
+
+    /**
+     * The budget, not the limit, is what decides how many candidates are
+     * reached — 200 of them at a concurrency of 16 is 12.5 waves, and five
+     * seconds only covers that if the mean lookup beats 400ms against a
+     * per-lookup timeout of 2500ms. It had no setting at all while the limit,
+     * which on a broad query is never the binding constraint, was the one an
+     * operator was pointed at.
+     */
+    describe('SEARCH_RESCUE_BUDGET_MS', () => {
+      /** Slower than any budget these tests set. */
+      const slowRescuer: AuthorityEntry = {
+        ...rescuer,
+        lookup: () => new Promise(resolve => setTimeout(() => resolve(null), 500))
+      };
+
+      it('cuts the pass short, with the limit nowhere near reached', async () => {
+        const { entry } = recorder([gated(1), gated(2)]);
+
+        const started = Date.now();
+        const response = await runOrchestrator({ q: 'crispr' }, {
+          providers: [entry],
+          authorities: [slowRescuer],
+          settings: settingsFrom({ SEARCH_RESCUE_LIMIT: '500', SEARCH_RESCUE_BUDGET_MS: '20' })
+        });
+
+        // Held for the budget rather than for the lookup, which is the whole
+        // point of the setting existing.
+        expect(Date.now() - started).toBeLessThan(400);
+        expect(response.bounded).toBe(true);
+        expect(response.complete).toBe(true);
+      });
+
+      it('falls back to the default rather than honouring a zero', async () => {
+        // A limit of zero means "do not run the step" and is honoured. A budget
+        // of zero would mean "run it and abort before anything can return",
+        // which spends the setup to guarantee nothing, so it is refused.
+        const { entry } = recorder([gated(1)]);
+
+        const response = await runOrchestrator({ q: 'crispr' }, {
+          providers: [entry],
+          authorities: [rescuer],
+          settings: settingsFrom({ SEARCH_RESCUE_BUDGET_MS: '0' })
+        });
+
+        expect(response.bounded).toBe(false);
+      });
+
+      it('ignores a value that is not a number', async () => {
+        const { entry } = recorder([gated(1)]);
+
+        expect((await runOrchestrator({ q: 'crispr' }, {
+          providers: [entry],
+          authorities: [rescuer],
+          settings: settingsFrom({ SEARCH_RESCUE_BUDGET_MS: 'soon' })
+        })).bounded).toBe(false);
+      });
+    });
+  });
+});
+
+/**
+ * How much of a corpus a search reads, and the only setting that moves it.
+ *
+ * `total` is `depth` times the providers that answered, less duplicates and
+ * less what the gates dropped — which is why a query matching 977,761 records
+ * at OpenAlex returned 2,754. The depth was a constant with no way to reach it,
+ * so the answer to "retrieve more" was to edit the source.
+ */
+describe('SEARCH_DEPTH', () => {
+  const depthOf = async (env: Record<string, string> = {}): Promise<number> => {
+    const { entry, calls } = recorder();
+    await runOrchestrator({ q: 'crispr' }, { providers: [entry], authorities: [], settings: settingsFrom(env) });
+    return calls[0]!.depth;
+  };
+
+  it('reads 600 deep when nothing is set', async () => {
+    expect(await depthOf()).toBe(600);
+  });
+
+  it('reads as deep as it is told to', async () => {
+    expect(await depthOf({ SEARCH_DEPTH: '1500' })).toBe(1500);
+  });
+
+  // The cost is per provider per page — twenty requests at once to a provider
+  // serving 100 a page — so the setting has a ceiling and it binds here rather
+  // than at whatever the operator typed.
+  it('clamps a value above the ceiling instead of honouring it', async () => {
+    expect(await depthOf({ SEARCH_DEPTH: '50000' })).toBe(2000);
+  });
+
+  // A depth of zero would plan the fan-out, ask every provider, and read
+  // nothing back — so it falls back rather than being honoured, which is how
+  // SEARCH_RESCUE_BUDGET_MS parses and for the same reason.
+  it('falls back to the default rather than honouring a zero', async () => {
+    expect(await depthOf({ SEARCH_DEPTH: '0' })).toBe(600);
+  });
+
+  it('ignores a value that is not a number', async () => {
+    expect(await depthOf({ SEARCH_DEPTH: 'deeper' })).toBe(600);
+  });
+});
+
+/**
+ * The year and publication-type facets are sent to the sources, so that
+ * ticking 2024 reads 2024 from each of them and counts 2024 across all they
+ * hold — rather than narrowing a read of the top of their whole answer. And
+ * each facet is counted across the sources under the query with its own
+ * selection lifted, so ticking one year leaves the others countable.
+ */
+describe('facets sent to the sources, and counted by them', () => {
+  type Counted = { facet: string; query: Query };
+
+  function counter(): { entry: ProviderEntry; searched: Query[]; counted: Counted[] } {
+    const searched: Query[] = [];
+    const counted: Counted[] = [];
+    const entry: ProviderEntry = {
+      id: 'openalex',
+      capabilities: {
+        keywordSearch: true, fieldedSearch: false, doiLookup: true, fields: [], yearFilter: true,
+        maxPageSize: 200, reportsTotal: true, suppliesCitations: false,
+        stages: { holds: ['preprint', 'published', 'unknown'], filter: true },
+        facets: ['year', 'stage', 'venue', 'publisher', 'topics']
+      },
+      translate: () => 'native',
+      normalizerVersion: 1,
+      search: async ({ query }) => {
+        searched.push(query);
+        return { papers: pageOf(3), totalHits: 5000, skipped: [] };
+      },
+      facets: async ({ requests }) => {
+        counted.push(...requests);
+        return { facets: { year: [{ value: 2021, count: 999 }] }, failures: [] };
+      },
+      facetsAggregate: true
+    };
+    return { entry, searched, counted };
+  }
+
+  it('can be turned off', async () => {
+    const { entry, counted } = counter();
+    const response = await runOrchestrator({ q: 'crispr' }, {
+      providers: [entry], authorities: [], settings: settingsFrom({ SEARCH_FACET_COUNTS: 'off' })
+    });
+
+    expect(counted).toEqual([]);
+    expect(response.countsFromSources).toBe(true);
+  });
+});

@@ -30,8 +30,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 import axios from 'axios';
 import type { Paper } from '@open-access-explorer/shared';
-import { search, parseQuery, ProviderCache } from '../src/orchestrator';
-import { AUTHORITIES } from '../src/authorities';
+import { search, parseQuery, ProviderCache, AUTHORITIES } from '@open-access-explorer/core';
 import { loadConfig, useConfig } from '../src/config';
 
 const QUERIES = [

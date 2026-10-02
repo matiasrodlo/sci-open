@@ -1,7 +1,7 @@
 import Redis from 'ioredis';
 import { createHash } from 'crypto';
 import { MemoryCache } from './memory-cache';
-import { log } from './logger';
+import { log } from '@open-access-explorer/core';
 
 /**
  * One cache: L1 in memory, L2 in Redis.

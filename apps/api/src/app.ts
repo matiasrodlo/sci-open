@@ -8,16 +8,27 @@ import type { CacheManager } from './lib/cache-manager';
 import { searchKey, worthCaching } from './lib/search-key';
 import { PaperCacheManager } from './lib/paper-cache-manager';
 import { httpPerformanceMonitor } from './lib/http-performance-monitor';
-import { assertPublicHttpUrl, attachmentHeader, fetchPdfStream, PdfProxyError } from './lib/pdf-proxy';
 import { adminOnly } from './lib/admin-auth';
-import { withLogger } from './lib/logger';
-import { SingleFlight } from './lib/single-flight';
 import { searchBodySchema, paperParamsSchema } from './lib/schemas';
 import { clientError, clientErrorStatus, lookupErrorStatus, SearchBudgetError } from './lib/client-error';
-import { AuthorityCache, AuthorityFactsCache, ProviderCache, ResultSetCache, UpstreamStats, lookupPaper, enrichPage } from './orchestrator';
-import { runSearch } from './orchestrator/from-search-params';
-import type { ProviderEntry } from './orchestrator/registry';
-import type { AuthorityEntry } from './authorities';
+import {
+  assertPublicHttpUrl,
+  attachmentHeader,
+  fetchPdfStream,
+  PdfProxyError,
+  withLogger,
+  SingleFlight,
+  AuthorityCache,
+  AuthorityFactsCache,
+  ProviderCache,
+  ResultSetCache,
+  UpstreamStats,
+  lookupPaper,
+  enrichPage,
+  runSearch,
+  type ProviderEntry,
+  type AuthorityEntry
+} from '@open-access-explorer/core';
 
 export type AppOptions = {
   config: Config;

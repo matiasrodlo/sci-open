@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { HttpPoolMetrics } from '../http-client-factory';
+import type { HttpPoolMetrics } from '@open-access-explorer/core';
 
 const { pool } = vi.hoisted(() => ({ pool: new Map<string, any>() }));
 
 // The monitor reads the factory singleton on every tick, so the factory is
 // what drives this test: the numbers below stand in for a service actually
 // serving requests between samples.
-vi.mock('../http-client-factory', () => ({
+vi.mock('@open-access-explorer/core', async importOriginal => ({
+  ...(await importOriginal<typeof import('@open-access-explorer/core')>()),
   httpClientFactory: { getMetrics: () => pool }
 }));
 

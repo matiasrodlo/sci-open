@@ -75,7 +75,7 @@ describe('normalizerVersion', () => {
   it.each(Object.keys(PINNED))('%s has not changed shape without changing version', provider => {
     expect(
       digest(provider),
-      `apps/api/src/providers/${provider}/normalize.ts has changed.\n\n` +
+      `packages/core/src/providers/${provider}/normalize.ts has changed.\n\n` +
         'Its output is cached under `normalizerVersion`, so the papers the old ' +
         'reading produced will keep being served until Redis expires them. Bump ' +
         `\`normalizerVersion\` for '${provider}' in orchestrator/registry.ts, then ` +

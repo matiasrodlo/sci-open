@@ -76,7 +76,7 @@ packages/
 
 ## Adding a Data Source
 
-A provider is a directory under `apps/api/src/providers/`, split so that only
+A provider is a directory under `packages/core/src/providers/`, split so that only
 one of its four parts does I/O.
 
 1. **`capabilities.ts`** — what this API can actually do. Strictly descriptive:
@@ -108,14 +108,14 @@ export const capabilities: ProviderCapabilities = {
 4. **`normalize.ts`** — payload to `Paper[]`, plus a `skipped` entry for every
    record it could not read and why. One bad record costs one record.
 
-Then add an entry to `apps/api/src/orchestrator/registry.ts`, and the source
+Then add an entry to `packages/core/src/orchestrator/registry.ts`, and the source
 identifier to `packages/shared/src/types.ts`. Give it a `lookup` in the
 registry only if the API has a way to ask for one record by its own id;
 without one, `lookupPaper` asks the search endpoint, which is the right
 request when the provider's native ids are DOIs or are themselves indexed.
 
-Record one live response into `apps/api/src/__fixtures__/` — see
-`scripts/record-fixtures.ts` — and write the `normalize` and `translate` suites
+Record one live response into `packages/core/src/__fixtures__/` — see
+`apps/api/scripts/record-fixtures.ts` — and write the `normalize` and `translate` suites
 against it, so the tests stay offline.
 
 ## Testing

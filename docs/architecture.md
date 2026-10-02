@@ -39,7 +39,7 @@ shared package holding the types both speak.
 
 ### Orchestrator
 
-`apps/api/src/orchestrator/` runs every search, in this order:
+`packages/core/src/orchestrator/` runs every search, in this order:
 
 1. **Plan** — which providers can serve this query, from their declared
    capabilities. A provider that cannot is skipped with a reason, not guessed
@@ -72,7 +72,7 @@ mistake.
 
 ### Providers
 
-Each provider is a directory under `apps/api/src/providers/` with four parts,
+Each provider is a directory under `packages/core/src/providers/` with four parts,
 so that the only impure one is isolated:
 
 | File | Role |
@@ -86,7 +86,7 @@ so that the only impure one is isolated:
 
 ### Authorities
 
-`apps/api/src/authorities/` holds the services consulted *about* a record —
+`packages/core/src/authorities/` holds the services consulted *about* a record —
 Crossref, OpenAlex, OpenCitations and Unpaywall. They are kept apart from
 providers because an authority never adds a paper: it fills fields on papers
 that were already going to be returned, and every field it supplies is recorded
@@ -95,7 +95,7 @@ provider failing does.
 
 ### Rescue
 
-`apps/api/src/orchestrator/rescue.ts` is the one place enrichment is paid for
+`packages/core/src/orchestrator/rescue.ts` is the one place enrichment is paid for
 before pagination, and it exists because the alternatives are both wrong.
 Enriching the whole filtered set is one request per record — a measured set of
 2,388 records is 2,388 requests per authority — and enriching only the page

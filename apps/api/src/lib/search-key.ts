@@ -1,5 +1,5 @@
 import type { ProviderReport, SearchParams } from '@open-access-explorer/shared';
-import { onlyRefused } from '../orchestrator/fanout';
+import { onlyRefused } from '@open-access-explorer/core';
 
 /**
  * The identity of a search request — query, page, sort and filters — which

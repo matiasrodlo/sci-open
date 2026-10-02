@@ -1,9 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { loadConfig, useConfig, SETTINGS } from '../config';
-import { MAX_DEPTH } from '../orchestrator';
-import { DEFAULT_SEARCH_SETTINGS } from '../orchestrator/from-search-params';
-import { getServiceConfig, DEFAULT_HTTP_POOL } from '../lib/http-pool-config';
-import { apiKeyFor } from '../lib/api-key';
+import { MAX_DEPTH, DEFAULT_SEARCH_SETTINGS, getServiceConfig, DEFAULT_HTTP_POOL, apiKeyFor } from '@open-access-explorer/core';
 
 /**
  * One rule for every setting: unset and empty are the default, and a value

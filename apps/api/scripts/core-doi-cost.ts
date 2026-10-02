@@ -29,8 +29,7 @@ import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 import type { Paper } from '@open-access-explorer/shared';
-import { search, parseQuery, PROVIDERS } from '../src/orchestrator';
-import { AUTHORITIES } from '../src/authorities';
+import { search, parseQuery, PROVIDERS, AUTHORITIES } from '@open-access-explorer/core';
 import { loadConfig, useConfig } from '../src/config';
 
 const QUERIES = [

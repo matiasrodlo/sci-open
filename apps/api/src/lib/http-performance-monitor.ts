@@ -1,5 +1,4 @@
-import { httpClientFactory } from './http-client-factory';
-import { log } from './logger';
+import { httpClientFactory, log } from '@open-access-explorer/core';
 
 export interface PerformanceMetrics {
   timestamp: Date;

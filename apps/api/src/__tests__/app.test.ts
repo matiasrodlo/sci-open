@@ -6,10 +6,8 @@ import type { Paper } from '@open-access-explorer/shared';
 import { buildApp } from '../app';
 import { loadConfig } from '../config';
 import { CacheManager } from '../lib/cache-manager';
-import { log } from '../lib/logger';
-import type { ProviderEntry } from '../orchestrator/registry';
-import type { AuthorityEntry } from '../authorities';
-import { paper, ref } from '../orchestrator/__tests__/helpers';
+import { log, type ProviderEntry, type AuthorityEntry } from '@open-access-explorer/core';
+import { paper, ref } from '@open-access-explorer/core/testing';
 
 /**
  * The routes, through Fastify, with nothing past the process boundary: the
@@ -52,8 +50,8 @@ const PUBLISHER = 'https://files.example.org/';
 /** How many times the route asked the publisher for a file. */
 const downloads = vi.hoisted(() => ({ started: 0 }));
 
-vi.mock('../lib/pdf-proxy', async importOriginal => {
-  const actual = await importOriginal<typeof import('../lib/pdf-proxy')>();
+vi.mock('@open-access-explorer/core', async importOriginal => {
+  const actual = await importOriginal<typeof import('@open-access-explorer/core')>();
   return {
     ...actual,
     assertPublicHttpUrl: async (raw: string) =>

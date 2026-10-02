@@ -1,4 +1,4 @@
-import { log } from './logger';
+import { log } from '@open-access-explorer/core';
 
 /** Something held for the life of the process and released on the way out. */
 export type Resource = {

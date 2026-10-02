@@ -1,5 +1,13 @@
 import { AsyncLocalStorage } from 'async_hooks';
-import type { FastifyBaseLogger } from 'fastify';
+
+/** The four methods the engine calls. Fastify's logger satisfies this, and so
+ * does the stderr logger the MCP binary installs. */
+export type EngineLogger = {
+  debug(fields: Record<string, unknown>, msg: string): void;
+  info(fields: Record<string, unknown>, msg: string): void;
+  warn(fields: Record<string, unknown>, msg: string): void;
+  error(fields: Record<string, unknown>, msg: string): void;
+};
 
 /**
  * One log stream for the whole service.
@@ -21,13 +29,13 @@ import type { FastifyBaseLogger } from 'fastify';
 
 type Level = 'debug' | 'info' | 'warn' | 'error';
 
-let sink: FastifyBaseLogger | null = null;
+let sink: EngineLogger | null = null;
 
 /** The logger of the request whose work is running, where there is one. */
-const current = new AsyncLocalStorage<FastifyBaseLogger>();
+const current = new AsyncLocalStorage<EngineLogger>();
 
 /** Called once at boot with the server's logger. */
-export function useLogger(logger: FastifyBaseLogger): void {
+export function useLogger(logger: EngineLogger): void {
   sink = logger;
 }
 
@@ -35,7 +43,7 @@ export function useLogger(logger: FastifyBaseLogger): void {
  * Runs `work` — and everything it starts, however asynchronously — logging to
  * `logger`. The server enters it for each request with that request's logger.
  */
-export function withLogger<T>(logger: FastifyBaseLogger, work: () => T): T {
+export function withLogger<T>(logger: EngineLogger, work: () => T): T {
   return current.run(logger, work);
 }
 

@@ -15,7 +15,7 @@ vi.mock('ioredis', () => {
 
 import { CacheManager, CacheStrategy } from '../cache-manager';
 import { PaperCacheManager } from '../paper-cache-manager';
-import { paper, ref } from '../../orchestrator/__tests__/helpers';
+import { paper, ref } from '@open-access-explorer/core/testing';
 
 const record = (over: Partial<Paper> = {}): Paper => paper({
   id: 'arxiv:2310.12345',

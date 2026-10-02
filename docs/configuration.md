@@ -397,7 +397,7 @@ API_ORIGIN=https://api.yourdomain.com
   proxy's: the publisher is never checked, and every redirect is judged by the
   proxy's address instead. A deployment that can only leave through a proxy
   needs the proxy to refuse the same destinations — loopback, private,
-  link-local and the other ranges `apps/api/src/lib/pdf-proxy.ts` blocks.
+  link-local and the other ranges `packages/core/src/lib/pdf-proxy.ts` blocks.
 - **CORS is not a setting, and does not need to be one.** The API sends no
   cross-origin headers, whatever `NODE_ENV` says
   (`origin: false`, `apps/api/src/app.ts`), which is correct for the only

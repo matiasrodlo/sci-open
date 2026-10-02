@@ -202,7 +202,7 @@ papers back.
 
 ## 3. One provider, one request
 
-Every connector under `apps/api/src/providers/` has the same four parts, so the
+Every connector under `packages/core/src/providers/` has the same four parts, so the
 only impure one is isolated and the other three are testable without a network.
 
 ```mermaid

@@ -11,8 +11,7 @@
  * It generates real traffic against services that owe you nothing. Keep the
  * request counts modest and the contact address correct.
  */
-import { httpClientFactory } from '../src/lib/http-client-factory';
-import { getPooledClient } from '../src/lib/http-client-factory';
+import { httpClientFactory, getPooledClient } from '@open-access-explorer/core';
 
 export interface PerformanceTestConfig {
   service: string;

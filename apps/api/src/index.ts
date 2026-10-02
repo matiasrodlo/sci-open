@@ -12,9 +12,8 @@ import { loadConfig, useConfig } from './config';
 import { buildApp } from './app';
 import { CacheManager } from './lib/cache-manager';
 import { httpPerformanceMonitor } from './lib/http-performance-monitor';
-import { httpClientFactory } from './lib/http-client-factory';
 import { gracefulShutdown } from './lib/shutdown';
-import { log, useLogger } from './lib/logger';
+import { httpClientFactory, log, useLogger } from '@open-access-explorer/core';
 
 /**
  * The server: the one place that reads the environment, opens connections and

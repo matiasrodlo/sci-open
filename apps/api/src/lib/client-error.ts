@@ -1,5 +1,5 @@
 import { QueryParseError } from '@open-access-explorer/shared';
-import { PdfProxyError } from './pdf-proxy';
+import { PdfProxyError } from '@open-access-explorer/core';
 
 /**
  * What a client is told when something fails.

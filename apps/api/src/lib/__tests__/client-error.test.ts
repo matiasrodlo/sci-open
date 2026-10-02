@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { AxiosError } from 'axios';
 import { QueryParseError } from '@open-access-explorer/shared';
 import { clientError, lookupErrorStatus } from '../client-error';
-import { OpenAlexUnavailableError } from '../../providers/openalex/fetch';
+import { OpenAlexUnavailableError } from '@open-access-explorer/core';
 
 /**
  * `/api/paper/:id` asks one provider for one record, and answered 500 however
