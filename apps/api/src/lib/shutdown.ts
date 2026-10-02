@@ -20,7 +20,10 @@ export type Resource = {
  *
  * One resource failing to close is logged and does not stop the next; the
  * process is exiting either way, and a Redis that will not answer QUIT is no
- * reason to leave sockets open to ten upstreams.
+ * reason to leave sockets open to ten upstreams. The server failing to close
+ * is no reason either: that rejection used to end the sequence before any
+ * resource was released, and reach the signal handler as an unhandled one.
+ * The promise this returns does not reject.
  *
  * Returns a function that runs the sequence once however many times it is
  * called, so a second signal during a slow drain does not start it again.
@@ -33,7 +36,11 @@ export function gracefulShutdown(
 
   return () => {
     running ??= (async () => {
-      await server.close();
+      try {
+        await server.close();
+      } catch (error) {
+        log.error('Failed to stop the server during shutdown', error);
+      }
       for (const resource of resources) {
         try {
           await resource.close();

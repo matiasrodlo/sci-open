@@ -58,10 +58,12 @@ export function buildApp(options: AppOptions): FastifyInstance {
     trustProxy: config.trustProxy
   });
 
-  fastify.register(cors, {
-    origin: config.production ? false : true,
-    credentials: true
-  });
+  // No cross-origin access, in any environment. A browser never calls this
+  // server: it talks to `apps/web`, which forwards server-side. This reflected
+  // any origin, with credentials, whenever `NODE_ENV` was not `production` —
+  // and `NODE_ENV` is unset too often to be the line between the two (see
+  // `lib/admin-auth.ts`). Registered rather than left out so that is stated.
+  fastify.register(cors, { origin: false });
 
   fastify.register(helmet);
 

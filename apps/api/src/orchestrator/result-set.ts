@@ -114,6 +114,11 @@ export type ResultSetCacheOptions = {
   now?: () => number;
 };
 
+/** A refusal from `admit`, told apart from a failure of the work itself. */
+class Refused {
+  constructor(readonly reason: unknown) {}
+}
+
 /**
  * Resolved sets, held in this process as they are — not serialised, because a
  * set is read on every page of every search and parsing megabytes to show
@@ -152,23 +157,38 @@ export class ResultSetCache {
    * neither held nor being resolved — and may throw to refuse; nothing is
    * resolved then. Joining a resolution already running costs the sources
    * nothing more, so it is not asked.
+   *
+   * It is asked inside the flight. Asked before it, while the answer was
+   * awaited the key was not yet running, so a second caller arriving then was
+   * asked too: both were charged for one resolution, and the second could be
+   * refused for a search already under way. A caller that joined a flight
+   * whose own caller was refused tries again, under its own admission, rather
+   * than sharing a refusal that was not its own.
    */
   async resolve(
     key: string,
     work: () => Promise<ResultSet>,
     admit?: () => Promise<void>
   ): Promise<{ set: ResultSet; cached: boolean }> {
-    const held = this.read(key);
-    if (held) return { set: held, cached: true };
+    for (;;) {
+      const held = this.read(key);
+      if (held) return { set: held, cached: true };
 
-    if (admit && !this.flights.running(key)) await admit();
-
-    const { value, coalesced } = await this.flights.run(key, async () => {
-      const set = await work();
-      if (set.complete || onlyRefused(set.reports)) this.write(key, set);
-      return set;
-    });
-    return { set: value, cached: coalesced };
+      let started = false;
+      try {
+        const { value, coalesced } = await this.flights.run(key, async () => {
+          started = true;
+          if (admit) await admit().catch(reason => { throw new Refused(reason); });
+          const set = await work();
+          if (set.complete || onlyRefused(set.reports)) this.write(key, set);
+          return set;
+        });
+        return { set: value, cached: coalesced };
+      } catch (error) {
+        if (!(error instanceof Refused)) throw error;
+        if (started) throw error.reason;
+      }
+    }
   }
 
   clear(): void {

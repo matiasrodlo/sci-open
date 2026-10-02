@@ -50,10 +50,9 @@ const start = async () => {
     ]);
 
     for (const signal of ['SIGINT', 'SIGTERM'] as const) {
-      process.on(signal, async () => {
+      process.on(signal, () => {
         log.info('Shutting down gracefully', { signal });
-        await stop();
-        process.exit(0);
+        void stop().finally(() => process.exit(0));
       });
     }
 

@@ -33,6 +33,19 @@ describe('lookupErrorStatus', () => {
   it('keeps 500 for a mistake in this service\'s own code', () => {
     expect(lookupErrorStatus(new TypeError("Cannot read properties of undefined (reading 'id')"))).toBe(500);
   });
+
+  it.each([
+    ['an invalid date', () => new Date(NaN).toISOString()],
+    ['a value that will not parse', () => JSON.parse('{')],
+    ['a malformed escape', () => decodeURIComponent('%')]
+  ])('answers 500 for %s in this service\'s own code, not 502', (_case, mistake) => {
+    // Only TypeError and ReferenceError were recognised, so the rest were
+    // reported as the provider's failure.
+    let thrown: unknown;
+    try { mistake(); } catch (error) { thrown = error; }
+    expect(thrown).toBeInstanceOf(Error);
+    expect(lookupErrorStatus(thrown)).toBe(500);
+  });
 });
 
 describe('clientError', () => {

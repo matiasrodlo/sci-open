@@ -82,7 +82,7 @@ describe('ResultSetCache', () => {
     const slow = () => new Promise<ResultSet>(resolve => { finish = resolve; });
 
     const leader = cache.resolve('k', slow, admit);
-    await Promise.resolve();
+    await vi.waitFor(() => expect(finish).toBeDefined());
     // Joining a resolution already running costs the sources nothing more.
     const follower = cache.resolve('k', slow, admit);
     finish(set());
@@ -100,6 +100,56 @@ describe('ResultSetCache', () => {
     await expect(cache.resolve('k', work, async () => { throw new Error('over budget'); })).rejects.toThrow('over budget');
     expect(work).not.toHaveBeenCalled();
     expect((await cache.resolve('k', work)).cached).toBe(false);
+  });
+
+  it('charges one admission when two callers arrive while it is being asked', async () => {
+    // Asked before the flight started, the key was not running while the
+    // answer was awaited, so a second caller then was asked — and charged — too.
+    const cache = new ResultSetCache();
+    let allow!: () => void;
+    const admit = vi.fn(() => new Promise<void>(resolve => { allow = resolve; }));
+    const work = vi.fn(async () => set());
+
+    const first = cache.resolve('k', work, admit);
+    const second = cache.resolve('k', work, admit);
+    allow();
+    const [a, b] = await Promise.all([first, second]);
+
+    expect(admit).toHaveBeenCalledOnce();
+    expect(work).toHaveBeenCalledOnce();
+    expect(a.set).toBe(b.set);
+  });
+
+  it('lets a caller that joined a refused one try under its own admission', async () => {
+    const cache = new ResultSetCache();
+    let refuse!: () => void;
+    const refused = vi.fn(() => new Promise<void>((_, reject) => { refuse = () => reject(new Error('over budget')); }));
+    const allowed = vi.fn(async () => {});
+    const work = vi.fn(async () => set());
+
+    const first = cache.resolve('k', work, refused);
+    const second = cache.resolve('k', work, allowed);
+    refuse();
+
+    await expect(first).rejects.toThrow('over budget');
+    expect((await second).cached).toBe(false);
+    expect(allowed).toHaveBeenCalledOnce();
+    expect(work).toHaveBeenCalledOnce();
+  });
+
+  it('shares a failure of the work itself, rather than trying again', async () => {
+    const cache = new ResultSetCache();
+    let fail!: () => void;
+    const work = vi.fn(() => new Promise<ResultSet>((_, reject) => { fail = () => reject(new Error('upstream')); }));
+
+    const first = cache.resolve('k', work, async () => {});
+    const second = cache.resolve('k', work, async () => {});
+    await new Promise(resolve => setTimeout(resolve, 0));
+    fail();
+
+    await expect(first).rejects.toThrow('upstream');
+    await expect(second).rejects.toThrow('upstream');
+    expect(work).toHaveBeenCalledOnce();
   });
 
   it('does not hold a set a provider failed to contribute to', async () => {

@@ -69,6 +69,9 @@ export function clientErrorStatus(error: unknown): number {
 /** Codes axios and the socket give a request that ran out of time. */
 const TIMEOUT_CODES = new Set(['ECONNABORTED', 'ETIMEDOUT', 'ESOCKETTIMEDOUT']);
 
+/** The error types only JavaScript itself throws. See `lookupErrorStatus`. */
+const OWN_MISTAKES = [TypeError, ReferenceError, RangeError, SyntaxError, URIError, EvalError] as const;
+
 /**
  * The status for a failure while asking a provider for one record.
  *
@@ -78,8 +81,12 @@ const TIMEOUT_CODES = new Set(['ECONNABORTED', 'ETIMEDOUT', 'ESOCKETTIMEDOUT']);
  * status: a 504 or a 502 is worth retrying later, a 500 is worth a bug report.
  *
  * A mistake in this service's own code still reads as one. The providers
- * throw their own `…UnavailableError`s, axios errors or plain `Error`s; a
- * `TypeError` or `ReferenceError` is not something any of them answers with.
+ * throw their own `…UnavailableError`s, axios errors or plain `Error`s; none
+ * of JavaScript's own error types is something any of them answers with.
+ * Only `TypeError` and `ReferenceError` were here, so a `RangeError` from an
+ * invalid date, or a `SyntaxError` from a cached value that would not parse,
+ * was reported as the provider's failure. No provider body is parsed with
+ * `JSON.parse` — axios reads JSON, and `xml2js` throws a plain `Error`.
  */
 export function lookupErrorStatus(error: unknown): number {
   if (error instanceof QueryParseError) return 400;
@@ -87,6 +94,6 @@ export function lookupErrorStatus(error: unknown): number {
   const { code, name } = (error ?? {}) as { code?: unknown; name?: unknown };
   if (name === 'TimeoutError' || (typeof code === 'string' && TIMEOUT_CODES.has(code))) return 504;
 
-  if (error instanceof TypeError || error instanceof ReferenceError) return 500;
+  if (OWN_MISTAKES.some(type => error instanceof type)) return 500;
   return 502;
 }

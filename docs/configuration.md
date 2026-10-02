@@ -393,8 +393,8 @@ API_ORIGIN=https://api.yourdomain.com
   needs the proxy to refuse the same destinations — loopback, private,
   link-local and the other ranges `apps/api/src/lib/pdf-proxy.ts` blocks.
 - **CORS is not a setting, and does not need to be one.** The API sends no
-  cross-origin headers when `NODE_ENV=production`
-  (`origin: false`, `apps/api/src/index.ts`), which is correct for the only
+  cross-origin headers, whatever `NODE_ENV` says
+  (`origin: false`, `apps/api/src/app.ts`), which is correct for the only
   topology this app ships: the browser talks to `apps/web`, and
   `app/api/[...path]/route.ts` forwards to the API server-side, so no
   cross-origin request is ever made. Pointing a browser directly at the API is

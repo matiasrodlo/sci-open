@@ -226,6 +226,29 @@ describe('rate limiting', () => {
   });
 });
 
+describe('cross-origin requests', () => {
+  // A browser never calls the API; `apps/web` forwards to it server-side. It
+  // reflected any origin, with credentials, unless NODE_ENV was `production`.
+  for (const NODE_ENV of ['production', 'development', '']) {
+    it(`grants no origin with NODE_ENV=${JSON.stringify(NODE_ENV)}`, async () => {
+      build({ NODE_ENV });
+      const origin = 'https://elsewhere.example';
+
+      const simple = await app!.inject({ method: 'GET', url: '/health', headers: { origin } });
+      expect(simple.headers['access-control-allow-origin']).toBeUndefined();
+      expect(simple.headers['access-control-allow-credentials']).toBeUndefined();
+
+      const preflight = await app!.inject({
+        method: 'OPTIONS',
+        url: '/api/search',
+        headers: { origin, 'access-control-request-method': 'POST' }
+      });
+      expect(preflight.headers['access-control-allow-origin']).toBeUndefined();
+      expect(preflight.headers['access-control-allow-methods']).toBeUndefined();
+    });
+  }
+});
+
 describe('POST /api/search', () => {
   it('answers from the providers, then from the cache', async () => {
     const { entry, searches } = provider();

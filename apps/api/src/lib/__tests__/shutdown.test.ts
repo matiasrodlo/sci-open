@@ -53,3 +53,20 @@ describe('gracefulShutdown', () => {
     expect(cache).toHaveBeenCalledOnce();
   });
 });
+
+describe('gracefulShutdown — a server that fails to close', () => {
+  it('still releases every resource, and does not reject', async () => {
+    // The rejection used to end the sequence before the resources and reach
+    // the signal handler unhandled, which exited with them still open.
+    const upstream = vi.fn();
+    const cache = vi.fn();
+    const stop = gracefulShutdown({ close: async () => { throw new Error('already closed'); } }, [
+      { name: 'upstream connections', close: upstream },
+      { name: 'cache', close: cache }
+    ]);
+
+    await expect(stop()).resolves.toBeUndefined();
+    expect(upstream).toHaveBeenCalledOnce();
+    expect(cache).toHaveBeenCalledOnce();
+  });
+});
