@@ -14,6 +14,19 @@ declare module 'axios' {
   }
 }
 
+/**
+ * The most of one upstream answer any pooled client will read.
+ *
+ * axios's Node default is no limit at all, so a provider or authority answering
+ * with a runaway body — a misbehaving server, a proxy error page that never
+ * ends — was buffered whole in this process. The largest page any source sends
+ * the fan-out, measured on 2026-10-01, is an OpenAlex page of 200 works at
+ * 9.3 MB; Europe PMC's thousand full records are 7.2 MB and PubMed's efetch of
+ * two hundred 1.6 MB. 64 MB leaves room for an unusually long page and still
+ * bounds what one request can cost.
+ */
+export const MAX_RESPONSE_BYTES = 64 * 1024 * 1024;
+
 export interface HttpPoolConfig {
   keepAliveTimeout?: number;
   maxSockets?: number;
@@ -147,6 +160,9 @@ export class HttpClientFactory {
         'Keep-Alive': `timeout=${config.keepAliveTimeout! / 1000}, max=1000`,
       },
       maxRedirects: 5,
+      // See `MAX_RESPONSE_BYTES`. A body past it fails the request, which the
+      // fan-out reports as that provider's error.
+      maxContentLength: MAX_RESPONSE_BYTES,
       validateStatus: (status) => status < 500, // Don't throw on 4xx errors
     });
 

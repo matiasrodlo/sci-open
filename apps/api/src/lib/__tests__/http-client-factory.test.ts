@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, beforeAll, afterAll } from 'vitest';
 import http from 'http';
 import type { AddressInfo } from 'net';
-import { HttpClientFactory } from '../http-client-factory';
+import { HttpClientFactory, MAX_RESPONSE_BYTES } from '../http-client-factory';
 
 /**
  * There are two key spaces in this factory and they are not the same.
@@ -157,4 +157,47 @@ describe('metrics counting', () => {
     await f.getClient(base, { retryAttempts: 0 }).get('/', { signal: controller.signal }).catch(() => undefined);
     expect(metricsFor(f)).toMatchObject({ totalRequests: 1, aborted: 1, errorRate: 0 });
   });
+});
+
+/**
+ * No upstream answer is read past a fixed size.
+ *
+ * Every pooled client was created without `maxContentLength`, and axios's
+ * Node default is unlimited, so one provider or authority answering with a
+ * runaway body could make the API buffer all of it. The largest page measured
+ * across the fan-out, on 2026-10-01, was an OpenAlex page of 200 works at
+ * 9.3 MB; the cap is several times that.
+ */
+describe('response size', () => {
+  it('caps what a pooled client will read', () => {
+    const client = build().getClient('https://api.example.org', { retryAttempts: 0 });
+    expect(client.defaults.maxContentLength).toBe(MAX_RESPONSE_BYTES);
+    expect(MAX_RESPONSE_BYTES).toBeGreaterThan(5 * 9_305_138);
+  });
+
+  it('refuses a body one byte over the cap rather than buffering it', async () => {
+    const chunk = Buffer.alloc(1024 * 1024, 0x20);
+    const server = http.createServer((_request, response) => {
+      response.writeHead(200, { 'content-type': 'application/json' });
+      let sent = 0;
+      const pump = () => {
+        while (sent <= MAX_RESPONSE_BYTES) {
+          sent += chunk.length;
+          if (!response.write(chunk)) return void response.once('drain', pump);
+        }
+        response.end();
+      };
+      pump();
+    });
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+
+    try {
+      const error = await build().getClient(base, { retryAttempts: 0, timeout: 20000 }).get('/big').catch(e => e);
+      expect(String(error?.message)).toMatch(/maxContentLength/);
+    } finally {
+      server.closeAllConnections();
+      await new Promise(resolve => server.close(resolve));
+    }
+  }, 20000);
 });
