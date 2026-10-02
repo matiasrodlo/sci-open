@@ -1,5 +1,6 @@
 export { createServer, createServerFactory } from './server';
 export type { ServerDeps } from './server';
+export { createHttpHandler } from './http';
 export { AdmissionError, ToolError } from './errors';
 export type { ToolErrorCode } from './errors';
 export { readMcpConfig, defaultMcpConfig } from './config';

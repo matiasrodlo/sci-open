@@ -53,14 +53,13 @@ export function createServer(deps: ServerDeps, request: { toolsets?: string[]; t
  */
 export function createServerFactory(deps: ServerDeps): McpServerFactory {
   const admit = deps.admit ?? tokenBucket(deps.config.maxNewSearchesPerMinute);
-  return ctx => {
-    const url = ctx.requestInfo ? new URL(ctx.requestInfo.url) : undefined;
-    const list = (key: string) => url?.searchParams.get(key)?.split(',').map(s => s.trim()).filter(Boolean);
-    const toolsets = list('toolsets');
-    const tools = list('tools');
-    return createServer({ ...deps, admit }, {
-      ...(toolsets ? { toolsets } : {}),
-      ...(tools ? { tools } : {})
-    });
-  };
+  return ctx => createServer({ ...deps, admit }, ctx.requestInfo ? selectionFrom(new URL(ctx.requestInfo.url)) : {});
+}
+
+/** The toolsets and tools an HTTP request's URL asks for: `?toolsets=core,read&tools=…`. */
+export function selectionFrom(url: URL): { toolsets?: string[]; tools?: string[] } {
+  const list = (key: string) => url.searchParams.get(key)?.split(',').map(s => s.trim()).filter(Boolean);
+  const toolsets = list('toolsets');
+  const tools = list('tools');
+  return { ...(toolsets ? { toolsets } : {}), ...(tools ? { tools } : {}) };
 }
