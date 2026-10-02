@@ -85,8 +85,11 @@ export async function citationLinks(
   const client = getPooledClient(options.baseUrl ?? DEFAULT_BASE_URL, getServiceConfig('opencitations'));
   const path = `/${direction === 'references' ? 'references' : 'citations'}/doi:${encodeURIComponent(doi)}`;
   const response = await client.get<unknown>(path, {
-    // A much-cited paper's list is every citing work at once.
-    timeout: options.timeoutMs ?? 20_000,
+    // A much-cited paper's list is every citing work at once: measured
+    // 2026-10-02, the 24,956 citers of 10.48550/arXiv.1706.03762 came back as
+    // 8.5 MB in 15.8 s. Forty seconds, and OpenAlex's fifteen after it for the
+    // records, stay under the web tier's seventy for an MCP call.
+    timeout: options.timeoutMs ?? 40_000,
     headers: {
       Accept: 'application/json',
       'User-Agent': options.userAgent,
