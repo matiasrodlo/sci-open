@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { mkdtempSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
@@ -159,11 +159,15 @@ describe('read_paper save_to', () => {
     expect(text).toBe(`Saved 4 sections (${Buffer.byteLength(file)} bytes) to ${path.join(dir, 'study.md')}.`);
   });
 
-  it('refuses over HTTP whatever the configuration says', async () => {
+  it('refuses over HTTP whatever the configuration says, before fetching anything', async () => {
     const fake = fakeEngine([STUDY], { documents: { 'europepmc:1': DOC } });
+    const readFullText = vi.spyOn(fake.engine, 'readFullText');
+    const lookup = vi.spyOn(fake.engine, 'lookup');
     const deps = { ...fake.deps, transport: 'http' as const, config: { ...fake.deps.config, allowWrites: true } };
     await expect(readPaper.run(readPaper.input.parse({ paper: 'europepmc:1', save_to: path.join(dir, 'http') }), deps))
       .rejects.toMatchObject({ code: 'writes_disabled' });
+    expect(lookup).not.toHaveBeenCalled();
+    expect(readFullText).not.toHaveBeenCalled();
   });
 
   it('refuses when writes are turned off', async () => {

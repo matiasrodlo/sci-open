@@ -49,6 +49,14 @@ export const readPaper = defineTool({
     saved: z.object({ path: z.string(), bytes: z.number().int(), sha256: z.string() }).optional()
   }),
   async run(args, deps) {
+    // Never over HTTP, whatever the configuration says: the path is on the
+    // caller's machine, and this process is not. Checked before anything is
+    // fetched, like the arguments below: a refusal certain from the start
+    // must not spend a lookup, a download or a paced host's slot first.
+    const writable = deps.transport === 'stdio' && deps.config.allowWrites;
+    if (args.save_to !== undefined && !writable) {
+      throw new ToolError('writes_disabled', 'This server is not allowed to write files.', 'Omit save_to to receive the content inline.');
+    }
     // Checked before anything is fetched: a missing argument costs nothing.
     if (args.save_to === undefined && args.view === 'section' && !args.section) {
       throw new ToolError('invalid_input', 'view="section" needs a section id.', 'Take one from view="outline", e.g. s2.1.');
@@ -68,9 +76,7 @@ export const readPaper = defineTool({
 
     if (args.save_to !== undefined) {
       const markdown = documentToMarkdown(doc);
-      // Never over HTTP, whatever the configuration says.
-      const allowed = deps.transport === 'stdio' && deps.config.allowWrites;
-      const path = await writeUserFile({ allowed }, args.save_to, '.md', markdown, args.overwrite);
+      const path = await writeUserFile({ allowed: writable }, args.save_to, '.md', markdown, args.overwrite);
       const saved = { path, bytes: Buffer.byteLength(markdown), sha256: createHash('sha256').update(markdown).digest('hex') };
       return { structured: { ...base, saved }, text: `Saved ${doc.sections.length} sections (${saved.bytes} bytes) to ${path}.`, provenance };
     }
