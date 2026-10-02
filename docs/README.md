@@ -33,6 +33,8 @@ Visit `http://localhost:3000`
 - [API Reference](./api.md) - Endpoints and data models
 - [Development](./development.md) - Setup and development guide
 - [Configuration](./configuration.md) - Environment variables and settings
+- [MCP server](../packages/mcp/README.md) - Install and use sci-open from Claude and other MCP clients
+- [MCP implementation manual](./mcp-implementation-manual.md) - How the MCP server is designed and built, step by step
 
 ## Features
 
@@ -59,7 +61,11 @@ sci-open/
 │   ├── web/          # Next.js frontend
 │   └── api/          # Fastify API server
 ├── packages/
-│   └── shared/       # Shared types
+│   ├── shared/       # Shared types
+│   ├── core/         # The search engine: providers, authorities, orchestrator
+│   ├── mcp/          # The MCP server and the sci-open command line
+│   └── mcp-evals/    # Evaluations of the MCP server
+├── plugin/           # Claude Code plugin: the MCP server and two skills
 └── docs/             # Documentation
 ```
 

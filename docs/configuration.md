@@ -325,8 +325,86 @@ The gate fails closed. With no key configured every one of those routes returns
 startup. This is deliberate: an ungated operator route should not depend on
 nothing else standing in front of it. They are not forwarded by `apps/web`
 either, which forwards search and paper details in both versions
-(`/api/search`, `/api/paper/:id` and their `/api/v2/` twins) and
-`/api/papers/:id/pdf`, and nothing else.
+(`/api/search`, `/api/paper/:id` and their `/api/v2/` twins),
+`/api/papers/:id/pdf` and `/api/mcp`, and nothing else.
+
+### MCP endpoint
+
+```env
+MCP_HTTP_ENABLED=false
+MCP_ALLOW_UNKEYED=false
+MCP_ALLOWED_ORIGINS=
+MCP_SEARCH_DEPTH=300
+```
+
+`MCP_HTTP_ENABLED=true` mounts the MCP server (`packages/mcp`) on the API at
+`/api/mcp`, for agents — see the [API reference](./api.md#mcp). Anything but
+`true` or `false` warns and leaves it off.
+
+**It needs `OPENALEX_API_KEY`.** An agent runs a dozen variants of a query
+where a person runs one, every variant is a fan-out to ten sources, and
+OpenAlex meters each request against a daily budget — a tenth of a key's for
+an anonymous caller, shared by this whole process: every MCP client and the
+web UI. With the endpoint enabled and no key, the API logs an error and does
+not mount it; a warning would be read after the budget was gone.
+`MCP_ALLOW_UNKEYED=true` mounts it anyway, for a local trial and never a
+shared deployment.
+
+`MCP_ALLOWED_ORIGINS` is a comma-separated list of hostnames a browser page
+may call the endpoint from, such as `app.example.org`. Empty, the default,
+refuses every request that carries an `Origin` header with `403` — the
+defence against DNS rebinding and against a page elsewhere driving the
+endpoint from a visitor's browser. MCP clients that are not browsers send no
+`Origin` and always pass.
+
+`MCP_SEARCH_DEPTH` is `SEARCH_DEPTH` for MCP searches: 300 by default, half
+the web UI's 600, capped at 2000, for the same reason the key is required.
+OpenAlex serves 200 records a page and DOAJ and OpenAIRE 100, so a search
+costs them 2, 3 and 3 requests rather than 3, 6 and 6. MCP searches share the
+API's caches, but a result set is held under its depth, so at a value other
+than `SEARCH_DEPTH` the web UI and MCP clients do not answer each other's
+searches from memory.
+
+What an MCP client may spend is the API's own limits: a bucket of 60 requests
+a minute on the route, and `RATE_LIMIT_NEW_SEARCH_MAX` for the calls that
+resolve a new result set, shared with the same visitor's searches from the web
+UI. Both key on `request.ip`, so `TRUST_PROXY` matters here as it does there —
+which is why the public URL is the web app's `/api/mcp` rather than a route
+from a proxy straight to the API. A proxy in front of the web tier has to pass
+a streamed response on as it arrives (a call that asks for progress is an SSE
+stream) and wait at least 70 seconds for an answer, the web tier's own budget
+for this route: a `verify_references` batch can take a minute.
+
+The server's other settings over HTTP are its defaults, listed below, with
+`save_to` always refused.
+
+## MCP server (stdio)
+
+`sci-open-mcp`, the MCP server run as a local command (`npx -y sci-open-mcp`),
+and the `sci-open` command line read their own settings, not the API's: a
+flag where there is one, then the environment. `sci-open-mcp --help` prints
+the list, and Appendix A of the
+[implementation manual](./mcp-implementation-manual.md#a-configuration) is
+the reference copy.
+
+| Variable | Flag | Default | Meaning |
+|---|---|---|---|
+| `UNPAYWALL_EMAIL` | | unset (warns) | Contact sent to Unpaywall and OpenAlex in the `User-Agent` |
+| `OPENALEX_API_KEY`, `CORE_API_KEY`, `NCBI_API_KEY`, `DOAJ_API_KEY`, `DATACITE_API_KEY` | | unset | Optional provider keys, as for the API |
+| `SCI_OPEN_TOOLSETS` | `--toolsets` | `core,read` | `core`, `read`, `graph`, `export`, `all` or `default` |
+| `SCI_OPEN_TOOLS` | `--tools` | unset | Extra tools by name |
+| `SCI_OPEN_ALLOW_WRITES` | `--no-writes` | `1` | Whether `save_to` may write a file |
+| `SCI_OPEN_TRUSTED_FULLTEXT_ONLY` | `--trusted-fulltext-only` | `0` | Full text from Europe PMC and arXiv only |
+| `SCI_OPEN_TEXT_BUDGET_CHARS` | | `40000` | Largest text answer |
+| `SCI_OPEN_STRUCTURED_BUDGET_CHARS` | | `80000` | Largest structured answer |
+| `SCI_OPEN_MAX_NEW_SEARCHES_PER_MIN` | | `30` | New result sets, DOI lookups and counts a minute |
+| `SEARCH_DEPTH` | | `300` | Records read per source, at most 2000 — not the API's 600 |
+| `SCI_OPEN_LOG_LEVEL` | `--log-level` | `warn` | `error`, `warn`, `info` or `debug`, to stderr |
+| `SCI_OPEN_ENGINE` | `--engine` | `live` | `fixture` serves recorded answers, offline |
+| `SCI_OPEN_FIXTURES` | `--fixtures` | `packages/mcp/fixtures/engine.json` | The recordings `--engine fixture` reads |
+
+stdout belongs to the protocol, so logs go to stderr, and nothing above
+`debug` holds a query or a reference.
 
 ## Docker Compose
 

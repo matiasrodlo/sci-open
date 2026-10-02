@@ -16,7 +16,18 @@ block with a hash of the query and of the result.
 Set `UNPAYWALL_EMAIL` to a real address. The server starts without it, but
 Unpaywall refuses anonymous requests and OpenAlex meters them more tightly.
 
-**Claude Code**
+**Claude Code**, as a plugin: the server and two skills that carry the
+method — `verify-bibliography` checks a reference list and reports what is
+fabricated, garbled or mismatched; `systematic-search` builds a query from a
+research question, tunes it by counts and keeps a search log fit for a
+methods section.
+
+```
+/plugin marketplace add matiasrodlo/sci-open
+/plugin install sci-open@sci-open
+```
+
+Or the server alone:
 
 ```bash
 claude mcp add sci-open --env UNPAYWALL_EMAIL=you@example.org -- npx -y sci-open-mcp
@@ -35,6 +46,13 @@ and other clients that start a server as a command take the same block:
     }
   }
 }
+```
+
+**Over HTTP**, from a sci-open deployment that serves it (see
+[Hosting the HTTP endpoint](#hosting-the-http-endpoint)):
+
+```bash
+claude mcp add --transport http sci-open https://<host>/api/mcp
 ```
 
 **From this repository**
@@ -131,6 +149,23 @@ sci-open read 10.1371/journal.pone.0000217                 # the outline
 sci-open read 10.1371/journal.pone.0000217 --section s2.4  # one section
 sci-open read 10.1371/journal.pone.0000217 --find "fitness"
 ```
+
+## Hosting the HTTP endpoint
+
+The sci-open API serves the same server at `/api/mcp`, over Streamable HTTP,
+when `MCP_HTTP_ENABLED=true` — and only with `OPENALEX_API_KEY` set, since
+every MCP client and the web app would otherwise share OpenAlex's anonymous
+budget. It is stateless and serves 2026-07-28 and 2025-era clients from one
+set of tools; `?toolsets=` and `?tools=` choose them. Each visitor has the
+web app's new-search budget, `save_to` is refused, and a browser may call it
+only from `MCP_ALLOWED_ORIGINS`. The public URL is the web app's
+`https://<host>/api/mcp`, which passes the visitor's address on to the API's
+rate limit.
+
+[docs/api.md](../../docs/api.md#mcp) describes the endpoint and
+[docs/configuration.md](../../docs/configuration.md#mcp-endpoint) its four
+settings. To serve it from another host, `createHttpHandler` returns the same
+server as a web-standard `fetch` handler.
 
 ## Evaluations
 

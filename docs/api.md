@@ -344,6 +344,68 @@ discarded it, under a rate-limit bucket separate from the download's.
 
 ---
 
+### MCP
+
+**POST** `/api/mcp`
+
+The MCP server in `packages/mcp`, over Streamable HTTP, for agents: the same
+tools, in the same toolsets, as the `sci-open-mcp` command speaks over stdio.
+Its README lists them. The public URL is `https://<host>/api/mcp`, through the
+web app like every other route here.
+
+**Off unless `MCP_HTTP_ENABLED=true`**, and then only with `OPENALEX_API_KEY`
+set — or `MCP_ALLOW_UNKEYED=true`, for a local trial. Otherwise the route is
+not mounted (`404`) and the API logs an error at startup saying why. See
+[Configuration](./configuration.md#mcp-endpoint).
+
+- **Stateless.** Every request is answered on its own, so any instance can
+  answer any request; a search handle carries its search with it. 2026-07-28
+  clients (`server/discover`) and 2025-era clients (`initialize`) are served
+  from the same tools. `GET` and `DELETE`, the 2025 session operations, answer
+  `405`.
+- **Responses.** A 2026-07-28 request is answered as one JSON body, unless it
+  is a `tools/call` carrying a `progressToken`: that one is upgraded to an SSE
+  stream, with a progress event as each source answers and the result last. A
+  2025-era request is answered as an SSE stream of one event. Send
+  `Accept: application/json, text/event-stream`.
+- **Tools.** `?toolsets=core,read` and `?tools=…` choose them, as `--toolsets`
+  and `--tools` do on stdio. An unknown name answers `400` with the valid ones.
+- **Limits.** The route has its own bucket of 60 requests a minute per
+  client. A tool call that resolves a new result set — a search, a DOI lookup,
+  a count, a page of a set no longer held — also spends the caller's
+  `RATE_LIMIT_NEW_SEARCH_MAX`, the same budget `POST /api/search` spends, so a
+  visitor has one allowance whichever way they search. Past it the call
+  answers a `rate_limited` tool error with the seconds to wait, not an HTTP
+  `429`; pages of a held search never spend it.
+- **Origin.** A request carrying an `Origin` header — a browser — is refused
+  with `403` unless its hostname is in `MCP_ALLOWED_ORIGINS`. MCP clients
+  that are not browsers send none and are not affected.
+- **No writes.** `save_to` answers `writes_disabled`: the path it names is on
+  the caller's machine.
+
+The 2026-07-28 revision checks a request's headers against its body, so a
+discovery probe by hand needs both:
+
+```bash
+curl -s localhost:4000/api/mcp \
+  -H 'content-type: application/json' \
+  -H 'accept: application/json, text/event-stream' \
+  -H 'mcp-protocol-version: 2026-07-28' \
+  -H 'mcp-method: server/discover' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{"_meta":{
+        "io.modelcontextprotocol/protocolVersion":"2026-07-28",
+        "io.modelcontextprotocol/clientCapabilities":{},
+        "io.modelcontextprotocol/clientInfo":{"name":"curl","version":"0"}}}}'
+```
+
+It answers the supported versions, the capabilities and the server's
+instructions. For anything more, use a client:
+`claude mcp add --transport http sci-open https://<host>/api/mcp`, or the
+Inspector (`npx @modelcontextprotocol/inspector`) with transport
+Streamable HTTP.
+
+---
+
 ### Health Check
 
 **GET** `/health`
@@ -410,6 +472,15 @@ per result set resolved, not once per page served from a held set.
 **GET** `/api/performance/report`
 
 A rendered summary of the HTTP metrics.
+
+**GET** `/api/performance/mcp`
+
+Per MCP tool: calls, failures by error code, total and longest time, the
+characters of text returned, and how many calls resolved a new result set
+rather than reading a held one. No query or reference is recorded. The counts
+cover the current window: every ten minutes the API logs them and starts a
+new one, and `since` says when this one began. Served only while
+[`/api/mcp`](#mcp) is mounted.
 
 ---
 
