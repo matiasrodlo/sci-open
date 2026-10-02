@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "sci-open": {
+      "command": "npx",
+      "args": ["-y", "sci-open-mcp@0.3.0"],
+      "env": { "UNPAYWALL_EMAIL": "${UNPAYWALL_EMAIL:-}" }
+    }
+  }
+}

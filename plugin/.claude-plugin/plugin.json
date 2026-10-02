@@ -1,0 +1,10 @@
+{
+  "name": "sci-open",
+  "version": "0.3.0",
+  "description": "Search, verify and read open-access literature: the sci-open MCP server and two research skills.",
+  "author": { "name": "Matías Rodlo" },
+  "homepage": "https://github.com/matiasrodlo/sci-open",
+  "repository": "https://github.com/matiasrodlo/sci-open",
+  "license": "MIT",
+  "keywords": ["research", "literature", "open-access", "citations", "mcp"]
+}

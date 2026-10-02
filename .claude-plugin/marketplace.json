@@ -1,0 +1,14 @@
+{
+  "name": "sci-open",
+  "owner": { "name": "Matías Rodlo" },
+  "metadata": {
+    "description": "sci-open's Claude Code plugin: open-access literature search, reference verification and full-text reading."
+  },
+  "plugins": [
+    {
+      "name": "sci-open",
+      "source": "./plugin",
+      "description": "Search, verify and read open-access literature: the sci-open MCP server and two research skills."
+    }
+  ]
+}
