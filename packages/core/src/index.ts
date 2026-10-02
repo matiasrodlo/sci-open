@@ -30,4 +30,7 @@ export { jatsToSections } from './fulltext/jats';
 export { arxivHtmlToSections } from './fulltext/html';
 export type { FullTextDocument, FullTextTier, Section as FullTextSection } from './fulltext/types';
 export { createEngine } from './engine';
-export type { Engine, EngineOptions, EngineCaches, SearchOutcome, SearchCallOptions } from './engine';
+export type { Engine, EngineOptions, EngineCaches, SearchOutcome, SearchCallOptions, DoiResolution } from './engine';
+export { citationLinks, OpenCitationsUnavailableError, idsIn } from './graph/opencitations';
+export type { CitationLink, CitationDirection } from './graph/opencitations';
+export { fetchWorksByDoi, WORKS_BY_DOI_MAX } from './providers/openalex/fetch';

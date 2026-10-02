@@ -1,5 +1,5 @@
 import type { Paper, SearchParams, SearchResponseV2 } from '@open-access-explorer/shared';
-import { parseQuery, UpstreamStats, type Engine, type FullTextDocument } from '@open-access-explorer/core';
+import { parseQuery, UpstreamStats, type CitationLink, type DoiResolution, type Engine, type FullTextDocument } from '@open-access-explorer/core';
 import { defaultMcpConfig } from '../src/config';
 import { nullMetrics } from '../src/metrics';
 import type { ToolDeps } from '../src/framework/define-tool';
@@ -18,6 +18,11 @@ export type FakeOptions = {
   admissions?: number;
   /** Full texts by paper id; a function to answer, or throw, per read. */
   documents?: Record<string, FullTextDocument> | ((paperId: string, trustedOnly: boolean) => Promise<FullTextDocument | null>);
+  /** Citation links by `references|<doi>` or `cited_by|<doi>`; a function to answer, or throw. */
+  citations?: Record<string, CitationLink[]> | ((doi: string, direction: 'references' | 'cited_by') => Promise<CitationLink[]>);
+  /** OpenAlex's records for `resolveDois`. Defaults to every paper with a DOI;
+   * a function to answer, or to leave DOIs unasked. */
+  openalex?: (dois: readonly string[]) => Promise<DoiResolution>;
 };
 
 export type Fake = { engine: Engine; deps: ToolDeps; searches: string[]; admitted: () => number };
@@ -80,6 +85,20 @@ export function fakeEngine(papers: readonly Paper[], options: FakeOptions = {}):
       const { documents } = options;
       if (typeof documents === 'function') return documents(paper.id, trustedOnly);
       return documents?.[paper.id] ?? null;
+    },
+    async citationLinks(doi, direction) {
+      const { citations } = options;
+      if (typeof citations === 'function') return citations(doi, direction);
+      return citations?.[`${direction}|${doi.toLowerCase()}`] ?? [];
+    },
+    async resolveDois(dois) {
+      if (options.openalex) return options.openalex(dois);
+      const found = new Map<string, Paper>();
+      for (const doi of dois) {
+        const paper = papers.find(p => p.doi?.toLowerCase() === doi.toLowerCase());
+        if (paper) found.set(doi.toLowerCase(), paper);
+      }
+      return { found, unasked: [] };
     }
   };
 

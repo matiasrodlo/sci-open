@@ -1,0 +1,61 @@
+{
+  "_note": "Recorded 2026-10-02 from api.opencitations.net/index/v2 for doi:10.7717/peerj-cs.421: every citation, and the first three references.",
+  "citations": [
+    {
+      "oci": "060264249-06101801781",
+      "citing": "omid:br/060264249 doi:10.48366/r109904 openalex:W6910306851",
+      "cited": "omid:br/06101801781 doi:10.7717/peerj-cs.421 openalex:W3134956838 pmid:33817056",
+      "creation": "2021",
+      "timespan": "P0Y",
+      "journal_sc": "no",
+      "author_sc": "yes"
+    },
+    {
+      "oci": "06103952512-06101801781",
+      "citing": "omid:br/06103952512 doi:10.1177/09610006211036734 openalex:W3189909973",
+      "cited": "omid:br/06101801781 doi:10.7717/peerj-cs.421 openalex:W3134956838 pmid:33817056",
+      "creation": "2021-08-04",
+      "timespan": "P0Y4M25D",
+      "journal_sc": "no",
+      "author_sc": "no"
+    },
+    {
+      "oci": "06404435594-06101801781",
+      "citing": "omid:br/06404435594 doi:10.1063/5.0110347 openalex:W4322579315",
+      "cited": "omid:br/06101801781 doi:10.7717/peerj-cs.421 openalex:W3134956838 pmid:33817056",
+      "creation": "2023",
+      "timespan": "P1Y",
+      "journal_sc": "no",
+      "author_sc": "no"
+    }
+  ],
+  "references": [
+    {
+      "oci": "06101801781-06101802023",
+      "citing": "omid:br/06101801781 doi:10.7717/peerj-cs.421 openalex:W3134956838 pmid:33817056",
+      "cited": "omid:br/06101802023 pmid:33816816 doi:10.7287/peerj.preprints.26727v1 doi:10.7717/peerj-cs.163",
+      "creation": "2021-03-10",
+      "timespan": "P2Y5M21D",
+      "journal_sc": "yes",
+      "author_sc": "no"
+    },
+    {
+      "oci": "06101801781-061202127742",
+      "citing": "omid:br/06101801781 doi:10.7717/peerj-cs.421 openalex:W3134956838 pmid:33817056",
+      "cited": "omid:br/061202127742 doi:10.1007/s11192-020-03792-z openalex:W4236101832",
+      "creation": "2021-03-10",
+      "timespan": "P0Y3M6D",
+      "journal_sc": "no",
+      "author_sc": "no"
+    },
+    {
+      "oci": "06101801781-061202127823",
+      "citing": "omid:br/06101801781 doi:10.7717/peerj-cs.421 openalex:W3134956838 pmid:33817056",
+      "cited": "omid:br/061202127823 pmid:32981987 openalex:W3101883599 doi:10.1007/s11192-020-03690-4",
+      "creation": "2021-03-10",
+      "timespan": "P0Y5M17D",
+      "journal_sc": "no",
+      "author_sc": "no"
+    }
+  ]
+}

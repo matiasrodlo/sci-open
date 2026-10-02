@@ -38,6 +38,12 @@ export class QuotaState {
     return out;
   }
 
+  /** A refusal seen outside a fan-out — a batch lookup by DOI — starts the
+   * same cool-down a refused search would. */
+  refuse(provider: ProviderId): void {
+    this.until.set(provider, this.now() + this.coolDownMs);
+  }
+
   /** What a fan-out learned. Only a refusal starts a cool-down; a report of one
    * already running does not extend it. */
   note(reports: readonly ProviderReport[]): void {

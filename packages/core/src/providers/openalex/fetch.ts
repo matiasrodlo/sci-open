@@ -192,6 +192,27 @@ export async function fetchPage(
   return response.data;
 }
 
+/** How many DOIs `fetchWorksByDoi` takes: one page of OpenAlex's largest but one. */
+export const WORKS_BY_DOI_MAX = 50;
+
+/**
+ * Up to fifty works by DOI, in one request: `filter=doi:a|b|…`.
+ *
+ * What lets a list of DOIs — a page of citation links, a list to export —
+ * resolve to records without a search each. One list query, billed as one,
+ * where a search per DOI would be a fan-out per DOI. OpenAlex reads `|` as OR
+ * within a filter and `,` between filters, so a DOI holding either cannot be
+ * listed; the caller leaves those out.
+ */
+export async function fetchWorksByDoi(
+  dois: readonly string[],
+  options: Omit<FetchOptions, 'pageSize' | 'offset'>
+): Promise<OpenAlexPayload> {
+  if (dois.length > WORKS_BY_DOI_MAX) throw new RangeError(`fetchWorksByDoi takes at most ${WORKS_BY_DOI_MAX} DOIs`);
+  if (dois.some(doi => /[|,]/.test(doi))) throw new RangeError('A DOI holding | or , cannot be listed in an OpenAlex filter');
+  return fetchPage({ filter: `doi:${dois.join('|')}` }, { ...options, pageSize: WORKS_BY_DOI_MAX, offset: 0 });
+}
+
 export type WorkFetchOptions = {
   baseUrl?: string;
   apiKey?: string;

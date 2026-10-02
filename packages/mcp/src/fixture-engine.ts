@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
 import type { Paper, SearchParams, SearchResponseV2 } from '@open-access-explorer/shared';
-import { UpstreamStats, type Engine, type FullTextDocument } from '@open-access-explorer/core';
+import { UpstreamStats, type CitationLink, type Engine, type FullTextDocument } from '@open-access-explorer/core';
 
 /**
  * Recorded answers in place of the sources: how the protocol tests, the
@@ -17,7 +17,14 @@ export type Fixtures = {
   registeredDois?: string[];
   /** Full texts, by paper id. A paper without one has no legal copy. */
   documents?: Record<string, FullTextDocument>;
+  /** OpenCitations links, by `references|<doi>` or `cited_by|<doi>`, the DOI
+   * lower-cased. A paper without an entry has no links. */
+  citations?: Record<string, CitationLink[]>;
 };
+
+/** The key a list of citation links is recorded and found under. */
+export const citationKey = (doi: string, direction: 'references' | 'cited_by'): string =>
+  `${direction}|${doi.toLowerCase().replace(/^https?:\/\/(dx\.)?doi\.org\//, '')}`;
 
 /** The key a search is recorded and found under. Filters, sort and page size
  * are left out on purpose: the set stays small, and what the evals score is
@@ -72,6 +79,18 @@ export function fixtureEngine(fixtures: Fixtures, options: { strict?: boolean } 
     },
     async readFullText(paper) {
       return fixtures.documents?.[paper.id] ?? null;
+    },
+    async citationLinks(doi, direction) {
+      return fixtures.citations?.[citationKey(doi, direction)] ?? [];
+    },
+    // Every recorded paper stands in for OpenAlex's record of its DOI.
+    async resolveDois(dois) {
+      const found = new Map<string, Paper>();
+      for (const doi of dois) {
+        const paper = byDoi(doi.replace(/^https?:\/\/(dx\.)?doi\.org\//i, ''));
+        if (paper) found.set(paper.doi!.toLowerCase(), paper);
+      }
+      return { found, unasked: [] };
     }
   };
 }
