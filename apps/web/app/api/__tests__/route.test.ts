@@ -202,6 +202,36 @@ describe('which headers travel', () => {
     // Everything else survives: the API's own diagnostics reach the browser.
     expect(response.headers.get('x-cache-hit')).toBe('true');
   });
+
+  it('carries what an MCP request is read by, and streams its progress back', async () => {
+    // The 2026-07-28 revision checks headers against the body and refuses a
+    // mismatch, and the API refuses a browser Origin it was not told to allow.
+    const progress = 'event: message\ndata: {"method":"notifications/progress"}\n\n';
+    fetchMock.mockResolvedValue(new Response(new Blob([progress]).stream(), { headers: { 'content-type': 'text/event-stream' } }));
+
+    const response = await POST(
+      request('http://localhost:3000/api/mcp?toolsets=core', {
+        method: 'POST',
+        body: '{}',
+        headers: {
+          accept: 'application/json, text/event-stream',
+          'content-type': 'application/json',
+          'mcp-protocol-version': '2026-07-28',
+          'mcp-method': 'tools/call',
+          origin: 'https://evil.example'
+        }
+      }),
+      context('mcp')
+    );
+
+    expect(called().target).toBe(`${ORIGIN}/api/mcp?toolsets=core`);
+    for (const header of ['accept', 'content-type', 'mcp-protocol-version', 'mcp-method', 'origin']) {
+      expect(sentHeaders().get(header), header).not.toBeNull();
+    }
+    expect(response.headers.get('content-type')).toBe('text/event-stream');
+    expect(response.body).toBeInstanceOf(ReadableStream);
+    expect(await response.text()).toBe(progress);
+  });
 });
 
 describe('methods and bodies', () => {
@@ -331,6 +361,32 @@ describe('how long the API is given to answer', () => {
     }
   });
 
+  it('gives an MCP call longer than a search, and still less than the edge', async () => {
+    // A verify_references batch can take a minute; the edge waits 75 seconds.
+    vi.useFakeTimers();
+    fetchMock.mockImplementation(
+      (_target: string, init: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init.signal!.addEventListener('abort', () =>
+            reject(new DOMException('The operation was aborted.', 'AbortError'))
+          );
+        })
+    );
+
+    let settled = false;
+    const pending = POST(
+      request('http://localhost:3000/api/mcp', { method: 'POST', body: '{}' }),
+      context('mcp')
+    ).finally(() => { settled = true; });
+
+    await vi.advanceTimersByTimeAsync(69000);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1000);
+    const response = await pending;
+    expect(response.status).toBe(504);
+    expect((await response.json()).detail).toBe('no response within 70000ms');
+  });
+
   it('does not time out an answer that arrives inside the budget', async () => {
     vi.useFakeTimers();
     fetchMock.mockImplementation(
@@ -368,7 +424,8 @@ describe('which routes are reachable', () => {
     [['paper', 'plos:10.1371/journal.pone.0265114']],
     [['papers', 'arxiv:2310.12345', 'pdf']],
     [['v2', 'search']],
-    [['v2', 'paper', 'arxiv:2310.12345']]
+    [['v2', 'paper', 'arxiv:2310.12345']],
+    [['mcp']]
   ])('forwards %j', async path => {
     await POST(request('http://localhost:3000/api/x', { method: 'POST', body: '{}' }), context(...path));
     expect(fetchMock).toHaveBeenCalledOnce();
@@ -388,7 +445,9 @@ describe('which routes are reachable', () => {
     [['v2', 'paper', 'a', 'b']],
     [['v2', 'papers', 'x', 'pdf']],
     [['v2', 'v2', 'search']],
-    [['v2', 'cache', 'clear']]
+    [['v2', 'cache', 'clear']],
+    [['mcp', 'x']],
+    [['v2', 'mcp']]
   ])('refuses %j without asking the API', async path => {
     const response = await POST(request('http://localhost:3000/api/x', { method: 'POST', body: '{}' }), context(...path));
     expect(response.status).toBe(404);

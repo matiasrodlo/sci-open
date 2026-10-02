@@ -116,6 +116,12 @@ function isPublic(path: readonly string[]): boolean {
       return rest.length === 2 && rest[1] === 'pdf';
     case 'v2':
       return isPublic(rest) && (rest[0] === 'search' || rest[0] === 'paper');
+    // The MCP server, for agents rather than browsers — but forwarded here
+    // rather than routed by a proxy straight to the API, because this tier is
+    // the hop the API trusts to name the visitor. Routed around it, every MCP
+    // client would share that proxy's rate-limit bucket.
+    case 'mcp':
+      return rest.length === 0;
     default:
       return false;
   }
@@ -146,7 +152,18 @@ function isPublic(path: readonly string[]): boolean {
  */
 const UPSTREAM_TIMEOUT_MS = 30000;
 
+/**
+ * An MCP call can outlast a search: `verify_references` checks up to
+ * twenty-five references, three at a time, and a batch can take a minute.
+ * A proxy in front of this tier has to wait longer than this for an answer
+ * — nginx waits sixty seconds unless told otherwise — or it gives up first.
+ * A call that sends progress has its headers back within the first source's
+ * answer, and the stream after them is not timed here.
+ */
+const MCP_TIMEOUT_MS = 70000;
+
 function budgetFor(path: readonly string[]): number {
+  if (path[0] === 'mcp') return MCP_TIMEOUT_MS;
   const route = path[0] === 'v2' ? path[1] : path[0];
   return route === 'search' ? SEARCH_TIMEOUT_MS : UPSTREAM_TIMEOUT_MS;
 }
