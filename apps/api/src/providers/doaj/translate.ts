@@ -1,5 +1,5 @@
 import type { Query, QueryField } from '@open-access-explorer/shared';
-import { cannotSend, flatTerms, nameAsWords, renderExpression, type Dialect } from '../render-query';
+import { cannotSend, flatTerms, joinFlat, nameAsWords, renderExpression, type Dialect } from '../render-query';
 
 /**
  * Query -> the DOAJ article search string. Pure, and the only place that knows
@@ -110,16 +110,8 @@ function flatClauses(query: Query): string[] {
   const terms = kept.map(anyField);
   const phrases = query.phrases.filter(p => p.trim()).map(p => anyField(quoted(p)));
 
-  if (terms.length > 0) {
-    const joined = terms.join(` ${query.join} `);
-    // Parenthesised so an OR join cannot swallow the clauses beside it. The
-    // old connector emitted `title:x OR abstract:x OR keywords:x AND (years)`
-    // unbracketed, where the AND binds to the last clause alone.
-    clauses.push(terms.length > 1 ? `(${joined})` : joined);
-  }
-
-  // Phrases are always required, whatever `join` says about the bare terms.
-  clauses.push(...phrases);
+  // Grouped, and under an OR the phrases are alternatives too. See `joinFlat`.
+  clauses.push(...joinFlat(terms, phrases, query.join));
 
   return clauses;
 }

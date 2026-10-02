@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseExpression, type QueryField } from '@open-access-explorer/shared';
-import { cannotSend, dropsForGood, flatStatesWhole, flatTerms, nameAsWords, renderExpression, type Dialect } from '../render-query';
+import { cannotSend, dropsForGood, flatStatesWhole, flatTerms, joinFlat, nameAsWords, renderExpression, type Dialect } from '../render-query';
 
 /**
  * The walk that turns a parsed query into one provider's syntax, and the one
@@ -258,5 +258,18 @@ describe('a provider with no wider index to ask', () => {
     const narrow = dialect({ unscoped: () => undefined });
     // `PU=` has no field here, and searching the name as words would be narrower.
     expect(renderExpression(parseExpression('TS=crispr AND PU=Elsevier'), narrow)).toBe('(TI:crispr OR AB:crispr)');
+  });
+});
+
+describe('joinFlat', () => {
+  it('makes every term and phrase an alternative under OR', () => {
+    expect(joinFlat(['A', 'B'], ['"c d"'], 'OR')).toEqual(['(A OR B OR "c d")']);
+    expect(joinFlat([], ['"c d"'], 'OR')).toEqual(['"c d"']);
+    expect(joinFlat([], [], 'OR')).toEqual([]);
+  });
+
+  it('keeps the terms one group and each phrase its own required clause under AND, as before', () => {
+    expect(joinFlat(['A', 'B'], ['"c d"'], 'AND')).toEqual(['(A AND B)', '"c d"']);
+    expect(joinFlat(['A'], [], 'AND')).toEqual(['A']);
   });
 });

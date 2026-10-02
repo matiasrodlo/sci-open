@@ -24,9 +24,11 @@ describe('translate — the defect this provider exists to fix', () => {
     expect(out).toBe('(ti:crispr OR abs:crispr) AND (ti:"gene editing" OR abs:"gene editing")');
   });
 
-  it('requires a phrase even when the terms are joined with OR', () => {
+  it('asks for a phrase as one more alternative when the terms are joined with OR', () => {
+    // It was required whatever the join, so `a OR b OR "gene editing"` was
+    // asked as `(a OR b) AND "gene editing"`. See `joinFlat`.
     const out = translate(query({ terms: ['a', 'b'], phrases: ['gene editing'], join: 'OR' }));
-    expect(out).toBe('((ti:a OR abs:a) OR (ti:b OR abs:b)) AND (ti:"gene editing" OR abs:"gene editing")');
+    expect(out).toBe('((ti:a OR abs:a) OR (ti:b OR abs:b) OR (ti:"gene editing" OR abs:"gene editing"))');
   });
 
   it('keeps an OR join from swallowing the clauses beside it', () => {

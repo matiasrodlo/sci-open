@@ -1,5 +1,5 @@
 import type { PaperStage, Query, QueryField, YearRange } from '@open-access-explorer/shared';
-import { cannotSend, flatTerms, renderExpression, type Dialect } from '../render-query';
+import { cannotSend, flatTerms, joinFlat, renderExpression, type Dialect } from '../render-query';
 
 /**
  * Query -> the Europe PMC query string. Pure, and the only place that knows
@@ -155,17 +155,11 @@ const DIALECT: Dialect = {
 function flatClauses(query: Query): string[] {
   const clauses: string[] = [];
 
-  // Phrases are always required; only bare terms honour `join`.
   const phrases = query.phrases.filter(p => p.trim()).map(p => scoped(quote(p)));
   const terms = (flatTerms(query, wildcards) ?? []).map(scoped);
 
-  if (terms.length > 0) {
-    const joined = terms.join(` ${query.join} `);
-    // Parenthesised so an OR join cannot swallow the clauses beside it —
-    // `a OR b AND OPEN_ACCESS:y` does not mean what it looks like.
-    clauses.push(terms.length > 1 ? `(${joined})` : joined);
-  }
-  clauses.push(...phrases);
+  // Grouped, and under an OR the phrases are alternatives too. See `joinFlat`.
+  clauses.push(...joinFlat(terms, phrases, query.join));
 
   return clauses;
 }

@@ -37,9 +37,11 @@ describe('translate — precedence and joins', () => {
     expect(out).toBe(`(${ANY('a')} OR ${ANY('b')}) AND bibjson.year:[2022 TO 2023]`);
   });
 
-  it('requires a phrase even when the terms are joined with OR', () => {
+  it('asks for a phrase as one more alternative when the terms are joined with OR', () => {
+    // It was required whatever the join, so `a OR b OR "gene editing"` was
+    // asked as `(a OR b) AND "gene editing"`. See `joinFlat`.
     const out = translate(query({ terms: ['a', 'b'], phrases: ['gene editing'], join: 'OR' }));
-    expect(out).toBe(`(${ANY('a')} OR ${ANY('b')}) AND ${ANY('"gene editing"')}`);
+    expect(out).toBe(`(${ANY('a')} OR ${ANY('b')} OR ${ANY('"gene editing"')})`);
   });
 });
 

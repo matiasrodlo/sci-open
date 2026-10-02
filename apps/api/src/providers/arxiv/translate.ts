@@ -1,5 +1,5 @@
 import type { Query, QueryField } from '@open-access-explorer/shared';
-import { cannotSend, flatTerms, renderExpression, type Dialect } from '../render-query';
+import { cannotSend, flatTerms, joinFlat, renderExpression, type Dialect } from '../render-query';
 
 /**
  * Query -> the arXiv `search_query` string. Pure, and the only place that
@@ -173,16 +173,8 @@ function flatClauses(query: Query): string[] {
   const terms = kept.map(scoped);
   const phrases = query.phrases.filter(p => p.trim()).map(p => scoped(quote(p)));
 
-  if (terms.length > 0) {
-    const joined = terms.join(` ${query.join} `);
-    // Parenthesised so an OR join cannot swallow the clauses beside it —
-    // `all:a OR all:b AND submittedDate:[...]` does not mean what it looks
-    // like.
-    clauses.push(terms.length > 1 ? `(${joined})` : joined);
-  }
-
-  // Phrases are always required, whatever `join` says about the bare terms.
-  clauses.push(...phrases);
+  // Grouped, and under an OR the phrases are alternatives too. See `joinFlat`.
+  clauses.push(...joinFlat(terms, phrases, query.join));
 
   return clauses;
 }

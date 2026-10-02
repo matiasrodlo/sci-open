@@ -1,5 +1,5 @@
 import type { Query, QueryField } from '@open-access-explorer/shared';
-import { cannotSend, flatTerms, nameAsWords, renderExpression, type Dialect } from '../render-query';
+import { cannotSend, flatTerms, joinFlat, nameAsWords, renderExpression, type Dialect } from '../render-query';
 
 /**
  * Query -> the PLOS Solr query string. Pure, and the only place that knows
@@ -170,12 +170,8 @@ function flatClauses(query: Query): string[] {
   const terms = kept.map(scoped);
   const phrases = query.phrases.filter(p => p.trim()).map(p => scoped(quote(p)));
 
-  if (terms.length > 0) {
-    const joined = terms.join(` ${query.join} `);
-    // Parenthesised so an OR join cannot swallow the date clause beside it.
-    clauses.push(terms.length > 1 ? `(${joined})` : joined);
-  }
-  clauses.push(...phrases);
+  // Grouped, and under an OR the phrases are alternatives too. See `joinFlat`.
+  clauses.push(...joinFlat(terms, phrases, query.join));
 
   return clauses;
 }

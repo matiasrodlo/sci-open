@@ -1,4 +1,4 @@
-import type { Query, QueryField, QueryNode, YearRange } from '@open-access-explorer/shared';
+import type { Query, QueryField, QueryJoin, QueryNode, YearRange } from '@open-access-explorer/shared';
 
 /**
  * The parsed query -> one provider's native query string.
@@ -90,6 +90,35 @@ export function flatTerms(query: Query, send: (term: string) => string): string[
   const words = query.terms.map(term => term.trim()).filter(Boolean);
   const sent = words.map(send).filter(Boolean);
   return sent.length < words.length ? undefined : sent;
+}
+
+/**
+ * A flat query's scoped terms and phrases as the clauses a provider ANDs.
+ *
+ * Under `AND` the terms are one group and each phrase a clause of its own, all
+ * required, as the flat form has always been sent. Under `OR` every term and
+ * every phrase is an alternative, in one group. The phrases used to be pushed
+ * as clauses of their own whatever the join — "phrases are always required" —
+ * which is right for the search box this form predates, where "any of these
+ * words" still meant every quoted phrase. A flat `OR` now only ever comes from
+ * an `OR` in the query, where the phrase is one of the alternatives, and
+ * requiring it asked `a OR "b c"` as `a AND "b c"`: the records only `a`
+ * matched were never read.
+ *
+ * Grouped either way, so an `OR` cannot swallow the clauses the caller ANDs
+ * beside it — `a OR b AND year:[…]` does not mean what it looks like.
+ */
+export function joinFlat(terms: readonly string[], phrases: readonly string[], join: QueryJoin): string[] {
+  if (join === 'OR') {
+    const alternatives = [...terms, ...phrases];
+    if (alternatives.length === 0) return [];
+    return [alternatives.length > 1 ? `(${alternatives.join(' OR ')})` : alternatives[0]!];
+  }
+
+  const clauses: string[] = [];
+  if (terms.length > 0) clauses.push(terms.length > 1 ? `(${terms.join(' AND ')})` : terms[0]!);
+  clauses.push(...phrases);
+  return clauses;
 }
 
 /**
