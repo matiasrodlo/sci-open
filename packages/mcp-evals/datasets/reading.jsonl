@@ -1,0 +1,20 @@
+{"id": "rd-01", "split": "tune", "paper": "10.1186/s12889-020-09443-5", "pmcid": "PMC7650517", "question": "What was the mean sampling weight for the participants who provided follow-up data?", "answers": ["115"]}
+{"id": "rd-02", "split": "tune", "paper": "10.1186/s12889-020-09848-2", "pmcid": "PMC7678207", "question": "What percentage of the managers, in both gender categories, were 40 to 59 years old?", "answers": ["65%", "65 %", "65"]}
+{"id": "rd-03", "split": "tune", "paper": "10.1186/s12889-020-09520-9", "pmcid": "PMC7499859", "question": "Of the residents selected for the survey, how many were actually interviewed?", "answers": ["5205", "5,205"]}
+{"id": "rd-04", "split": "tune", "paper": "10.1038/s41598-020-78099-3", "pmcid": "PMC7713292", "question": "How many pregnant women were withdrawn from the study?", "answers": ["8", "eight"]}
+{"id": "rd-05", "split": "tune", "paper": "10.1371/journal.pone.0241841", "pmcid": "PMC7644056", "question": "How many male patients did the study include?", "answers": ["374"]}
+{"id": "rd-06", "split": "tune", "paper": "10.1186/s12889-020-09947-0", "pmcid": "PMC7709228", "question": "How many households were visited in Sofala province?", "answers": ["1549", "1,549"]}
+{"id": "rd-07", "split": "tune", "paper": "10.1186/s12889-020-09575-8", "pmcid": "PMC7519556", "question": "What was the median household size, in persons?", "answers": ["6", "6 persons", "six"]}
+{"id": "rd-08", "split": "tune", "paper": "10.1186/s12889-020-09685-3", "pmcid": "PMC7568354", "question": "How many items did the pre-tested questionnaire have?", "answers": ["29", "29 items", "29-item"]}
+{"id": "rd-09", "split": "tune", "paper": "10.1186/s12889-020-09617-1", "pmcid": "PMC7532605", "question": "How many of the district's rural kebeles were categorized as non-accessible?", "answers": ["9", "nine"]}
+{"id": "rd-10", "split": "tune", "paper": "10.1371/journal.pone.0231878", "pmcid": "PMC7170232", "question": "How many participants had missing education or income data imputed?", "answers": ["1962", "1,962"]}
+{"id": "rd-11", "split": "tune", "paper": "10.1371/journal.pone.0239835", "pmcid": "PMC7588119", "question": "How many women were in the study sample?", "answers": ["642"]}
+{"id": "rd-12", "split": "tune", "paper": "10.1371/journal.pone.0244585", "pmcid": "PMC7773263", "question": "How many of the participating dentists were endodontists?", "answers": ["22"]}
+{"id": "rd-13", "split": "tune", "paper": "10.1186/s12889-020-08686-6", "pmcid": "PMC7175508", "question": "How many students visited the survey's introduction website?", "answers": ["5243", "5,243", "five thousand two hundred forty-three"]}
+{"id": "rd-14", "split": "holdout", "paper": "10.1186/s12889-020-09294-0", "pmcid": "PMC7391598", "question": "What was the Pearson correlation coefficient between MUAC and BMI among women?", "answers": ["0.889"]}
+{"id": "rd-15", "split": "holdout", "paper": "10.1371/journal.pone.0241335", "pmcid": "PMC7673498", "question": "What was the response rate among the medical students?", "answers": ["96.3%", "96.3 %", "96.3"]}
+{"id": "rd-16", "split": "holdout", "paper": "10.1186/s12889-020-09984-9", "pmcid": "PMC7718654", "question": "What minimum sample size was calculated with the Kish Leslie formula?", "answers": ["138"]}
+{"id": "rd-17", "split": "holdout", "paper": "10.1186/s12889-020-09011-x", "pmcid": "PMC7275562", "question": "What was the median seniority of the workers, in years?", "answers": ["18.92", "18.92 years"]}
+{"id": "rd-18", "split": "holdout", "paper": "10.1186/s12889-020-08609-5", "pmcid": "PMC7196222", "question": "How many individuals accessed primary healthcare services in 2017?", "answers": ["421283", "421,283"]}
+{"id": "rd-19", "split": "holdout", "paper": "10.1186/s12889-020-09211-5", "pmcid": "PMC7353800", "question": "How often were the health check-ups repeated for the same population?", "answers": ["every 2 years", "once every 2 years", "every two years", "biennially"]}
+{"id": "rd-20", "split": "holdout", "paper": "10.1371/journal.pone.0241377", "pmcid": "PMC7591060", "question": "What minimum sample size was established for group B?", "answers": ["100"]}

@@ -39,6 +39,17 @@ export function scoreSelection(c: SelectionCase, calls: readonly Call[]): { pass
   return { pass: true };
 }
 
+export type ReadingCase = { id: string; split: 'tune' | 'holdout'; paper: string; question: string; answers: string[] };
+
+const normalize = (s: string) => s.normalize('NFKC').toLowerCase().replace(/[\s,]+/g, ' ').replace(/[.\s]+$/, '').trim();
+
+/** The last `Answer:` line, compared exactly (after normalising) with the accepted forms. */
+export function scoreReading(answers: readonly string[], text: string): { pass: boolean; why?: string } {
+  const given = [...text.matchAll(/^\s*\**Answer:?\**:?\s*(.+)$/gim)].pop()?.[1]?.replace(/\*+/g, '').trim();
+  if (!given) return { pass: false, why: 'no Answer: line' };
+  return answers.some(a => normalize(a) === normalize(given)) ? { pass: true } : { pass: false, why: `answered ${given}` };
+}
+
 export type ReferenceItem = { text: string; planted: string; accept: string[] };
 
 const FLAGS = new Set(['ambiguous', 'mismatch', 'not_found']);

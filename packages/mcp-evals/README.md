@@ -13,6 +13,7 @@ the network.
 |---|---|---|---|
 | Tool selection | `pnpm --filter mcp-evals eval:selection [tune\|holdout]` | Claude API credentials (`ANTHROPIC_API_KEY` or `ant auth login`); costs API credit | Whether Claude Opus 5.5 calls the expected tool first, with the expected arguments, against the fixture engine — the server answers the same every run, so only the model varies |
 | References | `pnpm --filter mcp-evals eval:references [tune\|holdout]` | `UNPAYWALL_EMAIL`, the network; no model | Recall per planted error type, precision of the flags, and the rate at which real papers are called fabricated |
+| Reading | `pnpm --filter mcp-evals eval:reading [tune\|holdout]` | Claude API credentials and the network; costs API credit | Whether Claude, reading through `read_paper`, answers a question only the paper's full text answers: the last `Answer:` line, matched exactly against accepted forms |
 
 Build the server first (`pnpm build --filter=sci-open-mcp`); the harness
 starts its stdio binary as a client would.
@@ -25,14 +26,20 @@ OpenAlex key's daily budget included. Run it deliberately, not in a loop.
 
 - `datasets/tool-selection.jsonl`: one prompt per line, with the tool expected
   first (`first`) or in order (`sequence`), and arguments that must match
-  (`args`; an array is compared as a set). Cases that need a tool this release
-  does not ship stay out until it ships — `ts-03` waits for `read_paper`.
+  (`args`; an array is compared as a set). Cases that need a tool a release
+  does not ship stay out until it ships.
 - `datasets/references/*.json`: lists of real references with errors planted
   and labelled: `none`, `closed_real`, `preprint_version` (all real — flagging
   them is the error that hurts most), `fabricated`, `doi_wrong`,
   `doi_invented`, `year_wrong` and `author_wrong`. `accept` is the verdicts
   that count as right. Every real record was checked against Crossref or
   DataCite, and every invented DOI against doi.org, when the list was written.
+
+- `datasets/reading.jsonl`: twenty questions about open-access papers in
+  Europe PMC, each answered by a sentence in a methods or results section,
+  with the accepted forms of a short answer. Every answer was checked against
+  the paper's full text when the question was written; two of them (`rd-14`,
+  `rd-15`) also appear in the abstract.
 
 Every case carries `split: "tune" | "holdout"`. Change descriptions and
 thresholds against `tune` only; `holdout` is the number that gets published.

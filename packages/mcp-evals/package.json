@@ -6,6 +6,7 @@
   "scripts": {
     "eval:selection": "tsx src/main.ts selection",
     "eval:references": "tsx src/main.ts references",
+    "eval:reading": "tsx src/main.ts reading",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit"
   },

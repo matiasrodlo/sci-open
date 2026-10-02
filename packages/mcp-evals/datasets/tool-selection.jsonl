@@ -1,5 +1,7 @@
 {"id":"ts-01","split":"tune","prompt":"Find recent peer-reviewed papers on CRISPR base editing in plants.","expect":{"first":"search_papers","args":{"publication_type":["peer-reviewed"]}}}
 {"id":"ts-02","split":"tune","prompt":"Is this citation real? Smith J. (2021) Deep learning for protein folding. Nature 590:1-10.","expect":{"first":"verify_references"}}
+{"id":"ts-46","split":"tune","prompt":"In arxiv:2404.18021, find where the authors describe their wet-lab validation and summarise it.","expect":{"sequence":["read_paper"]}}
+{"id":"ts-47","split":"tune","prompt":"Save the full text of arxiv:2404.18021 to /tmp/crispr-gpt.md so I can read it offline.","expect":{"first":"read_paper","args":{"save_to":"/tmp/crispr-gpt.md"}}}
 {"id":"ts-04","split":"tune","prompt":"Roughly how many open-access papers on microplastics in drinking water have come out since 2020? I don't need the list.","expect":{"first":"search_papers","args":{"count_only":true}}}
 {"id":"ts-05","split":"tune","prompt":"Give me the full record for doi:10.1371/journal.pone.0000217, including which sources hold it.","expect":{"first":"get_paper","args":{"doi":"10.1371/journal.pone.0000217"}}}
 {"id":"ts-06","split":"tune","prompt":"Show me the details of arxiv:1706.03762.","expect":{"first":"get_paper","args":{"id":"arxiv:1706.03762"}}}
@@ -25,6 +27,8 @@
 {"id":"ts-28","split":"tune","prompt":"Find papers on Hsp90 inhibitors and give me every field with which source supplied it.","expect":{"first":"search_papers","args":{"detail":"full"}}}
 {"id":"ts-29","split":"tune","prompt":"Verify my reference list: (1) Ioannidis JPA. Why most published research findings are false. PLoS Med. 2005;2(8):e124. (2) Altschul SF, et al. Basic local alignment search tool. J Mol Biol. 1990;215:403-10. (3) Okafor L, Brandt P. Quantum annealing of protein folding landscapes. Nature. 2021;590:112-8.","expect":{"first":"verify_references"}}
 {"id":"ts-30","split":"tune","prompt":"Is PMID 22745249 the 2012 Jinek et al. CRISPR-Cas9 paper in Science?","expect":{"first":"verify_references"}}
+{"id":"ts-03","split":"holdout","prompt":"What sample size did doi:10.1371/journal.pone.0000217 use?","expect":{"sequence":["read_paper"]}}
+{"id":"ts-48","split":"holdout","prompt":"Read the methods of doi:10.1371/journal.pone.0000217 and tell me how fitness was measured in the evolution experiments.","expect":{"sequence":["read_paper"]}}
 {"id":"ts-31","split":"holdout","prompt":"Find open-access studies on the effect of evening blue light exposure on sleep in adolescents.","expect":{"first":"search_papers"}}
 {"id":"ts-32","split":"holdout","prompt":"Before searching, how many records do the sources have for TS=(wastewater AND SARS-CoV-2)? No list needed.","expect":{"first":"search_papers","args":{"count_only":true}}}
 {"id":"ts-33","split":"holdout","prompt":"My student cited 'Garcia L, Tan B. Self-healing concrete using engineered bacteria. Science 2020;368:44-48.' Can you check that it exists?","expect":{"first":"verify_references"}}

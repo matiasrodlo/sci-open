@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'fs';
 import path from 'path';
 import { connect, runCase, type RunResult } from './run';
-import { scoreReferences, scoreSelection, type ReferenceItem, type SelectionCase } from './scorers';
+import { scoreReading, scoreReferences, scoreSelection, type ReadingCase, type ReferenceItem, type SelectionCase } from './scorers';
 import { writeReport, type CaseRecord } from './report';
 
 /**
@@ -14,6 +14,8 @@ import { writeReport, type CaseRecord } from './report';
  *   only the model varies. Calls the Claude API.
  * - references: does verify_references grade planted errors right? Live
  *   sources, no model, no API cost.
+ * - reading: can a model answer a question that only a paper's full text
+ *   answers, through read_paper? Live sources and the Claude API.
  */
 
 const DATA = path.join(__dirname, '..', 'datasets');
@@ -81,7 +83,21 @@ async function main(): Promise<void> {
     return;
   }
 
-  throw new Error(`Unknown suite "${suite}": selection or references`);
+  if (suite === 'reading') {
+    const records: CaseRecord[] = [];
+    for (const c of jsonl<ReadingCase>('reading.jsonl').filter(c => c.split === split)) {
+      const started = Date.now();
+      const prompt = `${c.question} The paper: ${c.paper}. Read it with the tools; do not answer from memory. End with one line: Answer: <value>`;
+      // Eight turns: an outline, a section or two, perhaps a search, and the answer.
+      const run = await runCase(prompt, ['--toolsets', 'core,read'], 8);
+      records.push(record(c.id, scoreReading(c.answers, run.answer), run, Date.now() - started));
+      console.log(`${c.id} ${records.at(-1)!.pass ? 'pass' : `FAIL ${records.at(-1)!.why}`}`);
+    }
+    console.log(writeReport('reading', split, records));
+    return;
+  }
+
+  throw new Error(`Unknown suite "${suite}": selection, references or reading`);
 }
 
 main().catch(error => {
