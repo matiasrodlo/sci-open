@@ -110,6 +110,18 @@ function pickStage(raw: any): PaperStage {
   return raw?.pubYear || raw?.firstPublicationDate ? 'published' : 'unknown';
 }
 
+/**
+ * MeSH's "Retracted Publication" among the publication types: how Europe PMC,
+ * like PubMed, marks the retracted article itself (the notice is a separate
+ * record, "Retraction of Publication"). Verified 2026-10-02 on PMID 9500320.
+ */
+function isRetracted(raw: any): boolean {
+  const types = raw?.pubTypeList?.pubType;
+  return (Array.isArray(types) ? types : [types]).some(
+    (t: unknown) => typeof t === 'string' && t.trim().toLowerCase() === 'retracted publication'
+  );
+}
+
 function normalizeOne(raw: any, ref: SourceRef): Paper {
   const nativeId = raw?.id != null ? String(raw.id) : '';
   if (!nativeId) throw new Error('record has no id');
@@ -138,6 +150,7 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
     topics: asArray<string>(raw.keywordList?.keyword).filter(Boolean).map(String),
     ...(raw.language ? { language: String(raw.language) } : {}),
     ...(Number.isFinite(citationCount) ? { citationCount } : {}),
+    ...(isRetracted(raw) ? { retracted: true as const } : {}),
 
     oaStatus: 'unknown',
     stage: pickStage(raw),

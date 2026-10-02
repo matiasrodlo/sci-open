@@ -39,6 +39,7 @@ export function normalize(payload: OpenAlexPayload | null): AuthorityFacts | nul
     ...(paper.oaStatus !== 'unknown' ? { oaStatus: paper.oaStatus } : {}),
     ...(paper.fullText !== undefined ? { fullText: paper.fullText } : {}),
     ...(paper.landingPage !== undefined ? { landingPage: paper.landingPage } : {}),
+    ...(paper.retracted ? { retracted: true as const } : {}),
     ...(paper.stage !== 'unknown' ? { stage: paper.stage } : {})
   };
 }

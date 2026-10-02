@@ -24,7 +24,10 @@ export const capabilities: AuthorityCapabilities = {
     'citationCount',
     'oaStatus',
     'fullText',
-    'landingPage'
+    'landingPage',
+    // Only ever true, so filling the gap is all it can do: a paper no source
+    // flagged gains the flag; one already flagged keeps it.
+    'retracted'
   ],
 
   /**

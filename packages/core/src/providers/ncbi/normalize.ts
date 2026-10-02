@@ -186,6 +186,15 @@ function pickFullText(pmcId: string | undefined): FullText | undefined {
   return fullTextAt(`https://www.ncbi.nlm.nih.gov/pmc/articles/${pmcId}/pdf/`, 'pdf');
 }
 
+/**
+ * MeSH's "Retracted Publication" in `Article > PublicationTypeList`: the
+ * retracted article itself, not the notice ("Retraction of Publication").
+ */
+function isRetracted(article: any): boolean {
+  return asArray(one(article, 'PublicationTypeList')?.PublicationType)
+    .some((t: any) => textOf(t)?.toLowerCase() === 'retracted publication');
+}
+
 function normalizeOne(raw: any, ref: SourceRef): Paper {
   const medlineCitation = one(raw, 'MedlineCitation');
   const article = one(medlineCitation, 'Article');
@@ -214,6 +223,7 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
     ...(abstract ? { abstract } : {}),
     topics: pickTopics(medlineCitation),
     language: text(article, 'Language') ?? 'en',
+    ...(isRetracted(article) ? { retracted: true as const } : {}),
 
     // The route is Unpaywall's to supply. What is known here is whether PMC
     // holds a copy, which `fullText` carries.

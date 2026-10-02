@@ -34,7 +34,8 @@ const SELECT = [
   'open_access',
   'cited_by_count',
   'type',
-  'language'
+  'language',
+  'is_retracted'
 ].join(',');
 
 /**

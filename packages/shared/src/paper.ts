@@ -95,7 +95,7 @@ export type FullText = {
 /** The fields a merge picks between, and therefore the ones worth attributing. */
 export type ProvenancedField =
   | 'title' | 'abstract' | 'authors' | 'year' | 'venue' | 'publisher'
-  | 'topics' | 'language' | 'citationCount' | 'oaStatus' | 'fullText' | 'landingPage';
+  | 'topics' | 'language' | 'citationCount' | 'oaStatus' | 'fullText' | 'landingPage' | 'retracted';
 
 /**
  * Which provider supplied each field of the merged record.
@@ -143,6 +143,13 @@ export type Paper = {
   topics: string[];
   language?: string;
   citationCount?: number;
+  /**
+   * The work was retracted, as a source records it: OpenAlex's `is_retracted`,
+   * or the MeSH publication type "Retracted Publication" in Europe PMC and
+   * PubMed. Only ever `true`: a source that says nothing is not evidence the
+   * work stands, and a `false` could hide another source's `true` in a merge.
+   */
+  retracted?: true;
 
   /** How it is open. See `OaRoute`. */
   oaStatus: OaRoute;

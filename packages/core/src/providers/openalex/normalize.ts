@@ -157,6 +157,9 @@ function normalizeOne(work: any, ref: SourceRef): Paper {
     topics: pickTopics(work),
     ...(work?.language ? { language: String(work.language) } : {}),
     ...(Number.isFinite(citationCount) ? { citationCount } : {}),
+    // Recorded only when true: a work OpenAlex does not flag is not thereby
+    // known to stand. Verified 2026-10-02 on 10.1016/S0140-6736(97)11096-0.
+    ...(work?.is_retracted === true ? { retracted: true as const } : {}),
 
     oaStatus: pickRoute(work),
     stage: STAGES[String(work?.type ?? '')] ?? 'unknown',

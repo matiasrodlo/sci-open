@@ -44,7 +44,6 @@ const PINNED: Record<string, { version: number; normalizer: string }> = {
   // changed; nothing it emits did.
   arxiv: { version: 1, normalizer: 'b4dbc2c699cb' },
   biorxiv: { version: 1, normalizer: '21ff7b344e3c' },
-  ncbi: { version: 1, normalizer: '69c75a02a8e6' },
   plos: { version: 1, normalizer: '3c6958bbacb4' },
 
   // Version 2: these six take the URL from the payload, so `fullTextAt` can
@@ -54,13 +53,16 @@ const PINNED: Record<string, { version: number; normalizer: string }> = {
   core: { version: 2, normalizer: '047e4326ebe5' },
   datacite: { version: 2, normalizer: 'e25ea42d0c08' },
   doaj: { version: 2, normalizer: '52ed78538ef1' },
-  europepmc: { version: 2, normalizer: 'e464db8efb04' },
-  // The file changed to export `STAGES` for `translate`; nothing it emits did.
-  openalex: { version: 2, normalizer: 'ce5f94353202' },
   // Version 3: moved from the legacy search endpoint to the Graph API, a
   // different payload read by a rewritten normaliser. A version-2 entry holds
   // papers built from the legacy shape and must not be served as this one's.
-  openaire: { version: 3, normalizer: 'a1cfaaa7793d' }
+  openaire: { version: 3, normalizer: 'a1cfaaa7793d' },
+
+  // Bumped together: each now reads whether the work was retracted, so a
+  // record cached before it would be served without the flag.
+  ncbi: { version: 2, normalizer: 'eca683c3eca6' },
+  europepmc: { version: 3, normalizer: '9cf8941555ea' },
+  openalex: { version: 3, normalizer: 'b72412bb9d4f' }
 };
 
 const PROVIDER_DIR = join(__dirname, '..');
