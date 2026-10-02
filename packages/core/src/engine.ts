@@ -6,6 +6,7 @@ import { AuthorityCache, AuthorityFactsCache } from './orchestrator/authority-ca
 import { UpstreamStats } from './orchestrator/upstream-stats';
 import { lookupPaper } from './orchestrator/lookup';
 import { countSearch, type CountOutcome } from './orchestrator/count';
+import type { SearchProgress } from './orchestrator/progress';
 import { parseQuery } from './orchestrator/parse-query';
 import { normalizeDoi } from './orchestrator/merge';
 import { enrichPage } from './orchestrator/enrich';
@@ -55,15 +56,25 @@ export type SearchOutcome = { response: SearchResponseV2; fromCache: boolean };
 
 type Admit = () => Promise<void>;
 
+/** What a search or a count can be told besides its params. */
+export type SearchCallOptions = {
+  /** Asked only when something must be asked of the sources; may throw to refuse. */
+  admit?: Admit;
+  /** Narrows the fan-out to these providers. */
+  sources?: readonly string[];
+  /** Each source as it settles, then the access check and the page's details. */
+  onProgress?: (event: SearchProgress) => void;
+};
+
 export type Engine = {
   readonly userAgent: string;
   /** The same pipeline as POST /api/v2/search. `admit` is asked only when a
    * new result set must be resolved, never for a page of a held one.
    * `sources` narrows the fan-out to those providers. */
-  search(params: SearchParams, options?: { admit?: Admit; sources?: readonly string[] }): Promise<SearchOutcome>;
+  search(params: SearchParams, options?: SearchCallOptions): Promise<SearchOutcome>;
   /** Each source's own match count for these params, with nothing read (see
    * `countSearch`). Spends an admission: it is still a request to every source. */
-  count(params: SearchParams, options?: { admit?: Admit; sources?: readonly string[] }): Promise<CountOutcome>;
+  count(params: SearchParams, options?: SearchCallOptions): Promise<CountOutcome>;
   /** A paper by sci-open id (`provider:nativeId`), enriched by the authorities.
    * Asks only the provider the id names. */
   lookup(id: string): Promise<Paper | null>;
@@ -105,6 +116,7 @@ export function createEngine(options: EngineOptions): Engine {
       userAgent,
       ...authorities,
       ...(extra.admit ? { admit: extra.admit } : {}),
+      ...(extra.onProgress ? { onProgress: extra.onProgress } : {}),
       // Safe to share the caches: the result-set key includes the provider
       // list, so a narrowed set never answers a full search, or the reverse.
       providers: narrowed(extra.sources)
@@ -125,7 +137,8 @@ export function createEngine(options: EngineOptions): Engine {
         providers: narrowed(extra.sources),
         cache: providerCache,
         userAgent,
-        ...(extra.admit ? { admit: extra.admit } : {})
+        ...(extra.admit ? { admit: extra.admit } : {}),
+        ...(extra.onProgress ? { onProgress: extra.onProgress } : {})
       });
     },
     async lookup(id) {

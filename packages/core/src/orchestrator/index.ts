@@ -16,6 +16,7 @@ import { facetBaseSets, generateFacets, withSourceCounts, type Facets } from './
 import { countSourceFacets, type FacetQueries } from './source-facets';
 import { sortPapers } from './sort';
 import { enrichPage } from './enrich';
+import { progressTo, type SearchProgress } from './progress';
 
 export * from './parse-query';
 export * from './lookup';
@@ -30,6 +31,7 @@ export { ResultSetCache, resultSetKey } from './result-set';
 export type { ResultSet } from './result-set';
 export { UpstreamStats } from './upstream-stats';
 export type { UpstreamStatsSnapshot } from './upstream-stats';
+export type { SearchProgress } from './progress';
 
 /**
  * plan -> fan out -> merge/dedupe -> rank -> filter -> rescue -> facet -> paginate -> enrich
@@ -118,6 +120,12 @@ export type SearchOptions = {
    * something. See `ResultSetCache.resolve`.
    */
   admit?: () => Promise<void>;
+  /**
+   * Told what the search is doing as it does it: each source as it settles,
+   * the access check, the page's details. Called, never awaited, and a throw
+   * from it is dropped. Not part of what decides the set, so not in its key.
+   */
+  onProgress?: (event: SearchProgress) => void;
   providers?: readonly ProviderEntry[];
   userAgent?: string;
   now?: () => Date;
@@ -208,6 +216,7 @@ type Settled = ResultSetKeyParts & {
   stats: UpstreamStats | undefined;
   userAgent: string | undefined;
   now: (() => Date) | undefined;
+  progress: (event: SearchProgress) => void;
 };
 
 function settle(query: Query, options: SearchOptions): Settled {
@@ -242,7 +251,8 @@ function settle(query: Query, options: SearchOptions): Settled {
     cache: options.cache,
     stats: options.stats,
     userAgent: options.userAgent,
-    now: options.now
+    now: options.now,
+    progress: progressTo(options.onProgress)
   };
 }
 
@@ -295,7 +305,7 @@ function emptySet(settled: Settled): ResultSet {
 async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache): Promise<ResultSet> {
   const {
     query, filters, policy, openAccessOnly, depth, timeoutMs, facetQueries, facetBudgetMs, filtersSent,
-    providers, authorities, cache, stats, userAgent, now
+    providers, authorities, cache, stats, userAgent, now, progress
   } = settled;
 
   if (emptyYears(query)) return emptySet(settled);
@@ -327,9 +337,13 @@ async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache
       })
     : Promise.resolve([]);
 
+  let settledCount = 0;
   const { papers: fetched, reports: searchReports } = await fanOut(planned, {
     query, depth, offset: 0, timeoutMs, openAccessOnly,
-    onSettled: settled => settling.get(settled.report.provider)?.resolve(settled),
+    onSettled: settled => {
+      settling.get(settled.report.provider)?.resolve(settled);
+      progress({ stage: 'sources', settled: ++settledCount, planned: planned.planned.length, report: settled.report });
+    },
     ...(cache ? { cache } : {}),
     ...(userAgent ? { userAgent } : {}),
     ...(now ? { now } : {})
@@ -366,6 +380,13 @@ async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache
   // providers happened to say rather than on what is knowable. `kept` needs no
   // question asked; `candidates` are the ones the answer could still move.
   const { kept, candidates } = partitionByPolicy(ranked, filters, policy);
+
+  // Only when something will be asked: this is the step a reader would
+  // otherwise sit through in silence after every source has answered. It asks
+  // about at most `limit` of the candidates, and only through the authorities
+  // that could change the answer.
+  const asking = settled.rescue.authorities.length > 0 ? Math.min(candidates.length, settled.rescue.limit) : 0;
+  if (asking > 0) progress({ stage: 'access', candidates: asking });
 
   const { papers: rescuedPapers, report: rescueReport } = await rescueCandidates(candidates, {
     ...(authorities ? { authorities } : {}),
@@ -466,11 +487,13 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
   const sorted = sortPapers(set.papers, sort);
 
   const start = Math.max(page - 1, 0) * pageSize;
+  const pageOfPapers = sorted.slice(start, start + pageSize);
+  if (pageOfPapers.length > 0) settled.progress({ stage: 'details', papers: pageOfPapers.length });
 
   // Enrichment sees the page and only the page. It cannot change which papers
   // are on it, so `total`, `facets` and the page boundary above all still
   // describe the set they were computed over.
-  const { papers: enriched, reports: authorityReports } = await enrichPage(sorted.slice(start, start + pageSize), {
+  const { papers: enriched, reports: authorityReports } = await enrichPage(pageOfPapers, {
     ...(authorities ? { authorities } : {}),
     ...(enrichBudgetMs !== undefined ? { budgetMs: enrichBudgetMs } : {}),
     ...(userAgent ? { userAgent } : {}),

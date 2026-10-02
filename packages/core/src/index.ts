@@ -22,4 +22,4 @@ export * from './lib/pdf-proxy';
 export { preferredPdfUrl } from './lib/pdf-url';
 export { SingleFlight } from './lib/single-flight';
 export { createEngine } from './engine';
-export type { Engine, EngineOptions, EngineCaches, SearchOutcome } from './engine';
+export type { Engine, EngineOptions, EngineCaches, SearchOutcome, SearchCallOptions } from './engine';

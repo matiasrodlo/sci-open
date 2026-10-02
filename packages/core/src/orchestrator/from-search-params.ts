@@ -8,6 +8,7 @@ import type { ProviderCache } from './provider-cache';
 import type { ResultSetCache } from './result-set';
 import type { AuthorityFactsCache } from './authority-cache';
 import type { UpstreamStats } from './upstream-stats';
+import type { SearchProgress } from './progress';
 import type { ProviderEntry } from './registry';
 import type { AuthorityEntry } from '../authorities';
 import { toSearchResponse, toSearchResponseV2 } from './to-search-response';
@@ -188,6 +189,8 @@ export type RunOptions = {
   stats?: UpstreamStats;
   /** See `SearchOptions.admit`. */
   admit?: () => Promise<void>;
+  /** See `SearchOptions.onProgress`. */
+  onProgress?: (event: SearchProgress) => void;
   userAgent?: string;
   /** Defaults to the whole registry. A subset is how this is driven offline. */
   providers?: readonly ProviderEntry[];
@@ -296,6 +299,7 @@ export async function runSearch(
     ...(options.authorityFacts ? { authorityFacts: options.authorityFacts } : {}),
     ...(options.stats ? { stats: options.stats } : {}),
     ...(options.admit ? { admit: options.admit } : {}),
+    ...(options.onProgress ? { onProgress: options.onProgress } : {}),
     ...(options.userAgent ? { userAgent: options.userAgent } : {}),
     ...(options.providers ? { providers: options.providers } : {}),
     ...(options.authorities ? { authorities: options.authorities } : {})

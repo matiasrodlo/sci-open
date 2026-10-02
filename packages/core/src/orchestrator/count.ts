@@ -4,6 +4,7 @@ import { fanOut, isComplete } from './fanout';
 import { queryOf } from './from-search-params';
 import type { ProviderCache } from './provider-cache';
 import type { ProviderEntry } from './registry';
+import { progressTo, type SearchProgress } from './progress';
 
 /** One record is the whole of a count: the provider's total comes with it. */
 const COUNT_DEPTH = 1;
@@ -16,6 +17,8 @@ export type CountOptions = {
   userAgent?: string;
   /** Asked once before any source is; may throw to refuse the count. */
   admit?: () => Promise<void>;
+  /** Each source as it settles, as a search reports them. */
+  onProgress?: (event: SearchProgress) => void;
 };
 
 export type CountOutcome = {
@@ -65,8 +68,12 @@ export async function countSearch(params: SearchParams, options: CountOptions): 
     .map(p => ({ provider: p.id, status: 'skipped', retrieved: 0, latency: 0, skipReason: 'reports no match count' }));
 
   await options.admit?.();
-  const { reports } = await fanOut(plan(query, counting), {
+  const planned = plan(query, counting);
+  const progress = progressTo(options.onProgress);
+  let settled = 0;
+  const { reports } = await fanOut(planned, {
     query, depth: COUNT_DEPTH, offset: 0, timeoutMs: COUNT_TIMEOUT_MS, openAccessOnly,
+    onSettled: ({ report }) => progress({ stage: 'sources', settled: ++settled, planned: planned.planned.length, report }),
     ...(options.cache ? { cache: options.cache } : {}),
     ...(options.userAgent ? { userAgent: options.userAgent } : {})
   });
