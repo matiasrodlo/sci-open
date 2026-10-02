@@ -417,6 +417,16 @@ function guardedGet(url: URL, userAgent: string, options: GuardedGetOptions) {
     // http must not land on an unguarded default.
     httpAgent: guardedHttpAgent,
     httpsAgent: guardedHttpsAgent,
+    // Never through an outbound proxy, though axios takes one from `HTTP_PROXY`
+    // or `HTTPS_PROXY` unless told not to. The guard judges the address a socket
+    // connects to, and through a proxy that is the proxy's: measured with one on
+    // 127.0.0.1, the publisher was never looked up — the proxy fetched it — and
+    // every redirect was refused for the proxy's own address, a public site's
+    // included. Behind a private proxy that fails every download that
+    // redirects; behind a public one no redirect target would be judged at all.
+    // A deployment that must leave through a proxy needs the proxy to hold the
+    // same line — see `docs/configuration.md`.
+    proxy: false,
     headers: {
       'User-Agent': userAgent,
       Accept: 'application/pdf,*/*',

@@ -385,6 +385,13 @@ API_ORIGIN=https://api.yourdomain.com
   (`redis://user:password@host:6379`), and do not publish the port. The compose
   file binds it to `127.0.0.1` for this reason.
 - **HTTPS** — terminate it at the proxy. Neither service does its own TLS.
+- **Outbound proxies** — the PDF download ignores `HTTP_PROXY` and
+  `HTTPS_PROXY` and connects to publishers directly. Its SSRF guard judges the
+  address a socket connects to, and through a proxy that address is the
+  proxy's: the publisher is never checked, and every redirect is judged by the
+  proxy's address instead. A deployment that can only leave through a proxy
+  needs the proxy to refuse the same destinations — loopback, private,
+  link-local and the other ranges `apps/api/src/lib/pdf-proxy.ts` blocks.
 - **CORS is not a setting, and does not need to be one.** The API sends no
   cross-origin headers when `NODE_ENV=production`
   (`origin: false`, `apps/api/src/index.ts`), which is correct for the only
