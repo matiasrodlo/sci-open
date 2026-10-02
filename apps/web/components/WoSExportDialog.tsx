@@ -7,11 +7,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import type { Paper } from '@open-access-explorer/shared';
 import {
   generateCitationsBatch,
-  downloadCitation,
   getFileExtension,
-  CitationFormat,
-  CitationOptions
-} from '@/lib/citations';
+  type CitationFormat,
+  type CitationOptions
+} from '@open-access-explorer/shared';
+import { downloadCitation } from '@/lib/download-citation';
 
 interface WoSExportDialogProps {
   results: Paper[];

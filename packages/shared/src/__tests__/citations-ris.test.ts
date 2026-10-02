@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Paper } from '@open-access-explorer/shared';
+import type { Paper } from '../paper';
 import { generateCitation } from '../citations';
 
 /**

@@ -1,5 +1,5 @@
-import type { Paper } from '@open-access-explorer/shared';
-import { CitationOptions, downloadCitation, generateCitation } from './citations';
+import { generateCitation, type CitationOptions, type Paper } from '@open-access-explorer/shared';
+import { downloadCitation } from './download-citation';
 
 /** BibTeX-shaped wrappers over the citation module, for callers that only want BibTeX. */
 

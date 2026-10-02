@@ -1,4 +1,4 @@
-import type { Paper } from '@open-access-explorer/shared';
+import type { Paper } from './paper';
 
 /**
  * Two export formats, both correct.
@@ -286,10 +286,25 @@ export function generateCitationsBatch(papers: Paper[], options: CitationOptions
       if (count === 0) return entry;
 
       // a, b, c ... the convention a bibliography would use anyway.
-      const suffix = String.fromCharCode('a'.charCodeAt(0) + count - 1);
-      return entry.replace(`{${key},`, `{${key}${suffix},`);
+      return entry.replace(`{${key},`, `{${key}${keySuffix(count)},`);
     })
     .join(separator);
+}
+
+/**
+ * 1 -> `a`, 26 -> `z`, 27 -> `aa`: letters, however many repeats there are.
+ *
+ * It was one character counted up from `a`, so the 28th entry sharing a key
+ * got `{` — a brace inside the key, which ends the entry for any BibTeX parser.
+ * Entries with no author, no year and no title word longer than three letters
+ * all share the key `citation`, so a long export reaches it.
+ */
+function keySuffix(count: number): string {
+  let suffix = '';
+  for (let rest = count; rest > 0; rest = Math.floor((rest - 1) / 26)) {
+    suffix = String.fromCharCode('a'.charCodeAt(0) + ((rest - 1) % 26)) + suffix;
+  }
+  return suffix;
 }
 
 export function getFileExtension(format: CitationFormat): string {
@@ -298,28 +313,4 @@ export function getFileExtension(format: CitationFormat): string {
 
 export function getMimeType(format: CitationFormat): string {
   return format === 'ris' ? 'application/x-research-info-systems' : 'application/x-bibtex';
-}
-
-/**
- * Hands the file to the browser.
- *
- * The revoke is deferred, and that is the whole of what this function had
- * wrong. Revoking straight after `click()` can cancel the download before the
- * browser has finished reading the blob — the anchor's click is dispatched
- * synchronously but the fetch of the object URL is not, so tearing the URL down
- * in the same tick is a race the download sometimes loses. `PaperActions`
- * already deferred it for exactly this reason on the PDF path; this is the same
- * fix on the export path, which produces the larger file of the two and so had
- * the wider window to lose in.
- */
-export function downloadCitation(citation: string, filename: string, format: CitationFormat): void {
-  const blob = new Blob([citation], { type: `${getMimeType(format)};charset=utf-8` });
-  const url = window.URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  setTimeout(() => window.URL.revokeObjectURL(url), 1000);
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Paper } from '@open-access-explorer/shared';
+import type { Paper } from '../paper';
 import {
   generateCitation, generateCitationsBatch, getFileExtension, bareDoi, escapeBibTeX, citeKey, verbatimBibTeX
 } from '../citations';
@@ -191,6 +191,17 @@ describe('generateCitationsBatch', () => {
     );
     const keys = Array.from(out.matchAll(/^@\w+\{([^,]+),/gm)).map(m => m[1]);
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('keeps the keys valid past the twenty-sixth repeat', () => {
+    // One letter counted up from `a` gave the 28th `{`, which ends the entry.
+    // Records like these all share the key `citation`.
+    const bare = Array.from({ length: 30 }, () => record({ authors: [], year: undefined, title: 'On it' }));
+    const keys = Array.from(generateCitationsBatch(bare, { format: 'bibtex' }).matchAll(/^@\w+\{([^,]+),/gm)).map(m => m[1]);
+
+    expect(new Set(keys).size).toBe(30);
+    for (const key of keys) expect(key).toMatch(/^citation[a-z]*$/);
+    expect(keys.slice(25, 28)).toEqual(['citationy', 'citationz', 'citationaa']);
   });
 
   it('separates RIS records so each is its own entry', () => {
