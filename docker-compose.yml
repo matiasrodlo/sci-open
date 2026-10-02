@@ -1,6 +1,8 @@
 services:
   redis:
-    image: redis:7-alpine
+    # By digest as well as tag, like the Node base in the Dockerfiles, so a
+    # pull cannot change what runs. Dependabot proposes the moves.
+    image: redis:7-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
     ports:
       # Bound to the loopback interface, not to every one. The dev servers run
       # on the host and reach Redis through this mapping, so it stays — but
@@ -15,6 +17,9 @@ services:
       - redis_data:/data
     command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
     restart: unless-stopped
+    # Twice `--maxmemory`: an AOF rewrite forks, and pages written during it are
+    # copied, so the data can briefly be held twice.
+    mem_limit: 1g
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
@@ -36,9 +41,20 @@ services:
     # server finishes the ones running before it exits. Docker's default ten
     # seconds would kill it mid-drain.
     stop_grace_period: 40s
+    # What the caches may hold, at their defaults, is 448 MB counted as JSON:
+    # 256 for papers, 128 for the fan-outs and 64 for the result sets. Live,
+    # that is more — a string outside Latin-1 takes two bytes a character, and
+    # the held sets measured at 2.6 to 3.2 times what they were charged — so
+    # about 1.2 GB of heap when every budget is full, beside the service
+    # itself. Node sizes its heap at half the container's limit when told
+    # nothing (measured: 792 MB under 1.5 GB), so the heap is set here and the
+    # limit leaves room above it for buffers and native memory. Raise both
+    # together, and with the budgets — see docs/configuration.md.
+    mem_limit: 2g
     environment:
       - NODE_ENV=production
       - PORT=4000
+      - NODE_OPTIONS=--max-old-space-size=1536
       - REDIS_URL=redis://redis:6379
       # UNPAYWALL_EMAIL is not optional — Unpaywall answers 422 without a
       # contact address, and OpenAlex routes callers who identify themselves
@@ -165,10 +181,14 @@ services:
       # `API_ORIGIN=http://localhost:4000` for the dev servers, so the fallback
       # never applied and the container forwarded every request to itself.
       # Measured: every search answered 502, "The API is unreachable", while all
-      # three services reported healthy — web's check fetches `/`, which never
-      # calls the API. `compose-env.test.ts` holds this line in place.
+      # three services reported healthy — web's check fetched `/`, which never
+      # calls the API; it now fetches `/api/health`, which does.
+      # `compose-env.test.ts` holds this line in place.
       - API_ORIGIN=http://api:4000
     restart: unless-stopped
+    # It holds no cache of its own; this is the server rendering pages and
+    # forwarding requests, at 64 MB idle. Node gives itself half of it.
+    mem_limit: 1g
     depends_on:
       api:
         condition: service_healthy

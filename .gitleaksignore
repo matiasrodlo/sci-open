@@ -1,0 +1,6 @@
+# Findings gitleaks reports that are not secrets, by fingerprint. Each one says
+# what it is, so the list can be read rather than trusted.
+
+# `your_api_key`, the placeholder in a Typesense example in docs/deployment.md,
+# which f35ee57c added and 670043ab deleted along with the rest of that file.
+f35ee57cc7eb0c712c7601eb7fe2e4796bf44742:docs/deployment.md:curl-auth-header:508

@@ -9,18 +9,30 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Read the code and nothing else. Without this block the token took the
+# repository's default scope, which can be write to everything; no job here
+# writes anywhere. A job that needs more asks for it itself.
+#
+# Every action is pinned to a commit, with the release it was in a comment
+# beside it: a tag can be moved to other code after it was reviewed, which is
+# how the trivy-action and tj-actions/changed-files compromises reached the
+# workflows that trusted them. Dependabot proposes the moves
+# (.github/dependabot.yml).
+permissions:
+  contents: read
+
 jobs:
   verify:
     name: typecheck · lint · test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
         with:
           version: 8.10.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: pnpm
@@ -61,31 +73,55 @@ jobs:
     # both images build from a clean checkout, which is the part that was
     # unasserted.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
       # Separate steps rather than one `docker compose build` so a failure names
       # which image failed, and so the two get their own cache scopes — they
       # share a base layer but diverge immediately, and one scope would have
       # them evicting each other.
       - name: Build API image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: apps/api/Dockerfile
           push: false
+          load: true
+          tags: open-access-explorer-api:ci
           cache-from: type=gha,scope=api
           cache-to: type=gha,scope=api,mode=max
 
       - name: Build web image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: apps/web/Dockerfile
           push: false
+          load: true
+          tags: open-access-explorer-web:ci
           cache-from: type=gha,scope=web
           cache-to: type=gha,scope=web,mode=max
+
+      # The dependency audit sees the lockfile; this sees what ships — the
+      # Alpine packages and Node underneath the app as well as its modules.
+      # It fails on a high or critical vulnerability that has a fix, the bar
+      # the audit job holds the lockfile to: one with no fix yet is reported
+      # and does not fail, since nothing in this repository could clear it.
+      #
+      # The scanner is the Trivy image, pinned by digest, rather than
+      # aquasecurity/trivy-action. In March 2026 that action's tags were moved
+      # to credential-stealing code (GHSA-69fq-xp46-6x23), and an image named
+      # by digest was unaffected by any of it. Trivy reports usage and checks
+      # for updates unless told not to; a pinned scanner in CI needs neither.
+      - name: Scan images
+        run: |
+          for image in open-access-explorer-api:ci open-access-explorer-web:ci; do
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+              aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa \
+              image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed --no-progress \
+              --disable-telemetry --skip-version-check "$image"
+          done
 
       # The images are only half of what compose has to get right. This parses
       # the file, resolves every interpolation and validates the schema, which
@@ -94,6 +130,24 @@ jobs:
       # Dockerfiles are.
       - name: Validate compose file
         run: docker compose config --quiet
+
+  secrets:
+    name: secret scan
+    runs-on: ubuntu-latest
+    # The whole history, not the tip: a key committed and then deleted is still
+    # in every clone. Findings that are not secrets are listed, with what each
+    # one is, in .gitleaksignore.
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      # The gitleaks image, pinned by digest for the reason the scanner above is.
+      - name: Scan for secrets
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo \
+            ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            git . --redact --no-banner --exit-code 1
 
   audit:
     name: dependency audit
@@ -106,13 +160,13 @@ jobs:
     # gate fails on any high or critical advisory not on that list, which is
     # the only version of it worth running.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
         with:
           version: 8.10.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: pnpm

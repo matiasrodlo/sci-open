@@ -1,4 +1,9 @@
-FROM node:22-alpine AS base
+# One reference to the base image, by tag and by digest: the tag says which line
+# it follows, the digest which build of it this is, so a rebuild cannot pick up
+# a different image unannounced. Dependabot moves both (.github/dependabot.yml).
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS node
+
+FROM node AS base
 RUN apk add --no-cache libc6-compat
 RUN npm install -g pnpm@8.10.0
 
@@ -30,8 +35,19 @@ COPY . .
 RUN pnpm build --filter=@open-access-explorer/web
 
 # Production image, copy all the files and run next
-FROM base AS runner
+FROM node AS runner
 WORKDIR /app
+
+# Kept from when this stage was built on `base`, which installs it.
+RUN apk add --no-cache libc6-compat
+
+# From `node` rather than `base`, so without the pnpm the build installs, and
+# without the package managers the base image ships — npm, Corepack, Yarn.
+# None of them runs here: the service is `node` and its own files. Left in,
+# they were code in the image for a scan to report and an intruder to use, and
+# pnpm 8.10.0 is old enough to carry advisories of its own.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-* \
+ && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg
 
 ENV NODE_ENV=production
 

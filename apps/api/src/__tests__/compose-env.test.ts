@@ -43,7 +43,8 @@ const NOT_PASSED: Record<string, string> = {
   // whatever the developer's `.env` points at.
   NODE_ENV: 'set by compose to production',
   PORT: 'set by compose',
-  REDIS_URL: 'set by compose to the service name on its own network'
+  REDIS_URL: 'set by compose to the service name on its own network',
+  NODE_OPTIONS: 'set by compose for Node itself, which sizes the heap from it'
 };
 
 /**

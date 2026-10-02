@@ -228,6 +228,12 @@ entry larger than the whole budget is refused rather than admitted and then
 evicting everything else, so a very small value disables the cache instead of
 thrashing it.
 
+`docker-compose.yml` sizes the API container for the defaults: a 1.5 GB heap
+(`NODE_OPTIONS=--max-old-space-size=1536`) inside a 2 GB limit, against about
+1.2 GB of heap with every cache full. Raising a budget means raising both. Left
+to itself Node takes half the container's limit for its heap, which under 2 GB
+is 1 GB — less than full caches need — so the heap is set rather than derived.
+
 `CACHE_REDIS_COOLDOWN_MS` is the circuit breaker in front of L2. An
 unreachable Redis used to be paid for once per cache operation, and a paper
 request makes five or six: measured against a port with nothing listening, two
