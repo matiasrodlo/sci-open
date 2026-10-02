@@ -15,6 +15,7 @@ import { PROVIDERS, type ProviderEntry } from './orchestrator/registry';
 import { AUTHORITIES, type AuthorityEntry } from './authorities';
 import { useApiKeys, type ApiKeys } from './lib/api-key';
 import { configureHttpPools, type HttpPoolSettings } from './lib/http-pool-config';
+import { doiRegistered } from './lib/doi-registry';
 
 /**
  * One object, made once per process, that owns the caches and exposes exactly
@@ -87,6 +88,9 @@ export type Engine = {
    * source that holds it. A DOI lookup is a search, and spends an admission
    * like one. */
   lookupDoi(doi: string, options?: { admit?: Admit }): Promise<Paper | null>;
+  /** Whether the DOI system holds this DOI at all — whoever registered it.
+   * `undefined` when the registry could not say. One request, no admission. */
+  doiRegistered(doi: string): Promise<boolean | undefined>;
   stats: UpstreamStats;
 };
 
@@ -191,7 +195,8 @@ export function createEngine(options: EngineOptions): Engine {
       // reference check that could not see it would call it fabricated.
       const { response } = await search({ doi: wanted, filters: { openAccessOnly: false }, page: 1, pageSize: 1 }, extra);
       return response.papers.find(paper => paper.doi && normalizeDoi(paper.doi) === normalizeDoi(wanted)) ?? null;
-    }
+    },
+    doiRegistered: doi => doiRegistered(doi, { userAgent })
   };
 }
 
