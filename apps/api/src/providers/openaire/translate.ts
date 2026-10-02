@@ -81,7 +81,7 @@ function words(phrase: string): string {
 }
 
 /** What the search reads: the body text, which is every field it has. */
-const BODY_TEXT: ReadonlySet<QueryField> = new Set<QueryField>(['topic', 'title', 'abstract', 'all']);
+const BODY_TEXT: ReadonlySet<QueryField> = new Set<QueryField>(['topic', 'title', 'abstract']);
 
 /**
  * The search's own syntax, for a query the flat form cannot state whole.
@@ -95,9 +95,12 @@ const BODY_TEXT: ReadonlySet<QueryField> = new Set<QueryField>(['topic', 'title'
  * An author, a venue or a publisher has no field here, and searching the name
  * as words would ask for the papers that mention it — a narrower question — so
  * `unscoped` leaves those clauses out and `matchesQuery` applies them. No
- * `NOT`, which has not been measured here: left out, it only widens. `ALL=` is
- * read as body text, as the flat form reads it, though it also covers authors
- * and venues.
+ * `NOT`, which has not been measured here: left out, it only widens.
+ *
+ * `ALL=` has no field here either, since it reaches authors and venues as well
+ * as the body text. Unlike those it cannot be left out — a miss on `all` is
+ * `unknown` to `matchesQuery`, so everything the wider search brought back
+ * would be kept — and `cannotSend` keeps OpenAIRE from being asked.
  */
 const DIALECT: Dialect = {
   fields: field => (BODY_TEXT.has(field) ? ['search'] : []),
@@ -130,9 +133,18 @@ function flatSearch(query: Query): string {
   return [...terms, ...phrases].join(' ');
 }
 
-/** A nested query in the search's syntax, or nothing it can be sent as. See `cannotSend`. */
-function nestedSearch(expression: QueryNode): string {
+/**
+ * The search for a parsed query, or nothing it can be sent as.
+ *
+ * Nothing when the query needs a part the search cannot state and
+ * `matchesQuery` would not apply afterwards: an `ALL=` term, or an OR it
+ * cannot send whole that holds a topic term (see `cannotSend`). Otherwise from
+ * the flat form when that states the query whole, which keeps the common
+ * search exactly as it was, and in the search's own syntax when it is nested.
+ */
+function expressionSearch(query: Query, expression: QueryNode): string {
   if (cannotSend(expression, DIALECT)) return '';
+  if (flatStatesWhole(expression)) return flatSearch(query);
   return renderExpression(expression, DIALECT) ?? '';
 }
 
@@ -160,9 +172,8 @@ export function toParams(query: Query, options: TranslateOptions = {}): OpenAire
   // search exactly as it was. Anything nested loses its inner structure there —
   // `crispr AND (mouse OR rat)` reached OpenAIRE as `crispr`, and 11 of the 465
   // papers it returned mentioned either animal — so it is rendered instead.
-  // See `flatStatesWhole`.
-  const search =
-    query.expression && !flatStatesWhole(query.expression) ? nestedSearch(query.expression) : flatSearch(query);
+  // See `expressionSearch`.
+  const search = query.expression ? expressionSearch(query, query.expression) : flatSearch(query);
 
   // Published, and not the unknowns beside it, is the one narrowing OpenAIRE
   // can be asked for. A search for preprints never gets here: `normalize`

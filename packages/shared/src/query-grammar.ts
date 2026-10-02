@@ -466,11 +466,20 @@ export function parseExpression(input: string, options: ParseExpressionOptions =
  * answer the question that was asked, and a wrong-field search spends the depth
  * budget to return records the evaluator will drop anyway.
  *
+ * `all` is the fourth, and was flattened until a property test of this
+ * function's promise generated it: `ALL=` reaches authors, venues and
+ * publishers as well as the body text, so `ALL=Doudna` reached a provider
+ * reading the flat form as the *word* "Doudna", and every paper she wrote that
+ * does not say her name was never fetched. A provider that can state `ALL=` —
+ * OpenAlex's `default.search`, the `all:` and every-field forms the others
+ * render — is sent it from the parse instead; one that can only read the flat
+ * form now has nothing to search for, and is skipped.
+ *
  * `year` and `doi` are left out for a different reason — they are lifted onto
  * `Query.years` and `Query.doi`, which every provider can express.
  */
 function flattenable(field: QueryField): boolean {
-  return field === 'topic' || field === 'all' || field === 'title' || field === 'abstract';
+  return field === 'topic' || field === 'title' || field === 'abstract';
 }
 
 /**

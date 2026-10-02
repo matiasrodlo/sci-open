@@ -104,6 +104,15 @@ describe('a query no keyword-only provider can answer', () => {
     ]);
   });
 
+  it('skips it for ALL=, which reaches authors and venues as well as the words it can search', () => {
+    const { planned, skipped } = plan(parseQuery('ALL=Doudna'), providers);
+
+    expect(ids(planned)).toEqual(['europepmc']);
+    expect(skipped).toEqual([
+      { provider: 'openaire', reason: 'takes keywords only, with no way to name a field' }
+    ]);
+  });
+
   it('does not skip a provider that can express the field', () => {
     expect(ids(plan(parseQuery('AU=Doudna'), [entry('europepmc', caps())]).planned)).toEqual(['europepmc']);
   });

@@ -154,3 +154,22 @@ describe('toParams — alternatives and nested queries', () => {
     expect(toParams(query({ terms: ['a'], phrases: ['gene (editing'], join: 'OR' })).search).toBe('a OR (gene editing)');
   });
 });
+
+/**
+ * `ALL=` reaches authors, venues and publishers as well as the body text, and
+ * OpenAIRE's search is the body text only, so it cannot state one. Nor can it
+ * leave one out: a miss on `all` is `unknown` to `matchesQuery`, so everything
+ * the wider request brought back would be kept. OpenAIRE is not asked.
+ */
+describe('toParams — ALL=', () => {
+  it('sends nothing for a query that requires an ALL= term', () => {
+    for (const input of ['ALL=Doudna', 'ALL=Doudna AND TS=crispr', 'TS=crispr OR ALL=Doudna', 'TS=crispr AND (TS=mouse OR ALL=rat)']) {
+      expect({ input, sent: translate(parseQuery(input), { openAccessOnly: true }) }).toEqual({ input, sent: '' });
+    }
+  });
+
+  it('still sends a query whose ALL= term is only excluded', () => {
+    // A record is convicted for having what a NOT excludes, so leaving one out is safe.
+    expect(toParams(parseQuery('TS=crispr NOT ALL=cas9')).search).toBe('crispr');
+  });
+});

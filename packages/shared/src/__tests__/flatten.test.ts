@@ -24,11 +24,16 @@ const pick = <T>(items: readonly T[]): T => items[Math.floor(random() * items.le
 const WORDS = ['alpha', 'beta', 'gamma', 'delta'] as const;
 
 /**
- * No `all`, and no `topics` on the papers. Both reach text that is not body
- * text — authors and venues for `all`, keywords for `topic` — so a match
- * through them would fail the check for a reason other than the one under test.
+ * No `topics` on the papers: a topic term reaches keywords as well as body
+ * text, so a match through one would fail the check for a reason other than the
+ * one under test.
+ *
+ * `all` is generated, and it is the case that broke the promise: it reaches
+ * authors, venues and publishers too, so flattening `ALL=Doudna` into the body
+ * text missed every paper Doudna wrote that does not say "Doudna". This test
+ * failed as soon as `all` was added here, until `all` stopped being flattened.
  */
-const FIELDS: readonly QueryField[] = ['topic', 'title', 'abstract', 'author', 'venue', 'publisher', 'year'];
+const FIELDS: readonly QueryField[] = ['topic', 'title', 'abstract', 'author', 'venue', 'publisher', 'year', 'all'];
 
 function value(field: QueryField): QueryValue {
   if (field === 'year') {
@@ -124,5 +129,18 @@ describe('flatten', () => {
     // Every alternative covered: still the OR of them.
     expect(flatten(or(clause('topic', 'crispr'), { kind: 'and', nodes: [clause('topic', 'cas9'), clause('author', 'Doudna')] })))
       .toEqual({ terms: ['crispr', 'cas9'], phrases: [], join: 'OR' });
+  });
+
+  it('does not flatten ALL=, which reaches authors and venues as well as the body text', () => {
+    const clause = (field: QueryField, text: string): QueryNode => ({ kind: 'clause', field, value: { kind: 'term', text } });
+
+    // Was `Doudna` in the body text: every paper she wrote without her name in it, missed.
+    expect(flatten(clause('all', 'Doudna'))).toMatchObject({ terms: [], phrases: [] });
+    // Required beside a topic term, it is left out of the flat form like an author would be.
+    expect(flatten({ kind: 'and', nodes: [clause('all', 'Doudna'), clause('topic', 'crispr')] }))
+      .toMatchObject({ terms: ['crispr'], join: 'AND' });
+    // An alternative it cannot stand in for leaves the OR with nothing to flatten.
+    expect(flatten({ kind: 'or', nodes: [clause('topic', 'crispr'), clause('all', 'Doudna')] }))
+      .toMatchObject({ terms: [], phrases: [] });
   });
 });
