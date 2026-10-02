@@ -293,7 +293,11 @@ export async function runSearch(
     openAccessOnly,
     filtersSent,
     ...(facetQueries ? { facetQueries } : {}),
-    policy: { requireOpenAccess: openAccessOnly },
+    // Both gates follow the request. A search that includes papers which are
+    // not open has asked for papers nobody can read: holding it to "has a
+    // retrievable copy" still dropped every closed paper with none, so a
+    // closed paper looked up by its DOI did not exist.
+    policy: { requireOpenAccess: openAccessOnly, requireFullText: openAccessOnly },
     rescueLimit: settings.rescueLimit,
     rescueBudgetMs: settings.rescueBudgetMs,
     ...(options.cache ? { cache: options.cache } : {}),

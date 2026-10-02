@@ -136,6 +136,17 @@ describe('runOrchestrator: what the providers are asked', () => {
     expect(calls[0]!.query.doi).toBe('10.1038/s41586-020-2008-3');
   });
 
+  it('returns a closed paper with no copy only when the request includes closed papers', async () => {
+    const closed = paper({
+      id: 'europepmc:9', title: 'A closed study', doi: '10.1/closed', oaStatus: 'closed', fullText: undefined,
+      sources: [ref('europepmc', { nativeId: '9' })]
+    });
+    const { entry } = recorder([closed]);
+
+    expect((await run({ q: 'crispr' }, [entry])).total).toBe(0);
+    expect((await run({ q: 'crispr', filters: { openAccessOnly: false } }, [entry])).hits.map(h => h.id)).toEqual(['europepmc:9']);
+  });
+
   it('asks for open access only unless the request says otherwise', async () => {
     const { entry, calls } = recorder();
     await run({ q: 'crispr' }, [entry]);
