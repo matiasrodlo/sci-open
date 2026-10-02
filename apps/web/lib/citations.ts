@@ -211,9 +211,17 @@ function generateBibTeXEntry(data: CitationData, options: Required<CitationOptio
  * CRLF, every tag is exactly `XX  - `, and `ER  - ` closes the record.
  * A newline inside a value would start a line the parser cannot read, so
  * abstracts are flattened.
+ *
+ * Split rather than replaced. The expression this used, `\s*\r?\n\s*`, tried
+ * every start in a run of whitespace and scanned the rest of the run from
+ * each, so 50,000 spaces took 1.1 s in the reader's browser — and the values
+ * here are a provider's text, with no whitespace collapsed on the way. This is
+ * linear, and a lone `\r`, which the expression left in the line, now ends a
+ * line as well.
  */
 function risLine(tag: string, value: string): string {
-  return `${tag.padEnd(2)}  - ${value.replace(/\s*\r?\n\s*/g, ' ').trim()}`;
+  const flat = value.split(/\r\n|\r|\n/).map(line => line.trim()).filter(Boolean).join(' ');
+  return `${tag.padEnd(2)}  - ${flat}`;
 }
 
 function generateRISEntry(data: CitationData, options: Required<CitationOptions>): string {
