@@ -20,7 +20,8 @@ function engineFor(config: McpConfig): Engine {
   return createEngine({
     userAgent: config.userAgent,
     apiKeys: config.apiKeys,
-    search: { depth: config.searchDepth }
+    search: { depth: config.searchDepth },
+    ...(config.openCitationsToken ? { openCitationsToken: config.openCitationsToken } : {})
   });
 }
 

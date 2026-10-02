@@ -1,0 +1,290 @@
+{
+  "name": "get_citations",
+  "title": "Get citations",
+  "description": "The references of a paper (direction=\"references\") or the papers citing it (direction=\"cited_by\"), from OpenCitations, each resolved to a record where OpenAlex holds it, with self-citations flagged. Paged by offset. The paper needs a DOI; pass the DOI itself when you have it, which skips looking the paper up.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "paper": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 300,
+        "description": "DOI (preferred) or sci-open id, e.g. 10.7717/peerj-cs.421 or openalex:W3134956838"
+      },
+      "direction": {
+        "type": "string",
+        "enum": [
+          "references",
+          "cited_by"
+        ]
+      },
+      "limit": {
+        "default": 20,
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 50
+      },
+      "offset": {
+        "default": 0,
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      }
+    },
+    "required": [
+      "paper",
+      "direction"
+    ],
+    "$schema": "https://json-schema.org/draft/2020-12/schema"
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "paper": {
+        "type": "string"
+      },
+      "doi": {
+        "type": "string"
+      },
+      "direction": {
+        "type": "string",
+        "enum": [
+          "references",
+          "cited_by"
+        ]
+      },
+      "total_links": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+      },
+      "offset": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+      },
+      "returned": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+      },
+      "next_offset": {
+        "anyOf": [
+          {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "records_incomplete": {
+        "type": "boolean"
+      },
+      "links": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "doi": {
+              "type": "string"
+            },
+            "other_dois": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "pmid": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "created": {
+              "type": "string"
+            },
+            "journal_self_citation": {
+              "type": "boolean"
+            },
+            "author_self_citation": {
+              "type": "boolean"
+            },
+            "record": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "doi": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "authors": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "year": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "venue": {
+                  "type": "string"
+                },
+                "access": {
+                  "type": "string",
+                  "enum": [
+                    "gold",
+                    "green",
+                    "hybrid",
+                    "bronze",
+                    "closed",
+                    "unknown"
+                  ]
+                },
+                "stage": {
+                  "type": "string",
+                  "enum": [
+                    "preprint",
+                    "accepted",
+                    "published",
+                    "unknown"
+                  ]
+                },
+                "full_text": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "pdf",
+                        "html",
+                        "xml"
+                      ]
+                    },
+                    "verified": {
+                      "type": "boolean"
+                    },
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "verified"
+                  ],
+                  "additionalProperties": false
+                },
+                "citations": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "found_in": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "publisher": {
+                  "type": "string"
+                },
+                "topics": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "language": {
+                  "type": "string"
+                },
+                "landing_page": {
+                  "type": "string"
+                },
+                "sources": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "source": {
+                        "type": "string"
+                      },
+                      "native_id": {
+                        "type": "string"
+                      },
+                      "rank": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "retrieved_at": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "source",
+                      "native_id",
+                      "rank",
+                      "retrieved_at"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "field_sources": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "authors",
+                "access",
+                "stage",
+                "found_in"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "journal_self_citation",
+            "author_self_citation"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": [
+      "paper",
+      "doi",
+      "direction",
+      "total_links",
+      "offset",
+      "returned",
+      "next_offset",
+      "records_incomplete",
+      "links"
+    ],
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false
+  },
+  "annotations": {
+    "title": "Get citations",
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true
+  }
+}

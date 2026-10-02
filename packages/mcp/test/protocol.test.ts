@@ -60,12 +60,44 @@ describe('protocol', () => {
     expect(client.getInstructions()).toContain('TS= topic (default)');
   });
 
-  it('marks every tool read-only except the one that can write a file', async () => {
-    // Annotations describe a tool, not a call: read_paper writes only with
-    // save_to, and replaces a file only with overwrite, but it can.
+  it('describes the opt-in tools only to a client that is served them', () => {
+    expect(client.getInstructions()).not.toMatch(/get_citations|export_citations/);
+    expect(allClient.getInstructions()).toContain('- Follow citations: get_citations');
+    expect(allClient.getInstructions()).toContain('- Cite papers: export_citations');
+  });
+
+  it('follows a paper’s citers, its records fenced', async () => {
+    const result = await allClient.callTool({ name: 'get_citations', arguments: { paper: '10.48550/arXiv.1706.03762', direction: 'cited_by' } });
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toMatchObject({
+      total_links: 2,
+      links: [
+        { doi: '10.1234/hostile', id: 'openalex:W1', created: '2021', record: { title: 'A study of things' } },
+        { doi: '10.9999/elsewhere', author_self_citation: true }
+      ]
+    });
+    expect(text(result)).toMatch(/^<untrusted-[0-9a-f-]{36}>$/m);
+  });
+
+  it('exports citations as an embedded resource the client can save as is', async () => {
+    const result = await allClient.callTool({ name: 'export_citations', arguments: { papers: ['10.48550/arXiv.1706.03762', 'openalex:W1'] } });
+    expect(result.isError).toBeFalsy();
+    const blocks = result.content as Array<{ type: string; resource?: { uri: string; mimeType: string; text: string } }>;
+    const attached = blocks.find(b => b.type === 'resource')!.resource!;
+    expect(attached.mimeType).toBe('application/x-bibtex');
+    expect(attached.text.match(/^@/gm)).toHaveLength(2);
+    expect(result.structuredContent).toMatchObject({ entries: 2, resource_uri: attached.uri });
+    // The summary is a line, not the file again.
+    expect(text(result).split('\n')[0]).toMatch(/^2 BibTeX entries attached as a resource/);
+  });
+
+  it('marks every tool read-only except the two that can write a file', async () => {
+    // Annotations describe a tool, not a call: read_paper and export_citations
+    // write only with save_to, and replace a file only with overwrite, but they can.
     const { tools } = await allClient.listTools();
+    expect(tools).toHaveLength(7);
     for (const t of tools) {
-      const writes = t.name === 'read_paper';
+      const writes = t.name === 'read_paper' || t.name === 'export_citations';
       expect(t.annotations).toMatchObject({ readOnlyHint: !writes, destructiveHint: writes, idempotentHint: !writes, openWorldHint: true });
     }
   });

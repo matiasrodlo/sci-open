@@ -1,0 +1,113 @@
+{
+  "name": "export_citations",
+  "title": "Export citations",
+  "description": "BibTeX or RIS for up to 200 papers (DOIs or sci-open ids), generated from the records: never retype a citation yourself. With save_to (local connections only) the file is written to disk; otherwise it is attached as a resource to save as is. Papers that could not be resolved are listed, never dropped silently.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "papers": {
+        "minItems": 1,
+        "maxItems": 200,
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "description": "DOIs or sci-open ids, in the order wanted"
+      },
+      "format": {
+        "default": "bibtex",
+        "type": "string",
+        "enum": [
+          "bibtex",
+          "ris"
+        ]
+      },
+      "include_abstracts": {
+        "default": false,
+        "description": "Put each abstract in its entry",
+        "type": "boolean"
+      },
+      "save_to": {
+        "description": "Absolute path for the file (local connections only)",
+        "type": "string",
+        "maxLength": 1000
+      },
+      "overwrite": {
+        "default": false,
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "papers"
+    ],
+    "$schema": "https://json-schema.org/draft/2020-12/schema"
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "format": {
+        "type": "string",
+        "enum": [
+          "bibtex",
+          "ris"
+        ]
+      },
+      "entries": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+      },
+      "sha256": {
+        "type": "string"
+      },
+      "path": {
+        "type": "string"
+      },
+      "resource_uri": {
+        "type": "string"
+      },
+      "duplicates": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+      },
+      "unresolved": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "input": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "input",
+            "reason"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": [
+      "format",
+      "entries",
+      "sha256",
+      "duplicates",
+      "unresolved"
+    ],
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false
+  },
+  "annotations": {
+    "title": "Export citations",
+    "readOnlyHint": false,
+    "destructiveHint": true,
+    "idempotentHint": false,
+    "openWorldHint": true
+  }
+}

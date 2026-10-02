@@ -1,5 +1,5 @@
 import { QueryParseError } from '@open-access-explorer/shared';
-import { PdfProxyError, SourceBusyError } from '@open-access-explorer/core';
+import { OpenCitationsUnavailableError, PdfProxyError, SourceBusyError } from '@open-access-explorer/core';
 
 /**
  * Every failure a tool can return: a stable code, a plain message, and a hint
@@ -55,6 +55,11 @@ export function toToolError(error: unknown): ToolError {
       'Retry after the wait, or read another paper meanwhile. Sections of a paper already read never wait.',
       seconds
     );
+  }
+  if (error instanceof OpenCitationsUnavailableError) {
+    return error.status === 429
+      ? new ToolError('rate_limited', 'OpenCitations asks for fewer requests a minute.', 'Retry in a minute. Pages of a list already read do not ask it again.', 60)
+      : new ToolError('upstream_unavailable', 'OpenCitations did not answer.', 'Retry in a minute; the other tools do not depend on it.');
   }
   if (error instanceof PdfProxyError) {
     return new ToolError('no_full_text', 'The full-text copy could not be fetched.', 'Try view="outline" again later, or use get_paper for the landing page.');

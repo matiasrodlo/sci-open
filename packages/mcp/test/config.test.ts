@@ -75,8 +75,14 @@ describe('selectTools', () => {
   });
 
   it('serves every tool for all, and adds tools by name', () => {
-    expect(names({ toolsets: ['all'] })).toEqual(['search_papers', 'get_search_page', 'get_paper', 'verify_references', 'read_paper']);
-    expect(names({ toolsets: ['graph'], tools: ['get_paper'] })).toEqual(['get_paper']);
+    expect(names({ toolsets: ['all'] })).toEqual([
+      'search_papers', 'get_search_page', 'get_paper', 'verify_references', 'read_paper', 'get_citations', 'export_citations'
+    ]);
+    expect(names({ toolsets: ['graph'] })).toEqual(['get_citations']);
+    expect(names({ toolsets: ['default'], tools: ['export_citations'] })).toEqual([
+      'search_papers', 'get_search_page', 'get_paper', 'verify_references', 'read_paper', 'export_citations'
+    ]);
+    expect(names({ toolsets: ['graph'], tools: ['get_paper'] })).toEqual(['get_paper', 'get_citations']);
     expect(names({ toolsets: ['core'] })).not.toContain('read_paper');
   });
 

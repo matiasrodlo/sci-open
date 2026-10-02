@@ -1,6 +1,6 @@
 import type { Paper, ProviderReport, SearchResponseV2 } from '@open-access-explorer/shared';
 import { paper, ref } from '@open-access-explorer/core/testing';
-import { fixtureKey, type Fixtures } from '../src/fixture-engine';
+import { citationKey, fixtureKey, type Fixtures } from '../src/fixture-engine';
 
 /**
  * A small recorded world for the protocol tests: one search for `TS=crispr`
@@ -64,6 +64,13 @@ export const FIXTURES: Fixtures = {
       ],
       totalChars: 131, retrievedAt: '2026-10-02T00:00:00.000Z'
     }
+  },
+  // Two papers cite Attention: one recorded here (the hostile one), one not.
+  citations: {
+    [citationKey('10.48550/arXiv.1706.03762', 'cited_by')]: [
+      { dois: ['10.1234/hostile'], openalex: 'W1', created: '2021', journalSelfCitation: false, authorSelfCitation: false },
+      { dois: ['10.9999/elsewhere'], created: '2022-05-01', journalSelfCitation: false, authorSelfCitation: true }
+    ]
   },
   searches: {
     [fixtureKey({ q: 'TS=crispr', page: 1 })]: page(1),

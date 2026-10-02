@@ -14,6 +14,8 @@ import { searchPapers } from '../tools/search-papers';
 import { getPaper } from '../tools/get-paper';
 import { verifyReferences } from '../tools/verify-references';
 import { readPaper } from '../tools/read-paper';
+import { getCitations } from '../tools/get-citations';
+import { exportCitations } from '../tools/export-citations';
 
 const USAGE = `sci-open <command>
 
@@ -22,6 +24,10 @@ const USAGE = `sci-open <command>
   verify <file>                                verify_references, one reference per line (25 at most)
   read <id or DOI> [--section ID [--offset N] | --find TEXT | --out FILE]
                                                read_paper: the outline, a section, a search, or all of it to a file
+  refs <DOI or id> [--offset N]                get_citations: what the paper cites
+  citers <DOI or id> [--offset N]              get_citations: what cites the paper
+  cite <DOI or id>... [--ris] [--abstracts] [--out FILE]
+                                               export_citations: BibTeX (or RIS) to stdout, or to a file
 
 Configured by the same environment variables as sci-open-mcp.`;
 
@@ -37,6 +43,8 @@ function readArgs() {
         offset: { type: 'string' },
         find: { type: 'string' },
         out: { type: 'string' },
+        ris: { type: 'boolean' },
+        abstracts: { type: 'boolean' },
         help: { type: 'boolean' }
       }
     });
@@ -66,7 +74,12 @@ async function main(): Promise<void> {
   for (const warning of warnings) logger.warn({}, warning);
 
   const deps: ToolDeps = {
-    engine: createEngine({ userAgent: config.userAgent, apiKeys: config.apiKeys, search: { depth: config.searchDepth } }),
+    engine: createEngine({
+      userAgent: config.userAgent,
+      apiKeys: config.apiKeys,
+      search: { depth: config.searchDepth },
+      ...(config.openCitationsToken ? { openCitationsToken: config.openCitationsToken } : {})
+    }),
     config,
     metrics: nullMetrics,
     transport: 'stdio',
@@ -78,6 +91,13 @@ async function main(): Promise<void> {
     const parsed = def.input.safeParse(args); // the server's own limits and defaults
     if (!parsed.success) throw new ToolError('invalid_input', z.prettifyError(parsed.error));
     const outcome = await def.run(parsed.data, deps);
+    // An export's file is the output; its one-line summary goes to stderr, so
+    // `sci-open cite … > refs.bib` writes a file a reference manager reads.
+    if (outcome.resources?.length) {
+      process.stderr.write(`${outcome.text}\n`);
+      for (const attached of outcome.resources) process.stdout.write(attached.resource.text);
+      return;
+    }
     process.stdout.write(`${outcome.text}\n`);
   };
 
@@ -100,6 +120,20 @@ async function main(): Promise<void> {
             : values.find
               ? { view: 'search', query: values.find }
               : {})
+      });
+    case 'refs':
+    case 'citers':
+      return run(getCitations, {
+        paper: rest[0] ?? '',
+        direction: command === 'refs' ? 'references' : 'cited_by',
+        ...(values.offset ? { offset: Number(values.offset) } : {})
+      });
+    case 'cite':
+      return run(exportCitations, {
+        papers: rest,
+        format: values.ris ? 'ris' : 'bibtex',
+        ...(values.abstracts ? { include_abstracts: true } : {}),
+        ...(values.out ? { save_to: values.out } : {})
       });
     case 'verify':
       return run(verifyReferences, {

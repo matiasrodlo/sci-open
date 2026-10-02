@@ -1,6 +1,6 @@
 import { McpServer, type McpServerFactory } from '@modelcontextprotocol/server';
 import type { Engine } from '@open-access-explorer/core';
-import { INSTRUCTIONS } from './instructions';
+import { instructionsFor } from './instructions';
 import { selectTools } from './toolsets';
 import { registerTools } from './framework/register';
 import type { McpConfig } from './config';
@@ -19,19 +19,19 @@ export type ServerDeps = {
 
 export function createServer(deps: ServerDeps, request: { toolsets?: string[]; tools?: string[] } = {}): McpServer {
   const identity = { name: 'sci-open', version: BUILD.version, ...(BUILD.commit ? { commit: BUILD.commit } : {}) };
+  const tools = selectTools({
+    toolsets: request.toolsets ?? deps.config.toolsets,
+    tools: request.tools ?? deps.config.tools
+  });
   const server = new McpServer(
     { name: identity.name, title: 'sci-open — open-access literature', version: identity.version },
     {
-      instructions: INSTRUCTIONS,
+      instructions: instructionsFor(tools),
       capabilities: { tools: {} },
       // tools/list never changes while a process runs; let clients cache it.
       cacheHints: { 'tools/list': { ttlMs: 3_600_000, cacheScope: 'public' } }
     }
   );
-  const tools = selectTools({
-    toolsets: request.toolsets ?? deps.config.toolsets,
-    tools: request.tools ?? deps.config.tools
-  });
   registerTools(server, tools, {
     engine: deps.engine,
     config: deps.config,
