@@ -1,6 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ProviderId, Query } from '@open-access-explorer/shared';
+
+const { resolve } = vi.hoisted(() => ({ resolve: vi.fn() }));
+vi.mock('../fulltext/resolve', () => ({ resolveFullText: resolve }));
+
 import { createEngine } from '../engine';
+import { SourceBusyError } from '../lib/host-pacer';
 import type { ProviderEntry } from '../orchestrator/registry';
 import { paper, ref } from '../orchestrator/__tests__/helpers';
 
@@ -234,5 +239,63 @@ describe('a spent quota', () => {
     expect(openalex.calls).toHaveLength(1);
     expect(facetCalls).toBe(0);
     expect(authorityCalls).toBe(0);
+  });
+});
+
+describe('reading full text', () => {
+  const doc = { paperId: 'arxiv:1', tier: 'arxiv-html', url: 'https://arxiv.org/html/1', sections: [{ id: 's1', title: 'T', text: 'x' }], totalChars: 1, retrievedAt: 'now' };
+  const target = paper({ id: 'arxiv:1' });
+  const engine = () => createEngine({ userAgent: 'engine-test', providers: [], authorities: [] });
+
+  beforeEach(() => {
+    resolve.mockReset();
+  });
+
+  it('fetches a paper once, however many times its sections are read', async () => {
+    resolve.mockResolvedValue({ doc, definitive: true });
+    const e = engine();
+
+    await e.readFullText(target, { trustedOnly: false });
+    expect(await e.readFullText(target, { trustedOnly: false })).toEqual(doc);
+    expect(resolve).toHaveBeenCalledTimes(1);
+  });
+
+  it('fetches once for reads that arrive together', async () => {
+    resolve.mockImplementation(() => new Promise(r => setTimeout(() => r({ doc, definitive: true }), 10)));
+    const e = engine();
+
+    await Promise.all([e.readFullText(target, { trustedOnly: false }), e.readFullText(target, { trustedOnly: false })]);
+    expect(resolve).toHaveBeenCalledTimes(1);
+  });
+
+  it('holds trusted mode’s answer apart, since it reads fewer tiers', async () => {
+    resolve.mockResolvedValue({ doc: null, definitive: true });
+    const e = engine();
+
+    await e.readFullText(target, { trustedOnly: true });
+    await e.readFullText(target, { trustedOnly: false });
+    expect(resolve.mock.calls.map(c => c[1].trustedOnly)).toEqual([true, false]);
+  });
+
+  it('holds a definitive miss, and not one that a failure left open', async () => {
+    const e = engine();
+    resolve.mockResolvedValue({ doc: null, definitive: false });
+    await e.readFullText(target, { trustedOnly: false });
+    await e.readFullText(target, { trustedOnly: false });
+    expect(resolve).toHaveBeenCalledTimes(2);
+
+    resolve.mockResolvedValue({ doc: null, definitive: true });
+    await e.readFullText(target, { trustedOnly: false });
+    await e.readFullText(target, { trustedOnly: false });
+    expect(resolve).toHaveBeenCalledTimes(3);
+  });
+
+  it('holds nothing for a read deferred by a paced host, so the retry fetches', async () => {
+    const e = engine();
+    resolve.mockRejectedValueOnce(new SourceBusyError('arxiv.org', 30_000));
+    await expect(e.readFullText(target, { trustedOnly: false })).rejects.toBeInstanceOf(SourceBusyError);
+
+    resolve.mockResolvedValue({ doc, definitive: true });
+    expect(await e.readFullText(target, { trustedOnly: false })).toEqual(doc);
   });
 });

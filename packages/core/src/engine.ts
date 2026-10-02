@@ -16,6 +16,10 @@ import { AUTHORITIES, type AuthorityEntry } from './authorities';
 import { useApiKeys, type ApiKeys } from './lib/api-key';
 import { configureHttpPools, type HttpPoolSettings } from './lib/http-pool-config';
 import { doiRegistered } from './lib/doi-registry';
+import { SingleFlight } from './lib/single-flight';
+import { resolveFullText } from './fulltext/resolve';
+import { FullTextCache } from './fulltext/cache';
+import type { FullTextDocument } from './fulltext/types';
 
 /**
  * One object, made once per process, that owns the caches and exposes exactly
@@ -56,6 +60,8 @@ export type EngineOptions = {
   quotaCoolDownMs?: number;
   /** The clock the cool-down runs on, for tests. */
   now?: () => number;
+  /** Byte budget for full texts held between reads. 32 MB by default. */
+  fullTextBytes?: number;
 };
 
 export type SearchOutcome = { response: SearchResponseV2; fromCache: boolean };
@@ -91,6 +97,11 @@ export type Engine = {
   /** Whether the DOI system holds this DOI at all — whoever registered it.
    * `undefined` when the registry could not say. One request, no admission. */
   doiRegistered(doi: string): Promise<boolean | undefined>;
+  /** The best-structured legal open-access full text of a paper, or null.
+   * Held for an hour, so its sections are read without fetching it again.
+   * Throws `SourceBusyError` when the only copy is on a paced host with no
+   * slot soon enough: a copy that cannot be fetched yet, not no copy. */
+  readFullText(paper: Paper, options: { trustedOnly: boolean }): Promise<FullTextDocument | null>;
   stats: UpstreamStats;
 };
 
@@ -120,6 +131,10 @@ export function createEngine(options: EngineOptions): Engine {
     ...(options.quotaCoolDownMs !== undefined ? { coolDownMs: options.quotaCoolDownMs } : {}),
     ...(options.now ? { now: options.now } : {})
   });
+
+  const fullTexts = new FullTextCache(options.fullTextBytes !== undefined ? { maxBytes: options.fullTextBytes } : {});
+  /** Two reads of one paper at once fetch it once. */
+  const fullTextFlights = new SingleFlight();
 
   /** OpenAlex the authority is billed against the same budget as OpenAlex the
    * source, so a cooled-down OpenAlex is left out of enrichment too. */
@@ -196,7 +211,19 @@ export function createEngine(options: EngineOptions): Engine {
       const { response } = await search({ doi: wanted, filters: { openAccessOnly: false }, page: 1, pageSize: 1 }, extra);
       return response.papers.find(paper => paper.doi && normalizeDoi(paper.doi) === normalizeDoi(wanted)) ?? null;
     },
-    doiRegistered: doi => doiRegistered(doi, { userAgent })
+    doiRegistered: doi => doiRegistered(doi, { userAgent }),
+    async readFullText(paper, { trustedOnly }) {
+      // Trusted mode reads fewer tiers, so its answer is held apart.
+      const key = `${paper.id}|${trustedOnly ? 'trusted' : 'any'}`;
+      const held = fullTexts.get(key);
+      if (held !== undefined) return held;
+      const { value } = await fullTextFlights.run(key, async () => {
+        const { doc, definitive } = await resolveFullText(paper, { userAgent, trustedOnly });
+        if (doc || definitive) fullTexts.set(key, doc);
+        return doc;
+      });
+      return value;
+    }
   };
 }
 
