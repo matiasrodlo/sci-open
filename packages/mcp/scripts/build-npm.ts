@@ -22,7 +22,7 @@ const mcp = manifest(path.join(ROOT, 'package.json'));
 const core = manifest(path.join(ROOT, '..', 'core', 'package.json'));
 
 /** Left out of the bundle and installed from npm. A subpath (…/server/stdio) follows its package. */
-const EXTERNAL = ['@modelcontextprotocol/server', 'zod', 'axios', 'axios-retry', 'xml2js'];
+const EXTERNAL = ['@modelcontextprotocol/server', 'zod', 'axios', 'axios-retry', 'xml2js', 'unpdf', 'node-html-parser'];
 
 const range = (name: string): string => {
   const declared = mcp.dependencies?.[name] ?? core.dependencies?.[name];

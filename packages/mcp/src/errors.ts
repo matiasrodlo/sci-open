@@ -1,5 +1,5 @@
 import { QueryParseError } from '@open-access-explorer/shared';
-import { PdfProxyError } from '@open-access-explorer/core';
+import { PdfProxyError, SourceBusyError } from '@open-access-explorer/core';
 
 /**
  * Every failure a tool can return: a stable code, a plain message, and a hint
@@ -43,6 +43,17 @@ export function toToolError(error: unknown): ToolError {
       'invalid_input',
       `The query could not be parsed at position ${error.position}: ${error.message}`,
       'Quote words that look like operators ("or"), balance brackets, and use the tags in the server instructions. NEAR and SAME are not supported.'
+    );
+  }
+  // A paced host with no slot soon enough: a copy that cannot be fetched yet,
+  // with a number on the wait, never "no full text".
+  if (error instanceof SourceBusyError) {
+    const seconds = Math.ceil(error.retryAfterMs / 1000);
+    return new ToolError(
+      'rate_limited',
+      `${error.host} asks automated readers to space their requests; the next one can go in ${seconds} s.`,
+      'Retry after the wait, or read another paper meanwhile. Sections of a paper already read never wait.',
+      seconds
     );
   }
   if (error instanceof PdfProxyError) {

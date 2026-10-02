@@ -70,13 +70,14 @@ describe('selectTools', () => {
   const names = (request: Parameters<typeof selectTools>[0]) => selectTools(request).map(t => t.name);
 
   it('serves core and read by default, in a fixed order', () => {
-    expect(names({})).toEqual(['search_papers', 'get_search_page', 'get_paper', 'verify_references']);
+    expect(names({})).toEqual(['search_papers', 'get_search_page', 'get_paper', 'verify_references', 'read_paper']);
     expect(names({ toolsets: ['default'] })).toEqual(names({}));
   });
 
   it('serves every tool for all, and adds tools by name', () => {
-    expect(names({ toolsets: ['all'] })).toEqual(['search_papers', 'get_search_page', 'get_paper', 'verify_references']);
+    expect(names({ toolsets: ['all'] })).toEqual(['search_papers', 'get_search_page', 'get_paper', 'verify_references', 'read_paper']);
     expect(names({ toolsets: ['graph'], tools: ['get_paper'] })).toEqual(['get_paper']);
+    expect(names({ toolsets: ['core'] })).not.toContain('read_paper');
   });
 
   it('refuses an unknown toolset or tool, naming the valid ones', () => {

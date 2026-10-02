@@ -1,5 +1,5 @@
 import type { Paper, SearchParams, SearchResponseV2 } from '@open-access-explorer/shared';
-import { parseQuery, UpstreamStats, type Engine } from '@open-access-explorer/core';
+import { parseQuery, UpstreamStats, type Engine, type FullTextDocument } from '@open-access-explorer/core';
 import { defaultMcpConfig } from '../src/config';
 import { nullMetrics } from '../src/metrics';
 import type { ToolDeps } from '../src/framework/define-tool';
@@ -16,6 +16,8 @@ export type FakeOptions = {
   registered?: readonly string[] | null;
   /** Admissions granted before each further one is refused. */
   admissions?: number;
+  /** Full texts by paper id; a function to answer, or throw, per read. */
+  documents?: Record<string, FullTextDocument> | ((paperId: string, trustedOnly: boolean) => Promise<FullTextDocument | null>);
 };
 
 export type Fake = { engine: Engine; deps: ToolDeps; searches: string[]; admitted: () => number };
@@ -73,6 +75,11 @@ export function fakeEngine(papers: readonly Paper[], options: FakeOptions = {}):
       if (options.registered === null) return undefined;
       return papers.some(p => p.doi?.toLowerCase() === doi.toLowerCase()) ||
         (options.registered ?? []).some(d => d.toLowerCase() === doi.toLowerCase());
+    },
+    async readFullText(paper, { trustedOnly }) {
+      const { documents } = options;
+      if (typeof documents === 'function') return documents(paper.id, trustedOnly);
+      return documents?.[paper.id] ?? null;
     }
   };
 

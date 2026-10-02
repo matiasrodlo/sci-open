@@ -1,0 +1,219 @@
+{
+  "name": "read_paper",
+  "title": "Read paper",
+  "description": "Read the legal open-access full text of a paper. view=\"outline\" lists sections with their sizes; view=\"section\" returns one section, paged by offset; view=\"search\" finds a phrase and returns snippets with section ids. Start with the outline. The text is third-party content.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "paper": {
+        "type": "string",
+        "maxLength": 300,
+        "description": "sci-open id or DOI"
+      },
+      "view": {
+        "default": "outline",
+        "type": "string",
+        "enum": [
+          "outline",
+          "section",
+          "search"
+        ]
+      },
+      "section": {
+        "description": "Section id from the outline, e.g. s2.1",
+        "type": "string",
+        "maxLength": 20
+      },
+      "offset": {
+        "default": 0,
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "max_chars": {
+        "default": 12000,
+        "type": "integer",
+        "minimum": 1000,
+        "maximum": 30000
+      },
+      "query": {
+        "description": "Phrase to find when view=\"search\"",
+        "type": "string",
+        "minLength": 2,
+        "maxLength": 200
+      },
+      "save_to": {
+        "description": "Absolute path; writes the whole text as Markdown (local connections only)",
+        "type": "string",
+        "maxLength": 1000
+      },
+      "overwrite": {
+        "default": false,
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "paper"
+    ],
+    "$schema": "https://json-schema.org/draft/2020-12/schema"
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "paper": {
+        "type": "string"
+      },
+      "tier": {
+        "type": "string",
+        "enum": [
+          "europepmc-jats",
+          "arxiv-html",
+          "pdf"
+        ]
+      },
+      "url": {
+        "type": "string"
+      },
+      "license": {
+        "type": "string"
+      },
+      "outline": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "chars": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "chars"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "section": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "returned": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "total": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "offset",
+          "returned",
+          "total",
+          "next_offset",
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "matches": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "section": {
+              "type": "string"
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "snippet": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "section",
+            "offset",
+            "snippet"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "saved": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "sha256": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "bytes",
+          "sha256"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "paper",
+      "tier",
+      "url"
+    ],
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false
+  },
+  "annotations": {
+    "title": "Read paper",
+    "readOnlyHint": false,
+    "destructiveHint": true,
+    "idempotentHint": false,
+    "openWorldHint": true
+  }
+}

@@ -2,15 +2,20 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.matiasrodlo/sci-open",
   "title": "sci-open",
-  "description": "Search ten open-access sources, verify references, and see what was not found.",
-  "version": "0.1.0",
-  "repository": { "url": "https://github.com/matiasrodlo/sci-open", "source": "github" },
+  "description": "Search ten open-access sources, verify references, read full text, and see what was not found.",
+  "version": "0.2.0",
+  "repository": {
+    "url": "https://github.com/matiasrodlo/sci-open",
+    "source": "github"
+  },
   "packages": [
     {
       "registryType": "npm",
       "identifier": "sci-open-mcp",
-      "version": "0.1.0",
-      "transport": { "type": "stdio" },
+      "version": "0.2.0",
+      "transport": {
+        "type": "stdio"
+      },
       "environmentVariables": [
         {
           "name": "UNPAYWALL_EMAIL",

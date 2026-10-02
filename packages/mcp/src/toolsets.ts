@@ -3,15 +3,15 @@ import { searchPapers } from './tools/search-papers';
 import { getSearchPage } from './tools/get-search-page';
 import { getPaper } from './tools/get-paper';
 import { verifyReferences } from './tools/verify-references';
+import { readPaper } from './tools/read-paper';
 
 /**
  * Every tool this release ships, in a fixed order: tools/list must be
- * deterministic, for clients that cache it and for prompt caching. `read`
- * (read_paper), `graph` (get_citations) and `export` (export_citations) are
- * named so a client config can ask for them, and are empty until their
- * milestones ship.
+ * deterministic, for clients that cache it and for prompt caching. `graph`
+ * (get_citations) and `export` (export_citations) are named so a client
+ * config can ask for them, and are empty until their milestones ship.
  */
-export const ALL_TOOLS: readonly ToolDefinition<any, any>[] = [searchPapers, getSearchPage, getPaper, verifyReferences];
+export const ALL_TOOLS: readonly ToolDefinition<any, any>[] = [searchPapers, getSearchPage, getPaper, verifyReferences, readPaper];
 
 export const DEFAULT_TOOLSETS: readonly Toolset[] = ['core', 'read'];
 export const TOOLSETS: readonly Toolset[] = ['core', 'read', 'graph', 'export'];

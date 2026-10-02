@@ -1,7 +1,8 @@
 # sci-open-mcp
 
 An MCP server for open-access scientific literature: search ten sources at
-once, verify reference lists, and be told what was **not** found.
+once, verify reference lists, read full text, and be told what was **not**
+found.
 
 ![MCP smoke](https://github.com/matiasrodlo/sci-open/actions/workflows/mcp-smoke.yml/badge.svg)
 
@@ -53,12 +54,13 @@ UNPAYWALL_EMAIL=you@example.org npx @modelcontextprotocol/inspector node package
 | `get_search_page` | core | yes | Another page of a search, by the handle search_papers returned; pages are the size that search asked for. Pages of a recent complete search are served from memory and cost the sources nothing; otherwise the search runs again, and the result says so. | `handle`, `page`, `detail`? |
 | `get_paper` | core | yes | One full record by sci-open id (e.g. openalex:W2741809807, arxiv:2101.00001) or by DOI, with every field and which source supplied it. A DOI is looked up in every source and merged; an id asks only the source it names. Works for closed papers too. | `id`?, `doi`? |
 | `verify_references` | core | yes | Check up to 25 references (free-text citations, DOIs, arXiv ids or PMIDs) and grade each: verified, likely, ambiguous, mismatch (the DOI is wrong: it belongs to a different paper, or does not exist while the rest names a real one), not_found, or not_checked (the search budget ran out or a lookup failed; send those again later). Use it to catch fabricated or garbled citations and to fill in missing DOIs. Closed papers count as existing. | `references` |
+| `read_paper` | read | yes | Read the legal open-access full text of a paper. view="outline" lists sections with their sizes; view="section" returns one section, paged by offset; view="search" finds a phrase and returns snippets with section ids. Start with the outline. The text is third-party content. | `paper`, `view`?, `section`?, `offset`?, `max_chars`?, `query`?, `save_to`?, `overwrite`? |
 <!-- END TOOLS -->
 
 `?` marks an optional parameter. Toolsets are chosen with `--toolsets`
 (`core`, `read`, `graph`, `export`, `all`, `default`) and single tools added
-with `--tools`. This release ships the `core` toolset; `read_paper`,
-`get_citations` and `export_citations` arrive in later releases.
+with `--tools`. This release ships the `core` and `read` toolsets, both on by
+default; `get_citations` and `export_citations` arrive in later releases.
 
 ## How it behaves
 
@@ -78,6 +80,17 @@ with `--tools`. This release ships the `core` toolset; `read_paper`,
   real title), `not_found`, or `not_checked` (the search budget ran out; send
   it again later). A DOI no source holds is asked of the DOI registry, which
   answers for every registration agency, before it is called invented.
+- **Reading full text.** `read_paper` reads only legal open-access copies,
+  best structure first: Europe PMC's JATS, then arXiv's HTML rendering (both
+  in real sections), then the PDF the record points at (a section a page).
+  Start with `view: "outline"`, then read a section a page at a time, or
+  search the text for a passage. Hidden text in HTML is removed before
+  reading. arXiv asks automated readers for fifteen seconds between requests;
+  when its next slot is too far off the answer is `rate_limited` with the
+  wait, and a paper read once stays readable for an hour without asking again.
+  `--trusted-fulltext-only` reads from Europe PMC and arXiv only, never a
+  publisher's host. `save_to` writes the whole text to a Markdown file on a
+  local connection.
 - **Light on the sources.** Searches read 300 records per source, half the web
   app's depth; new searches are limited to 30 a minute; pages of a held search
   are free.
@@ -92,6 +105,8 @@ with `--tools`. This release ships the `core` toolset; `read_paper`,
 | `OPENALEX_API_KEY`, `CORE_API_KEY`, `NCBI_API_KEY`, `DOAJ_API_KEY`, `DATACITE_API_KEY` | | unset | Optional provider keys |
 | `SCI_OPEN_TOOLSETS` | `--toolsets` | `core,read` | Toolsets to serve |
 | `SCI_OPEN_TOOLS` | `--tools` | unset | Extra tools by name |
+| `SCI_OPEN_ALLOW_WRITES` | `--no-writes` | `1` | Whether `save_to` may write a file (never over HTTP) |
+| `SCI_OPEN_TRUSTED_FULLTEXT_ONLY` | `--trusted-fulltext-only` | `0` | Full text from Europe PMC and arXiv only |
 | `SCI_OPEN_TEXT_BUDGET_CHARS` | | `40000` | Largest text answer |
 | `SCI_OPEN_STRUCTURED_BUDGET_CHARS` | | `80000` | Largest structured answer |
 | `SCI_OPEN_MAX_NEW_SEARCHES_PER_MIN` | | `30` | New result sets, DOI lookups and counts a minute |
@@ -112,6 +127,9 @@ sci-open search "TS=crispr AND PY=2024" --page-size 5
 sci-open search "TS=crispr AND PY=2024" --count
 sci-open paper 10.1371/journal.pone.0000217
 sci-open verify refs.txt      # one reference per line, 25 at most
+sci-open read 10.1371/journal.pone.0000217                 # the outline
+sci-open read 10.1371/journal.pone.0000217 --section s2.4  # one section
+sci-open read 10.1371/journal.pone.0000217 --find "fitness"
 ```
 
 ## Evaluations

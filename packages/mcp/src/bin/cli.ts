@@ -13,12 +13,15 @@ import { paperRefKind } from '../tools/resolve-paper';
 import { searchPapers } from '../tools/search-papers';
 import { getPaper } from '../tools/get-paper';
 import { verifyReferences } from '../tools/verify-references';
+import { readPaper } from '../tools/read-paper';
 
 const USAGE = `sci-open <command>
 
   search "<query>" [--page-size N] [--count]   search_papers (--count: count_only)
   paper <id or DOI>                            get_paper
   verify <file>                                verify_references, one reference per line (25 at most)
+  read <id or DOI> [--section ID [--offset N] | --find TEXT | --out FILE]
+                                               read_paper: the outline, a section, a search, or all of it to a file
 
 Configured by the same environment variables as sci-open-mcp.`;
 
@@ -30,6 +33,10 @@ function readArgs() {
       options: {
         'page-size': { type: 'string' },
         count: { type: 'boolean' },
+        section: { type: 'string' },
+        offset: { type: 'string' },
+        find: { type: 'string' },
+        out: { type: 'string' },
         help: { type: 'boolean' }
       }
     });
@@ -83,6 +90,17 @@ async function main(): Promise<void> {
       });
     case 'paper':
       return run(getPaper, paperRefKind(rest[0] ?? ''));
+    case 'read':
+      return run(readPaper, {
+        paper: rest[0] ?? '',
+        ...(values.out
+          ? { save_to: values.out }
+          : values.section
+            ? { view: 'section', section: values.section, ...(values.offset ? { offset: Number(values.offset) } : {}) }
+            : values.find
+              ? { view: 'search', query: values.find }
+              : {})
+      });
     case 'verify':
       return run(verifyReferences, {
         references: readFileSync(rest[0] ?? '/dev/stdin', 'utf8').split('\n').map(l => l.trim()).filter(Boolean)

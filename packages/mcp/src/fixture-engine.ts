@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
 import type { Paper, SearchParams, SearchResponseV2 } from '@open-access-explorer/shared';
-import { UpstreamStats, type Engine } from '@open-access-explorer/core';
+import { UpstreamStats, type Engine, type FullTextDocument } from '@open-access-explorer/core';
 
 /**
  * Recorded answers in place of the sources: how the protocol tests, the
@@ -15,6 +15,8 @@ export type Fixtures = {
   papers: Record<string, Paper>;
   /** DOIs the DOI system holds though no paper here carries them. */
   registeredDois?: string[];
+  /** Full texts, by paper id. A paper without one has no legal copy. */
+  documents?: Record<string, FullTextDocument>;
 };
 
 /** The key a search is recorded and found under. Filters, sort and page size
@@ -56,14 +58,20 @@ export function fixtureEngine(fixtures: Fixtures, options: { strict?: boolean } 
       const reports = response?.providers ?? [];
       return { reports, complete: reports.every(r => r.status === 'ok' || r.status === 'skipped') };
     },
+    // As the live engine does: an arXiv id without a version names any version.
     async lookup(id) {
-      return fixtures.papers[id] ?? null;
+      if (fixtures.papers[id]) return fixtures.papers[id]!;
+      if (!id.startsWith('arxiv:') || /v\d+$/i.test(id)) return null;
+      return Object.values(fixtures.papers).find(p => p.id.replace(/v\d+$/i, '') === id) ?? null;
     },
     async lookupDoi(doi) {
       return byDoi(doi);
     },
     async doiRegistered(doi) {
       return byDoi(doi) !== null || registered.has(doi.toLowerCase());
+    },
+    async readFullText(paper) {
+      return fixtures.documents?.[paper.id] ?? null;
     }
   };
 }

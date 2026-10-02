@@ -34,6 +34,9 @@ Recipes:
 - Verify a bibliography: verify_references in batches of up to 25.
   Report every verdict other than "verified" to the user with its issues.
   Send references marked not_checked again after the wait they give.
-- One paper in full: get_paper with its id or DOI. A DOI is looked up in
+- One paper's record: get_paper with its id or DOI. A DOI is looked up in
   every source, closed papers included.
+- Read a paper: read_paper view="outline", then view="section" for the sections
+  you need, or view="search" to locate a passage. Quote section ids exactly.
+  A rate_limited answer gives the wait; read another paper meanwhile.
 `;

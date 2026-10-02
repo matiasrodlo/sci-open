@@ -52,7 +52,7 @@ describe('search_papers and get_search_page', () => {
   it.each([
     ['neither a query nor a DOI', {}],
     ['both a query and a DOI', { query: 'crispr', doi: '10.1234/x' }],
-    ['a query of invisible characters', { query: '​⁠' }],
+    ['a query of invisible characters', { query: '\u200B\u2060' }],
     ['years the wrong way round', { query: 'crispr', year_from: 2024, year_to: 2020 }],
     ['a count of a DOI', { doi: '10.1234/x', count_only: true }]
   ])('refuses %s, before spending an admission', async (_case, args) => {

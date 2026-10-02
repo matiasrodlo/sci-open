@@ -45,6 +45,10 @@ async function main(): Promise<void> {
   if (page?.handle) await call('get_search_page', { handle: page.handle, page: 2 }, s => s.results.length > 0 && s.rerun === undefined);
   await call('get_paper', { doi: PLOS }, s => s.paper.title.length > 0);
   await call('get_paper', { id: 'arxiv:1706.03762' }, s => /attention/i.test(s.paper.title));
+  // Europe PMC holds this one open: the JATS tier, real sections.
+  const outline = await call('read_paper', { paper: PLOS, view: 'outline' }, s => s.tier === 'europepmc-jats' && s.outline.length > 3);
+  const section = outline?.outline?.find((s: { chars: number }) => s.chars > 0)?.id;
+  if (section) await call('read_paper', { paper: PLOS, view: 'section', section }, s => s.section.text.length > 0);
   await call('verify_references', {
     references: [
       'Vaswani A, et al. Attention is all you need. 2017. arXiv:1706.03762',

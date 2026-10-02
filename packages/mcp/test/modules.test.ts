@@ -80,7 +80,7 @@ describe('search handles', () => {
 
 describe('sanitizing third-party text', () => {
   it('removes zero-width and bidi characters, and an encoded one in a second pass', () => {
-    expect(sanitizeText('a​b‮c')).toBe('abc');
+    expect(sanitizeText('a\u200Bb\u202Ec')).toBe('abc');
     expect(sanitizeText('a&#8203;b', { decodeEntities: true })).toBe('ab');
     expect(sanitizeText('a &amp; b', { decodeEntities: true })).toBe('a & b');
   });
@@ -94,8 +94,8 @@ describe('sanitizing third-party text', () => {
   });
 
   it('strips only the invisible when lengths must hold', () => {
-    expect(stripInvisible(' a​ \n')).toBe(' a \n');
-    expect(hasVisibleText('​ ⁠')).toBe(false);
+    expect(stripInvisible(' a\u200B \n')).toBe(' a \n');
+    expect(hasVisibleText('\u200B \u2060')).toBe(false);
     expect(hasVisibleText(' x ')).toBe(true);
   });
 });

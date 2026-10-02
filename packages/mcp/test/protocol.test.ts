@@ -53,18 +53,28 @@ describe('protocol', () => {
 
   it('lists the default tools in a fixed order', async () => {
     const { tools } = await client.listTools();
-    expect(tools.map(t => t.name)).toEqual(['search_papers', 'get_search_page', 'get_paper', 'verify_references']);
+    expect(tools.map(t => t.name)).toEqual(['search_papers', 'get_search_page', 'get_paper', 'verify_references', 'read_paper']);
   });
 
   it('gives the client the instructions, grammar included', () => {
     expect(client.getInstructions()).toContain('TS= topic (default)');
   });
 
-  it('marks every tool read-only, since none of this release writes', async () => {
+  it('marks every tool read-only except the one that can write a file', async () => {
+    // Annotations describe a tool, not a call: read_paper writes only with
+    // save_to, and replaces a file only with overwrite, but it can.
     const { tools } = await allClient.listTools();
     for (const t of tools) {
-      expect(t.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false, openWorldHint: true });
+      const writes = t.name === 'read_paper';
+      expect(t.annotations).toMatchObject({ readOnlyHint: !writes, destructiveHint: writes, idempotentHint: !writes, openWorldHint: true });
     }
+  });
+
+  it('reads a paper’s outline, its titles fenced', async () => {
+    const result = await client.callTool({ name: 'read_paper', arguments: { paper: 'arxiv:1706.03762v7' } });
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toMatchObject({ tier: 'arxiv-html', outline: [{ id: 's0', title: 'Abstract' }, { id: 's1', title: '1 Introduction' }] });
+    expect(text(result)).toMatch(/^<untrusted-[0-9a-f-]{36}>$/m);
   });
 
   it('returns structured content that matches the output schema, and provenance', async () => {
