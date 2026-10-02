@@ -5,7 +5,7 @@ import type { ProviderEntry } from '../registry';
 import { search } from '../index';
 import { parseQuery } from '../parse-query';
 import { AuthorityFactsCache } from '../authority-cache';
-import { ResultSetCache, resultSetKey, type ResultSet, type ResultSetKeyParts } from '../result-set';
+import { ResultSetCache, resultSetKey, sizeOfSet, type ResultSet, type ResultSetKeyParts } from '../result-set';
 import { paper, ref } from './helpers';
 
 const set = (over: Partial<ResultSet> = {}): ResultSet => ({
@@ -209,8 +209,9 @@ describe('ResultSetCache', () => {
   });
 
   it('lets the least recently read set go first when over budget', async () => {
-    // Each set is one paper, charged a little over 700 bytes.
-    const cache = new ResultSetCache({ maxBytes: 1600 });
+    // Room for two sets of one paper each, and not for three.
+    const budget = Math.floor(2.5 * sizeOfSet(set()));
+    const cache = new ResultSetCache({ maxBytes: budget });
     await cache.resolve('a', async () => set());
     await cache.resolve('b', async () => set());
     await cache.resolve('a', async () => set());           // `a` read, so `b` is now oldest
@@ -219,13 +220,27 @@ describe('ResultSetCache', () => {
     const work = vi.fn(async () => set());
     expect((await cache.resolve('a', work)).cached).toBe(true);
     expect((await cache.resolve('b', work)).cached).toBe(false);
-    expect(cache.stats().bytes).toBeLessThanOrEqual(1600);
+    expect(cache.stats().bytes).toBeLessThanOrEqual(budget);
   });
 
   it('does not hold a set larger than the whole budget', async () => {
     const cache = new ResultSetCache({ maxBytes: 100 });
     await cache.resolve('k', async () => set());
     expect(cache.stats().entries).toBe(0);
+  });
+
+  it('charges a set for its facets, reports and rescue as well as its papers', async () => {
+    // Charged for its papers alone, a set of none was free whatever it held.
+    const venues = Array.from({ length: 2000 }, (_, i) => ({ value: `Journal of Studies, volume ${i}`, count: 1 }));
+    const facetHeavy = set({ papers: [], facets: { venue: venues } });
+    expect(sizeOfSet(facetHeavy)).toBeGreaterThanOrEqual(JSON.stringify(venues).length);
+
+    const cache = new ResultSetCache({ maxBytes: 50_000 });
+    await cache.resolve('k', async () => facetHeavy);
+    expect(cache.stats().entries).toBe(0);
+
+    await cache.resolve('k', async () => set());
+    expect(cache.stats().bytes).toBe(sizeOfSet(set()));
   });
 });
 

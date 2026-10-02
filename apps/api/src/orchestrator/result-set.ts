@@ -103,8 +103,29 @@ export const DEFAULT_PARTIAL_COUNTS_TTL_MS = 60 * 1000;
  * papers, a few megabytes — so this is a dozen or two searches being paged
  * through at once. Charged as though nothing were shared with `ProviderCache`,
  * though a paper no provider shared with another is the same object in both.
+ *
+ * Serialised bytes, not heap. Measured on 2026-10-01 by holding the sets of
+ * live broad searches and dropping them: five released 124 MB of heap against
+ * 38.6 MB charged, three 60 MB against 23 MB — 2.6 to 3.2 times, the factor
+ * `docs/configuration.md` gives the two budgets that can be configured.
  */
 export const DEFAULT_RESULT_SET_MAX_BYTES = 64 * 1024 * 1024;
+
+/**
+ * What a set is charged: its papers as `ProviderCache` counts them, and the
+ * rest of it serialised.
+ *
+ * It was charged for its papers alone. The rest is small beside them —
+ * measured on the same broad searches, about 3,000 papers and 6.7 to 8.1 MB a
+ * set, the facets came to 7 KB, the reports to 1 KB and the rescue report to
+ * 300 bytes — but it is held all the same, and a set of few papers and many
+ * facet values is mostly facets. Serialising it costs one `JSON.stringify` of
+ * a few kilobytes, once for each set held.
+ */
+export function sizeOfSet(set: ResultSet): number {
+  const { papers, facets, reports, rescue } = set;
+  return sizeOf({ papers, skipped: [] }) + JSON.stringify({ facets, reports, rescue }).length;
+}
 
 export type ResultSetCacheOptions = {
   ttlMs?: number;
@@ -212,7 +233,7 @@ export class ResultSetCache {
   }
 
   private write(key: string, set: ResultSet): void {
-    const bytes = sizeOf({ papers: set.papers, skipped: [] });
+    const bytes = sizeOfSet(set);
     // Larger than the whole budget is not held, rather than evicting everything.
     if (bytes > this.maxBytes) return;
 
