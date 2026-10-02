@@ -3,6 +3,9 @@ import type { Call } from './run';
 export type SelectionCase = {
   id: string;
   split: 'tune' | 'holdout';
+  /** Toolsets the server is started with; the default ones when absent. The
+   * opt-in tools are only chosen where a client has turned them on. */
+  toolsets?: string;
   prompt: string;
   expect: { first?: string; sequence?: string[]; args?: Record<string, unknown> };
 };

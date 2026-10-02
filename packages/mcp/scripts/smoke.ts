@@ -56,6 +56,14 @@ async function main(): Promise<void> {
     ]
   }, s => s.results[0].verdict === 'verified' && s.results[1].verdict === 'not_found');
 
+  // Its references and citers are stable: published in 2021, cited since.
+  const PEERJ = '10.7717/peerj-cs.421';
+  await call('get_citations', { paper: PEERJ, direction: 'references', limit: 5 },
+    s => s.total_links > 20 && s.links.some((l: Structured) => l.record?.title));
+  await call('get_citations', { paper: PEERJ, direction: 'cited_by', limit: 5 }, s => s.total_links > 0);
+  await call('export_citations', { papers: [PEERJ, PLOS, 'arxiv:1706.03762'] },
+    s => s.entries === 3 && s.unresolved.length === 0 && typeof s.resource_uri === 'string');
+
   await client.close();
   if (failures.length) {
     console.error(failures.join('\n'));

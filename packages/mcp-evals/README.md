@@ -26,8 +26,10 @@ OpenAlex key's daily budget included. Run it deliberately, not in a loop.
 
 - `datasets/tool-selection.jsonl`: one prompt per line, with the tool expected
   first (`first`) or in order (`sequence`), and arguments that must match
-  (`args`; an array is compared as a set). Cases that need a tool a release
-  does not ship stay out until it ships.
+  (`args`; an array is compared as a set), and the toolsets to serve
+  (`toolsets`, the default ones when absent: `get_citations` and
+  `export_citations` are opt-in). Cases that need a tool a release does not
+  ship stay out until it ships.
 - `datasets/references/*.json`: lists of real references with errors planted
   and labelled: `none`, `closed_real`, `preprint_version` (all real — flagging
   them is the error that hurts most), `fabricated`, `doi_wrong`,

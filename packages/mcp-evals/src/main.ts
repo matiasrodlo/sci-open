@@ -44,7 +44,7 @@ async function main(): Promise<void> {
     for (const c of jsonl<SelectionCase>('tool-selection.jsonl').filter(c => c.split === split)) {
       const started = Date.now();
       // Four turns are plenty to see the first calls; the fixture engine answers them.
-      const run = await runCase(c.prompt, ['--engine', 'fixture'], 4);
+      const run = await runCase(c.prompt, ['--engine', 'fixture', ...(c.toolsets ? ['--toolsets', c.toolsets] : [])], 4);
       records.push(record(c.id, scoreSelection(c, run.calls), run, Date.now() - started));
       console.log(`${c.id} ${records.at(-1)!.pass ? 'pass' : `FAIL ${records.at(-1)!.why}`}`);
     }

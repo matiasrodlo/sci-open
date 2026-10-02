@@ -44,3 +44,10 @@
 {"id":"ts-43","split":"holdout","prompt":"Fill in the missing DOI for: Benjamini Y, Hochberg Y. Controlling the false discovery rate: a practical and powerful approach to multiple testing. J R Stat Soc B. 1995.","expect":{"first":"verify_references"}}
 {"id":"ts-44","split":"holdout","prompt":"What are the top venues publishing open-access work on coral bleaching?","expect":{"first":"search_papers","args":{"include_facets":true}}}
 {"id":"ts-45","split":"holdout","prompt":"Trouve des articles récents sur la maladie de Lyme chronique.","expect":{"first":"search_papers"}}
+{"id":"ts-49","split":"tune","toolsets":"all","prompt":"What papers does 10.7717/peerj-cs.421 cite? List the first ten.","expect":{"first":"get_citations","args":{"direction":"references"}}}
+{"id":"ts-50","split":"tune","toolsets":"all","prompt":"Who has cited doi:10.1371/journal.pone.0000217 since it came out?","expect":{"first":"get_citations","args":{"direction":"cited_by"}}}
+{"id":"ts-51","split":"tune","toolsets":"all","prompt":"Give me a BibTeX file for 10.7717/peerj-cs.421 and 10.1371/journal.pone.0000217.","expect":{"first":"export_citations","args":{"format":"bibtex"}}}
+{"id":"ts-52","split":"tune","toolsets":"all","prompt":"Find open-access papers on citation analysis of research software.","expect":{"first":"search_papers"}}
+{"id":"ts-53","split":"holdout","toolsets":"all","prompt":"Which later papers build on 10.48550/arXiv.1706.03762? I want the works that cite it, not a keyword search.","expect":{"first":"get_citations","args":{"direction":"cited_by"}}}
+{"id":"ts-54","split":"holdout","toolsets":"all","prompt":"Export these for Zotero as RIS: 10.1038/nature14539, 10.1126/science.aaa8415","expect":{"first":"export_citations","args":{"format":"ris"}}}
+{"id":"ts-55","split":"holdout","toolsets":"all","prompt":"What does the paper with DOI 10.1016/j.cell.2011.02.013 reference?","expect":{"first":"get_citations","args":{"direction":"references"}}}
