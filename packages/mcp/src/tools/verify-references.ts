@@ -151,13 +151,37 @@ async function verifyOne(ref: ParsedReference, deps: ToolDeps): Promise<Result> 
 /** Words the grammar reads as operators in any case; as bare terms they are a syntax error. */
 const OPERATOR_WORDS = new Set(['and', 'or', 'not', 'near', 'same']);
 
-/** The exact title first; its content words only when the exact title finds nothing. */
-async function findByTitle(ref: ParsedReference, deps: ToolDeps): Promise<{ p: Paper; j: Judgement } | undefined> {
+type Found = { p: Paper; j: Judgement };
+
+const STRONG = new Set(['verified', 'likely']);
+
+/**
+ * The title's words in the title within a year of the one cited, then in the
+ * title at any date, then anywhere in the record — each only when the one
+ * before found nothing good enough. The judge grades every candidate, so the
+ * searches can afford to be wide.
+ *
+ * Words, not the quoted title: a phrase keeps its punctuation, and sources do
+ * not agree on it. Measured live, the 1953 Watson–Crick paper is titled
+ * "nucleic acids; a structure" in Europe PMC and was cited "nucleic acids: a
+ * structure", so the exact phrase never found it — only its reprints. The year
+ * goes first because classic papers are reprinted under their own title: the
+ * plain title search ranked a 2007 reprint above the original. A year search
+ * that finds only a weak match goes on, since the cited year may be the error;
+ * the plain title search stops at any match, so a wrong year costs two
+ * searches, not three.
+ */
+async function findByTitle(ref: ParsedReference, deps: ToolDeps): Promise<Found | undefined> {
   if (!ref.title) return undefined;
-  const clean = ref.title.replace(/["*?]/g, ' ').replace(/\s+/g, ' ').trim();
-  const words = tokens(clean).filter(t => !OPERATOR_WORDS.has(t)).slice(0, 12);
-  const attempts = [`TI="${clean}"`, ...(words.length ? [`TS=(${words.join(' ')})`] : [])];
-  for (const q of attempts) {
+  const words = tokens(ref.title).filter(t => !OPERATOR_WORDS.has(t)).slice(0, 12).join(' ');
+  if (!words) return undefined;
+  const attempts: Array<{ q: string; enough: (found: Found) => boolean }> = [
+    ...(ref.year ? [{ q: `TI=(${words}) AND PY=${ref.year - 1}-${ref.year + 1}`, enough: (f: Found) => STRONG.has(f.j.verdict) }] : []),
+    { q: `TI=(${words})`, enough: (f: Found) => f.j.verdict !== 'not_found' },
+    { q: `TS=(${words})`, enough: () => true }
+  ];
+  let best: Found | undefined;
+  for (const { q, enough } of attempts) {
     // A title the grammar cannot read is a title to try the other way, not a
     // failed check: the syntax is ours, not the reference's.
     try {
@@ -170,10 +194,11 @@ async function findByTitle(ref: ParsedReference, deps: ToolDeps): Promise<{ p: P
       { admit: deps.admit }
     );
     if (response.papers.length === 0) continue;
-    const best = response.papers
+    const found = response.papers
       .map(p => ({ p, j: judge(ref, p) }))
       .sort((a, b) => b.j.score - a.j.score)[0]!;
-    return best.j.verdict === 'not_found' ? undefined : best;
+    if (!best || found.j.score > best.j.score) best = found;
+    if (enough(found)) break;
   }
-  return undefined;
+  return best && best.j.verdict !== 'not_found' ? best : undefined;
 }

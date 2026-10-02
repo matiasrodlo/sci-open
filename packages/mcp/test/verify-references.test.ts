@@ -81,10 +81,34 @@ describe('verify_references', () => {
     expect(results[0]).toMatchObject({ verdict: 'ambiguous', issues: ['year_mismatch: cited 1956, record 1953'] });
   });
 
-  it('reaches the content-word retry for a title holding "not" and "same"', async () => {
+  it('searches a title holding "not" and "same" without them, which the grammar reads as operators', async () => {
+    // Every query also goes through the real grammar in the fake engine.
     const { results, fake } = await verify(['Rossi M. Same day discharge is not inferior to overnight stay. JAMA. 2020.']);
     expect(results[0]!.verdict).toBe('verified');
-    expect(fake.searches).toEqual(['TI="Same day discharge is not inferior to overnight stay"', 'TS=(day discharge is inferior overnight stay)']);
+    expect(fake.searches).toEqual(['TI=(day discharge is inferior overnight stay) AND PY=2019-2021']);
+  });
+
+  it('ignores the punctuation sources disagree on', async () => {
+    // Cited with a colon; the record, as Europe PMC titles it, has a semicolon.
+    const { results } = await verify(['Watson JD, Crick FHC. Molecular structure of nucleic acids; a structure for deoxyribose nucleic acid. Nature. 1953.']);
+    expect(results[0]).toMatchObject({ verdict: 'verified', matched: { doi: '10.1038/171737a0' } });
+  });
+
+  it('spends two searches on a wrong year, not three', async () => {
+    const { results, fake } = await verify(['Watson JD, Crick FHC. Molecular structure of nucleic acids: a structure for deoxyribose nucleic acid. Nature 1956.']);
+    expect(results[0]!.verdict).toBe('ambiguous');
+    expect(fake.searches).toHaveLength(2);
+  });
+
+  it('finds the original of a paper reprinted under its own title, by the year cited', async () => {
+    // Measured live: the 1953 paper's title search ranked a 2007 reprint above it.
+    const reprint = paper({ ...DNA, id: 'openalex:W2007', doi: '10.1097/blo.0b013e31814b9304', year: 2007, authors: ['J. D. Watson', 'F. H. C. Crick'] });
+    const fake = fakeEngine([reprint, DNA]);
+    const { structured } = await verifyReferences.run({
+      references: ['Watson JD, Crick FHC. Molecular structure of nucleic acids: a structure for deoxyribose nucleic acid. Nature. 1953;171:737-738.']
+    }, fake.deps);
+    expect(structured.results[0]).toMatchObject({ verdict: 'verified', matched: { doi: '10.1038/171737a0' } });
+    expect(fake.searches).toHaveLength(1);
   });
 
   it('never calls a registered DOI no source indexes unregistered', async () => {

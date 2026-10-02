@@ -4,7 +4,7 @@ import { defaultMcpConfig } from '../src/config';
 import { nullMetrics } from '../src/metrics';
 import type { ToolDeps } from '../src/framework/define-tool';
 import { AdmissionError } from '../src/errors';
-import { fold, tokens } from '../src/references/match';
+import { tokens } from '../src/references/match';
 
 /**
  * An engine over a list of papers, for tool tests that need searches to
@@ -29,12 +29,13 @@ export function fakeEngine(papers: readonly Paper[], options: FakeOptions = {}):
   };
 
   const matches = (q: string, p: Paper): boolean => {
-    const exact = q.match(/^TI="(.*)"$/);
-    if (exact) return fold(p.title).replace(/[^\p{L}\p{N} ]/gu, '') === fold(exact[1]!).replace(/[^\p{L}\p{N} ]/gu, '');
-    const words = q.match(/^TS=\((.*)\)$/);
+    const years = q.match(/^(.*) AND PY=(\d{4})-(\d{4})$/);
+    if (years) return p.year !== undefined && p.year >= Number(years[2]) && p.year <= Number(years[3]) && matches(years[1]!, p);
+    // Title words, or for TS= the title and abstract: every word present, in any order.
+    const words = q.match(/^(TI|TS)=\((.*)\)$/);
     if (words) {
-      const have = new Set(tokens(p.title));
-      return words[1]!.split(' ').every(w => have.has(w));
+      const have = new Set(tokens(words[1] === 'TI' ? p.title : `${p.title} ${p.abstract ?? ''}`));
+      return words[2]!.split(' ').every(w => have.has(w));
     }
     return tokens(p.title).some(t => tokens(q).includes(t));
   };
