@@ -1,0 +1,67 @@
+name: MCP release
+
+# A tag mcp-v<version> publishes sci-open-mcp to npm with provenance, then to
+# the MCP Registry, which authenticates this workflow by GitHub OIDC — no
+# registry token is stored. The registry's own guide downloads its publisher
+# from `releases/latest`; this pins the version instead, as ci.yml pins its
+# actions. Bump MCP_PUBLISHER_VERSION deliberately.
+#
+# Before the first tag: create the `npm-publish` environment (release tags
+# only, a required reviewer) and its NPM_TOKEN secret. A failed registry step
+# after a successful npm publish is safe to re-run by hand from packages/mcp;
+# npm refuses the same version twice, so do not re-run the whole job.
+on:
+  push:
+    tags: ['mcp-v*']
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    permissions:
+      contents: read
+      id-token: write # npm provenance, and the registry's GitHub OIDC login
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          version: 8.10.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck && pnpm lint && pnpm test && pnpm build
+
+      - name: The tag, package.json, server.json and the changelog agree
+        working-directory: packages/mcp
+        run: |
+          version="${GITHUB_REF_NAME#mcp-v}"
+          test "$(node -p "require('./package.json').version")" = "$version"
+          test "$(node -p "require('./server.json').version")" = "$version"
+          test "$(node -p "require('./server.json').packages[0].version")" = "$version"
+          grep -q "^## \[$version\] - [0-9]" CHANGELOG.md
+
+      - run: pnpm --filter sci-open-mcp build:npm
+
+      - name: Publish to npm
+        run: npm publish packages/mcp/npm --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to the MCP Registry
+        working-directory: packages/mcp
+        env:
+          MCP_PUBLISHER_VERSION: v1.8.1
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish

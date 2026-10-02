@@ -56,6 +56,11 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # The MCP server's tools table is generated from its schemas; a schema
+      # change that left packages/mcp/README.md behind fails here.
+      - name: MCP tools table is current
+        run: pnpm --filter sci-open-mcp exec tsx scripts/generate-tool-docs.ts --check
+
   images:
     name: docker images
     runs-on: ubuntu-latest
