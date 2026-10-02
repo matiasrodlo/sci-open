@@ -238,6 +238,10 @@ search, which for bioRxiv, DataCite and PLOS is a DOI lookup because their
 native ids *are* DOIs. A record that comes back under a different id is not the
 one that was asked for, and the answer is 404 rather than that record.
 
+An arXiv id without a version — `arxiv:1706.03762` — names the paper, and is
+answered with the latest version arXiv holds, whose record carries the version
+(`arxiv:1706.03762v7`). An id that names a version is held to it.
+
 The record is then enriched by the same authorities the search path asks about
 its page — Unpaywall, Crossref and OpenCitations — so a paper reached by a
 shared link carries the same access route, verified copy and citation count as

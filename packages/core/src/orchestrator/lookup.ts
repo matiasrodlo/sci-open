@@ -168,10 +168,17 @@ export async function lookupPaper(id: string, options: LookupOptions = {}): Prom
  *
  * DOIs are case-insensitive in their suffix by convention and are compared
  * that way; everything else is compared as it stands.
+ *
+ * An arXiv id without a version names the paper, not one version of it, and
+ * arXiv answers `id_list=2101.00001` with the latest — `2101.00001v3` — so any
+ * version is the record asked for. Compared exactly, every versionless id a
+ * citation or a model gives answered 404. An id *with* a version still has to
+ * match it.
  */
 function matches(paper: Paper, provider: ProviderId, nativeId: string): boolean {
   const ref = paper.sources[0];
   if (!ref) return false;
   if (ref.provider !== provider) return false;
-  return ref.nativeId === nativeId || ref.nativeId.toLowerCase() === nativeId.toLowerCase();
+  if (ref.nativeId === nativeId || ref.nativeId.toLowerCase() === nativeId.toLowerCase()) return true;
+  return provider === 'arxiv' && !/v\d+$/i.test(nativeId) && ref.nativeId.replace(/v\d+$/i, '') === nativeId;
 }

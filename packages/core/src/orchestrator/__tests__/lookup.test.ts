@@ -197,6 +197,28 @@ describe('lookupPaper — what counts as found', () => {
     expect(found).not.toBeNull();
   });
 
+  it('accepts any version of an arXiv paper asked for without one', async () => {
+    // arXiv answers `id_list=1706.03762` with the latest version, and a
+    // citation or a model rarely gives one.
+    const arxiv = provider('arxiv', [from('arxiv', '1706.03762v7')], true);
+
+    const found = await lookupPaper('arxiv:1706.03762', { providers: [arxiv] });
+
+    expect(found?.id).toBe('arxiv:1706.03762v7');
+  });
+
+  it('does not take an arXiv id that only begins the one asked for', async () => {
+    const arxiv = provider('arxiv', [from('arxiv', '1706.03762v7')], true);
+
+    expect(await lookupPaper('arxiv:1706.0376', { providers: [arxiv] })).toBeNull();
+  });
+
+  it('holds an arXiv id that names a version to that version', async () => {
+    const arxiv = provider('arxiv', [from('arxiv', '1706.03762v7')], true);
+
+    expect(await lookupPaper('arxiv:1706.03762v2', { providers: [arxiv] })).toBeNull();
+  });
+
   it('does not accept a record from a different provider', async () => {
     const arxiv = provider('arxiv', [from('europepmc', 'X')]);
 
