@@ -1,4 +1,4 @@
-import type { Paper, ProviderReport, Query } from '@open-access-explorer/shared';
+import type { Paper, ProviderId, ProviderReport, Query } from '@open-access-explorer/shared';
 import type { Plan } from './plan';
 import type { ProviderCache } from './provider-cache';
 
@@ -30,6 +30,12 @@ export type FanOutOptions = {
    * counted one bucket at a time waits for its own search, not for everyone's.
    */
   onSettled?: (settled: ProviderSettled) => void;
+  /**
+   * Providers not to ask this time, and why: the engine's quota state. Each is
+   * reported failed and `cooling-down`, without a request — never `skipped`,
+   * which says the provider cannot express the query and lets the set be held.
+   */
+  unavailable?: ReadonlyMap<ProviderId, string>;
 };
 
 export type ProviderSettled = { report: ProviderReport; papers: readonly Paper[] };
@@ -72,7 +78,7 @@ export async function withBudget<T>(ms: number, work: (signal: AbortSignal) => P
 }
 
 export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOutResult> {
-  const { query, depth, offset, timeoutMs, openAccessOnly, cache, userAgent, now, onSettled } = options;
+  const { query, depth, offset, timeoutMs, openAccessOnly, cache, userAgent, now, onSettled, unavailable } = options;
 
   const skippedReports: ProviderReport[] = plan.skipped.map(s => ({
     provider: s.provider,
@@ -112,6 +118,17 @@ export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOut
       return {
         papers: [],
         report: { provider: provider.id, status: 'skipped', retrieved: 0, latency: 0, skipReason: 'cannot express this query' }
+      };
+    }
+
+    // A provider whose rate limit refused a recent request, left alone until
+    // it can answer. After the check above: a query it cannot express is
+    // skipped whatever its quota, and that is the truer report.
+    const cooling = unavailable?.get(provider.id);
+    if (cooling) {
+      return {
+        papers: [],
+        report: { provider: provider.id, status: 'error', retrieved: 0, latency: 0, error: cooling, rateLimited: 'cooling-down' }
       };
     }
 
@@ -163,6 +180,7 @@ export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOut
           retrieved: 0,
           error: error instanceof Error ? error.message : String(error),
           ...(!timedOut && refusedQuery(error) ? { refused: true } : {}),
+          ...(!timedOut && statusOf(error) === 429 ? { rateLimited: 'refused' as const } : {}),
           latency: Date.now() - startedAt
         }
       };
@@ -186,9 +204,15 @@ const REFUSALS = new Set([400, 422]);
  * have completed.
  */
 function refusedQuery(error: unknown): boolean {
+  const code = statusOf(error);
+  return code !== undefined && REFUSALS.has(code);
+}
+
+/** The HTTP status a provider's error carries, as `status` or on an axios `response`. */
+function statusOf(error: unknown): number | undefined {
   const { status, response } = (error ?? {}) as { status?: unknown; response?: { status?: unknown } };
   const code = typeof status === 'number' ? status : response?.status;
-  return typeof code === 'number' && REFUSALS.has(code);
+  return typeof code === 'number' ? code : undefined;
 }
 
 /**

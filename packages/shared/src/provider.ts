@@ -36,6 +36,13 @@ export type ProviderReport = {
    * well be answered next time; so a refusal is no reason not to hold the set.
    */
   refused?: boolean;
+  /**
+   * The provider's rate limit, rather than its health: `refused` when it
+   * answered this request with a 429, `cooling-down` when it was not asked
+   * because it answered one within the engine's cool-down. Always with
+   * `status: 'error'`, so the set is incomplete and is not held.
+   */
+  rateLimited?: 'refused' | 'cooling-down';
   latency: number;
   /** Why it was not asked. Present when `status` is `skipped`. */
   skipReason?: string;

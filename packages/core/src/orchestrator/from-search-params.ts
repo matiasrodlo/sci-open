@@ -1,4 +1,4 @@
-import type { CountedFacet, PaperStage, Query, SearchFilters, SearchParams, SearchResponse, SearchResponseV2, YearRange } from '@open-access-explorer/shared';
+import type { CountedFacet, PaperStage, ProviderId, Query, SearchFilters, SearchParams, SearchResponse, SearchResponseV2, YearRange } from '@open-access-explorer/shared';
 import { isStructured } from '@open-access-explorer/shared';
 import type { FacetQueries } from './source-facets';
 import { search as orchestratorSearch, DEFAULT_DEPTH } from './index';
@@ -191,6 +191,8 @@ export type RunOptions = {
   admit?: () => Promise<void>;
   /** See `SearchOptions.onProgress`. */
   onProgress?: (event: SearchProgress) => void;
+  /** See `SearchOptions.unavailable`. */
+  unavailable?: ReadonlyMap<ProviderId, string>;
   userAgent?: string;
   /** Defaults to the whole registry. A subset is how this is driven offline. */
   providers?: readonly ProviderEntry[];
@@ -300,6 +302,7 @@ export async function runSearch(
     ...(options.stats ? { stats: options.stats } : {}),
     ...(options.admit ? { admit: options.admit } : {}),
     ...(options.onProgress ? { onProgress: options.onProgress } : {}),
+    ...(options.unavailable ? { unavailable: options.unavailable } : {}),
     ...(options.userAgent ? { userAgent: options.userAgent } : {}),
     ...(options.providers ? { providers: options.providers } : {}),
     ...(options.authorities ? { authorities: options.authorities } : {})

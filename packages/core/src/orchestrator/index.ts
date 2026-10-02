@@ -126,6 +126,12 @@ export type SearchOptions = {
    * from it is dropped. Not part of what decides the set, so not in its key.
    */
   onProgress?: (event: SearchProgress) => void;
+  /**
+   * Providers not to ask, and why: the engine's quota state (`quota.ts`). Each
+   * is reported failed and `cooling-down`, and is not asked for its facet
+   * counts either. A set missing one is incomplete, so it is not held.
+   */
+  unavailable?: ReadonlyMap<ProviderId, string>;
   providers?: readonly ProviderEntry[];
   userAgent?: string;
   now?: () => Date;
@@ -217,6 +223,7 @@ type Settled = ResultSetKeyParts & {
   userAgent: string | undefined;
   now: (() => Date) | undefined;
   progress: (event: SearchProgress) => void;
+  unavailable: ReadonlyMap<ProviderId, string> | undefined;
 };
 
 function settle(query: Query, options: SearchOptions): Settled {
@@ -252,7 +259,8 @@ function settle(query: Query, options: SearchOptions): Settled {
     stats: options.stats,
     userAgent: options.userAgent,
     now: options.now,
-    progress: progressTo(options.onProgress)
+    progress: progressTo(options.onProgress),
+    unavailable: options.unavailable?.size ? options.unavailable : undefined
   };
 }
 
@@ -305,7 +313,7 @@ function emptySet(settled: Settled): ResultSet {
 async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache): Promise<ResultSet> {
   const {
     query, filters, policy, openAccessOnly, depth, timeoutMs, facetQueries, facetBudgetMs, filtersSent,
-    providers, authorities, cache, stats, userAgent, now, progress
+    providers, authorities, cache, stats, userAgent, now, progress, unavailable
   } = settled;
 
   if (emptyYears(query)) return emptySet(settled);
@@ -324,8 +332,11 @@ async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache
   // Started before the fan-out and awaited only once the set is assembled: the
   // counts run beside the search, and then beside the rescue, neither of which
   // needs them.
+  // A provider left out for its quota is left out of the counts too: OpenAlex
+  // aggregates its facets in requests of its own that do not wait for its
+  // search, and they are billed against the same budget.
   const counting = facetQueries
-    ? countSourceFacets(providers, {
+    ? countSourceFacets(unavailable ? (providers as readonly ProviderEntry[]).filter(p => !unavailable.has(p.id)) : providers, {
         queries: facetQueries,
         searched: query,
         settled: id => settling.get(id)?.promise ?? Promise.resolve(undefined),
@@ -344,6 +355,7 @@ async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache
       settling.get(settled.report.provider)?.resolve(settled);
       progress({ stage: 'sources', settled: ++settledCount, planned: planned.planned.length, report: settled.report });
     },
+    ...(unavailable ? { unavailable } : {}),
     ...(cache ? { cache } : {}),
     ...(userAgent ? { userAgent } : {}),
     ...(now ? { now } : {})

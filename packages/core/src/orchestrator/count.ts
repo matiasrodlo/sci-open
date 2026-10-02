@@ -1,4 +1,4 @@
-import type { ProviderReport, SearchParams } from '@open-access-explorer/shared';
+import type { ProviderId, ProviderReport, SearchParams } from '@open-access-explorer/shared';
 import { plan } from './plan';
 import { fanOut, isComplete } from './fanout';
 import { queryOf } from './from-search-params';
@@ -19,6 +19,8 @@ export type CountOptions = {
   admit?: () => Promise<void>;
   /** Each source as it settles, as a search reports them. */
   onProgress?: (event: SearchProgress) => void;
+  /** Providers not to ask, as for a search. See `SearchOptions.unavailable`. */
+  unavailable?: ReadonlyMap<ProviderId, string>;
 };
 
 export type CountOutcome = {
@@ -74,6 +76,7 @@ export async function countSearch(params: SearchParams, options: CountOptions): 
   const { reports } = await fanOut(planned, {
     query, depth: COUNT_DEPTH, offset: 0, timeoutMs: COUNT_TIMEOUT_MS, openAccessOnly,
     onSettled: ({ report }) => progress({ stage: 'sources', settled: ++settled, planned: planned.planned.length, report }),
+    ...(options.unavailable?.size ? { unavailable: options.unavailable } : {}),
     ...(options.cache ? { cache: options.cache } : {}),
     ...(options.userAgent ? { userAgent: options.userAgent } : {})
   });

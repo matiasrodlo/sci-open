@@ -138,3 +138,101 @@ describe('createEngine', () => {
     expect(europepmc.calls).toHaveLength(0);
   });
 });
+
+describe('a spent quota', () => {
+  /** A source whose answers are scripted call by call: `429` refuses, a number answers with that many papers. */
+  function scripted(id: ProviderId, script: Array<number | 429>, over: Partial<ProviderEntry> = {}) {
+    const calls: Query[] = [];
+    const entry: ProviderEntry = {
+      ...stub(id).entry,
+      search: async ({ query }) => {
+        const next = script[calls.length] ?? 3;
+        calls.push(query);
+        if (next === 429) throw Object.assign(new Error(`${id} 429: over budget`), { status: 429 });
+        const papers = Array.from({ length: next }, (_, i) =>
+          paper({ id: `${id}:${i}`, title: `${id} ${i}`, sources: [ref(id, { nativeId: String(i) })] }));
+        return { papers, totalHits: next, skipped: [] };
+      },
+      ...over
+    };
+    return { entry, calls };
+  }
+
+  it('leaves a source alone after its 429, says so, and holds no set without it', async () => {
+    let t = 0;
+    const openalex = scripted('openalex', [429, 3]);
+    const arxiv = stub('arxiv');
+    const engine = createEngine({
+      userAgent: 'engine-test', providers: [openalex.entry, arxiv.entry], authorities: [],
+      quotaCoolDownMs: 600_000, now: () => t
+    });
+
+    const refused = await engine.search({ q: 'crispr' });
+    expect(refused.response.providers.find(p => p.provider === 'openalex')).toMatchObject({ status: 'error', rateLimited: 'refused' });
+
+    t = 300_000;
+    const cooling = await engine.search({ q: 'microbiome' });
+    expect(openalex.calls).toHaveLength(1);
+    expect(cooling.response.providers.find(p => p.provider === 'openalex')).toMatchObject({ status: 'error', rateLimited: 'cooling-down' });
+    expect(cooling.response.complete).toBe(false);
+    // Not held: the same search again runs again.
+    expect((await engine.search({ q: 'microbiome' })).fromCache).toBe(false);
+    expect(openalex.calls).toHaveLength(1);
+
+    t = 600_000;
+    const recovered = await engine.search({ q: 'microbiome' });
+    expect(openalex.calls).toHaveLength(2);
+    expect(recovered.response.complete).toBe(true);
+
+    // The answer ended the cool-down, so nothing is left out now.
+    await engine.search({ q: 'plasmid' });
+    expect(openalex.calls).toHaveLength(3);
+  });
+
+  it('leaves a cooled-down source out of a count too', async () => {
+    const openalex = scripted('openalex', [429]);
+    const engine = createEngine({ userAgent: 'engine-test', providers: [openalex.entry], authorities: [] });
+
+    await engine.count({ q: 'crispr' });
+    const { reports, complete } = await engine.count({ q: 'microbiome' });
+
+    expect(openalex.calls).toHaveLength(1);
+    expect(reports[0]).toMatchObject({ status: 'error', rateLimited: 'cooling-down' });
+    expect(complete).toBe(false);
+  });
+
+  it('asks a cooled-down OpenAlex neither for its facet counts nor as an authority', async () => {
+    let facetCalls = 0;
+    let authorityCalls = 0;
+    const openalex = scripted('openalex', [429], {
+      facets: async () => { facetCalls++; return { facets: {}, failures: [] }; },
+      facetsAggregate: true
+    });
+    openalex.entry.capabilities = { ...openalex.entry.capabilities, facets: ['year'] };
+    const arxiv = stub('arxiv');
+    const engine = createEngine({
+      userAgent: 'engine-test',
+      providers: [openalex.entry, arxiv.entry],
+      authorities: [{
+        id: 'openalex',
+        capabilities: { fields: ['citationCount'], authoritative: [] },
+        pass: 0,
+        lookup: async () => { authorityCalls++; return null; }
+      }]
+    });
+
+    // Before the 429 is known, both are asked: what the test then shows missing was there to miss.
+    await engine.search({ q: 'crispr' });
+    expect(facetCalls).toBeGreaterThan(0);
+    expect(authorityCalls).toBeGreaterThan(0);
+    facetCalls = 0;
+    authorityCalls = 0;
+
+    await engine.search({ q: 'microbiome' });
+    await engine.lookupDoi('10.1234/arxiv-1');
+
+    expect(openalex.calls).toHaveLength(1);
+    expect(facetCalls).toBe(0);
+    expect(authorityCalls).toBe(0);
+  });
+});

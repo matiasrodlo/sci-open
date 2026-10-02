@@ -1,4 +1,4 @@
-import type { Paper, SearchParams, SearchResponseV2 } from '@open-access-explorer/shared';
+import type { Paper, ProviderId, SearchParams, SearchResponseV2 } from '@open-access-explorer/shared';
 import { runSearch, DEFAULT_SEARCH_SETTINGS, type SearchSettings } from './orchestrator/from-search-params';
 import { ProviderCache } from './orchestrator/provider-cache';
 import { ResultSetCache } from './orchestrator/result-set';
@@ -7,11 +7,12 @@ import { UpstreamStats } from './orchestrator/upstream-stats';
 import { lookupPaper } from './orchestrator/lookup';
 import { countSearch, type CountOutcome } from './orchestrator/count';
 import type { SearchProgress } from './orchestrator/progress';
+import { QuotaState } from './orchestrator/quota';
 import { parseQuery } from './orchestrator/parse-query';
 import { normalizeDoi } from './orchestrator/merge';
 import { enrichPage } from './orchestrator/enrich';
 import { PROVIDERS, type ProviderEntry } from './orchestrator/registry';
-import type { AuthorityEntry } from './authorities';
+import { AUTHORITIES, type AuthorityEntry } from './authorities';
 import { useApiKeys, type ApiKeys } from './lib/api-key';
 import { configureHttpPools, type HttpPoolSettings } from './lib/http-pool-config';
 
@@ -50,6 +51,10 @@ export type EngineOptions = {
   /** Subsets of the registries: how the engine is driven offline in tests. */
   providers?: readonly ProviderEntry[];
   authorities?: readonly AuthorityEntry[];
+  /** How long a source that answered 429 is left alone. Ten minutes by default. */
+  quotaCoolDownMs?: number;
+  /** The clock the cool-down runs on, for tests. */
+  now?: () => number;
 };
 
 export type SearchOutcome = { response: SearchResponseV2; fromCache: boolean };
@@ -102,11 +107,29 @@ export function createEngine(options: EngineOptions): Engine {
   const providers = options.providers ?? PROVIDERS;
   const authorities = options.authorities ? { authorities: options.authorities } : {};
 
+  /**
+   * The sources whose rate limit refused a recent request, left out until it
+   * can answer. One per engine — per process, which over HTTP means one for
+   * every client, as it should be: the budget it protects is the process's.
+   */
+  const quota = new QuotaState({
+    ...(options.quotaCoolDownMs !== undefined ? { coolDownMs: options.quotaCoolDownMs } : {}),
+    ...(options.now ? { now: options.now } : {})
+  });
+
+  /** OpenAlex the authority is billed against the same budget as OpenAlex the
+   * source, so a cooled-down OpenAlex is left out of enrichment too. */
+  const authoritiesNow = (unavailable: ReadonlyMap<ProviderId, string>) =>
+    unavailable.size
+      ? { authorities: (options.authorities ?? AUTHORITIES).filter(a => !unavailable.has(a.id as ProviderId)) }
+      : authorities;
+
   /** The registry, or the part of it a caller narrowed the search to. */
   const narrowed = (sources?: readonly string[]) =>
     sources?.length ? providers.filter(p => sources.includes(p.id)) : providers;
 
   const search: Engine['search'] = async (params, extra = {}) => {
+    const unavailable = quota.unavailable();
     const { responseV2, fromCache } = await runSearch(params, {
       settings,
       cache: providerCache,
@@ -114,13 +137,16 @@ export function createEngine(options: EngineOptions): Engine {
       authorityFacts,
       stats,
       userAgent,
-      ...authorities,
+      ...authoritiesNow(unavailable),
+      ...(unavailable.size ? { unavailable } : {}),
       ...(extra.admit ? { admit: extra.admit } : {}),
       ...(extra.onProgress ? { onProgress: extra.onProgress } : {}),
       // Safe to share the caches: the result-set key includes the provider
       // list, so a narrowed set never answers a full search, or the reverse.
       providers: narrowed(extra.sources)
     });
+    // A held set's reports are what was learned when it was resolved.
+    if (!fromCache) quota.note(responseV2.providers);
     return { response: responseV2, fromCache };
   };
 
@@ -133,18 +159,27 @@ export function createEngine(options: EngineOptions): Engine {
       // answer each other, and a count repeated while variants are compared
       // is answered from it. A repeat still spends an admission: the cache
       // cannot say in advance whether it holds every source's answer.
-      return countSearch(params, {
+      const unavailable = quota.unavailable();
+      const outcome = await countSearch(params, {
         providers: narrowed(extra.sources),
         cache: providerCache,
         userAgent,
+        ...(unavailable.size ? { unavailable } : {}),
         ...(extra.admit ? { admit: extra.admit } : {}),
         ...(extra.onProgress ? { onProgress: extra.onProgress } : {})
       });
+      quota.note(outcome.reports);
+      return outcome;
     },
     async lookup(id) {
+      // Not gated: a lookup asks one provider through its entity endpoint,
+      // which OpenAlex does not bill against the search budget. Its enrichment
+      // is, so it leaves out a cooled-down OpenAlex like a search's.
       const found = await lookupPaper(id, { userAgent, providers });
       if (!found) return null;
-      const { papers } = await enrichPage([found], { userAgent, cache: new AuthorityCache(authorityFacts), ...authorities });
+      const { papers } = await enrichPage([found], {
+        userAgent, cache: new AuthorityCache(authorityFacts), ...authoritiesNow(quota.unavailable())
+      });
       return papers[0] ?? found;
     },
     async lookupDoi(doi, extra = {}) {

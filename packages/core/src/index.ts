@@ -4,6 +4,7 @@ export type { SearchSettings, RunOptions } from './orchestrator/from-search-para
 export { DEFAULT_MAX_BYTES as DEFAULT_PROVIDER_CACHE_BYTES } from './orchestrator/provider-cache';
 export { onlyRefused } from './orchestrator/fanout';
 export { countSearch } from './orchestrator/count';
+export { QuotaState } from './orchestrator/quota';
 export type { CountOptions, CountOutcome } from './orchestrator/count';
 export type { ProviderEntry } from './orchestrator/registry';
 export { OpenAlexUnavailableError } from './providers/openalex/fetch';
