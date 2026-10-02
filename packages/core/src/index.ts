@@ -31,6 +31,7 @@ export { arxivHtmlToSections } from './fulltext/html';
 export type { FullTextDocument, FullTextTier, Section as FullTextSection } from './fulltext/types';
 export { createEngine } from './engine';
 export type { Engine, EngineOptions, EngineCaches, SearchOutcome, SearchCallOptions, DoiResolution } from './engine';
-export { citationLinks, OpenCitationsUnavailableError, idsIn } from './graph/opencitations';
+export { citationLinks, OpenCitationsUnavailableError, idsIn, OPENCITATIONS_HOST } from './graph/opencitations';
+export { RequestBudget } from './lib/request-budget';
 export type { CitationLink, CitationDirection } from './graph/opencitations';
 export { fetchWorksByDoi, WORKS_BY_DOI_MAX } from './providers/openalex/fetch';

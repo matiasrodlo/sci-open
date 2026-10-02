@@ -20,7 +20,12 @@ import { SingleFlight } from './lib/single-flight';
 import { resolveFullText } from './fulltext/resolve';
 import { FullTextCache } from './fulltext/cache';
 import type { FullTextDocument } from './fulltext/types';
-import { citationLinks as fetchCitationLinks, type CitationDirection, type CitationLink } from './graph/opencitations';
+import {
+  citationLinks as fetchCitationLinks, OpenCitationsUnavailableError, OPENCITATIONS_HOST,
+  type CitationDirection, type CitationLink
+} from './graph/opencitations';
+import { SourceBusyError } from './lib/host-pacer';
+import { RequestBudget } from './lib/request-budget';
 import { fetchWorksByDoi, OpenAlexUnavailableError, WORKS_BY_DOI_MAX } from './providers/openalex/fetch';
 import { normalize as normalizeOpenAlex } from './providers/openalex/normalize';
 import { apiKeyFor } from './lib/api-key';
@@ -69,6 +74,10 @@ export type EngineOptions = {
   fullTextBytes?: number;
   /** OpenCitations' access token, which raises its rate limit. */
   openCitationsToken?: string;
+  /** Citation-link requests a minute this process may send to OpenCitations.
+   * 150 by default, of the 180 it allows an address: the rest is the
+   * citation-count authority's. Divide it among replicas behind one address. */
+  openCitationsPerMinute?: number;
 };
 
 export type SearchOutcome = { response: SearchResponseV2; fromCache: boolean };
@@ -163,6 +172,11 @@ export function createEngine(options: EngineOptions): Engine {
   const linkLists = new Map<string, { expires: number; links: CitationLink[] }>();
   let heldLinks = 0;
   const linkFlights = new SingleFlight();
+  const linkRequests = new RequestBudget(OPENCITATIONS_HOST, options.openCitationsPerMinute ?? 150, now);
+  /** Until when OpenCitations is left alone after refusing us: a 429 is a
+   * state, not an error per call (D13), for the links and the citation-count
+   * authority alike, which spend one allowance. */
+  let citationsCoolUntil = 0;
   const LINK_BUDGET = 200_000;
   const LINK_HOLD_MS = 10 * 60_000;
   const dropList = (key: string) => {
@@ -178,10 +192,17 @@ export function createEngine(options: EngineOptions): Engine {
 
   /** OpenAlex the authority is billed against the same budget as OpenAlex the
    * source, so a cooled-down OpenAlex is left out of enrichment too. */
-  const authoritiesNow = (unavailable: ReadonlyMap<ProviderId, string>) =>
-    unavailable.size
-      ? { authorities: (options.authorities ?? AUTHORITIES).filter(a => !unavailable.has(a.id as ProviderId)) }
+  const authoritiesNow = (unavailable: ReadonlyMap<ProviderId, string>) => {
+    // OpenCitations the authority shares an address's allowance with the
+    // citation links, so it sits out their cool-down too.
+    const citationsCooling = now() < citationsCoolUntil;
+    return unavailable.size || citationsCooling
+      ? {
+          authorities: (options.authorities ?? AUTHORITIES)
+            .filter(a => !unavailable.has(a.id as ProviderId) && !(citationsCooling && a.id === 'opencitations'))
+        }
       : authorities;
+  };
 
   /** The registry, or the part of it a caller narrowed the search to. */
   const narrowed = (sources?: readonly string[]) =>
@@ -259,10 +280,21 @@ export function createEngine(options: EngineOptions): Engine {
       dropList(key);
       // Two pages asked for at once fetch the list once, and hold it once.
       const { value } = await linkFlights.run(key, async () => {
-        const links = await fetchCitationLinks(doi, direction, {
-          userAgent,
-          ...(options.openCitationsToken ? { token: options.openCitationsToken } : {})
-        });
+        if (now() < citationsCoolUntil) throw new SourceBusyError(OPENCITATIONS_HOST, citationsCoolUntil - now());
+        linkRequests.take();
+        let links: CitationLink[];
+        try {
+          links = await fetchCitationLinks(doi, direction, {
+            userAgent,
+            ...(options.openCitationsToken ? { token: options.openCitationsToken } : {})
+          });
+        } catch (error) {
+          if (error instanceof OpenCitationsUnavailableError && error.status === 429) {
+            citationsCoolUntil = now() + (error.retryAfterSeconds ?? 60) * 1000;
+            throw new SourceBusyError(OPENCITATIONS_HOST, citationsCoolUntil - now());
+          }
+          throw error;
+        }
         if (links.length <= LINK_BUDGET) {
           dropList(key);
           for (const oldest of linkLists.keys()) {

@@ -1,5 +1,5 @@
 import { QueryParseError } from '@open-access-explorer/shared';
-import { OpenCitationsUnavailableError, PdfProxyError, SourceBusyError } from '@open-access-explorer/core';
+import { OPENCITATIONS_HOST, OpenCitationsUnavailableError, PdfProxyError, SourceBusyError } from '@open-access-explorer/core';
 
 /**
  * Every failure a tool can return: a stable code, a plain message, and a hint
@@ -49,10 +49,17 @@ export function toToolError(error: unknown): ToolError {
   // with a number on the wait, never "no full text".
   if (error instanceof SourceBusyError) {
     const seconds = Math.ceil(error.retryAfterMs / 1000);
+    // arXiv asks for a crawl delay; OpenCitations allows so many a minute and
+    // answers 429 past it. Either way it is a wait, with a number on it.
+    const citations = error.host === OPENCITATIONS_HOST;
     return new ToolError(
       'rate_limited',
-      `${error.host} asks automated readers to space their requests; the next one can go in ${seconds} s.`,
-      'Retry after the wait, or read another paper meanwhile. Sections of a paper already read never wait.',
+      citations
+        ? `OpenCitations limits how often it may be asked; the next request can go in ${seconds} s.`
+        : `${error.host} asks automated readers to space their requests; the next one can go in ${seconds} s.`,
+      citations
+        ? 'Retry after the wait. Pages of a citation list already fetched never wait.'
+        : 'Retry after the wait, or read another paper meanwhile. Sections of a paper already read never wait.',
       seconds
     );
   }

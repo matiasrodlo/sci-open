@@ -4,7 +4,7 @@ import { tmpdir } from 'os';
 import path from 'path';
 import { createHash } from 'crypto';
 import type { Paper } from '@open-access-explorer/shared';
-import { OpenCitationsUnavailableError, type CitationLink } from '@open-access-explorer/core';
+import { OPENCITATIONS_HOST, OpenCitationsUnavailableError, SourceBusyError, type CitationLink } from '@open-access-explorer/core';
 import { paper, ref } from '@open-access-explorer/core/testing';
 import { getCitations } from '../src/tools/get-citations';
 import { exportCitations } from '../src/tools/export-citations';
@@ -139,6 +139,13 @@ describe('get_citations', () => {
     expect(byId.structured).toMatchObject({ paper: 'openalex:W3134956838', doi: '10.7717/peerj-cs.421', total_links: 4 });
     await expect(getCitations.run(getCitations.input.parse({ paper: 'arxiv:2101.00001', direction: 'references' }), fake.deps))
       .rejects.toMatchObject({ code: 'not_found', message: 'This paper has no DOI, and OpenCitations is keyed by DOI.' });
+  });
+
+  it('says how long to wait when the engine is holding OpenCitations off', () => {
+    const busy = toToolError(new SourceBusyError(OPENCITATIONS_HOST, 41_500));
+    expect(busy).toMatchObject({ code: 'rate_limited', retryAfterSeconds: 42 });
+    expect(busy.message).toBe('OpenCitations limits how often it may be asked; the next request can go in 42 s.');
+    expect(busy.hint).toBe('Retry after the wait. Pages of a citation list already fetched never wait.');
   });
 
   it('reports OpenCitations failing as the source being unavailable, and its 429 as a wait', () => {

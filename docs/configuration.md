@@ -382,6 +382,12 @@ requests a minute per address without one, and a list it returns is held ten
 minutes, so paging through it asks once. The citation-count authority does
 not use it; it sends no credentials.
 
+The process sends `get_citations` requests at most 150 a minute, leaving the
+rest of the address's 180 to the citation-count authority, and a 429 benches
+OpenCitations — both uses of it — for the time it asks, or a minute. More than
+one API replica behind one address shares that 180; the allowance is per
+process, so lower it in `createEngine` (`openCitationsPerMinute`) to match.
+
 The server's other settings over HTTP are its defaults, listed below, with
 `save_to` always refused. `get_citations` and `export_citations` are opt-in
 there as on stdio: a client asks for them with `?toolsets=all`.

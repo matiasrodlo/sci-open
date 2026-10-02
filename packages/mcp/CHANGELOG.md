@@ -16,8 +16,9 @@ Set the date in the commit that tags `mcp-v0.4.0`.
 - get_citations, opt-in (toolset `graph`): a paper's references or the
   papers citing it, from OpenCitations, each resolved to an OpenAlex record
   where one exists, with self-citations flagged, paged by offset. A list is
-  fetched once and held ten minutes. `OPENCITATIONS_TOKEN` raises
-  OpenCitations' rate limit.
+  fetched once and held ten minutes. At most 150 requests a minute go to
+  OpenCitations, and a 429 leaves it alone for the time it asks, the
+  citation-count authority included. `OPENCITATIONS_TOKEN` raises its limit.
 - export_citations, opt-in (toolset `export`): BibTeX or RIS for up to 200
   papers, from the records and with the formatter the web app uses. `save_to`
   writes the file on a local connection; otherwise it is attached as an

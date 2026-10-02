@@ -120,8 +120,11 @@ request its description. Over HTTP, `?toolsets=all` does the same.
   the papers citing it, from OpenCitations, each resolved to an OpenAlex
   record where one exists — fifty DOIs to a request, not a search each — with
   self-citations flagged. A list is fetched once and held ten minutes,
-  however it is paged. OpenCitations holds most open citation data, not every
-  citation, and the result says so.
+  however it is paged. A process sends OpenCitations at most 150 requests a
+  minute, of the 180 it allows an address, and after a 429 leaves it alone
+  for the time it asks (a minute if it does not say); either way the answer is
+  `rate_limited` with the wait. OpenCitations holds most open citation data,
+  not every citation, and the result says so.
 - **Exporting citations.** `export_citations` writes BibTeX or RIS for up to
   200 papers from their records, with the formatter the web app's export
   uses, so the model never retypes a citation. On a local connection

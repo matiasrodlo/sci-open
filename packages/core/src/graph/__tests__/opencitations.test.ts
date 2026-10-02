@@ -75,6 +75,13 @@ describe('citationLinks', () => {
     expect(await citationLinks('10.9999/nobody', 'cited_by', options)).toEqual([]);
   });
 
+  it('reads how long a 429 asks to be left alone', async () => {
+    get.mockResolvedValue({ status: 429, statusText: 'Too Many Requests', headers: { 'retry-after': '30' }, data: '' });
+    await expect(citationLinks('10.1/x', 'cited_by', options)).rejects.toMatchObject({ status: 429, retryAfterSeconds: 30 });
+    get.mockResolvedValue({ status: 429, statusText: 'Too Many Requests', headers: {}, data: '' });
+    await expect(citationLinks('10.1/x', 'cited_by', options)).rejects.toMatchObject({ status: 429, retryAfterSeconds: undefined });
+  });
+
   it('throws on an error status or a body that is not a list', async () => {
     get.mockResolvedValue(resolved(503, '<html>'));
     await expect(citationLinks('10.1/x', 'cited_by', options)).rejects.toBeInstanceOf(OpenCitationsUnavailableError);

@@ -29,12 +29,22 @@ export type CitationLink = {
   authorSelfCitation: boolean;
 };
 
+/** The host the index answers from, as the pacing and cool-down name it. */
+export const OPENCITATIONS_HOST = 'api.opencitations.net';
+
 /** OpenCitations answered with something other than a list of links. */
 export class OpenCitationsUnavailableError extends Error {
-  constructor(readonly status: number, detail: string) {
+  constructor(readonly status: number, detail: string, readonly retryAfterSeconds?: number) {
     super(`OpenCitations ${status}: ${detail}`);
     this.name = 'OpenCitationsUnavailableError';
   }
+}
+
+/** `Retry-After` in seconds, when it is a number of them. */
+function retryAfter(headers: unknown): number | undefined {
+  const raw = (headers as Record<string, unknown> | undefined)?.['retry-after'];
+  const seconds = Number(raw);
+  return typeof raw === 'string' && Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
 }
 
 export type CitationLinkOptions = {
@@ -84,7 +94,9 @@ export async function citationLinks(
     }
   });
   // The pooled client resolves a 4xx rather than throwing.
-  if (response.status >= 400) throw new OpenCitationsUnavailableError(response.status, response.statusText || 'no message given');
+  if (response.status >= 400) {
+    throw new OpenCitationsUnavailableError(response.status, response.statusText || 'no message given', retryAfter(response.headers));
+  }
   if (!Array.isArray(response.data)) throw new OpenCitationsUnavailableError(response.status, 'a 2xx response carrying no list');
 
   // The other end of each link: the cited work for a paper's references, the
