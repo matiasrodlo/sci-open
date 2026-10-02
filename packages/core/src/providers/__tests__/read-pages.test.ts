@@ -110,6 +110,30 @@ describe('not paying for pages that are not there', () => {
     expect(requests).toBe(1);
   });
 
+  it('asks for no more than it wants when that is less than a page', async () => {
+    // A count reads one record for the total that comes with it, and a lookup
+    // ten: a full page of 100 to 500 records, trimmed, was what both paid.
+    fetch = corpus(5000);
+
+    const { items, total, requests } = await read(fetch, 1, 100);
+
+    expect(fetch.mock.calls[0]![0]).toEqual({ pageSize: 1, offset: 0 });
+    expect(items).toEqual(['r0']);
+    expect(total).toBe(5000);
+    expect(requests).toBe(1);
+  });
+
+  it('keeps a full page where a smaller one would start somewhere else', async () => {
+    // A page-numbered API reads offset 150 at page size 10 as page 16 — record
+    // 150 — but only because 150 divides by 10; at offset 155 it would not.
+    // A full page from a non-zero offset is what the arithmetic was written for.
+    fetch = corpus(5000);
+
+    await read(fetch, 10, 100, 150);
+
+    expect(fetch.mock.calls[0]![0]).toEqual({ pageSize: 100, offset: 150 });
+  });
+
   it('stops at a short page even when the total disagrees', async () => {
     // A provider that returns fewer records than asked for has no more to give,
     // whatever it claimed its total was. Trusting the count over the page is

@@ -84,7 +84,14 @@ export async function readPages<Payload, Item>(
   const wanted = Math.max(options.wanted, 1);
   const perPage = Math.max(options.perPage, 1);
 
-  const first = await fetch({ pageSize: perPage, offset });
+  // A read of fewer records than a page asks for that many. A whole page
+  // trimmed afterwards cost the provider a full page to answer a count of one
+  // record (`countSearch`), and a lookup ten. Only where the smaller page still
+  // starts at `offset`: an API that numbers its pages derives the page from
+  // `offset / pageSize`, which a different size moves unless the read starts
+  // at zero — see `exactLastPage`.
+  const firstSize = wanted < perPage && (offset === 0 || exactLastPage) ? wanted : perPage;
+  const first = await fetch({ pageSize: firstSize, offset });
   const firstItems = itemsOf(first);
   const total = totalOf(first);
 
@@ -97,7 +104,7 @@ export async function readPages<Payload, Item>(
   // One page was the whole request, or the provider has nothing further: a page
   // shorter than the one asked for is the end of the results by any API's
   // convention, and is trusted over a reported total that disagrees.
-  if (firstItems.length >= wanted || firstItems.length < perPage) {
+  if (firstItems.length >= wanted || firstItems.length < firstSize) {
     return done(firstItems, 1);
   }
 

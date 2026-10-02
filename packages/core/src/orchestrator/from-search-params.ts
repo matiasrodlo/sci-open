@@ -213,17 +213,13 @@ export async function runOrchestrator(
 }
 
 /**
- * `runOrchestrator`, answering in both versions of the response from one run,
- * and saying whether the result set was held rather than resolved for this
- * request — which neither shape has anywhere to put and the route reports in
- * `X-Cache-Hit`.
+ * What a search's params ask the sources: the query, with the years and
+ * publication types sent rather than only filtered. `runSearch` and
+ * `countSearch` both start here, so a count is a count of the search it
+ * previews.
  */
-export async function runSearch(
-  params: SearchParams,
-  options: RunOptions = {}
-): Promise<{ response: SearchResponse; responseV2: SearchResponseV2; fromCache: boolean }> {
+export function queryOf(params: SearchParams) {
   const filters = params.filters ?? {};
-  const settings = options.settings ?? DEFAULT_SEARCH_SETTINGS;
   const { yearFrom, yearTo } = filters;
 
   // The bounds go into the Query so a provider that can express a year filter
@@ -264,9 +260,24 @@ export async function runSearch(
   };
 
   const query = ask(yearsToSend(bound, ticked), true);
-  const { facetQueries, filtersSent } = sourceCounting(filters, query, ask, bound, settings.facetCounts);
-
   const openAccessOnly = filters.openAccessOnly ?? true;
+
+  return { filters, query, ask, bound, userFilters, openAccessOnly };
+}
+
+/**
+ * `runOrchestrator`, answering in both versions of the response from one run,
+ * and saying whether the result set was held rather than resolved for this
+ * request — which neither shape has anywhere to put and the route reports in
+ * `X-Cache-Hit`.
+ */
+export async function runSearch(
+  params: SearchParams,
+  options: RunOptions = {}
+): Promise<{ response: SearchResponse; responseV2: SearchResponseV2; fromCache: boolean }> {
+  const { filters, query, ask, bound, userFilters, openAccessOnly } = queryOf(params);
+  const settings = options.settings ?? DEFAULT_SEARCH_SETTINGS;
+  const { facetQueries, filtersSent } = sourceCounting(filters, query, ask, bound, settings.facetCounts);
 
   const result = await orchestratorSearch(query, {
     page: params.page ?? 1,

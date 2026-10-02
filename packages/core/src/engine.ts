@@ -5,6 +5,7 @@ import { ResultSetCache } from './orchestrator/result-set';
 import { AuthorityCache, AuthorityFactsCache } from './orchestrator/authority-cache';
 import { UpstreamStats } from './orchestrator/upstream-stats';
 import { lookupPaper } from './orchestrator/lookup';
+import { countSearch, type CountOutcome } from './orchestrator/count';
 import { parseQuery } from './orchestrator/parse-query';
 import { normalizeDoi } from './orchestrator/merge';
 import { enrichPage } from './orchestrator/enrich';
@@ -60,6 +61,9 @@ export type Engine = {
    * new result set must be resolved, never for a page of a held one.
    * `sources` narrows the fan-out to those providers. */
   search(params: SearchParams, options?: { admit?: Admit; sources?: readonly string[] }): Promise<SearchOutcome>;
+  /** Each source's own match count for these params, with nothing read (see
+   * `countSearch`). Spends an admission: it is still a request to every source. */
+  count(params: SearchParams, options?: { admit?: Admit; sources?: readonly string[] }): Promise<CountOutcome>;
   /** A paper by sci-open id (`provider:nativeId`), enriched by the authorities.
    * Asks only the provider the id names. */
   lookup(id: string): Promise<Paper | null>;
@@ -112,6 +116,18 @@ export function createEngine(options: EngineOptions): Engine {
     userAgent,
     stats,
     search,
+    async count(params, extra = {}) {
+      // The provider cache keys on the depth, so a count and a search never
+      // answer each other, and a count repeated while variants are compared
+      // is answered from it. A repeat still spends an admission: the cache
+      // cannot say in advance whether it holds every source's answer.
+      return countSearch(params, {
+        providers: narrowed(extra.sources),
+        cache: providerCache,
+        userAgent,
+        ...(extra.admit ? { admit: extra.admit } : {})
+      });
+    },
     async lookup(id) {
       const found = await lookupPaper(id, { userAgent, providers });
       if (!found) return null;

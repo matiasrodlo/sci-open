@@ -87,6 +87,20 @@ describe('createEngine', () => {
     expect(admitted).toBe(1);
   });
 
+  it('counts matches with one record from each source, narrowed like a search', async () => {
+    const arxiv = stub('arxiv', 5);
+    const europepmc = stub('europepmc', 5);
+    const engine = engineWith(arxiv.entry, europepmc.entry);
+    let admitted = 0;
+
+    const { reports } = await engine.count({ q: 'crispr' }, { sources: ['arxiv'], admit: async () => { admitted++; } });
+
+    expect(reports.map(r => [r.provider, r.totalHits])).toEqual([['arxiv', 5]]);
+    expect(arxiv.calls.map(c => c.depth)).toEqual([1]);
+    expect(europepmc.calls).toEqual([]);
+    expect(admitted).toBe(1);
+  });
+
   it('looks a DOI up whether or not the paper is open', async () => {
     const arxiv = stub('arxiv');
     const engine = engineWith(arxiv.entry);

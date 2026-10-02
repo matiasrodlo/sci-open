@@ -1,8 +1,10 @@
 export * from './orchestrator';
-export { runSearch, runOrchestrator, DEFAULT_SEARCH_SETTINGS, toUserFilters } from './orchestrator/from-search-params';
+export { runSearch, runOrchestrator, DEFAULT_SEARCH_SETTINGS, toUserFilters, queryOf } from './orchestrator/from-search-params';
 export type { SearchSettings, RunOptions } from './orchestrator/from-search-params';
 export { DEFAULT_MAX_BYTES as DEFAULT_PROVIDER_CACHE_BYTES } from './orchestrator/provider-cache';
 export { onlyRefused } from './orchestrator/fanout';
+export { countSearch } from './orchestrator/count';
+export type { CountOptions, CountOutcome } from './orchestrator/count';
 export type { ProviderEntry } from './orchestrator/registry';
 export { OpenAlexUnavailableError } from './providers/openalex/fetch';
 export { AUTHORITIES, authorityById } from './authorities';
