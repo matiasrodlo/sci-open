@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseExpression, type QueryField } from '@open-access-explorer/shared';
-import { cannotSend, flatTerms, nameAsWords, renderExpression, type Dialect } from '../render-query';
+import { cannotSend, dropsForGood, flatStatesWhole, flatTerms, nameAsWords, renderExpression, type Dialect } from '../render-query';
 
 /**
  * The walk that turns a parsed query into one provider's syntax, and the one
@@ -151,6 +151,15 @@ describe('a term the provider cannot send', () => {
     expect(blocked('TS=crispr NOT (TS=a NOT TS=gen*)')).toBe(true);
   });
 
+  it('blocks the provider when an OR it cannot send whole holds a topic term', () => {
+    // The OR is left out entirely, and with it the topic branch `matchesQuery`
+    // never convicts on. Measured on 2026-10-01: `crispr AND (mouse OR rat)`
+    // asked as `crispr` came back 2% and 9% papers mentioning either animal.
+    expect(blocked('TS=crispr AND (TS=mouse OR TI=gen*)')).toBe(true);
+    // An OR of fields it does apply can still be left out.
+    expect(blocked('TS=crispr AND (TI=mouse OR TI=gen*)')).toBe(false);
+  });
+
   it('drops a whole negated group rather than part of it, which would narrow', () => {
     // `NOT (a)` would exclude every `a` record, including those without the
     // wildcard that the query keeps.
@@ -206,5 +215,48 @@ describe('sending the words of a name as a name', () => {
   it('sends the words alone where the dialect cannot say the name, or has no way to', () => {
     expect(render('AU=Jennifer AND AU=Doudna', { authorName: () => undefined })).toBe('(AU:Jennifer AND AU:Doudna)');
     expect(render('AU=Jennifer AND AU=Doudna')).toBe('(AU:Jennifer AND AU:Doudna)');
+  });
+});
+
+describe('dropsForGood', () => {
+  const forGood = (input: string) => dropsForGood(parseExpression(input));
+
+  it('is true of a part holding a topic or ALL= term, whose absence is never convicted', () => {
+    expect(forGood('TS=mouse')).toBe(true);
+    expect(forGood('ALL=mouse')).toBe(true);
+    expect(forGood('TI=mouse OR TS=rat')).toBe(true);
+  });
+
+  it('is false of a part on fields the evaluator applies, and of a negated topic term', () => {
+    expect(forGood('TI=mouse OR AU=Smith')).toBe(false);
+    expect(forGood('NOT TS=mouse')).toBe(false);
+  });
+
+  it('is true again under a double negation', () => {
+    expect(forGood('NOT (TI=a NOT TS=b)')).toBe(true);
+  });
+});
+
+describe('flatStatesWhole', () => {
+  const whole = (input: string) => flatStatesWhole(parseExpression(input));
+
+  it('is true of a clause, an AND of clauses and NOTs, and an OR of clauses', () => {
+    expect(whole('crispr')).toBe(true);
+    expect(whole('crispr cas9')).toBe(true);
+    expect(whole('crispr NOT cas9')).toBe(true);
+    expect(whole('crispr OR cas9')).toBe(true);
+  });
+
+  it('is false of anything nested, whose inner structure the flat form loses', () => {
+    expect(whole('crispr AND (mouse OR rat)')).toBe(false);
+    expect(whole('(a AND b) OR c')).toBe(false);
+  });
+});
+
+describe('a provider with no wider index to ask', () => {
+  it('leaves a clause out when `unscoped` declines it', () => {
+    const narrow = dialect({ unscoped: () => undefined });
+    // `PU=` has no field here, and searching the name as words would be narrower.
+    expect(renderExpression(parseExpression('TS=crispr AND PU=Elsevier'), narrow)).toBe('(TI:crispr OR AB:crispr)');
   });
 });

@@ -311,3 +311,49 @@ describe('toParams — a phrase in a fielded clause', () => {
       .toBe('raw_author_name.search:"Jennifer Doudna"|Charpentier');
   });
 });
+
+/**
+ * A part of the query OpenAlex is not sent is applied afterwards by
+ * `matchesQuery` — except a topic or `ALL=` term, whose absence it never
+ * convicts on, so leaving one out keeps everything the wider request returns.
+ * Both cases below were sent as the rest of the query.
+ */
+describe('toParams — a part it cannot send', () => {
+  const filter = (input: string) => toParams(parseQuery(input), { openAccessOnly: true }).filter;
+
+  it('asks nothing when a topic or ALL= wildcard it cannot run is required beside a field', () => {
+    // Was `raw_author_name.search:Doudna`: every Doudna paper, none removed.
+    expect(toParams(parseQuery('AU=Doudna AND TS=*generation'))).toEqual({});
+    expect(toParams(parseQuery('ALL=*generation AND AU=Doudna'))).toEqual({});
+  });
+
+  it('sends a topic wildcard it can run to the exact field, beside the others', () => {
+    // Measured on 2026-10-01: 81 open works.
+    expect(filter('AU=Doudna AND TS=generat*'))
+      .toBe('is_oa:true,raw_author_name.search:Doudna,title_and_abstract.search.exact:generat*');
+  });
+
+  it('still leaves out a title wildcard, which the evaluator applies to the titles that come back', () => {
+    expect(filter('AU=Doudna AND TI=*generation')).toBe('is_oa:true,raw_author_name.search:Doudna');
+  });
+
+  it('asks for a nested OR rather than leaving it out', () => {
+    // Was `title_and_abstract.search:crispr`, and 49 of the 553 papers that
+    // brought back mentioned either animal. Measured on 2026-10-01: 9,657, the
+    // union exactly (8,990 + 872 − 205).
+    expect(filter('TS=crispr AND (TS=mouse OR TS=rat)'))
+      .toBe('is_oa:true,title_and_abstract.search:crispr,title_and_abstract.search:mouse|rat');
+  });
+
+  it('asks nothing for a nested OR it cannot state when a topic term is in it', () => {
+    // Across two fields there is no filter form, and the topic branch would be
+    // dropped for good.
+    expect(toParams(parseQuery('TS=crispr AND (TS=mouse OR AU=Smith)'))).toEqual({});
+    expect(toParams(parseQuery('(TS=a AND TS=b) OR TS=c'))).toEqual({});
+  });
+
+  it('keeps the flat form for a query it states whole', () => {
+    expect(filter('crispr cas9')).toBe('is_oa:true,title_and_abstract.search:crispr cas9');
+    expect(filter('crispr NOT cas9')).toBe('is_oa:true,title_and_abstract.search:crispr');
+  });
+});

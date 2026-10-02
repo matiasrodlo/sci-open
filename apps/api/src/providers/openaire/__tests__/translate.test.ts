@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Query } from '@open-access-explorer/shared';
 import { translate, toParams } from '../translate';
+import { parseQuery } from '../../../orchestrator/parse-query';
 
 const query = (over: Partial<Query>): Query => ({ terms: [], phrases: [], join: 'AND', ...over });
 
@@ -110,5 +111,46 @@ describe('toParams — wildcards', () => {
   it('sends nothing when the wildcard is an alternative, or all there was', () => {
     expect(translate(query({ terms: ['crispr', 'gen*'], join: 'OR' }), { openAccessOnly: true })).toBe('');
     expect(translate(query({ terms: ['gen*'] }), { openAccessOnly: true })).toBe('');
+  });
+});
+
+/**
+ * OpenAIRE reads a space as AND and honours `OR` and parentheses. Measured on
+ * 2026-09-30 and 2026-10-01: `cancer OR zebrafish` 4,978,865, the union of
+ * 4,893,595 and 92,429 less the 7,159 with both; `(crispr AND (mouse OR rat))`
+ * 12,012, the union again.
+ */
+describe('toParams — alternatives and nested queries', () => {
+  const search = (input: string) => toParams(parseQuery(input), { openAccessOnly: true }).search;
+
+  it('asks for alternatives as alternatives, not for their overlap', () => {
+    // Was `cancer zebrafish`: the 7,159 with both.
+    expect(toParams(query({ terms: ['cancer', 'zebrafish'], join: 'OR' })).search).toBe('cancer OR zebrafish');
+    expect(toParams(query({ terms: ['zebrafish'], phrases: ['gene editing'], join: 'OR' })).search)
+      .toBe('zebrafish OR (gene editing)');
+  });
+
+  it('keeps a query the flat form states whole exactly as it was', () => {
+    expect(search('crispr cas9')).toBe('crispr cas9');
+    expect(search('AU=Doudna AND TS=crispr')).toBe('crispr');
+  });
+
+  it('asks for a nested OR rather than leaving it out', () => {
+    // Was `crispr`, and 11 of the 465 papers that brought back mentioned
+    // either animal.
+    expect(search('TS=crispr AND (TS=mouse OR TS=rat)')).toBe('(crispr AND (mouse OR rat))');
+    expect(search('(TS=a AND TS=b) OR TS=c')).toBe('((a AND b) OR c)');
+  });
+
+  it('leaves out an author it cannot scope, rather than searching the name as words', () => {
+    expect(search('AU=Doudna AND (TS=mouse OR TS=rat)')).toBe('(mouse OR rat)');
+  });
+
+  it('sends nothing for a nested OR with a branch it cannot send beside a topic term', () => {
+    expect(translate(parseQuery('TS=crispr AND (TS=mouse OR AU=Smith)'), { openAccessOnly: true })).toBe('');
+  });
+
+  it('drops the brackets and quotes from a phrase, which would unbalance the search', () => {
+    expect(toParams(query({ terms: ['a'], phrases: ['gene (editing'], join: 'OR' })).search).toBe('a OR (gene editing)');
   });
 });

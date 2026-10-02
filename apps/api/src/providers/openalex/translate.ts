@@ -1,6 +1,6 @@
 import type { PaperStage, Query, QueryField, QueryNode, QueryValue } from '@open-access-explorer/shared';
 import { fieldsUsed } from '@open-access-explorer/shared';
-import { isInitial } from '../render-query';
+import { dropsForGood, flatStatesWhole, isInitial } from '../render-query';
 import { STAGES } from './normalize';
 
 /**
@@ -168,9 +168,9 @@ function usesScopedField(expression: QueryNode): boolean {
  * Wildcards are refused rather than attempted. `title_and_abstract.search`
  * answers any `*` or `?` with HTTP 400 and only the `.search.exact` variant
  * runs them — and whether the other four keys have an exact variant at all is
- * not something this code has measured. An unsent wildcard clause widens the
- * request and `matchesQuery` applies it; a guessed filter key fails the whole
- * search.
+ * not something this code has measured; a guessed filter key fails the whole
+ * search. `clauseFilter` sends a topic wildcard to the one exact key that is
+ * measured, and `fieldFilters` decides what an unsent clause costs.
  */
 function clauseValue(value: QueryValue): string | undefined {
   if (value.kind === 'years') return undefined;
@@ -256,40 +256,63 @@ function orFilter(node: Extract<QueryNode, { kind: 'or' }>): string | undefined 
 }
 
 /**
- * The fielded query as OpenAlex filters.
+ * A required clause as one OpenAlex filter, or nothing when it has no form.
+ *
+ * A topic wildcard goes to `title_and_abstract.search.exact`, where the flat
+ * path below already sends one — the exact key is measured for that field and
+ * no other — under the same `exactRunnable` rules. Measured with an author
+ * filter beside it on 2026-10-01: `title_and_abstract.search.exact:generat*,
+ * raw_author_name.search:Doudna` answered 81 open works.
+ */
+function clauseFilter(node: Extract<QueryNode, { kind: 'clause' }>): string | undefined {
+  const key = FIELD_FILTERS[node.field];
+  if (!key) return undefined;
+
+  if (node.field === 'topic' && node.value.kind === 'term' && /[*?]/.test(node.value.text)) {
+    const term = node.value.text.trim();
+    return exactRunnable(term) ? `title_and_abstract.search.exact:${term}` : undefined;
+  }
+
+  // Only here, on a required clause: inside an `OR` the words would sit beside
+  // a `|`, and how OpenAlex groups the two has not been measured.
+  const value =
+    (node.field === 'author' && node.value.kind === 'phrase' && authorPhraseValue(node.value.text)) ||
+    clauseValue(node.value);
+  return value ? `${key}:${value}` : undefined;
+}
+
+/**
+ * The query as OpenAlex filters, or `undefined` when it cannot be sent without
+ * widening it for good.
  *
  * Repeating a key is how two requirements on one field are stated, and OpenAlex
  * ANDs them like any other pair of filters — measured, `title.search:crispr,
  * title.search:cas9` answered 20,350 against 49,423 for `crispr` alone.
  *
+ * A required clause or `OR` with no filter form is left out of the request when
+ * `matchesQuery` applies it afterwards — a title, abstract or author clause, a
+ * venue or a publisher, which have no key at all. One that holds a topic or
+ * `ALL=` term it does not apply: everything the wider request brings back is
+ * kept (see `dropsForGood`), so OpenAlex is not asked. That was the failure for
+ * `AU=Doudna AND TS=*generation`, sent as the author alone and answered with
+ * every Doudna paper.
+ *
  * `NOT` is left out even though `raw_author_name.search:!Doudna` is accepted
  * and does reduce the count. Excluding slightly more than the query asked is
  * the one direction that cannot be undone downstream, and exactly what `!`
  * matches on a stemmed search field has not been measured here. The clause is
- * dropped and `matchesQuery` applies it instead.
+ * dropped and `matchesQuery` applies it instead, convicting a record for having
+ * what it excludes.
  */
-function fieldFilters(expression: QueryNode): string[] {
+function fieldFilters(expression: QueryNode): string[] | undefined {
   const filters: string[] = [];
 
   for (const node of conjuncts(expression)) {
-    if (node.kind === 'clause') {
-      const key = FIELD_FILTERS[node.field];
-      // Only here, on a required clause: inside an `OR` the words would sit
-      // beside a `|`, and how OpenAlex groups the two has not been measured.
-      const value =
-        (node.field === 'author' && node.value.kind === 'phrase' && authorPhraseValue(node.value.text)) ||
-        clauseValue(node.value);
-      if (key && value) filters.push(`${key}:${value}`);
-      continue;
-    }
+    if (node.kind === 'not') continue;
 
-    if (node.kind === 'or') {
-      const filter = orFilter(node);
-      if (filter) filters.push(filter);
-    }
-
-    // Anything else — a `NOT`, a nested shape with no filter form — is widened
-    // away here and settled by the evaluator.
+    const filter = node.kind === 'clause' ? clauseFilter(node) : node.kind === 'or' ? orFilter(node) : undefined;
+    if (filter) filters.push(filter);
+    else if (dropsForGood(node)) return undefined;
   }
 
   return filters;
@@ -335,15 +358,25 @@ export function toParams(query: Query, options: TranslateOptions = {}): OpenAlex
    * declared unable to scope a field at all for that reason, which cost every
    * fielded search the largest source in the fan-out.
    *
-   * Left to the flat path below when no field is named, which is the common
-   * case and the one every measurement in this file was taken against.
+   * Built from the parse too when the flat words cannot state the query, which
+   * is anything nested: `crispr AND (mouse OR rat)` flattens to `crispr`, and
+   * asked for that, OpenAlex returned 49 papers of 553 mentioning either
+   * animal, every one kept since the `OR` it lost is a topic clause (see
+   * `flatStatesWhole`). The `OR` is a filter of its own here — and measured on
+   * 2026-10-01, `title_and_abstract.search:crispr,title_and_abstract.search:
+   * mouse|rat` answered 9,657 open works, the union exactly (8,990 with mouse,
+   * 872 with rat, 205 with both).
+   *
+   * Left to the flat path below otherwise, which is the common case and the
+   * one every measurement in this file was taken against.
    */
-  if (query.expression && usesScopedField(query.expression)) {
+  if (query.expression && (usesScopedField(query.expression) || !flatStatesWhole(query.expression))) {
     const scoped = fieldFilters(query.expression);
-    // Nothing of it OpenAlex can state — `SO=Nature` on its own. Returning no
-    // params makes `translate` empty, and `fanOut` reports the provider
-    // skipped instead of letting `is_oa:true` read the open-access corpus.
-    if (scoped.length === 0) return {};
+    // Nothing of it OpenAlex can state — `SO=Nature` on its own — or nothing it
+    // can state without widening it for good. Returning no params makes
+    // `translate` empty, and `fanOut` reports the provider skipped instead of
+    // letting `is_oa:true` read the open-access corpus.
+    if (!scoped || scoped.length === 0) return {};
 
     filters.push(...scoped);
     return { filter: filters.join(',') };

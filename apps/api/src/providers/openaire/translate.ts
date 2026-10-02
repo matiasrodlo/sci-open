@@ -1,5 +1,5 @@
-import type { Query } from '@open-access-explorer/shared';
-import { flatTerms } from '../render-query';
+import type { Query, QueryField, QueryNode } from '@open-access-explorer/shared';
+import { cannotSend, flatStatesWhole, flatTerms, renderExpression, type Dialect } from '../render-query';
 
 /**
  * Query -> OpenAIRE's request parameters.
@@ -59,6 +59,84 @@ export type TranslateOptions = {
 };
 
 /**
+ * A term as the search takes it, or `''` for a wildcard, which it does not have.
+ * Measured on 2026-09-30, `generation` 6,825,154 and `generat*` 3,793, `genome`
+ * 1,339,519 and `genom*` 167,992, and `*generation` exactly what `generation`
+ * finds — the `*` ignored.
+ */
+function sendable(term: string): string {
+  return /[*?]/.test(term) ? '' : term.trim();
+}
+
+/**
+ * A phrase as the bare words it has always been sent as (see `toParams`),
+ * grouped when there are several so an `OR` beside it cannot split them.
+ * Measured on 2026-10-01, `zebrafish OR (gene editing)` answered 141,933, the
+ * union exactly (92,431 + 50,387 − 885). Parentheses and quotes are dropped
+ * from the words, since an unbalanced one is an HTTP 400.
+ */
+function words(phrase: string): string {
+  const text = phrase.replace(/[()"]/g, ' ').replace(/\s+/g, ' ').trim();
+  return /\s/.test(text) ? `(${text})` : text;
+}
+
+/** What the search reads: the body text, which is every field it has. */
+const BODY_TEXT: ReadonlySet<QueryField> = new Set<QueryField>(['topic', 'title', 'abstract', 'all']);
+
+/**
+ * The search's own syntax, for a query the flat form cannot state whole.
+ *
+ * One index and no fields, so a body-text clause is the search itself, and it
+ * honours `AND`, `OR` and parentheses: measured on 2026-10-01,
+ * `(crispr AND (mouse OR rat))` answered 12,012, the union exactly (11,205 with
+ * mouse, 1,032 with rat, 225 with both). `OR` must be upper case:
+ * `cancer or zebrafish` answered 3,070, neither the union nor the overlap.
+ *
+ * An author, a venue or a publisher has no field here, and searching the name
+ * as words would ask for the papers that mention it — a narrower question — so
+ * `unscoped` leaves those clauses out and `matchesQuery` applies them. No
+ * `NOT`, which has not been measured here: left out, it only widens. `ALL=` is
+ * read as body text, as the flat form reads it, though it also covers authors
+ * and venues.
+ */
+const DIALECT: Dialect = {
+  fields: field => (BODY_TEXT.has(field) ? ['search'] : []),
+  scope: (_native, value) => value,
+  term: sendable,
+  phrase: words,
+  years: () => undefined,
+  doi: () => undefined,
+  unscoped: () => undefined,
+  supportsNot: false
+};
+
+/**
+ * The flat form, as the search has always been sent it — with alternatives
+ * joined as alternatives.
+ *
+ * They were joined with a space whatever the query's join, and a space is AND
+ * here as it is to OpenAlex, so every OR search read only the overlap of its
+ * sides from OpenAIRE. Measured on 2026-09-30: `cancer` 4,893,595, `zebrafish`
+ * 92,429, `cancer zebrafish` 7,159, and `cancer OR zebrafish` 4,978,865 — the
+ * union exactly.
+ */
+function flatSearch(query: Query): string {
+  // A wildcard is not left out, since the flat form does not say whether it
+  // was a topic term. See `flatTerms`.
+  const terms = flatTerms(query, sendable);
+  if (!terms) return '';
+  const phrases = query.phrases.map(phrase => phrase.trim()).filter(Boolean);
+  if (query.join === 'OR') return [...terms, ...phrases.map(words)].join(' OR ');
+  return [...terms, ...phrases].join(' ');
+}
+
+/** A nested query in the search's syntax, or nothing it can be sent as. See `cannotSend`. */
+function nestedSearch(expression: QueryNode): string {
+  if (cannotSend(expression, DIALECT)) return '';
+  return renderExpression(expression, DIALECT) ?? '';
+}
+
+/**
  * The parameters themselves. `translate` is the string form of this.
  */
 export function toParams(query: Query, options: TranslateOptions = {}): OpenAireParams {
@@ -78,13 +156,13 @@ export function toParams(query: Query, options: TranslateOptions = {}): OpenAire
   // what this provider returns relative to what it returned before, and that
   // is a separate decision from which endpoint to ask.
   //
-  // A query with a wildcard in it is not asked: the search has no wildcards.
-  // Measured on 2026-09-30, `generation` 6,825,154 and `generat*` 3,793,
-  // `genome` 1,339,519 and `genom*` 167,992, and `*generation` exactly what
-  // `generation` finds — the `*` ignored. Nor is the wildcard left out, since
-  // the flat form does not say whether it was a topic term. See `flatTerms`.
-  const terms = flatTerms(query, term => (/[*?]/.test(term) ? '' : term));
-  const search = terms ? [...terms, ...query.phrases.map(p => p.trim())].filter(Boolean).join(' ') : '';
+  // From the flat form when it states the query whole, which keeps the common
+  // search exactly as it was. Anything nested loses its inner structure there —
+  // `crispr AND (mouse OR rat)` reached OpenAIRE as `crispr`, and 11 of the 465
+  // papers it returned mentioned either animal — so it is rendered instead.
+  // See `flatStatesWhole`.
+  const search =
+    query.expression && !flatStatesWhole(query.expression) ? nestedSearch(query.expression) : flatSearch(query);
 
   // Published, and not the unknowns beside it, is the one narrowing OpenAIRE
   // can be asked for. A search for preprints never gets here: `normalize`
