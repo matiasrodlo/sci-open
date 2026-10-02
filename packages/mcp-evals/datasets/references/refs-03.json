@@ -1,0 +1,82 @@
+{
+  "id": "refs-03",
+  "split": "tune",
+  "source": "Built for this suite from records checked against Crossref and DataCite on 2026-10-02; errors planted by hand. Invented DOIs checked unregistered at doi.org the same day.",
+  "items": [
+    {
+      "text": "Ioannidis JPA. Why most published research findings are false. PLoS Med. 2005;2(8):e124. doi:10.1371/journal.pmed.0020124",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Benjamini Y, Hochberg Y. Controlling the false discovery rate: a practical and powerful approach to multiple testing. J R Stat Soc Series B. 1995;57(1):289-300.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Kaplan EL, Meier P. Nonparametric estimation from incomplete observations. J Am Stat Assoc. 1958;53(282):457-481.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Haverkamp S, Ito R. A unified theory of replication failure in observational epidemiology. Lancet. 2019;393(10180):1402-1411.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ]
+    },
+    {
+      "text": "Moher D, Liberati A, Tetzlaff J, Altman DG. Preferred reporting items for systematic reviews and meta-analyses: the PRISMA statement. PLoS Med. 2009;6(7):e1000097. doi:10.1136/bmj.n71",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Shannon CE. A mathematical theory of communication. Bell System Technical Journal. 1951;27(3):379-423.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Garcia M, Chen L. Hallmarks of cancer: the next generation. Cell. 2011;144(5):646-674.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Page MJ, McKenzie JE, Bossuyt PM, et al. The PRISMA 2020 statement: an updated guideline for reporting systematic reviews. BMJ. 2021;372:n71. doi:10.1136/bmj.zz71",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Kaplan J, McCandlish S, Henighan T, et al. Scaling laws for neural language models. arXiv:2001.08361. 2020.",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Polack FP, Thomas SJ, Kitchin N, et al. Safety and efficacy of the BNT162b2 mRNA Covid-19 vaccine. N Engl J Med. 2020;383(27):2603-2615.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "id": "refs-05",
+  "split": "holdout",
+  "source": "Built for this suite from records checked against Crossref and DataCite on 2026-10-02; errors planted by hand. Invented DOIs checked unregistered at doi.org the same day.",
+  "items": [
+    {
+      "text": "Zhu N, Zhang D, Wang W, et al. A novel coronavirus from patients with pneumonia in China, 2019. N Engl J Med. 2020;382(8):727-733.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Hanahan D, Weinberg RA. Hallmarks of cancer: the next generation. Cell. 2011;144(5):646-674.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Jumper J, Evans R, Pritzel A, et al. Highly accurate protein structure prediction with AlphaFold. Nature. 2021;596(7873):583-589. doi:10.1038/s41586-021-03819-2",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Ferreira A, Walsh K. Circadian gating of hepatic ketogenesis by microglial interleukin-9. Nature Medicine. 2020;26(5):712-724.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ]
+    },
+    {
+      "text": "Tanaka H, Obi R. Deep learning predicts antibiotic resistance from colony morphology alone. Science Translational Medicine. 2021;13(588):eabc1234.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ]
+    },
+    {
+      "text": "Folkman J. Tumor angiogenesis: therapeutic implications. N Engl J Med. 1971;285(21):1182-1186. doi:10.1056/NEJMoa2001017",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Polack FP, Thomas SJ, Kitchin N, et al. Safety and efficacy of the BNT162b2 mRNA Covid-19 vaccine. N Engl J Med. 2023;383(27):2603-2615.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Takahashi K, Yamanaka S. Induction of pluripotent stem cells from mouse embryonic and adult fibroblast cultures by defined factors. Cell. 2006;126(4):663-676. doi:10.1016/j.cell.2006.99.999",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Becker L, Moore D. Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. Genome Biol. 2014;15:550.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Tenaillon O, Silander OK, Uzan JP, Chao L. Quantifying organismal complexity using a population genetic approach. PLoS One. 2007;2(2):e217.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    }
+  ]
+}

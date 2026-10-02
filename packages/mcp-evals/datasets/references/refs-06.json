@@ -1,0 +1,82 @@
+{
+  "id": "refs-06",
+  "split": "holdout",
+  "source": "Built for this suite from records checked against Crossref and DataCite on 2026-10-02; errors planted by hand. Invented DOIs checked unregistered at doi.org the same day.",
+  "items": [
+    {
+      "text": "Brown TB, Mann B, Ryder N, et al. Language models are few-shot learners. arXiv:2005.14165. 2020.",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Silver D, Huang A, Maddison CJ, et al. Mastering the game of Go with deep neural networks and tree search. Nature. 2016;529(7587):484-489.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Shannon CE. A mathematical theory of communication. Bell System Technical Journal. 1948;27(3):379-423.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Moreno J, Albrecht D. Self-supervised retrieval of chemical reaction mechanisms from patent text. Journal of Chemical Information and Modeling. 2022;62(14):3311-3324.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ]
+    },
+    {
+      "text": "Kingma DP, Ba J. Adam: a method for stochastic optimization. arXiv. 2014. doi:10.1162/neco.1997.9.8.1735",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Li H, Durbin R. Fast and accurate short read alignment with Burrows-Wheeler transform. Bioinformatics. 2009;25(14):1754-1760. doi:10.1093/bioinformatics/btz99999",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Laemmli UK. Cleavage of structural proteins during the assembly of the head of bacteriophage T4. Nature. 1975;227:680-685.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Ortiz R, Khan A. Long short-term memory. Neural Computation. 1997;9(8):1735-1780.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "He K, Zhang X, Ren S, Sun J. Deep residual learning for image recognition. arXiv:1512.03385. 2015.",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Altschul SF, Gish W, Miller W, Myers EW, Lipman DJ. Basic local alignment search tool. J Mol Biol. 1990;215(3):403-410.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    }
+  ]
+}

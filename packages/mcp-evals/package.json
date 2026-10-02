@@ -1,0 +1,26 @@
+{
+  "name": "mcp-evals",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Evaluations of the sci-open MCP server: does a model choose its tools well, and does verify_references grade references right?",
+  "scripts": {
+    "eval:selection": "tsx src/main.ts selection",
+    "eval:references": "tsx src/main.ts references",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
+    "@modelcontextprotocol/client": "^2.2.0",
+    "sci-open-mcp": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.1",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.3"
+  },
+  "engines": { "node": ">=22.12" }
+}

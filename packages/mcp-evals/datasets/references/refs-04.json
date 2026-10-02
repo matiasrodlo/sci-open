@@ -1,0 +1,82 @@
+{
+  "id": "refs-04",
+  "split": "holdout",
+  "source": "Built for this suite from records checked against Crossref and DataCite on 2026-10-02; errors planted by hand. Invented DOIs checked unregistered at doi.org the same day.",
+  "items": [
+    {
+      "text": "Harris CR, Millman KJ, van der Walt SJ, et al. Array programming with NumPy. Nature. 2020;585(7825):357-362. doi:10.1038/s41586-020-2649-2",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Virtanen P, Gommers R, Oliphant TE, et al. SciPy 1.0: fundamental algorithms for scientific computing in Python. Nat Methods. 2020;17(3):261-272.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Hunter JD. Matplotlib: a 2D graphics environment. Computing in Science & Engineering. 2007;9(3):90-95.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Schindelin J, Arganda-Carreras I, Frise E, et al. Fiji: an open-source platform for biological-image analysis. Nat Methods. 2012;9(7):676-682.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Dubois C, Okonkwo E. Lattice-free tensor scheduling for sparse attention on heterogeneous clusters. Proceedings of the VLDB Endowment. 2022;15(9):1873-1886.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ]
+    },
+    {
+      "text": "Ronneberger O, Fischer P, Brox T. U-Net: convolutional networks for biomedical image segmentation. MICCAI 2015. Lecture Notes in Computer Science, vol 9351. doi:10.1038/s41592-019-0686-2",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Mikolov T, Chen K, Corrado G, Dean J. Efficient estimation of word representations in vector space. ICLR Workshop. 2013. doi:10.9999/iclr.2013.word2vec",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Goodfellow I, Pouget-Abadie J, Mirza M, et al. Generative adversarial networks. Communications of the ACM. 2017;63(11):139-144.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Devlin J, Chang MW, Lee K, Toutanova K. BERT: pre-training of deep bidirectional transformers for language understanding. arXiv:1810.04805. 2018.",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Novak P, Lindgren S. Neural machine translation by jointly learning to align and translate. International Conference on Learning Representations. 2015.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    }
+  ]
+}
