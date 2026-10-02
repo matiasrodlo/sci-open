@@ -2,8 +2,8 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.matiasrodlo/sci-open",
   "title": "sci-open",
-  "description": "Search ten open-access sources, verify references, read full text, and see what was not found.",
-  "version": "0.3.0",
+  "description": "Search ten open-access sources, verify references, read and cite papers, and see what was not found.",
+  "version": "0.4.0",
   "repository": {
     "url": "https://github.com/matiasrodlo/sci-open",
     "source": "github"
@@ -12,7 +12,7 @@
     {
       "registryType": "npm",
       "identifier": "sci-open-mcp",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "transport": {
         "type": "stdio"
       },
@@ -22,6 +22,12 @@
           "description": "Contact email sent to Unpaywall and OpenAlex. Strongly recommended: without it Unpaywall refuses requests and OpenAlex meters them more tightly.",
           "isRequired": false,
           "isSecret": false
+        },
+        {
+          "name": "OPENCITATIONS_TOKEN",
+          "description": "OpenCitations access token, for get_citations. Optional: OpenCitations allows 180 requests a minute without one.",
+          "isRequired": false,
+          "isSecret": true
         }
       ]
     }

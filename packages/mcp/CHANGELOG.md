@@ -7,6 +7,30 @@ in `test/__toolsnaps__/` are the record of every schema change.
 
 ## [Unreleased]
 
+## [0.4.0] - unreleased
+
+Set the date in the commit that tags `mcp-v0.4.0`.
+
+### Added
+
+- get_citations, opt-in (toolset `graph`): a paper's references or the
+  papers citing it, from OpenCitations, each resolved to an OpenAlex record
+  where one exists, with self-citations flagged, paged by offset. A list is
+  fetched once and held ten minutes. `OPENCITATIONS_TOKEN` raises
+  OpenCitations' rate limit.
+- export_citations, opt-in (toolset `export`): BibTeX or RIS for up to 200
+  papers, from the records and with the formatter the web app uses. `save_to`
+  writes the file on a local connection; otherwise it is attached as an
+  embedded resource. Unresolved papers are listed; abstracts are opt-in.
+- `sci-open refs`, `sci-open citers` and `sci-open cite`.
+- The plugin serves every toolset, and both skills export with
+  export_citations; systematic-search also follows citations.
+
+### Changed
+
+- The instructions describe get_citations and export_citations only to a
+  client that is served them.
+
 ## [0.3.0] - unreleased
 
 Set the date in the commit that tags `mcp-v0.3.0`.

@@ -237,4 +237,9 @@ describe('build info', () => {
     expect(json('..', '..', 'plugin', '.claude-plugin', 'plugin.json').version).toBe(version);
     expect(json('..', '..', 'plugin', '.mcp.json').mcpServers['sci-open'].args).toContain(`sci-open-mcp@${version}`);
   });
+
+  it('describes itself to the registry in at most 100 characters', () => {
+    // The registry's schema caps it, and refuses the publish past it.
+    expect(json('server.json').description.length).toBeLessThanOrEqual(100);
+  });
 });
