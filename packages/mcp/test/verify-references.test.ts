@@ -58,6 +58,13 @@ describe('verify_references', () => {
     expect(results[0]!.matched?.doi).toBe('10.1038/171737a0');
   });
 
+  it('calls a DOI on a related paper a mismatch, not a reference that does not exist', async () => {
+    // Half the cited title is in the DOI's record: too much to call it a
+    // different work by overlap alone, too little to be the paper cited.
+    const { results } = await verify(['Rossi M. Same-day discharge is safe in rural hospitals. 2020. doi:10.1001/jama.2020.1']);
+    expect(results[0]).toMatchObject({ verdict: 'mismatch', issues: expect.arrayContaining(['doi_points_to_different_work']) });
+  });
+
   it('calls an invented DOI on a real title a mismatch, with the real record to correct it from', async () => {
     const { results } = await verify(['Watson JD, Crick FHC. Molecular structure of nucleic acids: a structure for deoxyribose nucleic acid. Nature. 1953. doi:10.1038/fake.0001']);
     expect(results[0]).toMatchObject({ verdict: 'mismatch', issues: ['doi_not_registered'], evidence: { matched_on: 'title' } });

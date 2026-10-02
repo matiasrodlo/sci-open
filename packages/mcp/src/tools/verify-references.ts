@@ -117,7 +117,10 @@ async function verifyOne(ref: ParsedReference, deps: ToolDeps): Promise<Result> 
     const paper = await deps.engine.lookupDoi(ref.doi, { admit: deps.admit });
     if (paper) {
       const j = judge(ref, paper);
-      const wrong = ref.title !== undefined && titleOverlap(ref.title, paper.title).precision < 0.5;
+      // A DOI that resolves names a real paper, so a title that does not match
+      // it is a wrong DOI, never "not found" — however much the two titles
+      // share (PRISMA 2009 cited with the PRISMA 2020 statement's DOI).
+      const wrong = ref.title !== undefined && (titleOverlap(ref.title, paper.title).precision < 0.5 || j.verdict === 'not_found');
       return wrong ? done('doi', paper, j, ['doi_points_to_different_work'], 'mismatch') : done('doi', paper, j);
     }
     const registered = await deps.engine.doiRegistered(ref.doi);
