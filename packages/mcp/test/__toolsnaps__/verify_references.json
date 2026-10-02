@@ -56,6 +56,11 @@
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
+          },
+          "retracted": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
           }
         },
         "required": [
@@ -64,7 +69,8 @@
           "ambiguous",
           "mismatch",
           "not_found",
-          "not_checked"
+          "not_checked",
+          "retracted"
         ],
         "additionalProperties": false
       },
@@ -90,6 +96,10 @@
             "matched": {
               "type": "object",
               "properties": {
+                "retracted": {
+                  "type": "boolean",
+                  "const": true
+                },
                 "id": {
                   "type": "string"
                 },

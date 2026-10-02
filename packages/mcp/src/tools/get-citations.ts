@@ -4,7 +4,7 @@ import type { CitationLink } from '@open-access-explorer/core';
 import { defineTool } from '../framework/define-tool';
 import { ToolError } from '../errors';
 import { paperRefKind, resolvePaperRef } from './resolve-paper';
-import { shapePaper, paperSchema } from '../shape/paper';
+import { shapePaper, paperSchema, listedTitle, retractionWarning } from '../shape/paper';
 import { fenceUntrusted } from '../safety/untrusted';
 
 /** A linked work's record, without its abstract: a list entry, not a reading. */
@@ -116,12 +116,13 @@ export const getCitations = defineTool({
     const next_offset = args.offset + page.length < all.length ? args.offset + page.length : null;
     const rows = links.map((l, i) => {
       const what = l.record
-        ? `${l.record.title} (${l.record.year ?? 'n.d.'})${l.record.authors.length ? ` — ${l.record.authors.join(', ')}` : ''}`
+        ? `${listedTitle(l.record)} (${l.record.year ?? 'n.d.'})${l.record.authors.length ? ` — ${l.record.authors.join(', ')}` : ''}`
         : 'no record';
       const flags = `${l.author_self_citation ? ' [author self-citation]' : ''}${l.journal_self_citation ? ' [journal self-citation]' : ''}`;
       return `${args.offset + i + 1}. ${what}${l.doi ? ` doi:${l.doi}` : ''}${l.id ? ` id:${l.id}` : ''}${flags}`;
     });
     const noun = args.direction === 'references' ? 'references' : 'citing papers';
+    const retractedRows = links.flatMap((l, i) => (l.record?.retracted ? [`#${args.offset + i + 1}`] : []));
     const shown = page.length ? `, ${args.offset + 1}–${args.offset + page.length} shown` : '';
     return {
       structured: {
@@ -129,6 +130,7 @@ export const getCitations = defineTool({
         returned: page.length, next_offset, records_incomplete: recordsIncomplete, links
       },
       text: [
+        ...(retractedRows.length ? [retractionWarning(retractedRows.length === 1 ? [`Link ${retractedRows[0]}`] : [`Links ${retractedRows.join(', ')}`])] : []),
         `# ${all.length.toLocaleString('en')} ${noun} of doi:${doi}${shown}`,
         'Links from OpenCitations, which holds most open citation data but not every citation; records from OpenAlex.',
         ...(recordsIncomplete ? ['OpenAlex could not be asked about some of these, so "no record" may only mean not looked up; retry later for them.'] : []),

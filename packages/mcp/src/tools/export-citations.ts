@@ -8,6 +8,7 @@ import { ToolError, toToolError } from '../errors';
 import { paperRefKind } from './resolve-paper';
 import { writeUserFile } from '../safety/paths';
 import { stripInvisible } from '../safety/sanitize';
+import { retractionWarning } from '../shape/paper';
 
 /** Invisible characters out of every text field, as from all third-party text
  * this server returns. The formatter escapes the rest for its format. */
@@ -47,6 +48,8 @@ export const exportCitations = defineTool({
     resource_uri: z.string().optional(),
     /** Inputs that named a paper already in the file. */
     duplicates: z.number().int(),
+    /** Inputs whose paper a source records as retracted: exported all the same. */
+    retracted: z.array(z.string()),
     unresolved: z.array(z.object({ input: z.string(), reason: z.string() }))
   }),
   async run(args, deps) {
@@ -75,6 +78,7 @@ export const exportCitations = defineTool({
     })));
 
     const papers: Paper[] = [];
+    const retracted: string[] = [];
     const seen = new Set<string>();
     let duplicates = 0;
     const unresolved: Array<{ input: string; reason: string }> = [];
@@ -84,6 +88,7 @@ export const exportCitations = defineTool({
       else {
         seen.add(r.id);
         papers.push(visible(r));
+        if (r.retracted) retracted.push(args.papers[i]!);
       }
     });
     if (!papers.length) {
@@ -100,6 +105,7 @@ export const exportCitations = defineTool({
     const sha256 = createHash('sha256').update(file).digest('hex');
     const ext = getFileExtension(args.format);
     const label = args.format === 'bibtex' ? 'BibTeX' : 'RIS';
+    const warning = retracted.length ? `${retractionWarning(retracted)}\n` : '';
     const notes = [
       ...(duplicates ? [`${duplicates} duplicate${duplicates === 1 ? '' : 's'} left out.`] : []),
       ...(unresolved.length
@@ -111,15 +117,15 @@ export const exportCitations = defineTool({
     if (args.save_to !== undefined) {
       const path = await writeUserFile({ allowed: writable }, args.save_to, ext === 'ris' ? '.ris' : '.bib', file, args.overwrite);
       return {
-        structured: { format: args.format, entries: papers.length, sha256, path, duplicates, unresolved },
-        text: `Wrote ${papers.length} ${label} entries to ${path}.${notes ? ` ${notes}` : ''}`
+        structured: { format: args.format, entries: papers.length, sha256, path, duplicates, retracted, unresolved },
+        text: `${warning}Wrote ${papers.length} ${label} entries to ${path}.${notes ? ` ${notes}` : ''}`
       };
     }
 
     const uri = `sci-open://export/${sha256.slice(0, 12)}.${ext}`;
     return {
-      structured: { format: args.format, entries: papers.length, sha256, resource_uri: uri, duplicates, unresolved },
-      text: `${papers.length} ${label} entries attached as a resource (${uri}); save it as is, do not retype it.${notes ? ` ${notes}` : ''}`,
+      structured: { format: args.format, entries: papers.length, sha256, resource_uri: uri, duplicates, retracted, unresolved },
+      text: `${warning}${papers.length} ${label} entries attached as a resource (${uri}); save it as is, do not retype it.${notes ? ` ${notes}` : ''}`,
       resources: [{ type: 'resource', resource: { uri, mimeType: getMimeType(args.format), text: file } }]
     };
   }

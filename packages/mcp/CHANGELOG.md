@@ -23,6 +23,10 @@ Set the date in the commit that tags `mcp-v0.4.0`.
   writes the file on a local connection; otherwise it is attached as an
   embedded resource. Unresolved papers are listed; abstracts are opt-in.
 - `sci-open refs`, `sci-open citers` and `sci-open cite`.
+- Retractions. A paper OpenAlex, Europe PMC or PubMed records as retracted
+  carries `retracted: true` first in its record, and every tool that shows it
+  leads with a warning. verify_references keeps the verdict, since the paper
+  exists, adds the issue `retracted`, and counts them in its summary.
 - The plugin serves every toolset, and both skills export with
   export_citations; systematic-search also follows citations.
 

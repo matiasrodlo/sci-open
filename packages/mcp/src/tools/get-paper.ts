@@ -1,7 +1,7 @@
 import * as z from 'zod';
 import { defineTool } from '../framework/define-tool';
 import { ToolError } from '../errors';
-import { shapePaper, paperSchema } from '../shape/paper';
+import { shapePaper, paperSchema, retractionWarning } from '../shape/paper';
 import { fenceUntrusted } from '../safety/untrusted';
 
 const DOI_URL = /^https?:\/\/(dx\.)?doi\.org\//i;
@@ -37,6 +37,7 @@ export const getPaper = defineTool({
       shaped.abstract ? `\n${shaped.abstract}` : ''
     ].filter(Boolean).join('\n');
     const text = [
+      retractionWarning(shaped.retracted ? ['This paper'] : []),
       shaped.doi ? `DOI: ${shaped.doi}` : '',
       `Access: ${shaped.access}${shaped.full_text ? ` · full text: ${shaped.full_text.kind}${shaped.full_text.verified ? ' (verified)' : ' (unverified)'}` : ''}`,
       `Found in: ${shaped.found_in.join(', ')}${id ? ' (looked up by id, which asks only that source; pass doi to see every source that holds it)' : ''}`,

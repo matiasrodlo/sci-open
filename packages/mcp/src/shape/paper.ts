@@ -25,6 +25,8 @@ export function abbreviateAuthors(authors: readonly string[], max: number): stri
 }
 
 export const paperSchema = z.object({
+  /** A source records this work as retracted. First, so it is read first. */
+  retracted: z.literal(true).optional(),
   id: z.string(),
   doi: z.string().optional(),
   title: z.string(),
@@ -65,6 +67,7 @@ const ALWAYS = ['id', 'title', 'authors', 'access', 'stage', 'found_in'];
 export function shapePaper(p: Paper, detail: 'concise' | 'full'): ShapedPaper {
   const full = detail === 'full';
   return compact({
+    ...(p.retracted ? { retracted: true as const } : {}),
     id: p.id,
     doi: p.doi,
     title: sanitizeText(p.title),
@@ -90,4 +93,24 @@ export function shapePaper(p: Paper, detail: 'concise' | 'full'): ShapedPaper {
         }
       : {})
   }, ALWAYS) as ShapedPaper;
+}
+
+/**
+ * A title as a list shows it: marked when the paper is retracted, unless the
+ * title already says so — publishers often rename a retracted article
+ * "RETRACTED: …", and OpenAlex carries that title.
+ */
+export function listedTitle(p: { retracted?: true; title: string }): string {
+  return p.retracted && !/^\s*retracted\b/i.test(p.title) ? `RETRACTED — ${p.title}` : p.title;
+}
+
+/**
+ * The server's own warning about retracted papers, for the top of a text: out
+ * of the untrusted fence, because it is this server's statement, not the
+ * source's. `labels` name them as the rendering numbers or names them.
+ */
+export function retractionWarning(labels: readonly string[]): string {
+  if (!labels.length) return '';
+  const which = labels.length === 1 ? `${labels[0]} is` : `${labels.join(', ')} are`;
+  return `**Warning: ${which} recorded as retracted.** A retracted paper is not evidence; do not cite it as support.`;
 }

@@ -60,6 +60,10 @@
   "outputSchema": {
     "type": "object",
     "properties": {
+      "retracted": {
+        "type": "boolean",
+        "const": true
+      },
       "paper": {
         "type": "string"
       },

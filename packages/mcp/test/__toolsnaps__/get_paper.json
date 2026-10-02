@@ -22,6 +22,10 @@
       "paper": {
         "type": "object",
         "properties": {
+          "retracted": {
+            "type": "boolean",
+            "const": true
+          },
           "id": {
             "type": "string"
           },

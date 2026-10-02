@@ -96,6 +96,10 @@ request its description. Over HTTP, `?toolsets=all` does the same.
 - **Paging.** A search returns a handle that encodes the query, filters, sort
   and page size. Pages of a recent complete search come from memory; an older
   or incomplete one runs again, and the page says so.
+- **Retractions.** A paper OpenAlex, Europe PMC or PubMed records as
+  retracted carries `retracted: true`, and every answer that shows it leads
+  with a warning. A reference that matches one keeps its verdict — the paper
+  exists — with the issue `retracted`.
 - **Verifying references.** Each reference is graded `verified`, `likely`,
   `ambiguous`, `mismatch` (a real DOI on another paper, or an invented DOI on a
   real title), `not_found`, or `not_checked` (the search budget ran out; send

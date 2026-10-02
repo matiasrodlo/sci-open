@@ -6,7 +6,7 @@ import { defineTool, type ToolDeps } from '../framework/define-tool';
 import { toToolError } from '../errors';
 import { parseReference, type ParsedReference } from '../references/parse';
 import { judge, titleOverlap, tokens, type Judgement } from '../references/match';
-import { shapePaper, paperSchema } from '../shape/paper';
+import { shapePaper, paperSchema, listedTitle, retractionWarning } from '../shape/paper';
 import { fenceUntrusted } from '../safety/untrusted';
 import { sanitizeText } from '../safety/sanitize';
 
@@ -42,22 +42,28 @@ export const verifyReferences = defineTool({
   output: z.object({
     summary: z.object({
       verified: z.number().int(), likely: z.number().int(), ambiguous: z.number().int(),
-      mismatch: z.number().int(), not_found: z.number().int(), not_checked: z.number().int()
+      mismatch: z.number().int(), not_found: z.number().int(), not_checked: z.number().int(),
+      /** Matched records a source records as retracted, whatever their verdict. */
+      retracted: z.number().int()
     }),
     results: z.array(resultSchema)
   }),
   async run(args, deps) {
     const limit = pLimit(3); // be polite: three references in flight at once
     const results = await Promise.all(args.references.map(r => limit(() => checkOne(r, deps))));
-    const summary = { verified: 0, likely: 0, ambiguous: 0, mismatch: 0, not_found: 0, not_checked: 0 };
+    const summary = { verified: 0, likely: 0, ambiguous: 0, mismatch: 0, not_found: 0, not_checked: 0, retracted: 0 };
     for (const r of results) summary[r.verdict]++;
+    summary.retracted = results.filter(r => r.matched?.retracted).length;
     const rows = results.map((r, i) =>
-      `${i + 1}. **${r.verdict}**${r.matched ? ` — ${r.matched.title} (${r.matched.year ?? 'n.d.'})${r.matched.doi ? ` doi:${r.matched.doi}` : ''}` : ''}` +
+      `${i + 1}. **${r.verdict}**${r.matched ? ` — ${listedTitle(r.matched)} (${r.matched.year ?? 'n.d.'})${r.matched.doi ? ` doi:${r.matched.doi}` : ''}` : ''}` +
       `${r.issues.length ? ` — ${r.issues.join('; ')}` : ''}`);
+    const retractedRefs = results.flatMap((r, i) => (r.matched?.retracted ? [`#${i + 1}`] : []));
     const text = [
+      ...(retractedRefs.length ? [retractionWarning(retractedRefs.length === 1 ? [`Reference ${retractedRefs[0]}`] : [`References ${retractedRefs.join(', ')}`])] : []),
       `# Checked ${args.references.length} reference${args.references.length === 1 ? '' : 's'}`,
       `verified ${summary.verified} · likely ${summary.likely} · ambiguous ${summary.ambiguous} · mismatch ${summary.mismatch} · not found ${summary.not_found}` +
-        (summary.not_checked ? ` · not checked ${summary.not_checked} (send those again later)` : ''),
+        (summary.not_checked ? ` · not checked ${summary.not_checked} (send those again later)` : '') +
+        (summary.retracted ? ` · retracted ${summary.retracted}` : ''),
       '',
       fenceUntrusted('matched records', rows.join('\n'))
     ].join('\n');
@@ -107,7 +113,8 @@ async function verifyOne(ref: ParsedReference, deps: ToolDeps): Promise<Result> 
       ...(j.author_consistent !== undefined ? { author_consistent: j.author_consistent } : {}),
       corroborated_by: j.corroborated_by
     },
-    issues: [...extra, ...j.issues]
+    // The paper exists, so the verdict stands; it is just not evidence.
+    issues: [...(paper.retracted ? ['retracted'] : []), ...extra, ...j.issues]
   });
   const unmatched = (verdict: Result['verdict'], matched_on: 'doi' | 'title' | 'none', issues: string[]): Result => ({
     input, verdict, evidence: { matched_on, corroborated_by: [] }, issues

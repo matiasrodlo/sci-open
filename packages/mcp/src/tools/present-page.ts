@@ -1,7 +1,7 @@
 import * as z from 'zod';
 import type { SearchResponseV2 } from '@open-access-explorer/shared';
 import { encodeSearchHandle, type SearchSpec } from '../handles';
-import { shapePaper, paperSchema } from '../shape/paper';
+import { shapePaper, paperSchema, listedTitle, retractionWarning } from '../shape/paper';
 import { fitWholeItems } from '../shape/budget';
 import { coverageOf, coverageSchema, coverageSentence } from '../shape/coverage';
 import { fenceUntrusted } from '../safety/untrusted';
@@ -58,9 +58,11 @@ export function presentPage(
 
   const cell = (text: string) => text.replace(/\|/g, '/').replace(/\n/g, ' ');
   const lines = kept.map((p, i) =>
-    `| ${(r.page - 1) * r.pageSize + i + 1} | ${cell(p.title)} | ${cell(p.authors[0] ?? '—')} | ${p.year ?? '—'} | ${p.access}${p.full_text?.verified ? ' ✓' : ''} | ${p.found_in.length} | \`${p.id}\` |`
+    `| ${(r.page - 1) * r.pageSize + i + 1} | ${cell(listedTitle(p))} | ${cell(p.authors[0] ?? '—')} | ${p.year ?? '—'} | ${p.access}${p.full_text?.verified ? ' ✓' : ''} | ${p.found_in.length} | \`${p.id}\` |`
   );
+  const retracted = kept.flatMap((p, i) => (p.retracted ? [`#${(r.page - 1) * r.pageSize + i + 1}`] : []));
   const text = [
+    retractionWarning(retracted.length === 1 ? [`Result ${retracted[0]}`] : retracted.length ? [`Results ${retracted.join(', ')}`] : []),
     `# ${r.total.toLocaleString('en')}${lowerBound ? '+' : ''} results${spec.q ? ` for \`${spec.q}\`` : spec.doi ? ` for DOI ${spec.doi}` : ''} — page ${r.page}`,
     '',
     `**Coverage:** ${coverageSentence(coverage)}`,

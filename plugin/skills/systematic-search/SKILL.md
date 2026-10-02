@@ -24,7 +24,8 @@ bound, the coverage sentence, the handle (searches only) and the result hash
    `page_size=25`, and page with `get_search_page` until `next` is null or the
    user's cap.
 5. Screen titles and abstracts against the user's criteria. For an uncertain
-   paper, `read_paper` with `view="outline"`, then its methods section.
+   paper, `read_paper` with `view="outline"`, then its methods section. Exclude
+   a paper marked `retracted`, and log it as excluded for that reason.
 6. To check for papers the query missed, follow the citations of the most
    relevant included papers with `get_citations` (`references` backwards,
    `cited_by` forwards), and screen what it finds the same way. Log it as a

@@ -13,7 +13,9 @@ description: Check every reference in a bibliography, manuscript or reference li
    and keep each result with the reference it checked.
 3. A `not_checked` result is not a verdict. Wait the time its issue gives,
    then send only those references again.
-4. Report a one-line count per verdict, then every reference that is not
+4. Report a one-line count per verdict, then every reference marked
+   `retracted` (an issue, whatever the verdict: the paper exists but was
+   retracted, and cannot support a claim), then every reference that is not
    `verified`: its verdict, its issues in plain words, and the matched
    record's title, year and DOI when there is one.
    - `mismatch`: the DOI is wrong. Give the DOI the matched record carries.

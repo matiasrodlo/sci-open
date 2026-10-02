@@ -6,6 +6,7 @@ import { resolvePaperRef } from './resolve-paper';
 import { fenceUntrusted } from '../safety/untrusted';
 import { sanitizeText, stripInvisible } from '../safety/sanitize';
 import { writeUserFile } from '../safety/paths';
+import { retractionWarning } from '../shape/paper';
 import { documentToMarkdown } from '../shape/markdown';
 
 const MAX_MATCHES = 20;
@@ -36,6 +37,8 @@ export const readPaper = defineTool({
     overwrite: z.boolean().default(false)
   }),
   output: z.object({
+    /** A source records this paper as retracted. */
+    retracted: z.literal(true).optional(),
     paper: z.string(),
     tier: z.enum(['europepmc-jats', 'arxiv-html', 'pdf']),
     url: z.string(),
@@ -70,7 +73,12 @@ export const readPaper = defineTool({
     if (!doc) {
       throw new ToolError('no_full_text', 'No legal open-access full text was found for this paper.', 'Use get_paper for the abstract and landing page.');
     }
-    const base = { paper: paper.id, tier: doc.tier, url: doc.url, ...(doc.license ? { license: sanitizeText(doc.license) } : {}) };
+    const base = {
+      ...(paper.retracted ? { retracted: true as const } : {}),
+      paper: paper.id, tier: doc.tier, url: doc.url, ...(doc.license ? { license: sanitizeText(doc.license) } : {})
+    };
+    // Every view leads with it: a passage from a retracted paper is still read.
+    const lead = paper.retracted ? [retractionWarning(['This paper'])] : [];
     const provenance = doc.license ? { license: doc.license } : {};
     const source = `Source: ${doc.tier} · ${doc.url}${base.license ? ` · license: ${base.license}` : ''}`;
 
@@ -78,7 +86,7 @@ export const readPaper = defineTool({
       const markdown = documentToMarkdown(doc);
       const path = await writeUserFile({ allowed: writable }, args.save_to, '.md', markdown, args.overwrite);
       const saved = { path, bytes: Buffer.byteLength(markdown), sha256: createHash('sha256').update(markdown).digest('hex') };
-      return { structured: { ...base, saved }, text: `Saved ${doc.sections.length} sections (${saved.bytes} bytes) to ${path}.`, provenance };
+      return { structured: { ...base, saved }, text: [...lead, `Saved ${doc.sections.length} sections (${saved.bytes} bytes) to ${path}.`].join('\n'), provenance };
     }
 
     if (args.view === 'outline') {
@@ -87,6 +95,7 @@ export const readPaper = defineTool({
       return {
         structured: { ...base, outline },
         text: [
+          ...lead,
           `# Outline: ${outline.length} sections, ${doc.totalChars.toLocaleString('en')} characters`,
           source,
           '',
@@ -120,6 +129,7 @@ export const readPaper = defineTool({
           section: { id: section.id, title: sanitizeText(section.title), offset: args.offset, returned: end - args.offset, total, next_offset, text: slice }
         },
         text: [
+          ...lead,
           `# ${section.id} ${sanitizeText(section.title)}: characters ${args.offset}–${end} of ${total}`,
           source,
           '',
@@ -147,6 +157,7 @@ export const readPaper = defineTool({
     return {
       structured: { ...base, matches },
       text: [
+        ...lead,
         `# ${matches.length}${matches.length === MAX_MATCHES ? '+' : ''} matches for "${sanitizeText(query)}"`,
         source,
         '',
