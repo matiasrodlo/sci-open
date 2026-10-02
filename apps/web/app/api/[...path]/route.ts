@@ -198,11 +198,11 @@ async function proxy(request: NextRequest, path: string[]): Promise<Response> {
     }
 
     // The API being unreachable is a gateway failure, and saying so is more
-    // use than a 500 that looks like an application bug.
-    return Response.json(
-      { error: 'The API is unreachable', detail: error instanceof Error ? error.message : String(error) },
-      { status: 502 }
-    );
+    // use than a 500 that looks like an application bug. What failed goes to
+    // the log and not to the visitor: today it reads "fetch failed", but its
+    // cause can carry the API's address, which is this deployment's business.
+    console.error(`The API is unreachable at ${apiOrigin()}`, error);
+    return Response.json({ error: 'The API is unreachable' }, { status: 502 });
   } finally {
     clearTimeout(expiry);
   }

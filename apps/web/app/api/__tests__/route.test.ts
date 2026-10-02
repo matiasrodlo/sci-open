@@ -257,15 +257,16 @@ describe('what comes back', () => {
     // A gateway failure rather than a 500: the distinction is between the API
     // being down and this app being broken, and they are fixed by different
     // people.
-    fetchMock.mockRejectedValue(new Error('fetch failed'));
+    fetchMock.mockRejectedValue(Object.assign(new Error('fetch failed'), { cause: new Error('connect ECONNREFUSED 10.0.0.5:4000') }));
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const response = await GET(request('http://localhost:3000/api/search'), context('search'));
 
     expect(response.status).toBe(502);
-    expect(await response.json()).toEqual({
-      error: 'The API is unreachable',
-      detail: 'fetch failed'
-    });
+    // What failed is logged, not handed to the visitor.
+    expect(await response.json()).toEqual({ error: 'The API is unreachable' });
+    expect(logged).toHaveBeenCalled();
+    logged.mockRestore();
   });
 });
 
