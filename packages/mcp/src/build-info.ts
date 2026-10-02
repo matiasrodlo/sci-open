@@ -8,6 +8,6 @@ declare const __SCI_OPEN_COMMIT__: string | undefined;
  * so the workspace build runs with `commit` absent and the npm bundle has it.
  */
 export const BUILD = {
-  version: '0.2.0', // build-info.test.ts keeps this equal to package.json
+  version: '0.3.0', // build-info.test.ts keeps this equal to package.json
   commit: typeof __SCI_OPEN_COMMIT__ === 'string' ? __SCI_OPEN_COMMIT__ : undefined
 };

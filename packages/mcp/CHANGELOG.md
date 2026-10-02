@@ -7,6 +7,29 @@ in `test/__toolsnaps__/` are the record of every schema change.
 
 ## [Unreleased]
 
+## [0.3.0] - unreleased
+
+Set the date in the commit that tags `mcp-v0.3.0`.
+
+### Added
+
+- The server over Streamable HTTP, at `/api/mcp` on the sci-open API:
+  stateless, for 2026-07-28 and 2025-era clients alike, with progress as an
+  SSE stream for a client that asks for it. Off unless `MCP_HTTP_ENABLED=true`,
+  and then only with an OpenAlex key. Searches over it read 300 records per
+  source (`MCP_SEARCH_DEPTH`) and spend the same per-visitor new-search budget
+  as the web app; a browser may call it only from `MCP_ALLOWED_ORIGINS`;
+  `save_to` is always refused. `?toolsets=` and `?tools=` choose the tools,
+  and an unknown name answers 400 with the valid ones.
+- `createHttpHandler`, the same server as a web-standard request handler.
+- A Claude Code plugin, installable from this repository's marketplace: the
+  server and two skills, `verify-bibliography` and `systematic-search`.
+
+### Changed
+
+- read_paper refuses `save_to` on a connection that cannot write before
+  fetching anything. It used to look the paper up and download its text first.
+
 ## [0.2.0] - unreleased
 
 Set the date in the commit that tags `mcp-v0.2.0`.

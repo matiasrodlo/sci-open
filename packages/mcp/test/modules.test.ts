@@ -221,8 +221,20 @@ describe('pLimit', () => {
 });
 
 describe('build info', () => {
+  const json = (...parts: string[]) => JSON.parse(readFileSync(path.join(__dirname, '..', ...parts), 'utf8'));
+
   it('says the version package.json says', () => {
-    const manifest = JSON.parse(readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8')) as { version: string };
-    expect(BUILD.version).toBe(manifest.version);
+    expect(BUILD.version).toBe(json('package.json').version);
+  });
+
+  it('is the version the registry entry and the plugin name', () => {
+    // Bumped together (Step 14.4); the release workflow checks the tag
+    // against them too, but a drift should fail the commit that made it.
+    const { version } = json('package.json');
+    const server = json('server.json');
+    expect(server.version).toBe(version);
+    expect(server.packages[0].version).toBe(version);
+    expect(json('..', '..', 'plugin', '.claude-plugin', 'plugin.json').version).toBe(version);
+    expect(json('..', '..', 'plugin', '.mcp.json').mcpServers['sci-open'].args).toContain(`sci-open-mcp@${version}`);
   });
 });

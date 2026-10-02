@@ -41,13 +41,15 @@ jobs:
 
       - run: pnpm typecheck && pnpm lint && pnpm test && pnpm build
 
-      - name: The tag, package.json, server.json and the changelog agree
+      - name: The tag, package.json, server.json, the plugin and the changelog agree
         working-directory: packages/mcp
         run: |
           version="${GITHUB_REF_NAME#mcp-v}"
           test "$(node -p "require('./package.json').version")" = "$version"
           test "$(node -p "require('./server.json').version")" = "$version"
           test "$(node -p "require('./server.json').packages[0].version")" = "$version"
+          test "$(node -p "require('../../plugin/.claude-plugin/plugin.json').version")" = "$version"
+          node -e "process.exit(require('../../plugin/.mcp.json').mcpServers['sci-open'].args.includes('sci-open-mcp@$version') ? 0 : 1)"
           grep -q "^## \[$version\] - [0-9]" CHANGELOG.md
 
       - run: pnpm --filter sci-open-mcp build:npm

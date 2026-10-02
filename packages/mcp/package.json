@@ -1,6 +1,6 @@
 {
   "name": "sci-open-mcp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "MCP server for open-access scientific literature: search ten sources, verify references, read full text — and see what was not found.",
   "license": "MIT",

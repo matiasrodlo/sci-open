@@ -3,7 +3,7 @@
   "name": "io.github.matiasrodlo/sci-open",
   "title": "sci-open",
   "description": "Search ten open-access sources, verify references, read full text, and see what was not found.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "repository": {
     "url": "https://github.com/matiasrodlo/sci-open",
     "source": "github"
@@ -12,7 +12,7 @@
     {
       "registryType": "npm",
       "identifier": "sci-open-mcp",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "transport": {
         "type": "stdio"
       },
