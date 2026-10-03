@@ -1378,7 +1378,34 @@ function isTimeout(error: unknown): boolean {
 export function renderError(error: ToolError): string {
   return [`Error (${error.code}): ${error.message}`, error.hint ? `Hint: ${error.hint}` : ''].filter(Boolean).join('\n');
 }
+
+/** `toToolError`, and one log line for whoever runs the server, who is told
+ * the cause the model is not. The cause's message and the tool, never the
+ * call's arguments: they hold what the user asked. */
+export function reportToolError(raw: unknown, tool: string, logger: EngineLogger): ToolError {
+  const error = toToolError(raw);
+  const fields = { tool, code: error.code, err: raw instanceof Error ? raw.message : String(raw) };
+  if (error.code === 'internal') {
+    logger.error({ ...fields, ...(raw instanceof Error && raw.stack ? { stack: raw.stack } : {}) }, 'tool call failed');
+  } else if (raw instanceof ToolError || raw instanceof QueryParseError) {
+    logger.debug(fields, 'tool call refused');
+  } else if (error.code === 'rate_limited') {
+    logger.info(fields, 'tool call waits on a source');
+  } else {
+    logger.warn(fields, 'tool call failed upstream');
+  }
+  return error;
+}
 ```
+
+Every caught failure goes through `reportToolError`: the wrapper's (Step
+5.2), and the per-item ones in `verify_references` and `export_citations`,
+whose calls succeed though one reference or paper failed. An `internal` is a
+fault here and is logged with its stack; a ToolError a tool threw, or a query
+that did not parse, is an answer (`not_found`, a bad argument) and goes to
+debug; a wait on a paced source is info; any other mapped failure is a source
+failing, a warning. Without it, an `internal` was a count in the metrics and
+nothing else.
 
 The full table of codes is in [Appendix B](#b-error-codes). There is no
 "too large" code: input sizes are bounded by the schemas, which answer
@@ -1931,6 +1958,8 @@ export type ToolDeps = {
   engine: Engine;
   config: McpConfig;
   metrics: Metrics;
+  /** Where a failure's cause goes; the model is told only its code (Step 4.1). */
+  logger: EngineLogger;
   admit: () => Promise<void>;
   transport: 'stdio' | 'http';
   /** One progress notification, when the client asked for them; a no-op
@@ -2051,7 +2080,7 @@ export function registerTools(
             _meta: provenance
           };
         } catch (raw) {
-          const error = toToolError(raw);
+          const error = reportToolError(raw, def.name, deps.logger);
           deps.metrics.record({ tool: def.name, ok: false, code: error.code, ms: Date.now() - started, newSearches });
           return { isError: true, content: [{ type: 'text' as const, text: renderError(error) }] };
         }
@@ -2206,6 +2235,8 @@ export type ServerDeps = {
   engine: Engine;
   config: McpConfig;
   metrics: Metrics;
+  /** Told the cause of every failed call. stderr on stdio, never stdout. */
+  logger: EngineLogger;
   transport: 'stdio' | 'http';
   admit?: () => Promise<void>;
 };
@@ -3097,7 +3128,7 @@ async function checkOne(raw: string, deps: ToolDeps): Promise<Result> {
   try {
     return await verifyOne(parseReference(raw), deps);
   } catch (caught) {
-    const error = toToolError(caught);
+    const error = reportToolError(caught, 'verify_references', deps.logger);
     return {
       input: sanitizeText(raw),
       verdict: 'not_checked',
@@ -4432,7 +4463,8 @@ export const exportCitations = defineTool({
           : await deps.engine.lookup(k.id);
         return paper ?? { reason: 'not_found' };
       } catch (error) {
-        return { reason: toToolError(error).code }; // one failure is that paper's, not the export's
+        // One failure is that paper's, not the export's.
+        return { reason: reportToolError(error, 'export_citations', deps.logger).code };
       }
     })));
     const papers = resolved.filter((r): r is Paper => !('reason' in r));

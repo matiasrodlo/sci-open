@@ -82,7 +82,7 @@ function main(): void {
   }
 
   const handle = serveStdio(
-    createServerFactory({ engine: engineFor(config), config, metrics: createMetrics(logger), transport: 'stdio' }),
+    createServerFactory({ engine: engineFor(config), config, metrics: createMetrics(logger), logger, transport: 'stdio' }),
     { onerror: error => logger.error({ err: error.message }, 'mcp transport error') }
   );
 

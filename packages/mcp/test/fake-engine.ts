@@ -1,5 +1,5 @@
 import type { Paper, SearchParams, SearchResponseV2 } from '@sci-open/shared';
-import { parseQuery, type CitationLink, type DoiResolution, type Engine, type FullTextDocument } from '@sci-open/core';
+import { parseQuery, type CitationLink, type DoiResolution, type Engine, type EngineLogger, type FullTextDocument } from '@sci-open/core';
 import { defaultMcpConfig } from '../src/config';
 import { nullMetrics } from '../src/metrics';
 import type { ToolDeps } from '../src/framework/define-tool';
@@ -24,6 +24,9 @@ export type FakeOptions = {
    * a function to answer, or to leave DOIs unasked. */
   openalex?: (dois: readonly string[]) => Promise<DoiResolution>;
 };
+
+/** A logger that drops everything, for deps whose log no test reads. */
+export const quietLogger: EngineLogger = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} };
 
 export type Fake = { engine: Engine; deps: ToolDeps; searches: string[]; admitted: () => number };
 
@@ -104,6 +107,7 @@ export function fakeEngine(papers: readonly Paper[], options: FakeOptions = {}):
     engine,
     config: defaultMcpConfig('test'),
     metrics: nullMetrics,
+    logger: quietLogger,
     admit,
     transport: 'stdio',
     progress: () => {}

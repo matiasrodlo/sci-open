@@ -8,6 +8,7 @@ import { nullMetrics } from '../src/metrics';
 import { ALL_TOOLS } from '../src/toolsets';
 import { PROVENANCE_KEY } from '../src/provenance';
 import { FIXTURES } from './fixtures';
+import { quietLogger } from './fake-engine';
 
 /**
  * Through the real SDK — client, transport, schemas and the wrapper every tool
@@ -19,6 +20,7 @@ const DEPS: ServerDeps = {
   engine: fixtureEngine(FIXTURES),
   config: defaultMcpConfig('test'),
   metrics: nullMetrics,
+  logger: quietLogger,
   transport: 'stdio'
 };
 

@@ -44,7 +44,8 @@ const MAX_BODY_BYTES = 256 * 1024;
 const MAX_CLIENTS = 10_000;
 
 export type HttpServerOptions = {
-  deps: Omit<ServerDeps, 'transport' | 'admit'>;
+  /** Everything but the logger, which is `logger` below. */
+  deps: Omit<ServerDeps, 'transport' | 'admit' | 'logger'>;
   http: HttpConfig;
   newSearchesPerMinute: number;
   logger: EngineLogger;
@@ -96,7 +97,7 @@ export async function startHttpServer({ deps, http, newSearchesPerMinute, logger
   };
 
   const handler = createHttpHandler(
-    { ...deps, config: { ...deps.config, allowWrites: false }, admit },
+    { ...deps, config: { ...deps.config, allowWrites: false }, admit, logger },
     // The message only: a request can hold a query or a reference.
     { onerror: error => logger.warn({ err: error.message }, 'MCP request failed'), maxRequestBodySize: MAX_BODY_BYTES }
   );

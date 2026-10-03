@@ -3,7 +3,7 @@ import type { Paper } from '@sci-open/shared';
 import { parseQuery } from '@sci-open/core';
 import pLimit from '../p-limit';
 import { defineTool, type ToolDeps } from '../framework/define-tool';
-import { toToolError } from '../errors';
+import { reportToolError } from '../errors';
 import { parseReference, type ParsedReference } from '../references/parse';
 import { judge, titleOverlap, tokens, type Judgement } from '../references/match';
 import { shapePaper, paperSchema, listedTitle, retractionWarning } from '../shape/paper';
@@ -77,7 +77,7 @@ async function checkOne(raw: string, deps: ToolDeps): Promise<Result> {
   try {
     return await verifyOne(parseReference(raw), deps);
   } catch (caught) {
-    const error = toToolError(caught);
+    const error = reportToolError(caught, 'verify_references', deps.logger);
     return {
       input: sanitizeText(raw),
       verdict: 'not_checked',

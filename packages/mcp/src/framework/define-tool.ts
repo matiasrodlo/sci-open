@@ -1,5 +1,5 @@
 import type * as z from 'zod';
-import type { Engine } from '@sci-open/core';
+import type { Engine, EngineLogger } from '@sci-open/core';
 import type { ProvenanceInput } from '../provenance';
 import type { McpConfig } from '../config';
 import type { Metrics } from '../metrics';
@@ -11,6 +11,8 @@ export type ToolDeps = {
   engine: Engine;
   config: McpConfig;
   metrics: Metrics;
+  /** Where a failure's cause goes; the model is told only its code. See `reportToolError`. */
+  logger: EngineLogger;
   /** Spend one new-search admission; throws `AdmissionError` when refused. */
   admit: () => Promise<void>;
   transport: 'stdio' | 'http';

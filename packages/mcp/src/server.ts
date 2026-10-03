@@ -1,5 +1,5 @@
 import { McpServer, type McpServerFactory } from '@modelcontextprotocol/server';
-import type { Engine } from '@sci-open/core';
+import type { Engine, EngineLogger } from '@sci-open/core';
 import { instructionsFor } from './instructions';
 import { selectTools } from './toolsets';
 import { registerTools } from './framework/register';
@@ -12,6 +12,8 @@ export type ServerDeps = {
   engine: Engine;
   config: McpConfig;
   metrics: Metrics;
+  /** Told the cause of every failed call. stderr on stdio, never stdout. */
+  logger: EngineLogger;
   transport: 'stdio' | 'http';
   /** Spends one new-search admission. Defaults to a per-process token bucket. */
   admit?: () => Promise<void>;
@@ -36,6 +38,7 @@ export function createServer(deps: ServerDeps, request: { toolsets?: string[]; t
     engine: deps.engine,
     config: deps.config,
     metrics: deps.metrics,
+    logger: deps.logger,
     transport: deps.transport,
     admit: deps.admit ?? tokenBucket(deps.config.maxNewSearchesPerMinute)
   }, identity);

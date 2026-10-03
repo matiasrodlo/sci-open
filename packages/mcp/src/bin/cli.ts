@@ -7,7 +7,7 @@ import { readMcpConfig } from '../config';
 import { stderrLogger } from '../log';
 import { nullMetrics } from '../metrics';
 import { tokenBucket } from '../admission';
-import { ToolError, renderError, toToolError } from '../errors';
+import { ToolError, renderError, reportToolError, toToolError } from '../errors';
 import type { ToolDefinition, ToolDeps } from '../framework/define-tool';
 import { paperRefKind } from '../tools/resolve-paper';
 import { searchPapers } from '../tools/search-papers';
@@ -82,6 +82,7 @@ async function main(): Promise<void> {
     }),
     config,
     metrics: nullMetrics,
+    logger,
     transport: 'stdio',
     admit: tokenBucket(config.maxNewSearchesPerMinute),
     progress: () => {}
@@ -90,7 +91,10 @@ async function main(): Promise<void> {
   const run = async (def: ToolDefinition<any, any>, args: unknown): Promise<void> => {
     const parsed = def.input.safeParse(args); // the server's own limits and defaults
     if (!parsed.success) throw new ToolError('invalid_input', z.prettifyError(parsed.error));
-    const outcome = await def.run(parsed.data, deps);
+    // Logged as the server logs it, so a fault's cause reaches stderr too.
+    const outcome = await def.run(parsed.data, deps).catch((error: unknown) => {
+      throw reportToolError(error, def.name, logger);
+    });
     // An export's file is the output; its one-line summary goes to stderr, so
     // `sci-open cite … > refs.bib` writes a file a reference manager reads.
     if (outcome.resources?.length) {

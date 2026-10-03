@@ -157,7 +157,10 @@ request its description. Over HTTP, `?toolsets=all` does the same.
 | `SCI_OPEN_FIXTURES` | `--fixtures` | `fixtures/engine.json` | The recordings `--engine fixture` reads |
 
 `sci-open-mcp --help` prints the same list. Logs go to stderr only; nothing
-above `debug` holds a query or a reference.
+above `debug` holds a query or a reference. A failed tool call is logged with
+its cause, which the model is never shown: `error`, with the stack, for a
+fault in the server; `warn` for a source failing; `info` for a wait on a paced
+source; `debug` for an answer such as `not_found`.
 
 ## Command line
 

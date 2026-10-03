@@ -4,7 +4,7 @@ import type { Paper } from '@sci-open/shared';
 import { generateCitationsBatch, getFileExtension, getMimeType } from '@sci-open/shared';
 import pLimit from '../p-limit';
 import { defineTool } from '../framework/define-tool';
-import { ToolError, toToolError } from '../errors';
+import { ToolError, reportToolError } from '../errors';
 import { paperRefKind } from './resolve-paper';
 import { writeUserFile } from '../safety/paths';
 import { stripInvisible } from '../safety/sanitize';
@@ -73,7 +73,8 @@ export const exportCitations = defineTool({
           : await deps.engine.lookup(k.id);
         return paper ?? { reason: 'not_found' };
       } catch (error) {
-        return { reason: toToolError(error).code }; // one failure is that paper's, not the export's
+        // One failure is that paper's, not the export's.
+        return { reason: reportToolError(error, 'export_citations', deps.logger).code };
       }
     })));
 

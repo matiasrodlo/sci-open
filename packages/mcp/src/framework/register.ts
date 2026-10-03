@@ -2,11 +2,11 @@ import type { McpServer, ServerContext } from '@modelcontextprotocol/server';
 import type { ToolDefinition, ToolDeps } from './define-tool';
 import { buildProvenance, PROVENANCE_KEY, type ServerIdentity } from '../provenance';
 import { clampText } from '../shape/budget';
-import { renderError, toToolError } from '../errors';
+import { renderError, reportToolError } from '../errors';
 
 /**
  * The single place every cross-cutting rule is applied: annotations, progress,
- * admission counting, the text budget, provenance, error mapping and metrics.
+ * admission counting, the text budget, provenance, error mapping, logging and metrics.
  * A tool's own code only computes its answer.
  */
 export function registerTools(
@@ -74,7 +74,7 @@ export function registerTools(
             _meta: provenance
           };
         } catch (raw) {
-          const error = toToolError(raw);
+          const error = reportToolError(raw, def.name, deps.logger);
           deps.metrics.record({ tool: def.name, ok: false, code: error.code, ms: Date.now() - started, newSearches });
           // No structuredContent: an error result is not the declared output.
           return { isError: true, content: [{ type: 'text' as const, text: renderError(error) }] };

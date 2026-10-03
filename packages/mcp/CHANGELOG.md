@@ -13,6 +13,12 @@ in `test/__toolsnaps__/` are the record of every schema change.
   per-client request and new-search budgets, an Origin allowlist, a loopback
   Host check, `GET /health` and an admin-keyed `GET /metrics`. Settings are
   `SCI_OPEN_` variables; see the README.
+- A failed tool call is logged on stderr with its cause, which the model is
+  still never shown: an `error`, with the stack, for a fault in the server, a
+  warning for a source failing, `info` for a wait on a paced source and
+  `debug` for an answer such as `not_found`. A reference verify_references
+  could not check, or a paper export_citations could not resolve, is logged
+  the same way, though its call succeeds.
 
 ### Fixed
 

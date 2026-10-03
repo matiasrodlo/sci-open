@@ -1,5 +1,5 @@
 import { QueryParseError } from '@sci-open/shared';
-import { OPENCITATIONS_HOST, OpenCitationsUnavailableError, PdfProxyError, SourceBusyError } from '@sci-open/core';
+import { OPENCITATIONS_HOST, OpenCitationsUnavailableError, PdfProxyError, SourceBusyError, type EngineLogger } from '@sci-open/core';
 
 /**
  * Every failure a tool can return: a stable code, a plain message, and a hint
@@ -75,6 +75,34 @@ export function toToolError(error: unknown): ToolError {
     return new ToolError('upstream_unavailable', 'A source did not answer in time.', 'Retry once; if it persists, narrow the query or restrict sources.');
   }
   return new ToolError('internal', 'The server could not complete this request.');
+}
+
+/**
+ * `toToolError`, and one log line for whoever runs the server, who is told the
+ * cause the model is not. By what it says about the server:
+ *
+ * - `internal` is a fault here, logged as an error with its stack;
+ * - a ToolError a tool threw, or a query that did not parse, is an answer (a
+ *   paper nobody holds, a bad argument), logged at debug;
+ * - a wait on a paced or rate-limited source is routine, at info;
+ * - any other mapped failure is a source failing, a warning.
+ *
+ * The cause's message and the tool, never the call's arguments: they hold
+ * what the user asked.
+ */
+export function reportToolError(raw: unknown, tool: string, logger: EngineLogger): ToolError {
+  const error = toToolError(raw);
+  const fields = { tool, code: error.code, err: raw instanceof Error ? raw.message : String(raw) };
+  if (error.code === 'internal') {
+    logger.error({ ...fields, ...(raw instanceof Error && raw.stack ? { stack: raw.stack } : {}) }, 'tool call failed');
+  } else if (raw instanceof ToolError || raw instanceof QueryParseError) {
+    logger.debug(fields, 'tool call refused');
+  } else if (error.code === 'rate_limited') {
+    logger.info(fields, 'tool call waits on a source');
+  } else {
+    logger.warn(fields, 'tool call failed upstream');
+  }
+  return error;
 }
 
 function isTimeout(error: unknown): boolean {
