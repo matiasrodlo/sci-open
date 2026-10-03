@@ -4,7 +4,7 @@ import { timingSafeEqual } from 'crypto';
 import type { AddressInfo } from 'net';
 import proxyAddr from 'proxy-addr';
 import { hostHeaderValidation, originValidation, toNodeHandler } from '@modelcontextprotocol/node';
-import type { EngineLogger } from '@open-access-explorer/core';
+import type { EngineLogger } from '@sci-open/core';
 import { createHttpHandler } from './http';
 import { tokenBucket } from './admission';
 import { AdmissionError } from './errors';

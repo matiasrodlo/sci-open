@@ -1,4 +1,4 @@
-import type { ProviderCapabilities } from '@open-access-explorer/shared';
+import type { ProviderCapabilities } from '@sci-open/shared';
 
 /**
  * What the CORE v3 API can do, and what it is fast enough to be asked.
@@ -48,23 +48,6 @@ export const capabilities: ProviderCapabilities = {
    */
   doiLookup: true,
 
-  fields: [
-    'title',
-    'abstract',
-    'authors',
-    'year',
-    'venue',
-    'publisher',
-    'language',
-    'fullText',
-    'landingPage'
-  ],
-
-  // `yearPublished>=2022 AND yearPublished<=2023` in `q` narrows 60,460 to
-  // 15,589. Note this is the query, not the `filters` parameter the old
-  // connector used, which CORE ignores.
-  yearFilter: true,
-
   // The largest page verified to come back at all, and a latency ceiling
   // rather than a documented cap — 50 failed and 100 timed out, with a key and
   // without. A DOI lookup needs far less than this.
@@ -72,11 +55,6 @@ export const capabilities: ProviderCapabilities = {
 
   // `totalHits`.
   reportsTotal: true,
-
-  // The field exists and was 0 on every record measured, across the recorded
-  // page and a 25-record sample. Claiming it would put a column of zeros into
-  // the citations sort.
-  suppliesCitations: false,
 
   // `normalize` cannot tell a preprint from a published version in CORE's
   // records, and says so.

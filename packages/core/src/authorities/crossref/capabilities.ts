@@ -1,4 +1,4 @@
-import type { AuthorityCapabilities } from '@open-access-explorer/shared';
+import type { AuthorityCapabilities } from '@sci-open/shared';
 
 /**
  * What Crossref can be asked about a DOI it registered.

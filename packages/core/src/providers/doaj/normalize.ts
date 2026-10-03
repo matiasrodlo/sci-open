@@ -1,5 +1,5 @@
-import type { Paper, FullText, SourceRef } from '@open-access-explorer/shared';
-import { fullTextAt, httpUrl, stripMarkup } from '@open-access-explorer/shared';
+import type { Paper, FullText, SourceRef } from '@sci-open/shared';
+import { fullTextAt, httpUrl, stripMarkup } from '@sci-open/shared';
 import type { DoajPayload } from './fetch';
 
 /**
@@ -9,7 +9,6 @@ import type { DoajPayload } from './fetch';
 export type NormalizeOptions = {
   retrievedAt: string;
   rankOffset?: number;
-  latency?: number;
 };
 
 export type SkippedRecord = { index: number; nativeId?: string; reason: string };
@@ -127,14 +126,12 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
     landingPage: pickLandingPage(links, doi ? String(doi) : undefined, id),
 
     sources: [ref],
-    fieldSources: {},
-    retrievedAt: ref.retrievedAt,
-    ...(raw?.last_updated ? { updatedAt: String(raw.last_updated) } : {})
+    fieldSources: {}
   };
 }
 
 export function normalize(payload: DoajPayload, options: NormalizeOptions): NormalizeOutcome {
-  const { retrievedAt, rankOffset = 0, latency } = options;
+  const { retrievedAt, rankOffset = 0 } = options;
   const results = payload?.results ?? [];
 
   const papers: Paper[] = [];
@@ -146,8 +143,7 @@ export function normalize(payload: DoajPayload, options: NormalizeOptions): Norm
       provider: 'doaj',
       nativeId,
       rank: rankOffset + index,
-      retrievedAt,
-      ...(latency !== undefined ? { latency } : {})
+      retrievedAt
     };
 
     try {

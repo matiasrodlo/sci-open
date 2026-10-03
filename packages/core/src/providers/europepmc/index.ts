@@ -1,4 +1,4 @@
-import type { Paper, Query } from '@open-access-explorer/shared';
+import type { Paper, Query } from '@sci-open/shared';
 import { capabilities } from './capabilities';
 import { translate, translateId, translateIds, type TranslateOptions } from './translate';
 import { fetchPage, EuropePmcUnavailableError, type FetchOptions } from './fetch';
@@ -32,7 +32,6 @@ export type ProviderSearchResult = {
   totalHits?: number;
   /** Records that could not be read, so the caller can report rather than hide them. */
   skipped: SkippedRecord[];
-  latency: number;
 };
 
 /**
@@ -95,7 +94,6 @@ export async function search(
   } = options;
 
   const nativeQuery = translate(query, { openAccessOnly });
-  const started = Date.now();
 
   // The offset is taken from the list rather than asked of Europe PMC, which
   // has no parameter for it; so a read reaches at most `maxPageSize` deep.
@@ -115,7 +113,6 @@ export async function search(
     )
   );
 
-  const latency = Date.now() - started;
 
   const byId = new Map<string, unknown>();
   for (const page of pages) {
@@ -140,7 +137,7 @@ export async function search(
       });
       return;
     }
-    const outcome = normalize({ resultList: { result: [raw] } }, { retrievedAt, rankOffset: start + i, latency });
+    const outcome = normalize({ resultList: { result: [raw] } }, { retrievedAt, rankOffset: start + i });
     papers.push(...outcome.papers);
     skipped.push(...outcome.skipped);
   });
@@ -150,8 +147,7 @@ export async function search(
   return {
     papers,
     ...(Number.isFinite(reported) ? { totalHits: reported } : {}),
-    skipped,
-    latency
+    skipped
   };
 }
 
@@ -169,11 +165,9 @@ export type LookupOptions = Omit<FetchOptions, 'pageSize' | 'resultType'> & { no
 export async function lookup(nativeId: string, options: LookupOptions): Promise<Paper | null> {
   const { now = () => new Date(), ...fetchOptions } = options;
 
-  const started = Date.now();
   const payload = await fetchPage(translateId(nativeId), { ...fetchOptions, pageSize: 1 });
-  const latency = Date.now() - started;
 
-  const { papers } = normalize(payload, { retrievedAt: now().toISOString(), latency });
+  const { papers } = normalize(payload, { retrievedAt: now().toISOString() });
   return papers[0] ?? null;
 }
 

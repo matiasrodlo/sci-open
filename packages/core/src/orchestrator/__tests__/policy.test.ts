@@ -37,16 +37,6 @@ describe('applyPolicy — the rules that used to be invisible', () => {
 });
 
 describe('applyPolicy — user filters', () => {
-  it('filters by oaStatus, which the old pipeline never read', () => {
-    // Declared on SearchFilters, documented, faceted — and ignored, so a
-    // client filtering on it got the unfiltered set back.
-    const papers = [
-      paper({ id: 'g', oaStatus: 'gold' }),
-      paper({ id: 'b', oaStatus: 'bronze' })
-    ];
-    expect(applyPolicy(papers, { oaStatus: ['gold'] }).map(p => p.id)).toEqual(['g']);
-  });
-
   it('matches a source against every provider that returned the paper', () => {
     // A merged paper genuinely came from all of them; the old shape could only
     // record one.
@@ -65,38 +55,10 @@ describe('applyPolicy — user filters', () => {
     expect(applyPolicy(papers, { yearFrom: 2020, yearTo: 2021 }).map(p => p.id)).toEqual(['20', '21']);
   });
 
-  // The year facet ticks exact years rather than a bound, and sends them as
-  // strings. `toUserFilters` used to drop the field between the schema that
-  // accepted it and the filter that would have applied it, so ticking a year
-  // re-ran the search and returned everything — the same defect this file's
-  // header records for `oaStatus`, one field along.
-  it('filters by exact years from the facet', () => {
-    const papers = [paper({ id: '19', year: 2019 }), paper({ id: '20', year: 2020 }), paper({ id: '21', year: 2021 })];
-    expect(applyPolicy(papers, { year: ['2019', '2021'] }).map(p => p.id)).toEqual(['19', '21']);
-  });
-
-  it('excludes an undated paper from an exact-year filter', () => {
-    expect(applyPolicy([paper({ year: undefined })], { year: ['2020'] })).toHaveLength(0);
-  });
-
-  it('applies an exact-year filter and a year bound together', () => {
-    const papers = [paper({ id: '19', year: 2019 }), paper({ id: '20', year: 2020 }), paper({ id: '21', year: 2021 })];
-    expect(
-      applyPolicy(papers, { year: ['2019', '2021'], yearFrom: 2020 }).map(p => p.id)
-    ).toEqual(['21']);
-  });
-
-  it('ignores an empty exact-year list rather than excluding everything', () => {
-    expect(applyPolicy([paper({ year: 2020 })], { year: [] })).toHaveLength(1);
-  });
-
-  it('filters by stage, venue, publisher and topic', () => {
-    const p = paper({ stage: 'preprint', venue: 'bioRxiv', publisher: 'CSHL', topics: ['crispr'] });
+  it('filters by stage', () => {
+    const p = paper({ stage: 'preprint' });
     expect(applyPolicy([p], { stage: ['preprint'] })).toHaveLength(1);
-    expect(applyPolicy([p], { venue: ['bioRxiv'] })).toHaveLength(1);
-    expect(applyPolicy([p], { publisher: ['CSHL'] })).toHaveLength(1);
-    expect(applyPolicy([p], { topics: ['crispr'] })).toHaveLength(1);
-    expect(applyPolicy([p], { venue: ['Nature'] })).toHaveLength(0);
+    expect(applyPolicy([p], { stage: ['published'] })).toHaveLength(0);
   });
 
   it('combines filters conjunctively', () => {
@@ -149,28 +111,5 @@ describe('partitionByPolicy — what is settled and what is still a question', (
       noCopy({ id: 'b', doi: '10.1/b' })
     ]);
     expect(candidates.map(p => p.id)).toEqual(['a', 'b']);
-  });
-});
-
-/**
- * The facet counts a venue by `facetKey`, so one bucket holds every spelling
- * the providers used. Ticking it has to find all of them, or the count beside
- * the box overstates what it returns.
- */
-describe('a ticked name', () => {
-  it('selects every spelling of it', () => {
-    const lower = paper({ id: 'a', venue: 'Frontiers in psychology' });
-    const upper = paper({ id: 'b', venue: 'Frontiers in Psychology' });
-    const other = paper({ id: 'c', venue: 'Psychology' });
-
-    expect(applyPolicy([lower, upper, other], { venue: ['Frontiers in Psychology'] }).map(p => p.id))
-      .toEqual(['a', 'b']);
-  });
-
-  it('reads a publisher and a topic the same way', () => {
-    const p = paper({ publisher: 'Taylor & Francis', topics: ['Gene Editing'] });
-
-    expect(applyPolicy([p], { publisher: ['Taylor and Francis'] })).toHaveLength(1);
-    expect(applyPolicy([p], { topics: ['gene editing'] })).toHaveLength(1);
   });
 });

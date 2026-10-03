@@ -7,6 +7,19 @@ in `test/__toolsnaps__/` are the record of every schema change.
 
 ## [Unreleased]
 
+### Added
+
+- `sci-open-mcp --http` serves Streamable HTTP at `/mcp` on its own, with
+  per-client request and new-search budgets, an Origin allowlist, a loopback
+  Host check, `GET /health` and an admin-keyed `GET /metrics`. Settings are
+  `SCI_OPEN_` variables; see the README.
+
+### Removed
+
+- The sci-open web app and API, and with them `/api/mcp`,
+  `MCP_HTTP_ENABLED` and `MCP_ALLOWED_ORIGINS`. The repository is the MCP
+  server and the engine it is built on; `--http` replaces the API route.
+
 ## [0.4.0] - unreleased
 
 Set the date in the commit that tags `mcp-v0.4.0`.

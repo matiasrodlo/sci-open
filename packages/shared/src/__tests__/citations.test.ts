@@ -18,7 +18,6 @@ function record(over: Partial<Paper> = {}): Paper {
     stage: 'published',
     sources: [{ provider: 'europepmc', nativeId: '1', rank: 0, retrievedAt: '2024-01-01T00:00:00.000Z' }],
     fieldSources: {},
-    retrievedAt: '2024-01-01T00:00:00.000Z',
     ...over
   };
 }
@@ -231,7 +230,7 @@ describe('robustness', () => {
   it('does not throw on a record missing everything optional', () => {
     const sparse: Paper = {
       id: 'x:1', title: 'Bare', authors: [], topics: [], oaStatus: 'unknown', stage: 'unknown',
-      sources: [], fieldSources: {}, retrievedAt: '2024-01-01T00:00:00.000Z'
+      sources: [], fieldSources: {}
     };
 
     expect(() => generateCitation(sparse, { format: 'bibtex' })).not.toThrow();

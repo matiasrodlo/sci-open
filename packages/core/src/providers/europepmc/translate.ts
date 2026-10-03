@@ -1,4 +1,4 @@
-import type { PaperStage, Query, QueryField, YearRange } from '@open-access-explorer/shared';
+import type { PaperStage, Query, QueryField, YearRange } from '@sci-open/shared';
 import { cannotSend, flatTerms, joinFlat, renderExpression, type Dialect } from '../render-query';
 
 /**

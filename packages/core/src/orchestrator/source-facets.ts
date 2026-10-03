@@ -1,4 +1,4 @@
-import type { CountedFacet, ProviderId, Query, SourceFacets } from '@open-access-explorer/shared';
+import type { CountedFacet, ProviderId, Query, SourceFacets } from '@sci-open/shared';
 import { plan } from './plan';
 import { withBudget, type ProviderSettled } from './fanout';
 import { generateFacets, type SourceCounts } from './facet';
@@ -31,13 +31,13 @@ import type { ProviderCache } from './provider-cache';
  * that can be counted across the sources at all.
  *
  * Built at the request boundary (`from-search-params.ts`), because only there
- * is it known which ticked filters were sent to the sources and which were only
+ * is it known which filters were sent to the sources and which were only
  * applied to what came back. A facet is counted with its own selection lifted,
- * as the read's facets are (see `facetBaseSets`), so the year facet's query is
- * the search without the ticked years. A facet is absent when some *other*
- * ticked filter could not be sent: every source's count would then be of a set
- * the reader has already narrowed away from, and the read is the only count
- * true of the question.
+ * as the read's facets are (see `facetBaseSets`), so the stage facet's query is
+ * the search without the publication types. Every facet is absent when a
+ * filter could not be sent: every source's count would then be of a set the
+ * search has already narrowed away from, and the read is the only count true
+ * of the question.
  */
 export type FacetQueries = Partial<Record<CountedFacet, Query>>;
 
@@ -194,8 +194,7 @@ export async function countSourceFacets(
         ? (await cache.fetchFacets({
             provider: provider.id,
             requests: remaining.map(({ facet, query }) => ({ facet, nativeQuery: native(query) })),
-            years,
-            normalizerVersion: provider.normalizerVersion
+            years
           }, work)).outcome
         : await work();
 

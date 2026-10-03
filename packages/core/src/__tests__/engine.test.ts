@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { ProviderId, Query } from '@open-access-explorer/shared';
+import type { ProviderId, Query } from '@sci-open/shared';
 
 const { resolve } = vi.hoisted(() => ({ resolve: vi.fn() }));
 vi.mock('../fulltext/resolve', () => ({ resolveFullText: resolve }));
@@ -29,12 +29,11 @@ function stub(id: ProviderId, count = 3): { entry: ProviderEntry; calls: Call[] 
   const entry: ProviderEntry = {
     id,
     capabilities: {
-      keywordSearch: true, fieldedSearch: true, doiLookup: true, fields: [], yearFilter: true,
-      maxPageSize: 1000, reportsTotal: true, suppliesCitations: false,
+      keywordSearch: true, fieldedSearch: true, doiLookup: true,
+      maxPageSize: 1000, reportsTotal: true,
       stages: { holds: ['preprint', 'published'], filter: false }, facets: []
     },
     translate: query => `native:${query.terms.join(' ')}${query.doi ?? ''}`,
-    normalizerVersion: 1,
     search: async ({ query, openAccessOnly, depth }) => {
       calls.push({ query, openAccessOnly, depth });
       const found = query.doi ? papers.filter(p => p.doi === query.doi!.toLowerCase()) : papers;

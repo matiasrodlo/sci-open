@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Query } from '@open-access-explorer/shared';
+import type { Query } from '@sci-open/shared';
 
 const { get } = vi.hoisted(() => ({ get: vi.fn() }));
 // Resolved responses throughout, as the pooled client delivers them — its

@@ -1,9 +1,8 @@
-# Keeps the pins current. The workflow's actions are pinned to commits and the
-# images to digests (see .github/workflows/ci.yml and the Dockerfiles), which
-# stops a moved tag from changing what runs — and also stops a fix from
-# arriving on its own. These proposals are how the fixes arrive instead: each
-# one is a pull request, so the new commit or digest is reviewed and goes
-# through CI, image scan included, before anything uses it.
+# Keeps the pins current. The workflows' actions are pinned to commits (see
+# .github/workflows/ci.yml), which stops a moved tag from changing what runs —
+# and also stops a fix from arriving on its own. These proposals are how the
+# fixes arrive instead: each one is a pull request, so the new commit is
+# reviewed and goes through CI before anything uses it.
 #
 # npm is left out on purpose. The dependency audit in CI fails on any high or
 # critical advisory, which is the signal that matters there; a pull request for
@@ -17,18 +16,3 @@ updates:
     groups:
       actions:
         patterns: ["*"]
-
-  - package-ecosystem: docker
-    directories:
-      - /apps/api
-      - /apps/web
-    schedule:
-      interval: weekly
-    groups:
-      node:
-        patterns: ["node"]
-
-  - package-ecosystem: docker-compose
-    directory: /
-    schedule:
-      interval: weekly

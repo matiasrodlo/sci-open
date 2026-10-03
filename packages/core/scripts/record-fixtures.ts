@@ -6,9 +6,9 @@
  * only when a provider changes its response shape, and expect the diff to be
  * reviewed: a fixture is the contract those tests assert against.
  *
- *   pnpm --filter @open-access-explorer/api exec tsx scripts/record-fixtures.ts
+ *   pnpm --filter @sci-open/core record:fixtures
  *
- * Name providers to record only those — `… record-fixtures.ts openaire` — so
+ * Name providers to record only those — `… record:fixtures openaire` — so
  * re-recording the one whose shape changed leaves the other fixtures, and the
  * assertions pinned to them, alone.
  *
@@ -20,8 +20,8 @@ import fs from 'fs';
 import path from 'path';
 
 const QUERY = 'crispr gene editing';
-const OUT = path.resolve(__dirname, '../../../packages/core/src/__fixtures__');
-const UA = `OpenAccessExplorer/1.0 (mailto:${process.env.UNPAYWALL_EMAIL || 'fixtures@example.com'})`;
+const OUT = path.resolve(__dirname, '../src/__fixtures__');
+const UA = `sci-open-fixtures (+https://github.com/matiasrodlo/sci-open; mailto:${process.env.UNPAYWALL_EMAIL || 'fixtures@example.com'})`;
 
 function write(name: string, data: unknown) {
   const file = path.join(OUT, name);

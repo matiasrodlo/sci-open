@@ -1,4 +1,4 @@
-import type { Paper, Query } from '@open-access-explorer/shared';
+import type { Paper, Query } from '@sci-open/shared';
 import { capabilities } from './capabilities';
 import { translate, toParams, type TranslateOptions } from './translate';
 import {
@@ -6,7 +6,7 @@ import {
   type FetchOptions, type WorkFetchOptions, type OpenAlexGroup
 } from './fetch';
 import { normalize, totalHits, reconstructAbstract, STAGES, type SkippedRecord } from './normalize';
-import type { CountedFacet, FacetCount, PaperStage, SourceFacets } from '@open-access-explorer/shared';
+import type { CountedFacet, FacetCount, PaperStage, SourceFacets } from '@sci-open/shared';
 import type { ProviderFacetArgs, ProviderFacetOutcome } from '../count-facets';
 import { readPages } from '../read-pages';
 
@@ -27,7 +27,6 @@ export type ProviderSearchResult = {
   papers: Paper[];
   totalHits?: number;
   skipped: SkippedRecord[];
-  latency: number;
 };
 
 /**
@@ -67,9 +66,7 @@ export async function search(query: Query, options: SearchOptions): Promise<Prov
   // `toParams` returns nothing at all when there is nothing to ask for, which
   // is the whole of the check: an empty query used to leave `is_oa:true`
   // standing on its own, and that filter matches the open-access corpus.
-  if (!params.filter) return { papers: [], skipped: [], latency: 0 };
-
-  const started = Date.now();
+  if (!params.filter) return { papers: [], skipped: [] };
 
   const { items: results, total } = await readPages({
     wanted: pageSize,
@@ -80,19 +77,16 @@ export async function search(query: Query, options: SearchOptions): Promise<Prov
     totalOf: totalHits
   });
 
-  const latency = Date.now() - started;
 
   const { papers, skipped } = normalize({ results }, {
     retrievedAt: now().toISOString(),
-    rankOffset: offset,
-    latency
+    rankOffset: offset
   });
 
   return {
     papers,
     ...(total !== undefined ? { totalHits: total } : {}),
-    skipped,
-    latency
+    skipped
   };
 }
 
@@ -108,11 +102,9 @@ export type LookupOptions = WorkFetchOptions & { now?: () => Date };
 export async function lookup(nativeId: string, options: LookupOptions): Promise<Paper | null> {
   const { now = () => new Date(), ...fetchOptions } = options;
 
-  const started = Date.now();
   const payload = await fetchWork(nativeId, fetchOptions);
-  const latency = Date.now() - started;
 
-  const { papers } = normalize(payload, { retrievedAt: now().toISOString(), latency });
+  const { papers } = normalize(payload, { retrievedAt: now().toISOString() });
   return papers[0] ?? null;
 }
 

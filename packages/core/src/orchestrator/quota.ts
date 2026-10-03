@@ -1,4 +1,4 @@
-import type { ProviderId, ProviderReport } from '@open-access-explorer/shared';
+import type { ProviderId, ProviderReport } from '@sci-open/shared';
 
 /** Long enough not to spend a request per search on a known refusal; short
  * enough that a burst limit, mistaken for a spent budget, costs minutes. */

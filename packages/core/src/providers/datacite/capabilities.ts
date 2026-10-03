@@ -1,4 +1,4 @@
-import type { ProviderCapabilities } from '@open-access-explorer/shared';
+import type { ProviderCapabilities } from '@sci-open/shared';
 
 /**
  * What the DataCite API can do, and what it is worth asking.
@@ -51,15 +51,8 @@ export const capabilities: ProviderCapabilities = {
    */
   doiLookup: true,
 
-  fields: ['title', 'abstract', 'authors', 'year', 'publisher', 'topics', 'language', 'landingPage'],
-
-  // `publicationYear:[a TO b]`, and DataCite accepts a wildcard endpoint where
-  // arXiv answers 500 and DOAJ answers 400.
-  yearFilter: true,
-
   maxPageSize: 1000,
   reportsTotal: true,
-  suppliesCitations: false,
 
   // Read from `resourceTypeGeneral`, so a record can be any of the three.
   // There is no call to narrow by it: DataCite is not asked keyword queries.

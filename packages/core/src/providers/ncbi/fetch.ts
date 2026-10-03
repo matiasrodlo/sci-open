@@ -1,7 +1,6 @@
 import type { AxiosInstance } from 'axios';
 import { parseStringPromise } from 'xml2js';
 import { getPooledClient } from '../../lib/http-client-factory';
-import { getServiceConfig } from '../../lib/http-pool-config';
 import { usableApiKey } from '../../lib/api-key';
 
 /**
@@ -114,7 +113,7 @@ export async function fetchRecord(
 ): Promise<NcbiPayload> {
   const { baseUrl = DEFAULT_BASE_URL, apiKey, timeoutMs, signal, userAgent } = options;
 
-  const client: AxiosInstance = getPooledClient(baseUrl, getServiceConfig('ncbi'));
+  const client: AxiosInstance = getPooledClient(baseUrl);
   const key = usableApiKey(apiKey);
 
   const articles = await efetch([nativeId], {
@@ -140,7 +139,7 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
     userAgent
   } = options;
 
-  const client: AxiosInstance = getPooledClient(baseUrl, getServiceConfig('ncbi'));
+  const client: AxiosInstance = getPooledClient(baseUrl);
   const key = usableApiKey(apiKey);
   const headers = userAgent ? { 'User-Agent': userAgent } : undefined;
 
@@ -225,7 +224,7 @@ export type CountFetchOptions = Omit<FetchOptions, 'pageSize' | 'offset'>;
 export async function fetchCount(nativeQuery: string, options: CountFetchOptions): Promise<number> {
   const { baseUrl = DEFAULT_BASE_URL, apiKey, timeoutMs, signal, userAgent } = options;
 
-  const client: AxiosInstance = getPooledClient(baseUrl, getServiceConfig('ncbi'));
+  const client: AxiosInstance = getPooledClient(baseUrl);
   const key = usableApiKey(apiKey);
 
   const response = await client.get('/esearch.fcgi', {

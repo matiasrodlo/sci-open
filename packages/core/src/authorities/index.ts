@@ -1,2 +1,2 @@
-export { AUTHORITIES, authorityById } from './registry';
+export { AUTHORITIES } from './registry';
 export type { AuthorityEntry, AuthorityLookupArgs } from './registry';

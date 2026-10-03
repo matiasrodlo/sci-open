@@ -1,4 +1,4 @@
-import type { AuthorityFacts, AuthorityId } from '@open-access-explorer/shared';
+import type { AuthorityFacts, AuthorityId } from '@sci-open/shared';
 
 const keyOf = (authority: AuthorityId, doi: string) => `${authority}:${doi.toLowerCase()}`;
 
@@ -119,10 +119,6 @@ export class AuthorityFactsCache {
       if (this.entries.size <= this.maxEntries) break;
       this.entries.delete(oldest);
     }
-  }
-
-  clear(): void {
-    this.entries.clear();
   }
 
   get size(): number {

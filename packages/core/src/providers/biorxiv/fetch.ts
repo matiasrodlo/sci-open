@@ -1,5 +1,4 @@
 import { getPooledClient } from '../../lib/http-client-factory';
-import { getServiceConfig } from '../../lib/http-pool-config';
 
 /**
  * The only I/O in this provider: a per-DOI lookup against both servers.
@@ -43,7 +42,7 @@ export async function fetchByDoi(doi: string, options: FetchOptions): Promise<Se
 
   // One client for both servers: they are two paths on one host, so they share
   // a connection pool rather than each opening their own.
-  const client = getPooledClient(baseUrl, getServiceConfig('biorxiv'));
+  const client = getPooledClient(baseUrl);
 
   const settled = await Promise.all(
     SERVERS.map(async (server): Promise<ServerCollection> => {

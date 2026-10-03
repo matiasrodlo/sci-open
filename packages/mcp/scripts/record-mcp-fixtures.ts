@@ -1,6 +1,6 @@
 /**
  * Records the answers `--engine fixture` serves (fixtures/engine.json) from the
- * live engine, the way apps/api/scripts/record-fixtures.ts records provider
+ * live engine, the way packages/core/scripts/record-fixtures.ts records provider
  * responses. Re-record deliberately and review the diff: a changed fixture
  * changes what the evals measure.
  *
@@ -16,7 +16,7 @@
  */
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
-import { createEngine, usableApiKey } from '@open-access-explorer/core';
+import { createEngine, usableApiKey } from '@sci-open/core';
 import { citationKey, fixtureKey, type Fixtures } from '../src/fixture-engine';
 
 /** What the evals' first calls ask. Add a line when a dataset asks something new. */

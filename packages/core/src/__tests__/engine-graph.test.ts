@@ -10,7 +10,7 @@ vi.mock('../providers/openalex/fetch', async importOriginal => ({
   fetchWorksByDoi: works
 }));
 
-import type { Paper } from '@open-access-explorer/shared';
+import type { Paper } from '@sci-open/shared';
 import { createEngine } from '../engine';
 import { OpenAlexUnavailableError } from '../providers/openalex/fetch';
 import { OpenCitationsUnavailableError } from '../graph/opencitations';
@@ -40,12 +40,11 @@ function openalexSource() {
   const entry: ProviderEntry = {
     id: 'openalex',
     capabilities: {
-      keywordSearch: true, fieldedSearch: true, doiLookup: true, fields: [], yearFilter: true,
-      maxPageSize: 200, reportsTotal: true, suppliesCitations: false,
+      keywordSearch: true, fieldedSearch: true, doiLookup: true,
+      maxPageSize: 200, reportsTotal: true,
       stages: { holds: ['published'], filter: false }, facets: []
     },
     translate: query => query.terms.join(' '),
-    normalizerVersion: 1,
     search: async ({ query }) => {
       asked.push(query.terms.join(' '));
       return { papers: [], totalHits: 0, skipped: [] };

@@ -48,11 +48,11 @@ and other clients that start a server as a command take the same block:
 }
 ```
 
-**Over HTTP**, from a sci-open deployment that serves it (see
+**Over HTTP**, from a host that serves it (see
 [Hosting the HTTP endpoint](#hosting-the-http-endpoint)):
 
 ```bash
-claude mcp add --transport http sci-open https://<host>/api/mcp
+claude mcp add --transport http sci-open https://<host>/mcp
 ```
 
 **From this repository**
@@ -126,13 +126,13 @@ request its description. Over HTTP, `?toolsets=all` does the same.
   `rate_limited` with the wait. OpenCitations holds most open citation data,
   not every citation, and the result says so.
 - **Exporting citations.** `export_citations` writes BibTeX or RIS for up to
-  200 papers from their records, with the formatter the web app's export
-  uses, so the model never retypes a citation. On a local connection
+  200 papers from their records, with a formatter rather than the model, so
+  the model never retypes a citation. On a local connection
   `save_to` writes the file; otherwise it is attached as a resource to save as
   is. Papers that could not be resolved are listed, never dropped; abstracts
   are left out unless asked for.
-- **Light on the sources.** Searches read 300 records per source, half the web
-  app's depth; new searches are limited to 30 a minute; pages of a held search
+- **Light on the sources.** Searches read 300 records per source, half the
+  engine's default; new searches are limited to 30 a minute; pages of a held search
   are free.
 - **Progress.** A client that sends a progress token is told each source as it
   answers. One that does not gets a single response.
@@ -181,20 +181,25 @@ sci-open cite 10.7717/peerj-cs.421 --ris --out ~/refs   # writes ~/refs.ris
 
 ## Hosting the HTTP endpoint
 
-The sci-open API serves the same server at `/api/mcp`, over Streamable HTTP,
-when `MCP_HTTP_ENABLED=true` — and only with `OPENALEX_API_KEY` set, since
-every MCP client and the web app would otherwise share OpenAlex's anonymous
-budget. It is stateless and serves 2026-07-28 and 2025-era clients from one
-set of tools; `?toolsets=` and `?tools=` choose them. Each visitor has the
-web app's new-search budget, `save_to` is refused, and a browser may call it
-only from `MCP_ALLOWED_ORIGINS`. The public URL is the web app's
-`https://<host>/api/mcp`, which passes the visitor's address on to the API's
-rate limit.
+`sci-open-mcp --http` serves the same server at `/mcp` over Streamable HTTP,
+on `127.0.0.1:8080` unless `--host` and `--port` say otherwise. It needs
+`OPENALEX_API_KEY`, since every client would otherwise share OpenAlex's
+anonymous budget (`SCI_OPEN_ALLOW_UNKEYED=1` lifts that for a trial). It is
+stateless and serves 2026-07-28 and 2025-era clients from one set of tools;
+`?toolsets=` and `?tools=` choose them.
 
-[docs/api.md](../../docs/api.md#mcp) describes the endpoint and
-[docs/configuration.md](../../docs/configuration.md#mcp-endpoint) its five
-settings. To serve it from another host, `createHttpHandler` returns the same
-server as a web-standard `fetch` handler.
+```bash
+OPENALEX_API_KEY=… UNPAYWALL_EMAIL=you@example.org \
+  npx -y sci-open-mcp --http --host 0.0.0.0 --port 8080
+```
+
+Each client has a request allowance (`SCI_OPEN_REQUESTS_PER_MIN`, 60) and a
+new-search budget (`SCI_OPEN_MAX_NEW_SEARCHES_PER_MIN`, 30). Behind a reverse
+proxy, name it in `SCI_OPEN_TRUST_PROXY` so the budgets follow the visitor
+rather than the proxy. A browser may call it only from a hostname in
+`SCI_OPEN_ALLOWED_ORIGINS`, `save_to` is always refused, `GET /health`
+answers the version, and `GET /metrics` opens to a bearer token set in
+`SCI_OPEN_ADMIN_KEY`.
 
 ## Evaluations
 

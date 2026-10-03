@@ -1,6 +1,6 @@
 import * as z from 'zod';
-import type { ProviderReport } from '@open-access-explorer/shared';
-import type { CountOutcome } from '@open-access-explorer/core';
+import type { ProviderReport } from '@sci-open/shared';
+import type { CountOutcome } from '@sci-open/core';
 import { pageSchema } from './present-page';
 import { coverageOf, coverageSchema, coverageSentence } from '../shape/coverage';
 import type { ToolOutcome } from '../framework/define-tool';

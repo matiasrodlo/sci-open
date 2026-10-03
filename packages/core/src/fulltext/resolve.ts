@@ -1,6 +1,5 @@
-import type { Paper } from '@open-access-explorer/shared';
+import type { Paper } from '@sci-open/shared';
 import { getPooledClient } from '../lib/http-client-factory';
-import { getServiceConfig } from '../lib/http-pool-config';
 import { ARXIV_PACER, pacerFor, SourceBusyError } from '../lib/host-pacer';
 import { log } from '../lib/logger';
 import { jatsToSections } from './jats';
@@ -74,7 +73,7 @@ async function fromEuropePmc(paper: Paper, options: ResolveOptions): Promise<Ful
   const query = paper.doi ? `DOI:"${paper.doi}"` : pmid ? `EXT_ID:${pmid} AND SRC:MED` : undefined;
   if (!query) return null;
 
-  const client = getPooledClient(EPMC, getServiceConfig('europepmc'));
+  const client = getPooledClient(EPMC);
   const timeout = options.timeoutMs ?? 15_000;
   const found = await client.get('/search', {
     params: { query, resultType: 'core', format: 'json', pageSize: 1 },
@@ -104,7 +103,7 @@ async function fromArxivHtml(paper: Paper, options: ResolveOptions): Promise<Ful
   const id = arxivIdOf(paper);
   if (!id) return null;
 
-  const client = getPooledClient('https://arxiv.org', getServiceConfig('arxiv'));
+  const client = getPooledClient('https://arxiv.org');
   const path = `/html/${encodeURI(id)}`; // encodeURI: old-style ids (hep-th/9901001) keep their slash
   await ARXIV_PACER.acquire(options.maxWaitMs ?? MAX_WAIT_MS);
   const page = await client.get<string>(path, {

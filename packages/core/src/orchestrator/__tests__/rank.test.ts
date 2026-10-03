@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Query } from '@open-access-explorer/shared';
+import type { Query } from '@sci-open/shared';
 import { rank, fusionScore, overlapScore } from '../rank';
 import { paper, ref } from './helpers';
 

@@ -1,100 +1,57 @@
-# Open Access Explorer
+# sci-open
 
-A modern search interface for discovering open-access research papers across leading academic sources. Unifies search across arXiv, CORE, Europe PMC, NCBI, OpenAIRE, and other repositories, providing access to more than 90 million papers worldwide.
+An MCP server for open-access scientific literature: search ten sources at
+once, verify reference lists, read full text, follow and export citations —
+and be told what was **not** found.
 
-<img width="2946" height="1972" alt="image" src="https://github.com/user-attachments/assets/2443de09-7920-4f7d-b50a-d6f0edb98278" />
+Sources: arXiv, bioRxiv/medRxiv, CORE, DataCite, DOAJ, Europe PMC, OpenAIRE,
+OpenAlex, PLOS and PubMed, with Crossref, Unpaywall and OpenCitations as
+authorities.
 
-## Features
-
-- **Multi-source search** across ten academic repositories
-- **PDF resolution** that rewrites hosts advertising PDFs they do not serve
-- **Consistent paging** — each search's result set is resolved once and every page is a slice of it
-- **Capability-based source selection** — a provider is asked only what its API can answer
-- **Real-time faceting** by source, open-access status, year, venue and publisher
-- **Per-provider coverage reporting**, so a degraded search says which sources answered
-- **Authority rescue** — a paper is not dropped for want of a copy until the services that would know one have been asked
-
-## Quick Start
-
-**Prerequisites:** Node.js 22+, pnpm 8+, Docker
+## Install
 
 ```bash
-# Install dependencies
-pnpm install
-
-# Copy environment file
-cp docs/env.example .env
-
-# Start Redis. Compose also builds api and web for a production-like
-# run; the dev servers below replace them.
-docker-compose up -d redis
-
-# Start development servers
-pnpm dev
+claude mcp add sci-open --env UNPAYWALL_EMAIL=you@example.org -- npx -y sci-open-mcp
 ```
 
-Visit `http://localhost:3000`
+Or, in Claude Code, as a plugin with the `verify-bibliography` and
+`systematic-search` skills:
 
-## Configuration
-
-Every setting lives in [`docs/env.example`](./docs/env.example), which the Quick
-Start copies, and is explained in
-[Configuration](./docs/configuration.md). Three are worth knowing before a
-deployment rather than after one.
-
-```bash
-# Which hops in front of the API may state the caller's address.
-# Unset trusts none of them — and the browser never reaches the API directly,
-# so every request arrives from the web tier and the rate limit becomes one
-# bucket shared by every visitor rather than one each. Name the web tier by
-# address or CIDR — not the load balancer in front of it, which the API never
-# sees — and only once that load balancer appends the visitor's address to
-# X-Forwarded-For; without one, any caller could pick their own rate-limit key.
-# The API warns at startup while this is unset.
-TRUST_PROXY=
-
-# The two in-process caches, in bytes. Defaults are 256 MB of responses and
-# 128 MB of provider fan-outs. Both count serialised size, so expect two to
-# three times the configured value resident, and give a container memory limit
-# room above their sum.
-CACHE_MAX_BYTES=
-PROVIDER_CACHE_MAX_BYTES=
+```
+/plugin marketplace add matiasrodlo/sci-open
+/plugin install sci-open@sci-open
 ```
 
-Per-service HTTP pool tuning (`OPENALEX_POOL_CONFIG` and one for each of the
-other twelve upstreams) is optional — unset falls back to the global
-`HTTP_POOL_*` defaults. Provider API keys are optional too, except
-`UNPAYWALL_EMAIL`, which Unpaywall requires and OpenAlex rewards.
+Other clients, the tools, the `sci-open` CLI and hosting over HTTP are in
+[packages/mcp/README.md](./packages/mcp/README.md).
 
-## Documentation
-
-Comprehensive documentation is available in the [`/docs`](./docs) directory:
-
-- **[Architecture](./docs/architecture.md)** - System design and components
-- **[Platform Workflow](./docs/workflow.md)** - Mermaid diagrams of what happens at runtime
-- **[API Reference](./docs/api.md)** - Endpoints and data models
-- **[Development](./docs/development.md)** - Setup and development guide
-- **[Configuration](./docs/configuration.md)** - Environment variables and settings
-
-## Tech Stack
-
-**Frontend:** Next.js 15, React 19, TypeScript, Tailwind CSS, shadcn/ui  
-**Backend:** Fastify, TypeScript, Node.js  
-**Search:** in-process orchestrator — capability-based planning, fan-out, merge, rank  
-**Cache:** search in process — per-provider fan-outs, result sets, authority answers; paper details in memory over Redis  
-**Data Sources:** arXiv, CORE, Europe PMC, NCBI, OpenAIRE, and more
-
-## Project Structure
+## Repository
 
 ```
 sci-open/
-├── apps/
-│   ├── web/          # Next.js frontend
-│   └── api/          # Fastify API server
 ├── packages/
-│   └── shared/       # Shared types
-└── docs/             # Documentation
+│   ├── mcp/          # sci-open-mcp: the MCP server and the sci-open CLI
+│   ├── core/         # the search engine: providers, authorities, orchestrator
+│   ├── shared/       # types, query grammar, citation formatter
+│   └── mcp-evals/    # tool-selection, reading and reference evaluations
+├── plugin/           # the Claude Code plugin: server config and skills
+└── docs/             # the MCP implementation manual
 ```
+
+## Development
+
+**Prerequisites:** Node.js 22.12+, pnpm 8
+
+```bash
+pnpm install
+pnpm build
+pnpm test        # offline, against committed fixtures
+pnpm typecheck
+pnpm lint
+```
+
+The design, and the order it was built in, is
+[docs/mcp-implementation-manual.md](./docs/mcp-implementation-manual.md).
 
 ## License
 

@@ -1,4 +1,4 @@
-import type { CountedFacet, FacetCount, PaperStage, Query, SourceFacets } from '@open-access-explorer/shared';
+import type { CountedFacet, FacetCount, PaperStage, Query, SourceFacets } from '@sci-open/shared';
 
 /**
  * Whole-index facet counts, for a provider whose API can report a total and
@@ -21,8 +21,9 @@ export type FacetRequest = {
   facet: CountedFacet;
   /**
    * Not always the search's query. A facet is counted with its own selection
-   * lifted — the year facet under the query without the ticked years — so that
-   * ticking one year leaves the others visible and countable. See `facet.ts`.
+   * lifted — the stage facet under the query without the publication types —
+   * so that selecting one stage leaves the others visible and countable. See
+   * `facet.ts`.
    */
   query: Query;
 };
@@ -162,7 +163,7 @@ export async function countFacets(args: ProviderFacetArgs, spec: CountSpec): Pro
   const jobs = jobsFor(args, spec);
 
   // The same native query can be two jobs — the year facet's 2024 and, when
-  // 2024 is ticked, nothing else — so each is asked once.
+  // the search is bounded to 2024, another facet's — so each is asked once.
   const unasked = [...new Set(jobs.map(job => job.native))].filter(native => !args.known?.has(native));
   const queryOf = new Map(jobs.map(job => [job.native, job.query]));
 

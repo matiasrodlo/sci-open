@@ -1,4 +1,4 @@
-import type { Paper } from '@open-access-explorer/shared';
+import type { Paper } from '@sci-open/shared';
 import type { ParsedReference } from './parse';
 
 const STOP = new Set(['a', 'an', 'the', 'of', 'in', 'on', 'for', 'and', 'or', 'to', 'with', 'by', 'from', 'at', 'via']);

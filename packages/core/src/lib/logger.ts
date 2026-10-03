@@ -1,7 +1,5 @@
-import { AsyncLocalStorage } from 'async_hooks';
-
-/** The four methods the engine calls. Fastify's logger satisfies this, and so
- * does the stderr logger the MCP binary installs. */
+/** The four methods the engine calls. The MCP binary installs a stderr logger
+ * that satisfies this. */
 export type EngineLogger = {
   debug(fields: Record<string, unknown>, msg: string): void;
   info(fields: Record<string, unknown>, msg: string): void;
@@ -10,41 +8,25 @@ export type EngineLogger = {
 };
 
 /**
- * One log stream for the whole service.
+ * One log stream for the whole engine.
  *
  * Connectors and pipeline code used `console.*` directly, which meant a search
- * emitted thousands of unstructured lines to stdout — outside Fastify's logger,
- * so the configured level did nothing and `NODE_ENV=production` silenced none
- * of it. Everything goes through here instead, and here forwards to Fastify's
- * pino instance: levelled, structured, and correlated with the request that
- * caused it — through `withLogger`, which each request enters, so a line a
- * provider writes mid-search carries that search's `reqId`. Until that existed
- * every such line went to the root logger and carried no request at all.
+ * emitted thousands of unstructured lines to stdout — which, for an MCP server
+ * on stdio, is the protocol channel. Everything goes through here instead, and
+ * here forwards to the logger the process installed: levelled and structured.
  *
- * The argument order is console's rather than pino's — message first, detail
- * second — because that is what the call sites already read like, and a logging
- * change is not worth rewriting them around. The detail is normalised into
- * pino's structured field before it goes out.
+ * The argument order is console's — message first, detail second — because
+ * that is what the call sites already read like. The detail is normalised into
+ * structured fields before it goes out.
  */
 
 type Level = 'debug' | 'info' | 'warn' | 'error';
 
 let sink: EngineLogger | null = null;
 
-/** The logger of the request whose work is running, where there is one. */
-const current = new AsyncLocalStorage<EngineLogger>();
-
 /** Called once at boot with the server's logger. */
 export function useLogger(logger: EngineLogger): void {
   sink = logger;
-}
-
-/**
- * Runs `work` — and everything it starts, however asynchronously — logging to
- * `logger`. The server enters it for each request with that request's logger.
- */
-export function withLogger<T>(logger: EngineLogger, work: () => T): T {
-  return current.run(logger, work);
 }
 
 function fieldsFor(detail: unknown): Record<string, unknown> {
@@ -59,9 +41,8 @@ function fieldsFor(detail: unknown): Record<string, unknown> {
 }
 
 function emit(level: Level, msg: string, detail?: unknown): void {
-  const target = current.getStore() ?? sink;
-  if (target) {
-    target[level](fieldsFor(detail), msg);
+  if (sink) {
+    sink[level](fieldsFor(detail), msg);
     return;
   }
   // Before the server starts — scripts, tests — stay quiet unless something

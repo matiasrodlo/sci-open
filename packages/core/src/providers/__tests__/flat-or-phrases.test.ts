@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Query } from '@open-access-explorer/shared';
+import type { Query } from '@sci-open/shared';
 import { translate as arxiv } from '../arxiv/translate';
 import { translate as doaj } from '../doaj/translate';
 import { translate as europepmc } from '../europepmc/translate';

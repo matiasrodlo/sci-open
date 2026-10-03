@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import type { ProviderId } from '@open-access-explorer/shared';
+import type { ProviderId } from '@sci-open/shared';
 import type { AuthorityEntry } from '../../authorities';
-import { runOrchestrator } from '../from-search-params';
+import { runSearch } from '../from-search-params';
 import { countSearch } from '../count';
 import { ResultSetCache } from '../result-set';
 import type { ProviderEntry } from '../registry';
@@ -17,12 +17,11 @@ function source(id: ProviderId, papers = 3): ProviderEntry {
   return {
     id,
     capabilities: {
-      keywordSearch: true, fieldedSearch: true, doiLookup: true, fields: [], yearFilter: true,
-      maxPageSize: 100, reportsTotal: true, suppliesCitations: false,
+      keywordSearch: true, fieldedSearch: true, doiLookup: true,
+      maxPageSize: 100, reportsTotal: true,
       stages: { holds: ['published'], filter: false }, facets: []
     },
     translate: () => 'native',
-    normalizerVersion: 1,
     search: async () => ({
       papers: Array.from({ length: papers }, (_, i) =>
         paper({ id: `${id}:${i}`, title: `${id} ${i}`, doi: `10.1234/${id}.${i}`, sources: [ref(id, { nativeId: String(i) })] })),
@@ -41,7 +40,7 @@ describe('a search’s progress', () => {
   it('reports each source as it settles, then the page’s details', async () => {
     const { events, onProgress } = listen();
 
-    await runOrchestrator({ q: 'crispr', pageSize: 2 }, {
+    await runSearch({ q: 'crispr', pageSize: 2 }, {
       providers: [source('arxiv'), source('europepmc'), source('doaj')], authorities: [], onProgress
     });
 
@@ -55,10 +54,10 @@ describe('a search’s progress', () => {
   it('reports only the details for a page of a held set, since nothing was asked', async () => {
     const resultSets = new ResultSetCache();
     const providers = [source('arxiv', 5)];
-    await runOrchestrator({ q: 'crispr', pageSize: 2 }, { providers, authorities: [], resultSets });
+    await runSearch({ q: 'crispr', pageSize: 2 }, { providers, authorities: [], resultSets });
 
     const { events, onProgress } = listen();
-    await runOrchestrator({ q: 'crispr', page: 2, pageSize: 2 }, { providers, authorities: [], resultSets, onProgress });
+    await runSearch({ q: 'crispr', page: 2, pageSize: 2 }, { providers, authorities: [], resultSets, onProgress });
 
     expect(events).toEqual([{ stage: 'details', papers: 2 }]);
   });
@@ -82,14 +81,14 @@ describe('a search’s progress', () => {
     };
     const { events, onProgress } = listen();
 
-    await runOrchestrator({ q: 'crispr' }, { providers: [gated], authorities: [rescuer], onProgress });
+    await runSearch({ q: 'crispr' }, { providers: [gated], authorities: [rescuer], onProgress });
 
     expect(events.map(e => e.stage)).toEqual(['sources', 'access']);
     expect(events[1]).toEqual({ stage: 'access', candidates: 2 });
   });
 
   it('is not hurt by a listener that throws', async () => {
-    const response = await runOrchestrator({ q: 'crispr' }, {
+    const { response } = await runSearch({ q: 'crispr' }, {
       providers: [source('arxiv')],
       authorities: [],
       onProgress: () => { throw new Error('listener bug'); }

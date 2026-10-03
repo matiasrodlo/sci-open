@@ -1,5 +1,5 @@
-import type { Paper, ProviderReport, SearchResponseV2 } from '@open-access-explorer/shared';
-import { paper, ref } from '@open-access-explorer/core/testing';
+import type { Paper, ProviderReport, SearchResponseV2 } from '@sci-open/shared';
+import { paper, ref } from '@sci-open/core/testing';
 import { citationKey, fixtureKey, type Fixtures } from '../src/fixture-engine';
 
 /**
@@ -33,14 +33,11 @@ const page = (n: number): SearchResponseV2 => ({
   total: 5,
   page: n,
   pageSize: 2,
-  sort: 'relevance',
   facets: { year: [{ value: 2021, count: 3 }, { value: 2020, count: 2 }] },
   complete: false,
   bounded: false,
   countsFromSources: false,
-  providers: reports,
-  authorities: [],
-  duration: 1200
+  providers: reports
 });
 
 /** A record whose third-party text tries to give the model orders. */

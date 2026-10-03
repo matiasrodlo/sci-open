@@ -1,5 +1,5 @@
-import { QueryParseError } from '@open-access-explorer/shared';
-import { OPENCITATIONS_HOST, OpenCitationsUnavailableError, PdfProxyError, SourceBusyError } from '@open-access-explorer/core';
+import { QueryParseError } from '@sci-open/shared';
+import { OPENCITATIONS_HOST, OpenCitationsUnavailableError, PdfProxyError, SourceBusyError } from '@sci-open/core';
 
 /**
  * Every failure a tool can return: a stable code, a plain message, and a hint

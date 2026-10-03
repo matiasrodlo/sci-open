@@ -26,7 +26,6 @@ import {
   fetchPdfStream,
   servesPdf,
   statusForUpstream,
-  attachmentHeader,
   PdfProxyError,
   SSRF_REFUSED
 } from '../pdf-proxy';
@@ -463,7 +462,7 @@ describe('fetchPdfStream — the body', () => {
     upstream.write(Buffer.alloc(1024));
     serve({ 'content-type': 'application/pdf' }, upstream);
 
-    const { stream } = await fetch();
+    const stream = await fetch();
     stream.destroy();
     await new Promise(resolve => setImmediate(resolve));
 
@@ -479,19 +478,17 @@ describe('fetchPdfStream — the body', () => {
       Readable.from([gz])
     );
 
-    const { stream, contentLength } = await fetch();
+    const stream = await fetch();
 
-    expect(contentLength).toBeUndefined();
     expect((await read(stream)).equals(pdf)).toBe(true);
     const config = get.mock.calls[0]![1] as any;
     expect(config.decompress).toBe(false);
     expect(config.headers['Accept-Encoding']).toBe('identity');
   });
 
-  it('passes on the length of a body sent as it is', async () => {
+  it('reads a body sent as it is', async () => {
     serve({ 'content-type': 'application/pdf', 'content-length': String(pdf.length) }, Readable.from([pdf]));
-    const { stream, contentLength } = await fetch();
-    expect(contentLength).toBe(pdf.length);
+    const stream = await fetch();
     expect((await read(stream)).length).toBe(pdf.length);
   });
 
@@ -500,31 +497,6 @@ describe('fetchPdfStream — the body', () => {
     serve({ 'content-type': 'application/pdf', 'content-encoding': 'compress' }, data);
     await expect(fetch()).rejects.toMatchObject({ statusCode: 502 });
     expect(data.destroyed).toBe(true);
-  });
-});
-
-describe('attachmentHeader', () => {
-  it('names the file after the title, in ASCII and as written', () => {
-    expect(attachmentHeader('CRISPR "base" editing: a review', 'upstream.pdf')).toBe(
-      `attachment; filename="CRISPR_base_editing_a_review.pdf"; filename*=UTF-8''CRISPR%20%22base%22%20editing%3A%20a%20review.pdf`
-    );
-  });
-
-  it('keeps a title with no ASCII in it, and falls back only for the plain name', () => {
-    expect(attachmentHeader('新型冠状病毒', 'upstream.pdf')).toBe(
-      `attachment; filename="upstream.pdf"; filename*=UTF-8''${encodeURIComponent('新型冠状病毒.pdf')}`
-    );
-  });
-
-  it('uses the upstream name when there is no title', () => {
-    expect(attachmentHeader(undefined, 'upstream.pdf')).toBe('attachment; filename="upstream.pdf"');
-    expect(attachmentHeader('   ', 'upstream.pdf')).toBe('attachment; filename="upstream.pdf"');
-  });
-
-  it('escapes what RFC 8187 does not allow bare', () => {
-    expect(attachmentHeader("Smith's (2024) *notes*", 'x.pdf')).toContain(
-      "filename*=UTF-8''Smith%27s%20%282024%29%20%2Anotes%2A.pdf"
-    );
   });
 });
 

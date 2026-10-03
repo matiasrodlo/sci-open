@@ -1,4 +1,4 @@
-import type { FullTextDocument } from '@open-access-explorer/core';
+import type { FullTextDocument } from '@sci-open/core';
 import { sanitizeText } from '../safety/sanitize';
 
 /**

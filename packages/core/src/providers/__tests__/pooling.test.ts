@@ -8,10 +8,7 @@ import path from 'path';
  * It used to be five of thirteen, and the eight left out were the search
  * fan-out — the expensive half, and the half that decides how long a search
  * takes. Europe PMC alone reads up to 600 records per query. Those eight opened
- * a fresh connection per request, ran without the retry policy, and contributed
- * nothing to `httpPerformanceMonitor`, so the three `/api/performance/*` routes
- * and the 30-second collection behind them described the five cheapest callers
- * and were silent about everything a slow search is made of.
+ * a fresh connection per request and ran without the retry policy.
  *
  * The split was deliberate and documented, which is exactly why it needed a
  * test rather than a comment: nothing failed while it drifted, and nothing
@@ -71,21 +68,4 @@ describe('every upstream is pooled', () => {
       expect(source).not.toMatch(/\baxios\.(get|post|put|patch|delete|request)\s*[(<]/);
     }
   );
-});
-
-describe('pool configuration reaches every service it names', () => {
-  it('exposes a config for each pooled service', async () => {
-    // `getServiceConfig` falls back to the global defaults for an unknown name,
-    // so a missing entry is a silent loss of per-service tuning rather than a
-    // failure. This checks the names resolve to a usable config.
-    const { getServiceConfig } = await import('../../lib/http-pool-config');
-
-    for (const service of ['arxiv', 'biorxiv', 'core', 'doaj', 'europepmc',
-                           'openaire', 'opencitations', 'plos', 'openalex',
-                           'crossref', 'unpaywall', 'datacite', 'ncbi']) {
-      const config = getServiceConfig(service);
-      expect(config.maxSockets, service).toBeGreaterThan(0);
-      expect(config.timeout, service).toBeGreaterThan(0);
-    }
-  });
 });

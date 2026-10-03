@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { AuthorityFacts, Paper } from '@open-access-explorer/shared';
+import type { AuthorityFacts, Paper } from '@sci-open/shared';
 import { enrichPage, applyFacts, betterFullText } from '../enrich';
 import type { AuthorityEntry } from '../../authorities';
 import { paper } from './helpers';
@@ -69,12 +69,12 @@ describe('enrichPage', () => {
 
   it('never asks about a paper with no DOI', async () => {
     const lookup = vi.fn(async () => ({ publisher: 'Springer' }));
-    const { reports } = await enrichPage([paper()], {
+    const { examined, cutShort } = await enrichPage([paper()], {
       authorities: [authority('crossref', null, { lookup })]
     });
 
     expect(lookup).not.toHaveBeenCalled();
-    expect(reports[0].status).toBe('skipped');
+    expect({ examined, cutShort }).toEqual({ examined: 0, cutShort: false });
   });
 
   it('does not add, drop or reorder the page', async () => {
@@ -190,7 +190,7 @@ describe('enrichPage', () => {
         lookup: counts
       });
 
-      const { papers, reports } = await enrichPage(
+      const { papers } = await enrichPage(
         [withDoi({ id: 'a' }), withDoi({ id: 'b', doi: '10.1/b' })],
         {
           authorities: [
@@ -206,37 +206,21 @@ describe('enrichPage', () => {
 
       expect(counts).toHaveBeenCalledTimes(1);
       expect(papers.map(p => p.citationCount)).toEqual([99, 7]);
-      expect(reports.find(r => r.authority === 'opencitations')).toMatchObject({ asked: 1, applied: 1 });
     });
   });
 
-  describe('reports', () => {
-    it('counts what was asked, what answered and what it was worth', async () => {
-      const { reports } = await enrichPage([withDoi(), withDoi({ doi: '10.1/b' })], {
-        authorities: [
-          authority('crossref', { publisher: 'Springer' }),
-          authority('openalex', null)
-        ]
-      });
-
-      expect(reports.find(r => r.authority === 'crossref')).toMatchObject({
-        status: 'ok', asked: 2, answered: 2, applied: 2
-      });
-      // Asked, answered nothing: the DOI is simply not registered there.
-      expect(reports.find(r => r.authority === 'openalex')).toMatchObject({
-        status: 'ok', asked: 2, answered: 0, applied: 0
-      });
-    });
-
-    it('reports an authority that only ever threw as errored', async () => {
-      const { reports } = await enrichPage([withDoi()], {
+  describe('the budget', () => {
+    it('costs the detail, not the page, when every lookup fails', async () => {
+      const { papers, examined, cutShort } = await enrichPage([withDoi()], {
         authorities: [authority('crossref', null, {
           capabilities: { fields: ['publisher'], authoritative: [] },
           lookup: async () => { throw new Error('Crossref 503'); }
         })]
       });
 
-      expect(reports[0]).toMatchObject({ status: 'error', asked: 1, answered: 0, error: 'Crossref 503' });
+      expect(papers).toHaveLength(1);
+      // A failure concludes the lookup but judges nothing.
+      expect({ examined, cutShort }).toEqual({ examined: 0, cutShort: false });
     });
 
     it('gives up at the budget rather than holding the page open', async () => {
@@ -246,26 +230,35 @@ describe('enrichPage', () => {
       });
 
       const started = Date.now();
-      const { papers, reports } = await enrichPage([withDoi()], { authorities: [slow], budgetMs: 50 });
+      const { papers, cutShort } = await enrichPage([withDoi()], { authorities: [slow], budgetMs: 50 });
 
       expect(Date.now() - started).toBeLessThan(2000);
-      expect(reports[0].status).toBe('timeout');
+      expect(cutShort).toBe(true);
       // The page is still the page. Enrichment failing costs detail, not results.
       expect(papers).toHaveLength(1);
     });
 
     /**
-     * The budget is a fact about the page, and the status is a fact about one
-     * authority. Conflating them blamed the wrong one.
-     *
-     * The test used to be `answered + errors < asked`, and `answered` counts
-     * only lookups that returned facts — so an authority whose honest answer is
-     * "never heard of that DOI" looked, for every such paper, like it still had
-     * work outstanding. One slow sibling then reported it as having exceeded a
-     * budget it had beaten comfortably. Unpaywall answers most of a page that
-     * way, and it is the one authority the rescue depends on.
+     * A null is an answer. The test used to count only lookups that returned
+     * facts, so an authority whose honest answer is "never heard of that DOI"
+     * looked, for every such paper, like it still had work outstanding.
+     * Unpaywall answers most of a page that way, and it is the one authority
+     * the rescue depends on.
      */
-    it('does not blame an authority that finished for a budget someone else spent', async () => {
+    it('is not cut short by questions answered with nothing', async () => {
+      const fast = authority('openalex', null, {
+        capabilities: { fields: ['publisher'], authoritative: [] }
+      });
+
+      const { examined, cutShort } = await enrichPage(
+        [withDoi({ id: 'a' }), withDoi({ id: 'b', doi: '10.1/b' })],
+        { authorities: [fast], budgetMs: 50 }
+      );
+
+      expect({ examined, cutShort }).toEqual({ examined: 2, cutShort: false });
+    });
+
+    it('is cut short when one authority leaves a question unanswered', async () => {
       // Answers instantly, for every paper, with "I know nothing about that DOI".
       const fast = authority('openalex', null, {
         capabilities: { fields: ['publisher'], authoritative: [] }
@@ -277,24 +270,20 @@ describe('enrichPage', () => {
         lookup: () => new Promise(resolve => setTimeout(() => resolve(null), 5000))
       });
 
-      const { reports } = await enrichPage(
+      const { cutShort } = await enrichPage(
         [withDoi({ id: 'a' }), withDoi({ id: 'b', doi: '10.1/b' })],
         { authorities: [fast, slow], budgetMs: 50 }
       );
 
-      expect(reports.find(r => r.authority === 'openalex')).toMatchObject({
-        status: 'ok', asked: 2, answered: 0
-      });
-      // The one that did spend it is still named.
-      expect(reports.find(r => r.authority === 'crossref')).toMatchObject({ status: 'timeout' });
+      expect(cutShort).toBe(true);
     });
   });
 
   /**
    * The page path does not read this — a paper nobody reached is still returned
    * — but `rescue.ts` does, where a paper nobody reached is a paper dropped.
-   * The counts in the reports cannot stand in for it: `asked` is per authority
-   * and counts tasks started, not papers settled.
+   * A count of lookups cannot stand in for it: it counts tasks started, not
+   * papers settled.
    */
   describe('how many papers were settled', () => {
     it('counts only the papers carrying a DOI to ask about', async () => {

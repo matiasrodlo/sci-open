@@ -1,5 +1,4 @@
 import { getPooledClient } from '../lib/http-client-factory';
-import { getServiceConfig } from '../lib/http-pool-config';
 
 /**
  * Who cites whom, from the OpenCitations Index: what a paper cites
@@ -82,13 +81,13 @@ export async function citationLinks(
   direction: CitationDirection,
   options: CitationLinkOptions
 ): Promise<CitationLink[]> {
-  const client = getPooledClient(options.baseUrl ?? DEFAULT_BASE_URL, getServiceConfig('opencitations'));
+  const client = getPooledClient(options.baseUrl ?? DEFAULT_BASE_URL);
   const path = `/${direction === 'references' ? 'references' : 'citations'}/doi:${encodeURIComponent(doi)}`;
   const response = await client.get<unknown>(path, {
     // A much-cited paper's list is every citing work at once: measured
     // 2026-10-02, the 24,956 citers of 10.48550/arXiv.1706.03762 came back as
     // 8.5 MB in 15.8 s. Forty seconds, and OpenAlex's fifteen after it for the
-    // records, stay under the web tier's seventy for an MCP call.
+    // records, keep an MCP call under a minute.
     timeout: options.timeoutMs ?? 40_000,
     headers: {
       Accept: 'application/json',

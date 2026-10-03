@@ -1,5 +1,5 @@
 import { McpServer, type McpServerFactory } from '@modelcontextprotocol/server';
-import type { Engine } from '@open-access-explorer/core';
+import type { Engine } from '@sci-open/core';
 import { instructionsFor } from './instructions';
 import { selectTools } from './toolsets';
 import { registerTools } from './framework/register';

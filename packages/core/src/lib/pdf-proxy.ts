@@ -32,11 +32,6 @@ export class PdfProxyError extends Error {
   }
 }
 
-export type PdfStream = {
-  stream: Readable;
-  contentLength?: number;
-  filename: string;
-};
 
 /**
  * The pdfUrl arrives from the browser, so this endpoint would otherwise be an
@@ -306,45 +301,6 @@ export async function assertPublicHttpUrl(rawUrl: string): Promise<URL> {
   return url;
 }
 
-function filenameFor(url: URL): string {
-  const last = url.pathname.split('/').filter(Boolean).pop() || 'paper';
-  // A malformed escape in a publisher's path is not a reason to fail the
-  // download; it is a reason to use the segment as it stands.
-  let decoded = last;
-  try {
-    decoded = decodeURIComponent(last);
-  } catch {
-    // keep `last`
-  }
-  const base = decoded.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
-  return base.toLowerCase().endsWith('.pdf') ? base : `${base}.pdf`;
-}
-
-/**
- * `Content-Disposition` for a paper's PDF, named after its title.
- *
- * Two names, because the header's plain `filename` is ASCII by definition and
- * titles are not: `filename` carries an ASCII stand-in for clients that read
- * nothing else, and `filename*` (RFC 6266 / 8187) carries the title itself,
- * which every current browser prefers. The ASCII name falls back to the one
- * the file had upstream when the title has no ASCII in it, and both do when
- * there is no title.
- */
-export function attachmentHeader(title: string | undefined, fallback: string): string {
-  const trimmed = (title ?? '').replace(/\s+/g, ' ').trim().slice(0, 120);
-  const ascii = trimmed
-    .normalize('NFKD')
-    .replace(/[^\x20-\x7e]/g, '')
-    .replace(/[^A-Za-z0-9._-]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 80);
-
-  if (!trimmed) return `attachment; filename="${fallback}"`;
-
-  const utf8 = encodeURIComponent(`${trimmed}.pdf`).replace(/['()*]/g, c => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
-  return `attachment; filename="${ascii ? `${ascii}.pdf` : fallback}"; filename*=UTF-8''${utf8}`;
-}
-
 function looksLikePdfResponse(url: URL, contentType: string): boolean {
   if (contentType.startsWith('application/pdf') || contentType.startsWith('application/octet-stream')) {
     return true;
@@ -425,7 +381,7 @@ function guardedGet(url: URL, userAgent: string, options: GuardedGetOptions) {
     // included. Behind a private proxy that fails every download that
     // redirects; behind a public one no redirect target would be judged at all.
     // A deployment that must leave through a proxy needs the proxy to hold the
-    // same line — see `docs/configuration.md`.
+    // same line.
     proxy: false,
     headers: {
       'User-Agent': userAgent,
@@ -470,26 +426,20 @@ function decoderFor(encoding: string): Transform | undefined | null {
 }
 
 /**
- * Streams the PDF rather than buffering it, so a large file does not sit in
- * memory on its way to the browser.
+ * Streams the PDF, capped at `MAX_PDF_BYTES` after decoding.
  *
  * **Decoded here, not by axios.** Axios decodes a gzip body and deletes
  * `Content-Encoding`, but keeps the upstream `Content-Length` — the compressed
- * size — and the route forwarded it. Measured: a header of 244 bytes in front
- * of a body of 200,009, so the web tier read 244 bytes and the reader got a
- * truncated file. The plain body is asked for, and a body encoded anyway is
- * decoded below and sent without a length, since its decoded size is not known
- * until it has all arrived.
+ * size — which truncated a body read by that length. The plain body is asked
+ * for, and a body encoded anyway is decoded below.
  *
- * **One pipeline, so that ending either side ends both.** The body used to be
- * piped into the stream handed to the route. When a reader abandoned the
- * download, Fastify destroyed that stream, and `pipe` answers a destroyed
- * destination by unpiping and *pausing* the source, not destroying it. Axios's
- * `timeout` stops applying once the headers arrive, so the publisher's socket
- * stayed open, paused, for as long as the publisher cared to wait. `pipeline`
- * destroys every stage when any one of them closes early or fails.
+ * **One pipeline, so that ending either side ends both.** `pipe` answers a
+ * destroyed destination by unpiping and *pausing* the source, not destroying
+ * it, and axios's `timeout` stops applying once the headers arrive, so an
+ * abandoned read left the publisher's socket open. `pipeline` destroys every
+ * stage when any one of them closes early or fails.
  */
-export async function fetchPdfStream(url: URL, userAgent: string): Promise<PdfStream> {
+export async function fetchPdfStream(url: URL, userAgent: string): Promise<Readable> {
   const response = await guardedGet(url, userAgent, {
     timeoutMs: DOWNLOAD_TIMEOUT_MS,
     headers: { 'Accept-Encoding': 'identity' },
@@ -520,8 +470,7 @@ export async function fetchPdfStream(url: URL, userAgent: string): Promise<PdfSt
   }
 
   // A compressed body over the limit is a larger file still, so this holds
-  // whether or not it is encoded; what it cannot be is forwarded as the length
-  // of a body that is decoded on the way through.
+  // whether or not it is encoded.
   const declaredLength = Number(response.headers['content-length']);
   if (Number.isFinite(declaredLength) && declaredLength > MAX_PDF_BYTES) {
     response.data.destroy();
@@ -549,15 +498,11 @@ export async function fetchPdfStream(url: URL, userAgent: string): Promise<PdfSt
     }
   });
 
-  // The error reaches the route through `limited`, which is what it reads;
+  // The error reaches the reader through `limited`, which is what it reads;
   // the callback only has to exist.
   pipeline([response.data, ...(decoder ? [decoder] : []), limited], () => {});
 
-  return {
-    stream: limited,
-    contentLength: !decoder && Number.isFinite(declaredLength) ? declaredLength : undefined,
-    filename: filenameFor(url)
-  };
+  return limited;
 }
 
 /** The first bytes of every PDF: the header comment, `%PDF-1.7` and so on. */

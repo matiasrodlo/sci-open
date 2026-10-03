@@ -1,4 +1,4 @@
-import type { Query } from '@open-access-explorer/shared';
+import type { Query } from '@sci-open/shared';
 
 /**
  * Query -> the DataCite search string. Pure, and the only place that knows

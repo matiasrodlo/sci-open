@@ -1,4 +1,4 @@
-import type { Paper, Query } from '@open-access-explorer/shared';
+import type { Paper, Query } from '@sci-open/shared';
 import { capabilities } from './capabilities';
 import { translate, type TranslateOptions } from './translate';
 import {
@@ -30,7 +30,6 @@ export type ProviderSearchResult = {
   papers: Paper[];
   totalHits?: number;
   skipped: SkippedRecord[];
-  latency: number;
 };
 
 export async function search(query: Query, options: SearchOptions): Promise<ProviderSearchResult> {
@@ -43,9 +42,7 @@ export async function search(query: Query, options: SearchOptions): Promise<Prov
   } = options;
 
   const nativeQuery = translate(query, { openAccessOnly });
-  if (!nativeQuery) return { papers: [], skipped: [], latency: 0 };
-
-  const started = Date.now();
+  if (!nativeQuery) return { papers: [], skipped: [] };
 
   // PubMed's page here is 500 and the orchestrator asks for `depth` — 600 by
   // default — so a search retrieved 500 and `ProviderReport` recorded it as a
@@ -72,11 +69,9 @@ export async function search(query: Query, options: SearchOptions): Promise<Prov
     totalOf: payload => payload?.totalHits
   });
 
-  const latency = Date.now() - started;
   const { papers, skipped } = normalize(items, {
     retrievedAt: now().toISOString(),
-    rankOffset: offset,
-    latency
+    rankOffset: offset
   });
 
   // Each page is two calls — esearch then efetch — so `requests` here is pages,
@@ -86,8 +81,7 @@ export async function search(query: Query, options: SearchOptions): Promise<Prov
   return {
     papers,
     ...(total !== undefined ? { totalHits: total } : {}),
-    skipped,
-    latency
+    skipped
   };
 }
 
@@ -97,11 +91,9 @@ export type LookupOptions = RecordFetchOptions & { now?: () => Date };
 export async function lookup(nativeId: string, options: LookupOptions): Promise<Paper | null> {
   const { now = () => new Date(), ...fetchOptions } = options;
 
-  const started = Date.now();
   const { articles } = await fetchRecord(nativeId, fetchOptions);
-  const latency = Date.now() - started;
 
-  const { papers } = normalize(articles, { retrievedAt: now().toISOString(), latency });
+  const { papers } = normalize(articles, { retrievedAt: now().toISOString() });
   return papers[0] ?? null;
 }
 

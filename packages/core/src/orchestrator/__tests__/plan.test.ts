@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { ProviderCapabilities } from '@open-access-explorer/shared';
+import type { ProviderCapabilities } from '@sci-open/shared';
 import { plan } from '../plan';
 import { parseQuery } from '../parse-query';
 import type { ProviderEntry } from '../registry';
@@ -19,11 +19,8 @@ const caps = (over: Partial<ProviderCapabilities> = {}): ProviderCapabilities =>
   keywordSearch: true,
   fieldedSearch: true,
   doiLookup: true,
-  fields: ['title'],
-  yearFilter: true,
   maxPageSize: 100,
   reportsTotal: true,
-  suppliesCitations: false,
   stages: { holds: ['published'], filter: false },
   facets: [],
   ...over
@@ -33,7 +30,6 @@ const entry = (id: string, capabilities: ProviderCapabilities): ProviderEntry =>
   id: id as ProviderEntry['id'],
   capabilities,
   translate: () => 'native',
-  normalizerVersion: 1,
   search: async () => ({ papers: [], totalHits: 0, skipped: [] })
 });
 

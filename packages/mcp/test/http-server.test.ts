@@ -1,10 +1,10 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
-import { paper, ref } from '@open-access-explorer/core/testing';
+import { paper, ref } from '@sci-open/core/testing';
 import { startHttpServer, type RunningHttpServer } from '../src/http-server';
 import { createMetrics } from '../src/metrics';
 import type { HttpConfig } from '../src/config';
-import type { Engine } from '@open-access-explorer/core';
+import type { Engine } from '@sci-open/core';
 import { fixtureEngine } from '../src/fixture-engine';
 import { fakeEngine } from './fake-engine';
 import { FIXTURES } from './fixtures';
@@ -87,7 +87,7 @@ describe('sci-open-mcp --http', () => {
       } }
     }, { 'mcp-protocol-version': '2026-07-28', 'mcp-method': 'server/discover' });
     expect(response.status).toBe(200);
-    expect((await response.json()).result.supportedVersions).toContain('2026-07-28');
+    expect(((await response.json()) as { result: { supportedVersions: string[] } }).result.supportedVersions).toContain('2026-07-28');
   });
 
   it('serves a 2025-era client statelessly, so the session operations answer 405', async () => {
@@ -107,7 +107,7 @@ describe('sci-open-mcp --http', () => {
 
     const typo = await post(`${url}?toolsets=nope`, LIST_TOOLS);
     expect(typo.status).toBe(400);
-    expect((await typo.json()).error.message).toMatch(/^Unknown toolset "nope"/);
+    expect(((await typo.json()) as { error: { message: string } }).error.message).toMatch(/^Unknown toolset "nope"/);
   });
 
   it('refuses a browser on an origin it was not told to allow, and passes clients that send none', async () => {

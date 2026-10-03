@@ -1,4 +1,4 @@
-import type { ProviderCapabilities } from '@open-access-explorer/shared';
+import type { ProviderCapabilities } from '@sci-open/shared';
 
 /**
  * What the NCBI E-utilities can actually do for PubMed.
@@ -20,32 +20,12 @@ export const capabilities: ProviderCapabilities = {
   // `"10.x/y"[DOI]` resolves to the single record.
   doiLookup: true,
 
-  fields: [
-    'title',
-    'abstract',
-    'authors',
-    'year',
-    'venue',
-    // MeSH descriptors where PubMed has indexed the article, author keywords
-    // where it has not. The old connector wrote `topics: []` on every record.
-    'topics',
-    'language',
-    'fullText',
-    'landingPage'
-  ],
-
-  // `2022:2023[PDAT]`, verified as above.
-  yearFilter: true,
-
   // Abstract XML for a page of PMIDs is bulky; this is the ceiling the old
   // connector used and there is no reason to raise it.
   maxPageSize: 500,
 
   // `esearchresult.count`.
   reportsTotal: true,
-
-  // PubMed holds no citation counts.
-  suppliesCitations: false,
 
   // Published when PubMed Central holds it, which `pubmed pmc[sb]` asks for.
   // Under the open-access filter every record is in PMC already.

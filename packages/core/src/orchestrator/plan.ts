@@ -1,4 +1,4 @@
-import type { PaperStage, ProviderId, Query } from '@open-access-explorer/shared';
+import type { PaperStage, ProviderId, Query } from '@sci-open/shared';
 import type { ProviderEntry } from './registry';
 
 /**

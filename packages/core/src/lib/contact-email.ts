@@ -26,7 +26,3 @@ export function extractContactEmail(userAgent: string): string | undefined {
 
   return email;
 }
-
-export function isPlaceholderContact(userAgent: string): boolean {
-  return extractContactEmail(userAgent) === undefined;
-}

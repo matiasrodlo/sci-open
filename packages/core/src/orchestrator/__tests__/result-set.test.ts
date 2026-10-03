@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { AuthorityFacts, Paper, Query } from '@open-access-explorer/shared';
+import type { AuthorityFacts, Paper, Query } from '@sci-open/shared';
 import type { AuthorityEntry } from '../../authorities';
 import type { ProviderEntry } from '../registry';
 import { search } from '../index';
@@ -12,7 +12,7 @@ const set = (over: Partial<ResultSet> = {}): ResultSet => ({
   papers: [paper()],
   facets: {},
   reports: [],
-  rescue: { candidates: 0, examined: 0, rescued: 0, bounded: false, authorities: [] },
+  rescue: { candidates: 0, examined: 0, rescued: 0, bounded: false },
   complete: true,
   countsFromSources: false,
   ...over
@@ -28,24 +28,24 @@ const parts = (over: Partial<ResultSetKeyParts> = {}): ResultSetKeyParts => ({
   facetQueries: undefined,
   facetBudgetMs: 20000,
   filtersSent: false,
-  providers: [{ id: 'europepmc', normalizerVersion: 2 }],
+  providers: ['europepmc'],
   rescue: { authorities: ['unpaywall'], limit: 200, budgetMs: 5000 },
   ...over
 });
 
 describe('resultSetKey', () => {
   it('is the same for the same filters in any order', () => {
-    expect(resultSetKey(parts({ filters: { year: ['2024', '2023'], venue: ['Nature'] } })))
-      .toBe(resultSetKey(parts({ filters: { venue: ['Nature'], year: ['2023', '2024'] } })));
+    expect(resultSetKey(parts({ filters: { source: ['arxiv', 'ncbi'], stage: ['preprint'] } })))
+      .toBe(resultSetKey(parts({ filters: { stage: ['preprint'], source: ['ncbi', 'arxiv'] } })));
   });
 
   it('changes with anything that changes which papers are in the set', () => {
     const base = resultSetKey(parts());
     expect(resultSetKey(parts({ query: parseQuery('crispr cas9') }))).not.toBe(base);
-    expect(resultSetKey(parts({ filters: { year: ['2024'] } }))).not.toBe(base);
+    expect(resultSetKey(parts({ filters: { stage: ['preprint'] } }))).not.toBe(base);
     expect(resultSetKey(parts({ depth: 1200 }))).not.toBe(base);
     expect(resultSetKey(parts({ openAccessOnly: false }))).not.toBe(base);
-    expect(resultSetKey(parts({ providers: [{ id: 'europepmc', normalizerVersion: 3 }] }))).not.toBe(base);
+    expect(resultSetKey(parts({ providers: ['europepmc', 'ncbi'] }))).not.toBe(base);
     expect(resultSetKey(parts({ rescue: { authorities: ['unpaywall'], limit: 0, budgetMs: 5000 } }))).not.toBe(base);
   });
 });
@@ -265,12 +265,11 @@ describe('search, with a set cache', () => {
     const entry: ProviderEntry = {
       id: 'europepmc',
       capabilities: {
-        keywordSearch: true, fieldedSearch: true, doiLookup: true, fields: [], yearFilter: true,
-        maxPageSize: 1000, reportsTotal: true, suppliesCitations: false,
+        keywordSearch: true, fieldedSearch: true, doiLookup: true,
+        maxPageSize: 1000, reportsTotal: true,
         stages: { holds: ['published'], filter: false }, facets: []
       },
       translate: () => 'native',
-      normalizerVersion: 1,
       search: async ({ query }) => {
         calls.push(query);
         return { papers, totalHits: papers.length, skipped: [] };

@@ -1,4 +1,4 @@
-import type { Query, QueryField, QueryJoin, QueryNode, YearRange } from '@open-access-explorer/shared';
+import type { Query, QueryField, QueryJoin, QueryNode, YearRange } from '@sci-open/shared';
 
 /**
  * The parsed query -> one provider's native query string.

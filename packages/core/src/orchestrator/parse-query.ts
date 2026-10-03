@@ -1,5 +1,5 @@
-import type { Query, QueryField, QueryJoin } from '@open-access-explorer/shared';
-import { flatten, intersectYears, parseExpression, soleDoi } from '@open-access-explorer/shared';
+import type { Query, QueryField, QueryJoin } from '@sci-open/shared';
+import { flatten, intersectYears, parseExpression, soleDoi } from '@sci-open/shared';
 
 /**
  * The user's text -> a structured Query.

@@ -1,5 +1,5 @@
-import type { Paper, PaperStage, FullText, SourceRef } from '@open-access-explorer/shared';
-import { fullTextAt, httpUrl, stripMarkup } from '@open-access-explorer/shared';
+import type { Paper, PaperStage, FullText, SourceRef } from '@sci-open/shared';
+import { fullTextAt, httpUrl, stripMarkup } from '@sci-open/shared';
 import type { DataCitePayload } from './fetch';
 
 /**
@@ -18,7 +18,7 @@ import type { DataCitePayload } from './fetch';
  * policy filter's decision, not the provider's.
  */
 
-export type NormalizeOptions = { retrievedAt: string; rankOffset?: number; latency?: number };
+export type NormalizeOptions = { retrievedAt: string; rankOffset?: number };
 export type SkippedRecord = { index: number; nativeId?: string; reason: string };
 export type NormalizeOutcome = { papers: Paper[]; skipped: SkippedRecord[] };
 
@@ -144,13 +144,12 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
         : {}),
 
     sources: [ref],
-    fieldSources: {},
-    retrievedAt: ref.retrievedAt
+    fieldSources: {}
   };
 }
 
 export function normalize(payload: DataCitePayload, options: NormalizeOptions): NormalizeOutcome {
-  const { retrievedAt, rankOffset = 0, latency } = options;
+  const { retrievedAt, rankOffset = 0 } = options;
   const data = payload?.data ?? [];
 
   const papers: Paper[] = [];
@@ -162,8 +161,7 @@ export function normalize(payload: DataCitePayload, options: NormalizeOptions): 
       provider: 'datacite',
       nativeId,
       rank: rankOffset + index,
-      retrievedAt,
-      ...(latency !== undefined ? { latency } : {})
+      retrievedAt
     };
 
     try {

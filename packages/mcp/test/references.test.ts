@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import path from 'path';
 import { parseReference } from '../src/references/parse';
 import { judge, titleOverlap } from '../src/references/match';
-import { paper, ref } from '@open-access-explorer/core/testing';
+import { paper, ref } from '@sci-open/core/testing';
 
 type Case = {
   style: string;

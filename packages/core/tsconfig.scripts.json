@@ -1,8 +1,8 @@
 {
   // The build emits from `src` alone, so `scripts/` sits outside the program
   // `tsconfig.json` describes and would never be checked. This adds it back
-  // without emitting, so the four harnesses in `scripts/` fail the typecheck
-  // rather than rotting quietly against the `src` they reach into.
+  // without emitting, so the fixture recorder fails the typecheck rather than
+  // rotting quietly.
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": true,

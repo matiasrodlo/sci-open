@@ -3,9 +3,9 @@ import { createServerFactory, selectionFrom, type ServerDeps } from './server';
 import { selectTools } from './toolsets';
 
 /**
- * The server over Streamable HTTP, as a web-standard handler a host mounts
- * (the API wraps it with `toNodeHandler`). The same factory as stdio, so the
- * two can never offer different tools.
+ * The server over Streamable HTTP, as a web-standard handler
+ * (`http-server.ts` wraps it with `toNodeHandler`). The same factory as stdio,
+ * so the two can never offer different tools.
  *
  * Stateless: every request gets a fresh instance from the factory, which is
  * what lets any replica answer any request — a search handle carries its own

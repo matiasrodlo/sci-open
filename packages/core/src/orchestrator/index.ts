@@ -1,5 +1,5 @@
-import type { AuthorityReport, Paper, ProviderId, ProviderReport, Query, SearchSort } from '@open-access-explorer/shared';
-import { matchesQuery } from '@open-access-explorer/shared';
+import type { Paper, ProviderId, ProviderReport, Query, SearchSort } from '@sci-open/shared';
+import { matchesQuery } from '@sci-open/shared';
 import { AUTHORITIES, type AuthorityEntry } from '../authorities';
 import { PROVIDERS, type ProviderEntry } from './registry';
 import { plan } from './plan';
@@ -7,31 +7,15 @@ import { fanOut, isComplete, type ProviderSettled } from './fanout';
 import { ProviderCache } from './provider-cache';
 import { mergePapers } from './merge';
 import { rank } from './rank';
-import { applyPolicy, partitionByPolicy, type PolicyOptions, type UserFilters } from './policy';
+import { partitionByPolicy, type PolicyOptions, type UserFilters } from './policy';
 import { canRescue, rescueCandidates, DEFAULT_RESCUE_BUDGET_MS, DEFAULT_RESCUE_LIMIT, type RescueReport } from './rescue';
 import { AuthorityCache, type AuthorityFactsCache } from './authority-cache';
 import { resultSetKey, type ResultSet, type ResultSetCache, type ResultSetKeyParts } from './result-set';
-import type { UpstreamStats } from './upstream-stats';
 import { facetBaseSets, generateFacets, withSourceCounts, type Facets } from './facet';
 import { countSourceFacets, type FacetQueries } from './source-facets';
 import { sortPapers } from './sort';
 import { enrichPage } from './enrich';
 import { progressTo, type SearchProgress } from './progress';
-
-export * from './parse-query';
-export * from './lookup';
-export { PROVIDERS, plan, fanOut, isComplete, ProviderCache, mergePapers, rank, applyPolicy, generateFacets, facetBaseSets, sortPapers, enrichPage };
-export { partitionByPolicy } from './policy';
-export { countSourceFacets, yearWindow, YEAR_BUCKETS } from './source-facets';
-export type { FacetQueries } from './source-facets';
-export { rescueCandidates, canRescue, DEFAULT_RESCUE_LIMIT, DEFAULT_RESCUE_BUDGET_MS } from './rescue';
-export type { RescueReport } from './rescue';
-export { AuthorityCache, AuthorityFactsCache } from './authority-cache';
-export { ResultSetCache, resultSetKey } from './result-set';
-export type { ResultSet } from './result-set';
-export { UpstreamStats } from './upstream-stats';
-export type { UpstreamStatsSnapshot } from './upstream-stats';
-export type { SearchProgress } from './progress';
 
 /**
  * plan -> fan out -> merge/dedupe -> rank -> filter -> rescue -> facet -> paginate -> enrich
@@ -111,8 +95,6 @@ export type SearchOptions = {
   resultSets?: ResultSetCache;
   /** Authorities' answers, held across searches. See `AuthorityFactsCache`. */
   authorityFacts?: AuthorityFactsCache;
-  /** Where each source's reports are tallied across searches. See `UpstreamStats`. */
-  stats?: UpstreamStats;
   /**
    * Asked once before this search resolves a set of its own — not when the set
    * is held, or is being resolved by another search — and may throw to refuse
@@ -146,16 +128,8 @@ export type OrchestratorResult = {
   facets: Facets;
   reports: ProviderReport[];
   /**
-   * What each authority was asked and what it was worth. Kept apart from
-   * `reports` because an authority is not a source of results — it never adds
-   * a paper, so it has no `retrieved` to report and nothing to contribute to
-   * the source facet.
-   */
-  authorities: AuthorityReport[];
-  /**
-   * What the rescue pass cost and what it bought. Reported separately from
-   * `authorities` because those describe the page and this describes the set:
-   * it is the one step that changes which papers are in the result at all.
+   * What the rescue pass cost and what it bought: it is the one step after the
+   * fan-out that changes which papers are in the result at all.
    */
   rescue: RescueReport;
   /**
@@ -170,21 +144,20 @@ export type OrchestratorResult = {
   /**
    * True when the sources' own counts describe this search: the filters were
    * all sent (`filtersSent`), and every source asked could express the
-   * publication type among them. The header's "at least" count is the largest
-   * source's `totalHits` only then.
+   * publication type among them. Only then is a source's `totalHits` a count
+   * of this search rather than of a wider one.
    */
   countsFromSources: boolean;
   /** True when the set came from `resultSets` — held, or resolved by a concurrent identical search. */
   fromCache: boolean;
-  duration: number;
 };
 
 /**
  * How deep each provider is read, and the ceiling on what that may be set to.
  *
  * 600 is the measured default, and the number the comments throughout this
- * package are written against. It is configurable — `SEARCH_DEPTH`, read in
- * `config.ts` — because it is the one setting
+ * package are written against. It is configurable — `SEARCH_DEPTH`, read by
+ * the MCP server's `config.ts` — because it is the one setting
  * that decides how much of a corpus a search actually sees. The header reading
  * "2,754 retrieved of 977,761+ matching" is reporting this bound and nothing
  * else: the first figure is `depth x providers that answered`, less duplicates
@@ -214,12 +187,11 @@ export const MAX_DEPTH = 2000;
 const DEFAULT_TIMEOUT_MS = 20000;
 
 /** `SearchOptions` with the defaults applied, for the steps that resolve the set. */
-type Settled = ResultSetKeyParts & {
+type Settled = Omit<ResultSetKeyParts, 'providers'> & {
   query: Query;
   providers: readonly ProviderEntry[];
   authorities: readonly AuthorityEntry[] | undefined;
   cache: ProviderCache | undefined;
-  stats: UpstreamStats | undefined;
   userAgent: string | undefined;
   now: (() => Date) | undefined;
   progress: (event: SearchProgress) => void;
@@ -256,7 +228,6 @@ function settle(query: Query, options: SearchOptions): Settled {
       budgetMs: options.rescueBudgetMs ?? DEFAULT_RESCUE_BUDGET_MS
     },
     cache: options.cache,
-    stats: options.stats,
     userAgent: options.userAgent,
     now: options.now,
     progress: progressTo(options.onProgress),
@@ -268,17 +239,16 @@ function keyOf(settled: Settled): string {
   const { query, filters, policy, openAccessOnly, depth, timeoutMs, facetQueries, facetBudgetMs, filtersSent, providers, rescue } = settled;
   return resultSetKey({
     query, filters, policy, openAccessOnly, depth, timeoutMs, facetQueries, facetBudgetMs, filtersSent, rescue,
-    providers: providers.map(({ id, normalizerVersion }) => ({ id, normalizerVersion }))
+    providers: providers.map(({ id }) => id)
   });
 }
 
 /**
  * A year range that starts after it ends, which nothing can be published in.
  *
- * Reached three ways, none of them a typo the parser could refuse: `yearFrom`
- * after `yearTo` in the filters, a ticked year outside that bound, and `PY=`
- * in the query text disjoint from either — the bounds are intersected, and two
- * that do not overlap intersect to this. Asked of the sources, it cost a whole
+ * Reached two ways, neither a typo the parser could refuse: `yearFrom` after
+ * `yearTo` in the filters, and `PY=` in the query text disjoint from them —
+ * the bounds are intersected, and two that do not overlap intersect to this. Asked of the sources, it cost a whole
  * fan-out, facet counts included, for an answer that could only be empty, and
  * each source read the backwards range its own way.
  */
@@ -300,7 +270,7 @@ function emptySet(settled: Settled): ResultSet {
       latency: 0,
       skipReason: 'the year range ends before it starts'
     })),
-    rescue: { candidates: 0, examined: 0, rescued: 0, bounded: false, authorities: [] },
+    rescue: { candidates: 0, examined: 0, rescued: 0, bounded: false },
     complete: true,
     countsFromSources: false
   };
@@ -313,7 +283,7 @@ function emptySet(settled: Settled): ResultSet {
 async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache): Promise<ResultSet> {
   const {
     query, filters, policy, openAccessOnly, depth, timeoutMs, facetQueries, facetBudgetMs, filtersSent,
-    providers, authorities, cache, stats, userAgent, now, progress, unavailable
+    providers, authorities, cache, userAgent, now, progress, unavailable
   } = settled;
 
   if (emptyYears(query)) return emptySet(settled);
@@ -409,7 +379,6 @@ async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache
     filters,
     policy
   });
-  stats?.recordAuthorities(rescueReport.authorities);
 
   // Back into rank order. A rescued paper takes the position it always had —
   // it was ranked with everything else and only ever excluded by the gate — so
@@ -454,7 +423,6 @@ async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache
     const facetError = facetErrors.get(report.provider);
     return facetError ? { ...report, facetError } : report;
   });
-  stats?.recordProviders(reports);
 
   /**
    * A publication type every source asked could express. One that holds
@@ -476,7 +444,6 @@ async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache
 }
 
 export async function search(query: Query, options: SearchOptions = {}): Promise<OrchestratorResult> {
-  const startedAt = Date.now();
   const { page = 1, pageSize = 20, sort = 'relevance', authorities, enrichBudgetMs, userAgent, resultSets } = options;
 
   const settled = settle(query, options);
@@ -505,13 +472,12 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
   // Enrichment sees the page and only the page. It cannot change which papers
   // are on it, so `total`, `facets` and the page boundary above all still
   // describe the set they were computed over.
-  const { papers: enriched, reports: authorityReports } = await enrichPage(pageOfPapers, {
+  const { papers: enriched } = await enrichPage(pageOfPapers, {
     ...(authorities ? { authorities } : {}),
     ...(enrichBudgetMs !== undefined ? { budgetMs: enrichBudgetMs } : {}),
     ...(userAgent ? { userAgent } : {}),
     cache: authorityCache
   });
-  options.stats?.recordAuthorities(authorityReports);
 
   /**
    * Order the page again, because enrichment just rewrote the keys it was
@@ -542,11 +508,9 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
     pageSize,
     facets: set.facets,
     reports: set.reports,
-    authorities: authorityReports,
     rescue: set.rescue,
     complete: set.complete,
     countsFromSources: set.countsFromSources,
-    fromCache: cached,
-    duration: Date.now() - startedAt
+    fromCache: cached
   };
 }

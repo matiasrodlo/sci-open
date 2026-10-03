@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { Paper } from '@open-access-explorer/shared';
-import { paper, ref } from '@open-access-explorer/core/testing';
+import type { Paper } from '@sci-open/shared';
+import { paper, ref } from '@sci-open/core/testing';
 import { searchPapers } from '../src/tools/search-papers';
 import { getPaper } from '../src/tools/get-paper';
 import { readPaper } from '../src/tools/read-paper';

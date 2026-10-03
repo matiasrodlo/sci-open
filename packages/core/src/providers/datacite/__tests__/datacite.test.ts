@@ -1,8 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import type { Query } from '@open-access-explorer/shared';
-import { canServe } from '@open-access-explorer/shared';
+import type { Query } from '@sci-open/shared';
 import { translate } from '../translate';
 import { normalize, totalHits } from '../normalize';
 import { capabilities } from '../capabilities';
@@ -25,13 +24,12 @@ describe('capabilities — the decision this provider exists to record', () => {
     // cannot, because its corpus of repository items and theses is disjoint
     // from theirs.
     expect(capabilities.keywordSearch).toBe(false);
-    expect(canServe(capabilities, {})).toBe(false);
   });
 
   it('still answers a DOI lookup, which is what it is good for', () => {
     // A DataCite DOI resolves here and nowhere else in the fan-out, precisely
     // because the corpus is disjoint.
-    expect(canServe(capabilities, { doi: '10.5281/zenodo.222' })).toBe(true);
+    expect(capabilities.doiLookup).toBe(true);
   });
 });
 

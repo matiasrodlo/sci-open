@@ -1,4 +1,4 @@
-import type { ProviderCapabilities } from '@open-access-explorer/shared';
+import type { ProviderCapabilities } from '@sci-open/shared';
 
 /**
  * What the Europe PMC REST API can actually do.
@@ -18,31 +18,8 @@ export const capabilities: ProviderCapabilities = {
   fieldedSearch: true,
   doiLookup: true,
 
-  // Populated on `resultType=core` responses. `publisher` is absent: Europe PMC
-  // describes the journal, not who publishes it.
-  fields: [
-    'title',
-    'abstract',
-    'authors',
-    'year',
-    'venue',
-    'topics',
-    'language',
-    'citationCount',
-    'fullText',
-    'landingPage'
-  ],
-
-  // PUB_YEAR is a query term, so a year bound narrows the corpus rather than
-  // being filtered afterwards — which also makes the reported hit count honest.
-  yearFilter: true,
-
   maxPageSize: 1000,
   reportsTotal: true,
-
-  // `citedByCount` is on every core record. The old connector never read it,
-  // which is why Europe PMC contributed nothing to the citations sort.
-  suppliesCitations: true,
 
   // `SRC:PPR` is the preprint source, and `normalize` reads it the same way.
   stages: { holds: ['preprint', 'published', 'unknown'], filter: true },

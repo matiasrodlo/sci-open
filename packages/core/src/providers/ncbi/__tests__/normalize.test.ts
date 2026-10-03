@@ -78,11 +78,11 @@ describe('normalize — dates', () => {
     expect(run(edge).papers.find(p => p.id === 'ncbi:22222222')!.year).toBe(1998);
   });
 
-  it('records retrieval time, not the current time, as retrievedAt', () => {
+  it('records retrieval time, not the current time, on the source', () => {
     // The old connector stamped `createdAt: new Date().toISOString()` on every
     // record, so the field meant "when we asked" and the publication date was
     // nowhere in the output.
-    expect(run(recorded).papers.every(p => p.retrievedAt === AT)).toBe(true);
+    expect(run(recorded).papers.every(p => p.sources[0]!.retrievedAt === AT)).toBe(true);
   });
 });
 

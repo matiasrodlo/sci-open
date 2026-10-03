@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { paper, ref } from '@open-access-explorer/core/testing';
+import { paper, ref } from '@sci-open/core/testing';
 import { verifyReferences } from '../src/tools/verify-references';
 import { fakeEngine, type FakeOptions } from './fake-engine';
 

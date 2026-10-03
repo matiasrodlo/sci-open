@@ -1,4 +1,4 @@
-import type { CountedFacet, FacetBucket, Paper, ProviderId, SourceFacets } from '@open-access-explorer/shared';
+import type { CountedFacet, FacetBucket, Paper, ProviderId, SourceFacets } from '@sci-open/shared';
 import { matchesFilters, passesPolicy, type PolicyOptions, type UserFilters } from './policy';
 import { facetKey } from './facet-key';
 
@@ -27,25 +27,18 @@ export { facetKey };
  * in given everything else they have chosen. That is what this now counts.
  */
 
-/**
- * One value and its count. Shared with clients, since version 2 of the search
- * response returns the facets as they are; `from` is set by `withSourceCounts`.
- */
+/** One value and its count, as the search response returns them. */
 export type { FacetBucket };
 export type Facets = Record<string, FacetBucket[]>;
 
-/** The facets this module produces, and the filter each one's checkboxes write to. */
+/** The facets this module produces. */
+export type FacetKey = 'source' | 'oaStatus' | 'stage' | 'year' | 'venue' | 'publisher' | 'topics';
+
+/** The facets a caller can filter on, and the filter each one writes to. */
 const OWN_FILTER = {
   source: 'source',
-  oaStatus: 'oaStatus',
-  stage: 'stage',
-  year: 'year',
-  venue: 'venue',
-  publisher: 'publisher',
-  topics: 'topics'
-} as const satisfies Record<string, keyof UserFilters>;
-
-export type FacetKey = keyof typeof OWN_FILTER;
+  stage: 'stage'
+} as const satisfies Partial<Record<FacetKey, keyof UserFilters>>;
 
 /** The set to count one facet over, where it differs from the returned set. */
 export type FacetBases = Partial<Record<FacetKey, readonly Paper[]>>;
@@ -123,7 +116,7 @@ export function facetBaseSets(
 ): FacetBases {
   const bases: FacetBases = {};
 
-  for (const facet of Object.keys(OWN_FILTER) as FacetKey[]) {
+  for (const facet of Object.keys(OWN_FILTER) as Array<keyof typeof OWN_FILTER>) {
     const key = OWN_FILTER[facet];
     const selected = filters[key];
     if (!Array.isArray(selected) || selected.length === 0) continue;
@@ -212,8 +205,8 @@ export type SourceCounts = { provider: ProviderId; facets: SourceFacets };
  *
  * A facet outside `countable` is returned as the read counted it. That is the
  * facet whose count some filter no source could be sent would have to narrow:
- * a source's count of IEEE Access says nothing about how many of those are
- * also in the venue the reader ticked. See `FacetQueries`.
+ * a source's count of IEEE Access says nothing about how many of those came
+ * from the sources the search was limited to. See `FacetQueries`.
  *
  * A value only a source reports — a journal outside everything read — is
  * added, which is the point: those are the buckets the read could not see.
@@ -235,13 +228,13 @@ export function withSourceCounts(
       buckets.set(facetKey(bucket.value), { value: bucket.value, count: bucket.count });
     }
 
-    for (const { provider, facets } of sources) {
+    for (const { facets } of sources) {
       for (const bucket of facets[facet] ?? []) {
         const key = facetKey(bucket.value);
         if (key === '') continue;
         const held = buckets.get(key);
-        if (!held) buckets.set(key, { value: bucket.value, count: bucket.count, from: provider });
-        else if (bucket.count > held.count) buckets.set(key, { value: held.value, count: bucket.count, from: provider });
+        if (!held) buckets.set(key, { value: bucket.value, count: bucket.count });
+        else if (bucket.count > held.count) buckets.set(key, { value: held.value, count: bucket.count });
       }
     }
 

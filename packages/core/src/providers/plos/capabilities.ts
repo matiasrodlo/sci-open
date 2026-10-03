@@ -1,4 +1,4 @@
-import type { ProviderCapabilities } from '@open-access-explorer/shared';
+import type { ProviderCapabilities } from '@sci-open/shared';
 
 /**
  * What the PLOS Solr endpoint can actually do.
@@ -18,28 +18,10 @@ export const capabilities: ProviderCapabilities = {
   fieldedSearch: true,
   doiLookup: true,
 
-  fields: [
-    'title',
-    'abstract',
-    'authors',
-    'year',
-    'venue',
-    // From the `subject` field, which the old connector never requested — it
-    // put the article type in `topics` instead, so every PLOS record was
-    // tagged "Research Article" and nothing else.
-    'topics',
-    'language',
-    'fullText',
-    'landingPage'
-  ],
-
-  yearFilter: true,
-
   // PLOS's Solr endpoint serves up to 1000 rows per request.
   maxPageSize: 1000,
 
   reportsTotal: true,
-  suppliesCitations: false,
 
   // Journals only, and `ARTICLE_TYPES` keeps the read to research articles.
   stages: { holds: ['published'], filter: false },

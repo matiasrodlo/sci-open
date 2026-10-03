@@ -71,8 +71,7 @@ function paper(): Paper {
     oaStatus: 'gold',
     stage: 'published',
     sources: [],
-    fieldSources: {},
-    retrievedAt: '2026-09-30T00:00:00.000Z'
+    fieldSources: {}
   };
 }
 

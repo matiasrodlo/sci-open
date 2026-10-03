@@ -1,6 +1,5 @@
 import type { AxiosInstance } from 'axios';
 import { getPooledClient } from '../../lib/http-client-factory';
-import { getServiceConfig } from '../../lib/http-pool-config';
 import { extractContactEmail } from '../../lib/contact-email';
 import { usableApiKey } from '../../lib/api-key';
 import type { OpenAlexParams } from './translate';
@@ -104,7 +103,7 @@ export async function fetchGroups(
 ): Promise<OpenAlexGroup[]> {
   const { baseUrl = DEFAULT_BASE_URL, apiKey, timeoutMs, signal, userAgent } = options;
 
-  const client: AxiosInstance = getPooledClient(baseUrl, getServiceConfig('openalex'));
+  const client: AxiosInstance = getPooledClient(baseUrl);
   const key = usableApiKey(apiKey);
   const contactEmail = userAgent ? extractContactEmail(userAgent) : undefined;
 
@@ -141,7 +140,7 @@ export async function fetchPage(
     baseUrl = DEFAULT_BASE_URL, apiKey, pageSize, offset, timeoutMs, signal, userAgent
   } = options;
 
-  const client: AxiosInstance = getPooledClient(baseUrl, getServiceConfig('openalex'));
+  const client: AxiosInstance = getPooledClient(baseUrl);
 
   // OpenAlex meters every request against a daily budget, and an anonymous
   // caller gets a tenth of what a key gets — a free one, from
@@ -240,17 +239,16 @@ export type WorkFetchOptions = {
 export async function fetchWork(id: string, options: WorkFetchOptions): Promise<OpenAlexPayload> {
   const { baseUrl = DEFAULT_BASE_URL, apiKey, timeoutMs, signal, userAgent } = options;
 
-  const client: AxiosInstance = getPooledClient(baseUrl, getServiceConfig('openalex'));
+  const client: AxiosInstance = getPooledClient(baseUrl);
   const contactEmail = userAgent ? extractContactEmail(userAgent) : undefined;
   // The entity endpoint is billed too, just less than a search. Same key.
   const key = usableApiKey(apiKey);
 
-  // Ids are stored stripped, but the old paper endpoint wrote the full URL
-  // into `OARecord.id`, so a link made before this phase carries one.
+  // Ids are stored stripped, but a caller may name a work by its OpenAlex URL.
   const workId = stripOpenAlexPrefix(id);
 
   // Encoded because it is caller-supplied: `workId` is whatever followed
-  // `openalex:` in `/api/paper/:id`. Unescaped, a `..` segment or a `?` steers
+  // `openalex:` in the id a tool was given. Unescaped, a `..` segment or a `?` steers
   // the request at other paths and parameters on OpenAlex. It could not leave
   // the host — the path always starts `/works/`, so axios never reads it as an
   // absolute URL — and `lookupPaper`'s `matches` guard rejects a record that is

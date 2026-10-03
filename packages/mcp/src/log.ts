@@ -1,4 +1,4 @@
-import type { EngineLogger } from '@open-access-explorer/core';
+import type { EngineLogger } from '@sci-open/core';
 
 const LEVELS = ['debug', 'info', 'warn', 'error'] as const;
 export type LogLevel = (typeof LEVELS)[number];

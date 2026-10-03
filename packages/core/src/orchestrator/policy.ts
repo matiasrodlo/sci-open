@@ -1,17 +1,12 @@
-import type { OaRoute, Paper, PaperStage } from '@open-access-explorer/shared';
-import { facetKey } from './facet-key';
+import type { OaRoute, Paper, PaperStage } from '@sci-open/shared';
 
 /**
  * What the caller asked to see, and what the service will serve.
  *
- * Two things used to be tangled here. The OA and retrievability rules were
- * hard filters buried in the middle of `applyFilters`, applied to every search
- * whether or not it asked for them and invisible from outside; and
- * `filters.oaStatus` was declared, documented, and faceted, but never read, so
- * filtering on it silently returned everything.
- *
- * Both are request options now, with defaults that preserve the previous
- * behaviour.
+ * The OA and retrievability rules used to be hard filters buried in the middle
+ * of `applyFilters`, applied to every search whether or not it asked for them
+ * and invisible from outside. They are request options now, with defaults that
+ * preserve the previous behaviour.
  *
  * The two halves are separable — `matchesFilters` for what the caller ticked,
  * `passesPolicy` for the two gates the service applies on its own — because
@@ -30,17 +25,7 @@ export type UserFilters = {
   source?: string[];
   yearFrom?: number;
   yearTo?: number;
-  /**
-   * Exact years, as sent by the year facet. Distinct from the `yearFrom`/
-   * `yearTo` bound: the facet offers a set of discrete years to tick, not a
-   * range. Both apply when both are present.
-   */
-  year?: string[];
-  oaStatus?: string[];
   stage?: string[];
-  venue?: string[];
-  publisher?: string[];
-  topics?: string[];
 };
 
 const OPEN_ROUTES: readonly OaRoute[] = ['gold', 'green', 'hybrid', 'bronze'];
@@ -62,18 +47,6 @@ export function isOpen(paper: Paper): boolean {
 function matches(values: string[] | undefined, candidate: string | undefined): boolean {
   if (!values || values.length === 0) return true;
   return candidate !== undefined && values.includes(candidate);
-}
-
-/**
- * The same, for a name: a ticked venue selects every paper carrying that
- * venue however its provider spelled it. The facet counts by `facetKey`, so a
- * bucket holds every spelling, and ticking it has to find all of them or the
- * count beside the box overstates what it returns.
- */
-function matchesName(values: string[] | undefined, candidates: ReadonlyArray<string | undefined>): boolean {
-  if (!values || values.length === 0) return true;
-  const wanted = new Set(values.map(facetKey));
-  return candidates.some(candidate => candidate !== undefined && wanted.has(facetKey(candidate)));
 }
 
 /**
@@ -100,19 +73,7 @@ export function matchesFilters(paper: Paper, filters: UserFilters = {}): boolean
     if (filters.yearTo !== undefined && paper.year > filters.yearTo) return false;
   }
 
-  // The year facet ticks exact years. Compared as strings because that is
-  // what the facet emits and what arrives in the query string; `p.year` is a
-  // number, so one side has to be converted either way.
-  if (filters.year?.length) {
-    if (paper.year === undefined) return false;
-    if (!filters.year.includes(String(paper.year))) return false;
-  }
-
-  if (!matches(filters.oaStatus, paper.oaStatus)) return false;
   if (!matches(filters.stage, paper.stage)) return false;
-  if (!matchesName(filters.venue, [paper.venue])) return false;
-  if (!matchesName(filters.publisher, [paper.publisher])) return false;
-  if (!matchesName(filters.topics, paper.topics)) return false;
 
   return true;
 }

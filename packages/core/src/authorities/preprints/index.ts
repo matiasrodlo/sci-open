@@ -1,4 +1,4 @@
-import type { AuthorityFacts } from '@open-access-explorer/shared';
+import type { AuthorityFacts } from '@sci-open/shared';
 import { servesPdf } from '../../lib/pdf-proxy';
 import { capabilities } from './capabilities';
 import { locate } from './locate';
@@ -12,7 +12,7 @@ export type LookupOptions = {
 };
 
 /** Sent when the caller has none, so a server's logs can still name us. */
-const DEFAULT_USER_AGENT = 'OpenAccessExplorer/1.0';
+const DEFAULT_USER_AGENT = 'sci-open (+https://github.com/matiasrodlo/sci-open)';
 
 /**
  * The server's PDF for this DOI, once it has been fetched and found to be one.

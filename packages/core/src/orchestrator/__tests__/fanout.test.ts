@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { ProviderReport, Query } from '@open-access-explorer/shared';
+import type { ProviderReport, Query } from '@sci-open/shared';
 import { fanOut, isComplete, onlyRefused } from '../fanout';
 import { plan } from '../plan';
 import { ProviderCache } from '../provider-cache';
@@ -16,12 +16,11 @@ function stubProvider(
   return {
     id,
     capabilities: {
-      keywordSearch: true, fieldedSearch: true, doiLookup: true, fields: [], yearFilter: true,
-      maxPageSize: 100, reportsTotal: true, suppliesCitations: false,
+      keywordSearch: true, fieldedSearch: true, doiLookup: true,
+      maxPageSize: 100, reportsTotal: true,
       stages: { holds: ['published'], filter: false }, facets: [], ...caps
     },
     translate: () => `native(${id})`,
-    normalizerVersion: 1,
     search: behaviour
   };
 }

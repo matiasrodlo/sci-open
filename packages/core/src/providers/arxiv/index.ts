@@ -1,4 +1,4 @@
-import type { Paper, Query } from '@open-access-explorer/shared';
+import type { Paper, Query } from '@sci-open/shared';
 import { capabilities } from './capabilities';
 import { translate, type TranslateOptions } from './translate';
 import { fetchPage, fetchRecord, type FetchOptions, type RecordFetchOptions } from './fetch';
@@ -28,7 +28,6 @@ export type ProviderSearchResult = {
   papers: Paper[];
   totalHits?: number;
   skipped: SkippedRecord[];
-  latency: number;
 };
 
 export async function search(
@@ -49,10 +48,8 @@ export async function search(
   // document, so this is a real case rather than a defensive one — and a
   // request that cannot mean anything is not worth a round trip.
   if (!nativeQuery) {
-    return { papers: [], skipped: [], latency: 0 };
+    return { papers: [], skipped: [] };
   }
-
-  const started = Date.now();
 
   const payload = await fetchPage(nativeQuery, {
     ...fetchOptions,
@@ -60,11 +57,9 @@ export async function search(
     offset
   });
 
-  const latency = Date.now() - started;
   const { papers, skipped } = normalize(payload, {
     retrievedAt: now().toISOString(),
-    rankOffset: offset,
-    latency
+    rankOffset: offset
   });
 
   const reported = totalHits(payload);
@@ -72,8 +67,7 @@ export async function search(
   return {
     papers,
     ...(reported !== undefined ? { totalHits: reported } : {}),
-    skipped,
-    latency
+    skipped
   };
 }
 
@@ -83,11 +77,9 @@ export type LookupOptions = RecordFetchOptions & { now?: () => Date };
 export async function lookup(nativeId: string, options: LookupOptions): Promise<Paper | null> {
   const { now = () => new Date(), ...fetchOptions } = options;
 
-  const started = Date.now();
   const payload = await fetchRecord(nativeId, fetchOptions);
-  const latency = Date.now() - started;
 
-  const { papers } = normalize(payload, { retrievedAt: now().toISOString(), latency });
+  const { papers } = normalize(payload, { retrievedAt: now().toISOString() });
   return papers[0] ?? null;
 }
 

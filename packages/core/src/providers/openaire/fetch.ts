@@ -1,5 +1,4 @@
 import { getPooledClient } from '../../lib/http-client-factory';
-import { getServiceConfig } from '../../lib/http-pool-config';
 import type { OpenAireParams } from './translate';
 
 /** The only I/O in this provider. */
@@ -66,7 +65,7 @@ export async function fetchPage(
 ): Promise<OpenAirePayload> {
   const { baseUrl = DEFAULT_BASE_URL, pageSize, offset } = options;
 
-  const client = getPooledClient(baseUrl, getServiceConfig('openaire'));
+  const client = getPooledClient(baseUrl);
 
   const response = await client.get<OpenAirePayload>('/researchProducts', {
     params: {
@@ -106,7 +105,7 @@ export async function fetchProduct(
 ): Promise<unknown | null> {
   const { baseUrl = DEFAULT_BASE_URL } = options;
 
-  const client = getPooledClient(baseUrl, getServiceConfig('openaire'));
+  const client = getPooledClient(baseUrl);
 
   const response = await client.get<unknown>(
     `/researchProducts/${encodeURIComponent(id)}`,

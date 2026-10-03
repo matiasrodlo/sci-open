@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { mkdtempSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
-import { SourceBusyError, type FullTextDocument } from '@open-access-explorer/core';
-import { paper, ref } from '@open-access-explorer/core/testing';
+import { SourceBusyError, type FullTextDocument } from '@sci-open/core';
+import { paper, ref } from '@sci-open/core/testing';
 import { readPaper } from '../src/tools/read-paper';
 import { fakeEngine, type FakeOptions } from './fake-engine';
 

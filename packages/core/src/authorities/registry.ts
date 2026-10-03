@@ -1,4 +1,4 @@
-import type { AuthorityCapabilities, AuthorityFacts, AuthorityId, Paper } from '@open-access-explorer/shared';
+import type { AuthorityCapabilities, AuthorityFacts, AuthorityId, Paper } from '@sci-open/shared';
 import { apiKeyFor } from '../lib/api-key';
 import * as crossref from './crossref';
 import * as openalex from './openalex';
@@ -126,7 +126,3 @@ export const AUTHORITIES: AuthorityEntry[] = [
       })
   }
 ];
-
-export function authorityById(id: AuthorityId): AuthorityEntry | undefined {
-  return AUTHORITIES.find(a => a.id === id);
-}

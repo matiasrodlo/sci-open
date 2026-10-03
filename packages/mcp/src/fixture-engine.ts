@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
-import type { Paper, SearchParams, SearchResponseV2 } from '@open-access-explorer/shared';
-import { UpstreamStats, type CitationLink, type Engine, type FullTextDocument } from '@open-access-explorer/core';
+import type { Paper, SearchParams, SearchResponseV2 } from '@sci-open/shared';
+import type { CitationLink, Engine, FullTextDocument } from '@sci-open/core';
 
 /**
  * Recorded answers in place of the sources: how the protocol tests, the
@@ -43,8 +43,6 @@ export function fixtureEngine(fixtures: Fixtures, options: { strict?: boolean } 
   const byDoi = (doi: string) => Object.values(fixtures.papers).find(p => p.doi?.toLowerCase() === doi.toLowerCase()) ?? null;
   const registered = new Set((fixtures.registeredDois ?? []).map(d => d.toLowerCase()));
   return {
-    userAgent: 'sci-open-mcp fixture engine',
-    stats: new UpstreamStats(),
     async search(params, options = {}) {
       const key = fixtureKey(params);
       const response = fixtures.searches[key];
@@ -97,7 +95,7 @@ export function fixtureEngine(fixtures: Fixtures, options: { strict?: boolean } 
 
 function emptyResponse(params: SearchParams): SearchResponseV2 {
   return {
-    papers: [], total: 0, page: params.page ?? 1, pageSize: params.pageSize ?? 10, sort: params.sort ?? 'relevance',
-    facets: {}, complete: true, bounded: false, countsFromSources: false, providers: [], authorities: [], duration: 0
+    papers: [], total: 0, page: params.page ?? 1, pageSize: params.pageSize ?? 10,
+    facets: {}, complete: true, bounded: false, countsFromSources: false, providers: []
   };
 }

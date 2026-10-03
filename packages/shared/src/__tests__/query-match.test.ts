@@ -30,7 +30,6 @@ const paper = (over: Partial<Paper> = {}): Paper => ({
   stage: 'published',
   sources: [],
   fieldSources: {},
-  retrievedAt: '2026-08-29T00:00:00.000Z',
   ...over
 });
 

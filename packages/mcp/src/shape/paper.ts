@@ -1,5 +1,5 @@
 import * as z from 'zod';
-import type { Paper } from '@open-access-explorer/shared';
+import type { Paper } from '@sci-open/shared';
 import { sanitizeText } from '../safety/sanitize';
 
 /** Drops undefined, null, empty strings and empty arrays, so the model never

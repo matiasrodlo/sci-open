@@ -2,7 +2,7 @@
 import './stdout-guard';
 import path from 'path';
 import { serveStdio } from '@modelcontextprotocol/server/stdio';
-import { createEngine, useLogger, type Engine } from '@open-access-explorer/core';
+import { createEngine, useLogger, type Engine } from '@sci-open/core';
 import { createServerFactory } from '../server';
 import { selectTools } from '../toolsets';
 import { readMcpConfig, type McpConfig } from '../config';

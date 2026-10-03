@@ -6,7 +6,7 @@ import { normalize as ncbi } from '../providers/ncbi/normalize';
 import { normalize as openalexFacts } from '../authorities/openalex/normalize';
 import { mergePapers } from '../orchestrator/merge';
 import { applyFacts } from '../orchestrator/enrich';
-import { authorityById } from '../authorities';
+import { AUTHORITIES } from '../authorities';
 import { AT, paper, ref } from '../orchestrator/__tests__/helpers';
 
 /**
@@ -72,7 +72,7 @@ describe('keeping the flag', () => {
     expect(facts).toMatchObject({ retracted: true });
 
     const target = paper({ id: 'crossref:x', doi: '10.1016/s0140-6736(97)11096-0' });
-    applyFacts(target, facts!, authorityById('openalex')!);
+    applyFacts(target, facts!, AUTHORITIES.find(a => a.id === 'openalex')!);
     expect(target.retracted).toBe(true);
     expect(target.fieldSources.retracted).toBe('openalex');
   });

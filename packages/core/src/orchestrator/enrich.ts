@@ -1,8 +1,8 @@
 import {
   isHttpUrl,
-  type AuthorityFacts, type AuthorityReport, type FieldSources, type FullText,
+  type AuthorityFacts, type FieldSources, type FullText,
   type Paper, type ProvenancedField
-} from '@open-access-explorer/shared';
+} from '@sci-open/shared';
 import { preferredPdfUrl, servesInterstitial } from '../lib/pdf-url';
 import { AUTHORITIES, type AuthorityEntry } from '../authorities';
 import type { AuthorityCache } from './authority-cache';
@@ -49,7 +49,13 @@ export type EnrichOptions = {
 
 export type EnrichResult = {
   papers: Paper[];
-  reports: AuthorityReport[];
+  /**
+   * True when the budget ran out with a question still unanswered: some lookup
+   * was put and had not come back, with an answer or a failure, when it
+   * expired. The rescue reads it — a question that might have kept a paper
+   * went unasked, so the set is bounded — and so does nothing else.
+   */
+  cutShort: boolean;
   /**
    * How many of the papers handed in got a usable answer — a lookup came back
    * for them, in time, saying something the caller can act on. A null counts:
@@ -64,10 +70,10 @@ export type EnrichResult = {
    * question answered. Counted as examined, the rescue reported itself
    * complete with a paper dropped that one more second would have kept.
    *
-   * The reports cannot answer this. `asked` is per authority and counts tasks
-   * *started*, so it double-counts a paper two authorities both looked up and
-   * over-counts one whose lookup was abandoned mid-flight. This counts distinct
-   * papers, so `handed in − examined` is the shortfall and nothing else.
+   * A count of lookups cannot answer this: it double-counts a paper two
+   * authorities both looked up and over-counts one whose lookup was abandoned
+   * mid-flight. This counts distinct papers, so `handed in − examined` is the
+   * shortfall and nothing else.
    *
    * The page path ignores it — enrichment there is optional detail, and a paper
    * nobody reached is still returned. The rescue is the caller that needs it,
@@ -256,19 +262,7 @@ export async function enrichPage(
 
   const withDoi = enriched.filter(paper => paper.doi);
   if (authorities.length === 0 || withDoi.length === 0) {
-    return {
-      papers: enriched,
-      reports: authorities.map(authority => ({
-        authority: authority.id,
-        status: 'skipped' as const,
-        asked: 0,
-        answered: 0,
-        applied: 0,
-        skipReason: withDoi.length === 0 ? 'no paper on the page carries a DOI' : 'not consulted',
-        latency: 0
-      })),
-      examined: 0
-    };
+    return { papers: enriched, examined: 0, cutShort: false };
   }
 
   const controller = new AbortController();
@@ -283,10 +277,14 @@ export async function enrichPage(
   const put = new Map<string, number>();
   const answeredFor = new Map<string, number>();
 
-  const tally = new Map<string, { asked: number; settled: number; answered: number; applied: number; errors: number; error?: string; startedAt: number; latency: number }>();
-  for (const authority of authorities) {
-    tally.set(authority.id, { asked: 0, settled: 0, answered: 0, applied: 0, errors: 0, startedAt: Date.now(), latency: 0 });
-  }
+  /**
+   * Lookups started, and lookups that concluded — with facts, with a null, or
+   * with a failure. Kept apart from `answeredFor`, which asks whether a
+   * *paper* was judged: a failure is a conclusion for the lookup and no
+   * judgement of the paper.
+   */
+  let asked = 0;
+  let settled = 0;
 
   try {
     for (const pass of [0, 1] as const) {
@@ -306,8 +304,7 @@ export async function enrichPage(
           if (authority.wants && !authority.wants(paper)) continue;
           put.set(paper.id, (put.get(paper.id) ?? 0) + 1);
           tasks.push(async () => {
-            const counters = tally.get(authority.id)!;
-            counters.asked += 1;
+            asked += 1;
             try {
               const lookup = () => authority.lookup({
                 doi: paper.doi!,
@@ -326,34 +323,21 @@ export async function enrichPage(
               // Answered, including a null: "this authority knows nothing about
               // that DOI" is an answer, and the paper had its chance.
               answeredFor.set(paper.id, (answeredFor.get(paper.id) ?? 0) + 1);
-              counters.settled += 1;
+              settled += 1;
 
-              if (!facts) return;
-              counters.answered += 1;
-              counters.applied += applyFacts(paper, facts, authority);
-            } catch (error) {
+              if (facts) applyFacts(paper, facts, authority);
+            } catch {
               // Deliberately *not* examined. The question was put and came back
               // with nothing usable, so this paper is as unjudged as one the
               // budget never reached — and `candidates - examined` is only the
               // shortfall it claims to be if a failed lookup counts as a gap.
-              counters.errors += 1;
-
-              // Settled all the same, and this is where the two counts part
-              // company. They answer different questions: `examined` asks
-              // whether the *paper* was judged, and a failed lookup leaves it
-              // as unjudged as silence; `settled` asks whether the *authority*
-              // finished the task, and a failure is a conclusion — which is
-              // what the `error` status below is for.
               //
-              // Guarded on the signal for the same reason the success path is.
-              // A lookup that threw *because* the budget aborted it was cut
-              // off rather than concluded, and counting it would let a late
-              // `AbortError` erase the very timeout that caused it.
-              if (!controller.signal.aborted) counters.settled += 1;
-
-              counters.error ??= error instanceof Error ? error.message : String(error);
-            } finally {
-              counters.latency = Date.now() - counters.startedAt;
+              // Settled all the same: the lookup concluded. Guarded on the
+              // signal for the same reason the success path is — a lookup that
+              // threw *because* the budget aborted it was cut off rather than
+              // concluded, and counting it would let a late `AbortError` erase
+              // the very cut that caused it.
+              if (!controller.signal.aborted) settled += 1;
             }
           });
         }
@@ -367,48 +351,13 @@ export async function enrichPage(
     clearTimeout(expiry);
   }
 
-  const expired = controller.signal.aborted;
-
-  const reports: AuthorityReport[] = authorities.map(authority => {
-    const c = tally.get(authority.id)!;
-
-    // A budget that ran out is a timeout for whoever had work left, and
-    // nothing at all for an authority that had already finished.
-    //
-    // `settled` is what says which of those an authority is, and it had to be
-    // counted separately because no combination of the others could. The test
-    // was `answered + errors < asked`, and `answered` only counts a lookup that
-    // returned *facts* — so every null answer looked like outstanding work.
-    // Unpaywall returns nulls for most of a page by nature, so any expiry at
-    // all reported it as having timed out, with the budget named as the reason,
-    // when it had answered every question it was asked and answered them fast.
-    // Measured on two papers with a 50ms budget and a second authority hanging:
-    // `{ asked: 2, answered: 0, status: 'timeout' }`.
-    const status =
-      c.asked === 0 ? 'skipped'
-      : expired && c.settled < c.asked ? 'timeout'
-      : c.errors > 0 && c.answered === 0 ? 'error'
-      : 'ok';
-
-    return {
-      authority: authority.id,
-      status,
-      asked: c.asked,
-      answered: c.answered,
-      applied: c.applied,
-      ...(status === 'error' && c.error !== undefined ? { error: c.error } : {}),
-      ...(status === 'timeout'
-        ? { error: `exceeded the ${budgetMs}ms enrichment budget` }
-        : {}),
-      ...(c.asked === 0
-        ? { skipReason: 'nothing on this page needed it' }
-        : {}),
-      latency: c.latency
-    };
-  });
+  // A null is an answer: an authority that knows nothing about most of a page
+  // — Unpaywall, by nature — has still finished with it. Only a question put
+  // and not concluded when the budget expired leaves the page cut short.
+  const cutShort = controller.signal.aborted && settled < asked;
 
   let examined = 0;
   for (const [id, count] of put) if (answeredFor.get(id) === count) examined += 1;
 
-  return { papers: enriched, reports, examined };
+  return { papers: enriched, examined, cutShort };
 }

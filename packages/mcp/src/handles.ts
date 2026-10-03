@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import * as z from 'zod';
-import { PROVIDERS } from '@open-access-explorer/core';
+import { PROVIDERS } from '@sci-open/core';
 import { canonicalJson } from './provenance';
 import { ToolError } from './errors';
 

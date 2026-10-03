@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { getPooledClient } from '../../lib/http-client-factory';
-import { getServiceConfig } from '../../lib/http-pool-config';
 import { extractContactEmail } from '../../lib/contact-email';
 
 /** The only I/O in this authority. */
@@ -64,7 +63,7 @@ export async function lookupDoi(doi: string, options: FetchOptions): Promise<Unp
   const email = userAgent ? extractContactEmail(userAgent) : undefined;
   if (!email) throw new UnpaywallUnidentifiedError();
 
-  const client = getPooledClient(baseUrl, getServiceConfig('unpaywall'));
+  const client = getPooledClient(baseUrl);
 
   try {
     const response = await client.get<UnpaywallPayload>(`/${doiPath(doi)}`, {

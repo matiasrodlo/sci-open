@@ -1,5 +1,5 @@
-import type { PaperStage, Query, QueryField, QueryNode, QueryValue } from '@open-access-explorer/shared';
-import { fieldsUsed } from '@open-access-explorer/shared';
+import type { PaperStage, Query, QueryField, QueryNode, QueryValue } from '@sci-open/shared';
+import { fieldsUsed } from '@sci-open/shared';
 import { dropsForGood, flatStatesWhole, isInitial } from '../render-query';
 import { STAGES } from './normalize';
 

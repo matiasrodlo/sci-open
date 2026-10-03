@@ -1,5 +1,5 @@
 import * as z from 'zod';
-import { parseQuery } from '@open-access-explorer/core';
+import { parseQuery } from '@sci-open/core';
 import { defineTool } from '../framework/define-tool';
 import { presentPage } from './present-page';
 import { presentCounts, searchOutputSchema } from './present-counts';

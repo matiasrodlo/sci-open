@@ -1,6 +1,6 @@
 import * as z from 'zod';
-import type { Paper } from '@open-access-explorer/shared';
-import { parseQuery } from '@open-access-explorer/core';
+import type { Paper } from '@sci-open/shared';
+import { parseQuery } from '@sci-open/core';
 import pLimit from '../p-limit';
 import { defineTool, type ToolDeps } from '../framework/define-tool';
 import { toToolError } from '../errors';

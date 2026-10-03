@@ -1,5 +1,5 @@
-import type { AuthorityFacts, FullText, PaperStage } from '@open-access-explorer/shared';
-import { fullTextAt, stripMarkup } from '@open-access-explorer/shared';
+import type { AuthorityFacts, FullText, PaperStage } from '@sci-open/shared';
+import { fullTextAt, stripMarkup } from '@sci-open/shared';
 import type { CrossrefPayload } from './fetch';
 
 /** Crossref payload -> AuthorityFacts. Pure. */

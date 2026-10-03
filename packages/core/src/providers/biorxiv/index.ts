@@ -1,4 +1,4 @@
-import type { Paper, Query } from '@open-access-explorer/shared';
+import type { Paper, Query } from '@sci-open/shared';
 import { capabilities } from './capabilities';
 import { fetchByDoi, SERVERS, type FetchOptions, type BiorxivServer } from './fetch';
 import { normalize, type SkippedRecord } from './normalize';
@@ -28,7 +28,6 @@ export type ProviderSearchResult = {
   papers: Paper[];
   totalHits?: number;
   skipped: SkippedRecord[];
-  latency: number;
 };
 
 export async function search(query: Query, options: SearchOptions): Promise<ProviderSearchResult> {
@@ -37,17 +36,14 @@ export async function search(query: Query, options: SearchOptions): Promise<Prov
   // `capabilities.keywordSearch` is false, so the orchestrator never routes a
   // keyword query here. Returning empty rather than scanning a date window is
   // the same answer stated in the one place that would still be reachable.
-  if (!query.doi) return { papers: [], skipped: [], latency: 0 };
+  if (!query.doi) return { papers: [], skipped: [] };
 
-  const started = Date.now();
   const collections = await fetchByDoi(query.doi, fetchOptions);
-  const latency = Date.now() - started;
 
   const { papers, skipped } = normalize(collections, {
     retrievedAt: now().toISOString(),
-    rankOffset: offset,
-    latency
+    rankOffset: offset
   });
 
-  return { papers, skipped, latency };
+  return { papers, skipped };
 }

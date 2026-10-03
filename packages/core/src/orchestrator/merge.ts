@@ -1,4 +1,4 @@
-import type { FieldSources, Paper, ProvenancedField, ProviderId } from '@open-access-explorer/shared';
+import type { FieldSources, Paper, ProvenancedField, ProviderId } from '@sci-open/shared';
 import { facetKey } from './facet-key';
 
 /**

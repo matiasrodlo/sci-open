@@ -1,5 +1,5 @@
-import type { AuthorityFacts, FullText, OaRoute, PaperStage } from '@open-access-explorer/shared';
-import { fullTextAt, httpUrl } from '@open-access-explorer/shared';
+import type { AuthorityFacts, FullText, OaRoute, PaperStage } from '@sci-open/shared';
+import { fullTextAt, httpUrl } from '@sci-open/shared';
 import { preferredPdfUrl } from '../../lib/pdf-url';
 import type { UnpaywallPayload } from './fetch';
 

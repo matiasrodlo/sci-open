@@ -1,5 +1,4 @@
 import { getPooledClient } from '../../lib/http-client-factory';
-import { getServiceConfig } from '../../lib/http-pool-config';
 import { parseStringPromise } from 'xml2js';
 
 /**
@@ -48,7 +47,7 @@ async function get(
 ): Promise<ArxivFeed> {
   const { baseUrl = DEFAULT_BASE_URL, timeoutMs, signal, userAgent } = options;
 
-  const client = getPooledClient(baseUrl, getServiceConfig('arxiv'));
+  const client = getPooledClient(baseUrl);
 
   // The base URL is the whole endpoint, so the request path is empty.
   const response = await client.get<string>('', {

@@ -1,5 +1,5 @@
 {
-  "name": "@open-access-explorer/shared",
+  "name": "@sci-open/shared",
   "version": "1.0.0",
   "description": "Shared types and utilities",
   "main": "dist/index.js",

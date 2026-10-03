@@ -1,5 +1,5 @@
-import type { Paper, PaperStage, FullText, SourceRef } from '@open-access-explorer/shared';
-import { fullTextAt, httpUrl, stripMarkup } from '@open-access-explorer/shared';
+import type { Paper, PaperStage, FullText, SourceRef } from '@sci-open/shared';
+import { fullTextAt, httpUrl, stripMarkup } from '@sci-open/shared';
 import type { EuropePmcPayload } from './fetch';
 
 /**
@@ -17,7 +17,6 @@ export type NormalizeOptions = {
   /** Rank of the first record in this page, for paged reads. */
   rankOffset?: number;
   /** Round trip time of the request that produced this payload, if known. */
-  latency?: number;
 };
 
 export type SkippedRecord = {
@@ -158,8 +157,7 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
     ...(pickLandingPage(raw) ? { landingPage: pickLandingPage(raw)! } : {}),
 
     sources: [ref],
-    fieldSources: {},
-    retrievedAt: ref.retrievedAt
+    fieldSources: {}
   };
 }
 
@@ -167,7 +165,7 @@ export function normalize(
   payload: EuropePmcPayload,
   options: NormalizeOptions
 ): NormalizeOutcome {
-  const { retrievedAt, rankOffset = 0, latency } = options;
+  const { retrievedAt, rankOffset = 0 } = options;
   const results = payload?.resultList?.result ?? [];
 
   const papers: Paper[] = [];
@@ -180,8 +178,7 @@ export function normalize(
       // Position in Europe PMC's own result list — provenance, and the input
       // to rank fusion.
       rank: rankOffset + index,
-      retrievedAt,
-      ...(latency !== undefined ? { latency } : {})
+      retrievedAt
     };
 
     try {

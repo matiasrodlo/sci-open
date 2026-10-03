@@ -1,4 +1,4 @@
-import type { ProviderCapabilities } from '@open-access-explorer/shared';
+import type { ProviderCapabilities } from '@sci-open/shared';
 
 /**
  * What the arXiv Atom API can actually do.
@@ -25,34 +25,11 @@ export const capabilities: ProviderCapabilities = {
 
   skipReason: { doiLookup: 'no DOI index' },
 
-  fields: [
-    'title',
-    'abstract',
-    'authors',
-    'year',
-    // From `arxiv:journal_ref`, present once a preprint has appeared
-    // somewhere. The old connector never read it, so arXiv was one of only two
-    // providers contributing no venue at all.
-    'venue',
-    'topics',
-    'language',
-    'fullText',
-    'landingPage'
-  ],
-
-  // Verified, not assumed: `submittedDate:[a TO b]` narrowed a 16-hit query to
-  // 3, every one inside the bound. See the note in `translate` for the form
-  // that does *not* work.
-  yearFilter: true,
-
   // arXiv asks that a single request stay at or below 2000 results.
   maxPageSize: 2000,
 
   // `opensearch:totalResults`, on every feed.
   reportsTotal: true,
-
-  // arXiv holds no citation data.
-  suppliesCitations: false,
 
   // Every record is a preprint; `normalize` says so of all of them. Nothing to
   // narrow, so a search for peer-reviewed papers skips arXiv instead.

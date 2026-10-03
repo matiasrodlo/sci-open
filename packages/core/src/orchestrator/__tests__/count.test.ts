@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import type { ProviderCapabilities, ProviderId, Query, SearchParams } from '@open-access-explorer/shared';
+import type { ProviderCapabilities, ProviderId, Query, SearchParams } from '@sci-open/shared';
 import { countSearch } from '../count';
-import { runOrchestrator } from '../from-search-params';
+import { runSearch } from '../from-search-params';
 import { ProviderCache } from '../provider-cache';
 import type { ProviderEntry } from '../registry';
 import { paper, ref } from './helpers';
@@ -14,8 +14,8 @@ import { paper, ref } from './helpers';
 type Asked = { query: Query; depth: number; openAccessOnly: boolean; native: string };
 
 const capabilities = (over: Partial<ProviderCapabilities> = {}): ProviderCapabilities => ({
-  keywordSearch: true, fieldedSearch: true, doiLookup: true, fields: [], yearFilter: true,
-  maxPageSize: 100, reportsTotal: true, suppliesCitations: false,
+  keywordSearch: true, fieldedSearch: true, doiLookup: true,
+  maxPageSize: 100, reportsTotal: true,
   stages: { holds: ['preprint', 'published'], filter: true }, facets: [],
   ...over
 });
@@ -28,7 +28,6 @@ function source(id: ProviderId, totalHits: number, over: Partial<ProviderCapabil
     id,
     capabilities: capabilities(over),
     translate,
-    normalizerVersion: 1,
     search: async ({ query, depth, openAccessOnly }) => {
       asked.push({ query, depth, openAccessOnly, native: translate(query, { openAccessOnly }) });
       const papers = Array.from({ length: Math.min(depth, 3) }, (_, i) =>
@@ -120,7 +119,7 @@ describe('countSearch', () => {
     expect(arxiv.asked).toHaveLength(1);
 
     // The cache keys on the depth: a search reads its own records.
-    await runOrchestrator({ q: 'crispr' }, { providers: [arxiv.entry], authorities: [], cache });
+    await runSearch({ q: 'crispr' }, { providers: [arxiv.entry], authorities: [], cache });
     expect(arxiv.asked.map(a => a.depth)).toEqual([1, 600]);
   });
 });
@@ -131,7 +130,7 @@ describe('a count is a count of the search it previews', () => {
     ['a year range', { q: 'crispr', filters: { yearFrom: 2020, yearTo: 2024 } }],
     ['a publication type', { q: 'crispr', filters: { publicationType: ['preprint'] } }],
     ['closed papers included', { q: 'crispr', filters: { openAccessOnly: false } }],
-    ['ticked years', { q: 'crispr', filters: { year: ['2021', '2022'] } }]
+    ['a source filter', { q: 'crispr', filters: { source: ['arxiv'] } }]
   ];
 
   it.each(variants)('plans the same sources and sends each the same query: %s', async (_name, params) => {
@@ -139,7 +138,7 @@ describe('a count is a count of the search it previews', () => {
     const searched = [source('arxiv', 10), source('doaj', 10, { stages: { holds: ['published'], filter: false } })];
 
     await countSearch(params, { providers: counted.map(s => s.entry) });
-    await runOrchestrator(params, { providers: searched.map(s => s.entry), authorities: [] });
+    await runSearch(params, { providers: searched.map(s => s.entry), authorities: [] });
 
     const asked = (sources: typeof counted) => sources.filter(s => s.asked.length > 0).map(s => s.entry.id);
     expect(asked(counted)).toEqual(asked(searched));

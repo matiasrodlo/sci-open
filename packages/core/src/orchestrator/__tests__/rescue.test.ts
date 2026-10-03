@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { AuthorityFacts, Paper } from '@open-access-explorer/shared';
+import type { AuthorityFacts, Paper } from '@sci-open/shared';
 import { rescueCandidates, canRescue } from '../rescue';
 import { AuthorityCache } from '../authority-cache';
 import type { AuthorityEntry } from '../../authorities';
@@ -84,19 +84,6 @@ describe('rescueCandidates', () => {
 
     expect(papers).toHaveLength(1);
     expect(papers[0].oaStatus).toBe('gold');
-  });
-
-  it('re-tests a rescued paper against the filters the caller ticked', async () => {
-    // The paper passed `oaStatus: ['gold']` while its route was still unknown
-    // only because the filter had nothing to compare against. Admitting it on
-    // the strength of the gate alone would put a bronze paper on a page the
-    // caller asked to be gold.
-    const { papers } = await rescueCandidates([candidate()], {
-      authorities: [unpaywall({ fullText: PDF, oaStatus: 'bronze' })],
-      filters: { oaStatus: ['gold'] }
-    });
-
-    expect(papers).toHaveLength(0);
   });
 
   it('spends the limit on the highest-ranked candidates and says it was bounded', async () => {
@@ -184,13 +171,12 @@ describe('rescueCandidates', () => {
     });
 
     it('counts a paper once however many authorities asked about it', async () => {
-      // `asked` in the authority reports is per authority and would say two.
+      // A count of lookups would say two.
       const { report } = await rescueCandidates([candidate()], {
         authorities: [authority('unpaywall', null), authority('openalex', { fullText: PDF })]
       });
 
       expect(report.examined).toBe(1);
-      expect(report.authorities.reduce((n, r) => n + r.asked, 0)).toBe(2);
     });
   });
 

@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { getPooledClient } from '../../lib/http-client-factory';
-import { getServiceConfig } from '../../lib/http-pool-config';
 
 /** The only I/O in this authority. */
 
@@ -27,7 +26,7 @@ export type CrossrefPayload = { message?: unknown };
 export async function lookupDoi(doi: string, options: FetchOptions): Promise<CrossrefPayload | null> {
   const { baseUrl = DEFAULT_BASE_URL, timeoutMs, signal, userAgent } = options;
 
-  const client = getPooledClient(baseUrl, getServiceConfig('crossref'));
+  const client = getPooledClient(baseUrl);
 
   try {
     const response = await client.get<CrossrefPayload>(`/works/${encodeURIComponent(doi)}`, {

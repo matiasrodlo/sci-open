@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { ProviderId, ProviderReport } from '@open-access-explorer/shared';
+import type { ProviderId, ProviderReport } from '@sci-open/shared';
 import { QuotaState } from '../quota';
 import { fanOut, isComplete } from '../fanout';
 import { plan } from '../plan';
@@ -63,12 +63,11 @@ function source(id: ProviderId, search: ProviderEntry['search']): ProviderEntry 
   const entry = {
     id,
     capabilities: {
-      keywordSearch: true, fieldedSearch: true, doiLookup: true, fields: [], yearFilter: true,
-      maxPageSize: 100, reportsTotal: true, suppliesCitations: false,
+      keywordSearch: true, fieldedSearch: true, doiLookup: true, fields: [],
+      maxPageSize: 100, reportsTotal: true,
       stages: { holds: ['published'], filter: false }, facets: []
     },
     translate: () => 'native',
-    normalizerVersion: 1,
     calls: 0,
     search: async (args: Parameters<ProviderEntry['search']>[0]) => {
       entry.calls++;

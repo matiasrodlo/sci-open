@@ -3,7 +3,7 @@ import { createHash } from 'crypto';
 import { mkdtempSync, readFileSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
-import type { ProviderReport } from '@open-access-explorer/shared';
+import type { ProviderReport } from '@sci-open/shared';
 import { buildProvenance, canonicalJson, PROVENANCE_KEY } from '../src/provenance';
 import { decodeSearchHandle, encodeSearchHandle, type SearchSpec } from '../src/handles';
 import { hasVisibleText, sanitizeText, stripInvisible } from '../src/safety/sanitize';

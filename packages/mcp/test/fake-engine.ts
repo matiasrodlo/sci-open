@@ -1,5 +1,5 @@
-import type { Paper, SearchParams, SearchResponseV2 } from '@open-access-explorer/shared';
-import { parseQuery, UpstreamStats, type CitationLink, type DoiResolution, type Engine, type FullTextDocument } from '@open-access-explorer/core';
+import type { Paper, SearchParams, SearchResponseV2 } from '@sci-open/shared';
+import { parseQuery, type CitationLink, type DoiResolution, type Engine, type FullTextDocument } from '@sci-open/core';
 import { defaultMcpConfig } from '../src/config';
 import { nullMetrics } from '../src/metrics';
 import type { ToolDeps } from '../src/framework/define-tool';
@@ -48,8 +48,6 @@ export function fakeEngine(papers: readonly Paper[], options: FakeOptions = {}):
   };
 
   const engine: Engine = {
-    userAgent: 'fake',
-    stats: new UpstreamStats(),
     async search(params: SearchParams, extra = {}) {
       const query = params.doi ?? params.q ?? '';
       parseQuery(query); // throws as the live engine would
@@ -115,8 +113,7 @@ export function fakeEngine(papers: readonly Paper[], options: FakeOptions = {}):
 
 function response(papers: Paper[], total: number, page: number, pageSize: number): SearchResponseV2 {
   return {
-    papers, total, page, pageSize, sort: 'relevance', facets: {}, complete: true, bounded: false, countsFromSources: false,
-    providers: [{ provider: 'openalex', status: 'ok', retrieved: total, totalHits: total, latency: 1 }],
-    authorities: [], duration: 1
+    papers, total, page, pageSize, facets: {}, complete: true, bounded: false, countsFromSources: false,
+    providers: [{ provider: 'openalex', status: 'ok', retrieved: total, totalHits: total, latency: 1 }]
   };
 }

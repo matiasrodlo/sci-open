@@ -1,5 +1,4 @@
 import { getPooledClient } from '../../lib/http-client-factory';
-import { getServiceConfig } from '../../lib/http-pool-config';
 import { usableApiKey } from '../../lib/api-key';
 
 /**
@@ -53,7 +52,7 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
   // 401, but sending a placeholder as a credential is wrong either way.
   const key = usableApiKey(apiKey);
 
-  const client = getPooledClient(baseUrl, getServiceConfig('doaj'));
+  const client = getPooledClient(baseUrl);
 
   const response = await client.get<DoajPayload>(
     `/search/articles/${encodeURIComponent(nativeQuery)}`,
@@ -119,7 +118,7 @@ export async function fetchArticle(
 
   const key = usableApiKey(apiKey);
 
-  const client = getPooledClient(baseUrl, getServiceConfig('doaj'));
+  const client = getPooledClient(baseUrl);
 
   try {
     const response = await client.get<Record<string, unknown>>(

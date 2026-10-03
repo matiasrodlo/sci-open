@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import type { Paper, ProviderReport, Query } from '@open-access-explorer/shared';
+import type { Paper, ProviderReport, Query } from '@sci-open/shared';
 import { SingleFlight } from '../lib/single-flight';
 import type { Facets } from './facet';
 import { onlyRefused } from './fanout';
@@ -52,8 +52,8 @@ export type ResultSetKeyParts = {
   facetQueries: FacetQueries | undefined;
   facetBudgetMs: number;
   filtersSent: boolean;
-  /** A normaliser change changes the papers, as it does the provider cache's key. */
-  providers: ReadonlyArray<{ id: string; normalizerVersion: number }>;
+  /** The providers asked: a search narrowed to some sources is a different set. */
+  providers: readonly string[];
   rescue: { authorities: readonly string[]; limit: number; budgetMs: number };
 };
 
@@ -106,8 +106,7 @@ export const DEFAULT_PARTIAL_COUNTS_TTL_MS = 60 * 1000;
  *
  * Serialised bytes, not heap. Measured on 2026-10-01 by holding the sets of
  * live broad searches and dropping them: five released 124 MB of heap against
- * 38.6 MB charged, three 60 MB against 23 MB — 2.6 to 3.2 times, the factor
- * `docs/configuration.md` gives the two budgets that can be configured.
+ * 38.6 MB charged, three 60 MB against 23 MB — 2.6 to 3.2 times.
  */
 export const DEFAULT_RESULT_SET_MAX_BYTES = 64 * 1024 * 1024;
 
@@ -210,11 +209,6 @@ export class ResultSetCache {
         if (started) throw error.reason;
       }
     }
-  }
-
-  clear(): void {
-    this.entries.clear();
-    this.held = 0;
   }
 
   stats(): { entries: number; bytes: number; maxBytes: number } {

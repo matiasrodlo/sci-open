@@ -1,4 +1,4 @@
-import type { Query, QueryField } from '@open-access-explorer/shared';
+import type { Query, QueryField } from '@sci-open/shared';
 import { cannotSend, flatTerms, joinFlat, nameAsWords, renderExpression, type Dialect } from '../render-query';
 
 /**

@@ -1,4 +1,4 @@
-import type { Paper, ProviderId, ProviderReport, Query } from '@open-access-explorer/shared';
+import type { Paper, ProviderId, ProviderReport, Query } from '@sci-open/shared';
 import type { Plan } from './plan';
 import type { ProviderCache } from './provider-cache';
 
@@ -147,8 +147,7 @@ export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOut
           provider: provider.id,
           nativeQuery,
           depth,
-          offset,
-          normalizerVersion: provider.normalizerVersion
+          offset
         },
         () => withBudget(timeoutMs, work)
       );

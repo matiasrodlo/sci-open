@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import type { Query } from '@open-access-explorer/shared';
+import type { Query } from '@sci-open/shared';
 import { countFacets, paced, type CountSpec, type ProviderFacetArgs } from '../count-facets';
 
 /**

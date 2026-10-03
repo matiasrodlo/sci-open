@@ -1,4 +1,4 @@
-import type { ProviderCapabilities } from '@open-access-explorer/shared';
+import type { ProviderCapabilities } from '@sci-open/shared';
 
 /**
  * What the bioRxiv/medRxiv API can do.
@@ -36,19 +36,11 @@ export const capabilities: ProviderCapabilities = {
    */
   doiLookup: true,
 
-  fields: ['title', 'abstract', 'authors', 'year', 'venue', 'topics', 'language', 'fullText', 'landingPage'],
-
-  // No query language, so no year clause either — the window is expressed in
-  // the path, and a DOI lookup takes no bounds.
-  yearFilter: false,
-
   // The details endpoint returns a fixed 30 records per cursor page.
   maxPageSize: 30,
 
   // A DOI lookup has no corpus-wide count to report.
   reportsTotal: false,
-
-  suppliesCitations: false,
 
   // A preprint server, and `normalize` marks every record one.
   stages: { holds: ['preprint'], filter: false },

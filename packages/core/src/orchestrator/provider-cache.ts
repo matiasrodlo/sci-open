@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import type { ProviderId } from '@open-access-explorer/shared';
+import type { ProviderId } from '@sci-open/shared';
 import { SingleFlight } from '../lib/single-flight';
 import type { ProviderFacetOutcome, ProviderSearchOutcome } from './registry';
 
@@ -32,7 +32,6 @@ export type ProviderCacheKeyParts = {
   nativeQuery: string;
   depth: number;
   offset: number;
-  normalizerVersion: number;
 };
 
 export function providerCacheKey(parts: ProviderCacheKeyParts): string {
@@ -40,12 +39,11 @@ export function providerCacheKey(parts: ProviderCacheKeyParts): string {
     parts.provider,
     parts.nativeQuery,
     `depth=${parts.depth}`,
-    `offset=${parts.offset}`,
-    `v=${parts.normalizerVersion}`
+    `offset=${parts.offset}`
   ].join('|');
 
   // Hashed for a bounded key length. The provider stays in the clear so
-  // entries remain greppable and one provider can be invalidated on its own.
+  // entries remain greppable.
   return `provider:${parts.provider}:${createHash('sha256').update(canonical).digest('hex').slice(0, 32)}`;
 }
 
@@ -55,22 +53,19 @@ export function providerCacheKey(parts: ProviderCacheKeyParts): string {
  * Its own key rather than a search key with a marker in it: the facets are
  * counted under up to three queries at once — a facet is counted with its own
  * selection lifted — and against a window of years, and every one of those
- * changes the answer. Prefixed like a search key so `invalidateProvider`
- * reaches both.
+ * changes the answer.
  */
 export type FacetCacheKeyParts = {
   provider: ProviderId;
   requests: ReadonlyArray<{ facet: string; nativeQuery: string }>;
   years: readonly number[];
-  normalizerVersion: number;
 };
 
 export function facetCacheKey(parts: FacetCacheKeyParts): string {
   const canonical = [
     parts.provider,
     ...parts.requests.map(r => `${r.facet}=${r.nativeQuery}`).sort(),
-    `years=${parts.years.join(',')}`,
-    `v=${parts.normalizerVersion}`
+    `years=${parts.years.join(',')}`
   ].join('|');
 
   return `provider:${parts.provider}:facets:${createHash('sha256').update(canonical).digest('hex').slice(0, 32)}`;
@@ -293,21 +288,6 @@ export class ProviderCache {
       if (this.held <= this.maxBytes) return;
       this.drop(key);
     }
-  }
-
-  /** Drops every entry for one provider, leaving the others intact. */
-  invalidateProvider(provider: ProviderId): number {
-    const prefix = `provider:${provider}:`;
-    let removed = 0;
-    for (const key of [...this.entries.keys()]) {
-      if (key.startsWith(prefix) && this.drop(key)) removed++;
-    }
-    return removed;
-  }
-
-  clear(): void {
-    this.entries.clear();
-    this.held = 0;
   }
 
   get size(): number {

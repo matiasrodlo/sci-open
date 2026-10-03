@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { QueryParseError, formatExpression } from '@open-access-explorer/shared';
+import { QueryParseError, formatExpression } from '@sci-open/shared';
 import { parseQuery } from '../parse-query';
 
 /**

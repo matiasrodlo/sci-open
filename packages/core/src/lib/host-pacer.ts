@@ -16,9 +16,8 @@ const realClock: Clock = { now: () => Date.now(), sleep: ms => new Promise(resol
  * sleeps until it. One whose slot is further off than it will wait gets
  * `SourceBusyError` and takes nothing, so a refusal never delays anyone else.
  *
- * Per process, not per deployment: two API replicas would each send at this
- * rate. Divide the interval among them, or keep the slot in Redis, before
- * running more than one.
+ * Per process, not per deployment: two server replicas would each send at
+ * this rate. Divide the interval among them before running more than one.
  */
 export class HostPacer {
   private nextSlot = 0;
@@ -42,9 +41,8 @@ export class HostPacer {
 /**
  * `Crawl-delay: 15` in arXiv's robots.txt, for /html and /pdf alike, which
  * also says indiscriminate automated downloads are not permitted (read
- * 2026-10-02). Two arXiv paths stay outside this pacer: the search provider,
- * which talks to export.arxiv.org's API under that API's own terms, and the
- * API's PDF route, which serves one file to a person who clicked.
+ * 2026-10-02). The search provider stays outside this pacer: it talks to
+ * export.arxiv.org's API under that API's own terms.
  */
 export const ARXIV_PACER = new HostPacer('arxiv.org', 15_000);
 

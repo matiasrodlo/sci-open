@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Query } from '@open-access-explorer/shared';
+import type { Query } from '@sci-open/shared';
 import { translate } from '../translate';
 import { capabilities } from '../capabilities';
 
@@ -60,10 +60,6 @@ describe('translate — DOI', () => {
 });
 
 describe('capabilities — declared from measurement', () => {
-  it('does not claim citations, which CORE reports as zero', () => {
-    expect(capabilities.suppliesCitations).toBe(false);
-  });
-
   it('caps the page at what was verified to return', () => {
     // 25 came back in 35.6s; 50 failed and 100 timed out at 90s.
     expect(capabilities.maxPageSize).toBe(25);
@@ -76,14 +72,11 @@ describe('capabilities — declined on latency, not on quality', () => {
     // 38.2, 42.7 seconds and one HTTP 500. Four in ten land inside the
     // orchestrator's 20s budget, and a provider that misses it six times in
     // ten spends the `complete: false` signal on itself.
-    const { canServe } = await import('@open-access-explorer/shared');
     expect(capabilities.keywordSearch).toBe(false);
-    expect(canServe(capabilities, {})).toBe(false);
   });
 
   it('answers a DOI lookup, which was inside the budget every time', async () => {
     // 5.9s, 12.9s, 15.9s, 15.9s — median 14.4s.
-    const { canServe } = await import('@open-access-explorer/shared');
-    expect(canServe(capabilities, { doi: '10.1038/srep09811' })).toBe(true);
+    expect(capabilities.doiLookup).toBe(true);
   });
 });

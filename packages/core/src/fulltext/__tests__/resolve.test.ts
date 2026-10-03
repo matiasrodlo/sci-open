@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'fs';
 import path from 'path';
-import type { Paper } from '@open-access-explorer/shared';
+import type { Paper } from '@sci-open/shared';
 
 /**
  * Which tier answers, and what the reader is told when none can. Every

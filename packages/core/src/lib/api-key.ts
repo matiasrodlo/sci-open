@@ -1,8 +1,9 @@
 /**
  * Whether a configured API key is actually a key.
  *
- * `docs/env.example` ships placeholders like `your_datacite_api_key_here`, and
- * a `.env` copied from it has them in every slot. Sent as a credential they are
+ * The sample env file this repository shipped had placeholders like
+ * `your_datacite_api_key_here`, and a `.env` copied from it has them in every
+ * slot. Sent as a credential they are
  * worse than nothing: DataCite answers `Authorization: Bearer
  * your_datacite_api_key_here` with **HTTP 401**, where the same request with no
  * header at all answers 200. So an unconfigured key does not degrade the

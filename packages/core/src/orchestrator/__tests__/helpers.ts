@@ -1,4 +1,4 @@
-import type { Paper, ProviderId, SourceRef } from '@open-access-explorer/shared';
+import type { Paper, ProviderId, SourceRef } from '@sci-open/shared';
 
 export const AT = '2026-08-29T00:00:00.000Z';
 
@@ -16,7 +16,6 @@ export function paper(over: Partial<Paper> = {}): Paper {
     stage: 'published',
     sources: [ref('europepmc')],
     fieldSources: {},
-    retrievedAt: AT,
     fullText: { url: 'https://example.org/p.pdf', kind: 'pdf', verified: false },
     ...over
   };

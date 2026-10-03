@@ -1,4 +1,4 @@
-import { fullTextAt, httpUrl, stripMarkup, type Paper, type FullText, type SourceRef } from '@open-access-explorer/shared';
+import { fullTextAt, httpUrl, stripMarkup, type Paper, type FullText, type SourceRef } from '@sci-open/shared';
 
 /**
  * CORE payload -> Paper[]. Pure, and isolated per record.
@@ -9,7 +9,7 @@ import { fullTextAt, httpUrl, stripMarkup, type Paper, type FullText, type Sourc
  */
 
 export type CorePayload = { totalHits?: number; results?: unknown[] };
-export type NormalizeOptions = { retrievedAt: string; rankOffset?: number; latency?: number };
+export type NormalizeOptions = { retrievedAt: string; rankOffset?: number };
 export type SkippedRecord = { index: number; nativeId?: string; reason: string };
 export type NormalizeOutcome = { papers: Paper[]; skipped: SkippedRecord[] };
 
@@ -117,13 +117,12 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
     landingPage: pickLandingPage(raw, doi, nativeId),
 
     sources: [ref],
-    fieldSources: {},
-    retrievedAt: ref.retrievedAt
+    fieldSources: {}
   };
 }
 
 export function normalize(payload: CorePayload, options: NormalizeOptions): NormalizeOutcome {
-  const { retrievedAt, rankOffset = 0, latency } = options;
+  const { retrievedAt, rankOffset = 0 } = options;
   const results = payload?.results ?? [];
 
   const papers: Paper[] = [];
@@ -135,8 +134,7 @@ export function normalize(payload: CorePayload, options: NormalizeOptions): Norm
       provider: 'core',
       nativeId,
       rank: rankOffset + index,
-      retrievedAt,
-      ...(latency !== undefined ? { latency } : {})
+      retrievedAt
     };
 
     try {

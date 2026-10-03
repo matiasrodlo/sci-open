@@ -1,4 +1,4 @@
-import type { Paper, Query } from '@open-access-explorer/shared';
+import type { Paper, Query } from '@sci-open/shared';
 import { capabilities } from './capabilities';
 import { translate, toParams, type TranslateOptions } from './translate';
 import { fetchPage, fetchProduct, OpenAireUnavailableError, type FetchOptions } from './fetch';
@@ -21,16 +21,13 @@ export type ProviderSearchResult = {
   papers: Paper[];
   totalHits?: number;
   skipped: SkippedRecord[];
-  latency: number;
 };
 
 export async function search(query: Query, options: SearchOptions): Promise<ProviderSearchResult> {
   const { openAccessOnly, pageSize = 50, offset = 0, now = () => new Date(), ...fetchOptions } = options;
 
   const params = toParams(query, { openAccessOnly });
-  if (!params.search && !params.pid) return { papers: [], skipped: [], latency: 0 };
-
-  const started = Date.now();
+  if (!params.search && !params.pid) return { papers: [], skipped: [] };
 
   // OpenAIRE serves at most 100 per page and the orchestrator asks for `depth`
   // — 600 by default — so a single page returned a sixth of what was requested
@@ -50,13 +47,12 @@ export async function search(query: Query, options: SearchOptions): Promise<Prov
     totalOf: totalHits
   });
 
-  const latency = Date.now() - started;
 
   // Rebuilt as the one payload `normalize` reads, which is what keeps this
   // module the only place that knows a read was ever more than one request.
   const { papers, skipped } = normalize(
     { results: items },
-    { retrievedAt: now().toISOString(), rankOffset: offset, latency }
+    { retrievedAt: now().toISOString(), rankOffset: offset }
   );
 
   log.debug('OpenAIRE read', { requests, retrieved: papers.length, wanted: pageSize });
@@ -64,8 +60,7 @@ export async function search(query: Query, options: SearchOptions): Promise<Prov
   return {
     papers,
     ...(total !== undefined ? { totalHits: total } : {}),
-    skipped,
-    latency
+    skipped
   };
 }
 
@@ -84,12 +79,10 @@ export type LookupOptions = Omit<FetchOptions, 'pageSize' | 'offset'> & { now?: 
 export async function lookup(nativeId: string, options: LookupOptions): Promise<Paper | null> {
   const { now = () => new Date(), ...fetchOptions } = options;
 
-  const started = Date.now();
   const record = await fetchProduct(nativeId, fetchOptions);
-  const latency = Date.now() - started;
   if (!record) return null;
 
-  const { papers } = normalizeRecord(record, { retrievedAt: now().toISOString(), latency });
+  const { papers } = normalizeRecord(record, { retrievedAt: now().toISOString() });
   return papers.find(paper => paper.sources[0]?.nativeId === nativeId) ?? null;
 }
 

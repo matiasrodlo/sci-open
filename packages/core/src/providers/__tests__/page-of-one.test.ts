@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { ProviderId } from '@open-access-explorer/shared';
+import type { ProviderId } from '@sci-open/shared';
 
 /**
  * A count (`countSearch`) reads each source at a depth of one, and

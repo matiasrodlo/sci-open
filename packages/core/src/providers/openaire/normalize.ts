@@ -1,5 +1,5 @@
-import type { Paper, FullText, OaRoute, SourceRef } from '@open-access-explorer/shared';
-import { fullTextAt, httpUrl, stripMarkup } from '@open-access-explorer/shared';
+import type { Paper, FullText, OaRoute, SourceRef } from '@sci-open/shared';
+import { fullTextAt, httpUrl, stripMarkup } from '@sci-open/shared';
 import type { OpenAirePayload } from './fetch';
 
 /**
@@ -12,7 +12,7 @@ import type { OpenAirePayload } from './fetch';
  * some lists carry entries that are not what their name says.
  */
 
-export type NormalizeOptions = { retrievedAt: string; rankOffset?: number; latency?: number };
+export type NormalizeOptions = { retrievedAt: string; rankOffset?: number };
 export type SkippedRecord = { index: number; nativeId?: string; reason: string };
 export type NormalizeOutcome = { papers: Paper[]; skipped: SkippedRecord[] };
 
@@ -159,8 +159,7 @@ function normalizeOne(record: any, ref: SourceRef): Paper {
         : `https://explore.openaire.eu/search/publication?articleId=${nativeId}`),
 
     sources: [ref],
-    fieldSources: {},
-    retrievedAt: ref.retrievedAt
+    fieldSources: {}
   };
 }
 
@@ -170,7 +169,7 @@ export function normalizeRecord(record: unknown, options: NormalizeOptions): Nor
 }
 
 export function normalize(payload: OpenAirePayload, options: NormalizeOptions): NormalizeOutcome {
-  const { retrievedAt, rankOffset = 0, latency } = options;
+  const { retrievedAt, rankOffset = 0 } = options;
   const results = asArray(payload?.results as unknown[] | undefined);
 
   const papers: Paper[] = [];
@@ -186,8 +185,7 @@ export function normalize(payload: OpenAirePayload, options: NormalizeOptions): 
       provider: 'openaire',
       nativeId,
       rank: rankOffset + index,
-      retrievedAt,
-      ...(latency !== undefined ? { latency } : {})
+      retrievedAt
     };
 
     try {

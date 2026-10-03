@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseExpression, type QueryField } from '@open-access-explorer/shared';
+import { parseExpression, type QueryField } from '@sci-open/shared';
 import { cannotSend, dropsForGood, flatStatesWhole, flatTerms, joinFlat, nameAsWords, renderExpression, type Dialect } from '../render-query';
 
 /**

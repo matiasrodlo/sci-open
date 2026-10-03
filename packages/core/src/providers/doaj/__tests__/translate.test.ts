@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { Query } from '@open-access-explorer/shared';
-import { parseExpression } from '@open-access-explorer/shared';
+import type { Query } from '@sci-open/shared';
+import { parseExpression } from '@sci-open/shared';
 import { translate } from '../translate';
 
 const query = (over: Partial<Query>): Query => ({ terms: [], phrases: [], join: 'AND', ...over });

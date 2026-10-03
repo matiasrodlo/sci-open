@@ -1,5 +1,5 @@
 {
-  "name": "@open-access-explorer/core",
+  "name": "@sci-open/core",
   "version": "1.0.0",
   "description": "The sci-open search engine: providers, authorities, orchestrator",
   "main": "dist/index.js",
@@ -11,11 +11,12 @@
     "clean": "rm -rf dist",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "lint": "eslint src --ext .ts",
-    "typecheck": "tsc --noEmit"
+    "lint": "eslint src scripts --ext .ts",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.scripts.json",
+    "record:fixtures": "tsx scripts/record-fixtures.ts"
   },
   "dependencies": {
-    "@open-access-explorer/shared": "workspace:*",
+    "@sci-open/shared": "workspace:*",
     "axios": "^1.20.0",
     "axios-retry": "^4.5.0",
     "node-html-parser": "^9.0.4",
@@ -29,6 +30,7 @@
     "@typescript-eslint/parser": "^7.18.0",
     "@vitest/coverage-v8": "^4.1.11",
     "eslint": "^8.57.1",
+    "tsx": "^4.23.13",
     "typescript": "^5.9.3",
     "vitest": "^4.1.11"
   },

@@ -1,5 +1,4 @@
 import { getPooledClient } from '../../lib/http-client-factory';
-import { getServiceConfig } from '../../lib/http-pool-config';
 
 /**
  * The only I/O in this provider.
@@ -99,7 +98,7 @@ export async function fetchPage(
 ): Promise<EuropePmcPayload> {
   const { baseUrl = DEFAULT_BASE_URL, pageSize, resultType = 'core', timeoutMs, signal, userAgent } = options;
 
-  const client = getPooledClient(baseUrl, getServiceConfig('europepmc'));
+  const client = getPooledClient(baseUrl);
 
   const response = await client.get<EuropePmcPayload>('/search', {
     params: {

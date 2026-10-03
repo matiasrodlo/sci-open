@@ -1,4 +1,4 @@
-import type { AuthorityFacts } from '@open-access-explorer/shared';
+import type { AuthorityFacts } from '@sci-open/shared';
 import type { OpenCitationsPayload } from './fetch';
 
 /**

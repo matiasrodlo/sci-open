@@ -1,4 +1,4 @@
-import type { SearchProgress } from '@open-access-explorer/core';
+import type { SearchProgress } from '@sci-open/core';
 import type { ToolDeps } from '../framework/define-tool';
 
 const SETTLED: Record<string, string> = { ok: 'answered', timeout: 'timed out', error: 'failed', skipped: 'skipped' };

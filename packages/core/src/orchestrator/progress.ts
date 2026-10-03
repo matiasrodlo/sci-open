@@ -1,4 +1,4 @@
-import type { ProviderReport } from '@open-access-explorer/shared';
+import type { ProviderReport } from '@sci-open/shared';
 
 /**
  * What a search is doing, for a caller that shows it: each source as it

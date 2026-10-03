@@ -1,10 +1,10 @@
-import type { Paper, PaperStage, FullText, OaRoute, SourceRef } from '@open-access-explorer/shared';
-import { fullTextAt, httpUrl, stripMarkup } from '@open-access-explorer/shared';
+import type { Paper, PaperStage, FullText, OaRoute, SourceRef } from '@sci-open/shared';
+import { fullTextAt, httpUrl, stripMarkup } from '@sci-open/shared';
 import type { OpenAlexPayload } from './fetch';
 
 /** OpenAlex payload -> Paper[]. Pure, and isolated per record. */
 
-export type NormalizeOptions = { retrievedAt: string; rankOffset?: number; latency?: number };
+export type NormalizeOptions = { retrievedAt: string; rankOffset?: number };
 export type SkippedRecord = { index: number; nativeId?: string; reason: string };
 export type NormalizeOutcome = { papers: Paper[]; skipped: SkippedRecord[] };
 
@@ -169,13 +169,12 @@ function normalizeOne(work: any, ref: SourceRef): Paper {
     landingPage: doi ? `https://doi.org/${doi}` : `https://openalex.org/${nativeId}`,
 
     sources: [ref],
-    fieldSources: {},
-    retrievedAt: ref.retrievedAt
+    fieldSources: {}
   };
 }
 
 export function normalize(payload: OpenAlexPayload, options: NormalizeOptions): NormalizeOutcome {
-  const { retrievedAt, rankOffset = 0, latency } = options;
+  const { retrievedAt, rankOffset = 0 } = options;
   const results = payload?.results ?? [];
 
   const papers: Paper[] = [];
@@ -190,8 +189,7 @@ export function normalize(payload: OpenAlexPayload, options: NormalizeOptions): 
       provider: 'openalex',
       nativeId,
       rank: rankOffset + index,
-      retrievedAt,
-      ...(latency !== undefined ? { latency } : {})
+      retrievedAt
     };
 
     try {

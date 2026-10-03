@@ -45,8 +45,6 @@ export type SourceRef = {
   /** Zero-based position in that provider's own result list for this query. */
   rank: number;
   retrievedAt: string;
-  /** Round trip time for the request that produced it, when known. */
-  latency?: number;
 };
 
 /**
@@ -163,6 +161,4 @@ export type Paper = {
   sources: SourceRef[];
   /** Who supplied each merged field. Empty when there was nothing to choose between. */
   fieldSources: FieldSources;
-  retrievedAt: string;
-  updatedAt?: string;
 };

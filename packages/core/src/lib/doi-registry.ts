@@ -1,5 +1,4 @@
 import { getPooledClient } from './http-client-factory';
-import { getServiceConfig } from './http-pool-config';
 
 /**
  * Whether any registration agency holds this DOI — the Handle System's own
@@ -16,7 +15,7 @@ export async function doiRegistered(
   doi: string,
   options: { userAgent: string; timeoutMs?: number }
 ): Promise<boolean | undefined> {
-  const client = getPooledClient('https://doi.org', getServiceConfig('doi'));
+  const client = getPooledClient('https://doi.org');
   // The slashes stay: they separate the handle's parts, they are not in one.
   const path = `/api/handles/${doi.split('/').map(encodeURIComponent).join('/')}`;
   try {

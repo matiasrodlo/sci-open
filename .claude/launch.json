@@ -2,25 +2,21 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "web",
+      "name": "mcp-http",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": [
         "--filter",
-        "@open-access-explorer/web",
-        "dev"
+        "sci-open-mcp",
+        "exec",
+        "tsx",
+        "src/bin/stdio.ts",
+        "--http",
+        "--port",
+        "8080",
+        "--engine",
+        "fixture"
       ],
-      "port": 3000,
-      "autoPort": true
-    },
-    {
-      "name": "api",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "--filter",
-        "@open-access-explorer/api",
-        "dev"
-      ],
-      "port": 4000
+      "port": 8080
     }
   ]
 }

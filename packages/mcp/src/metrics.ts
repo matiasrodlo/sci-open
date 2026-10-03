@@ -1,4 +1,4 @@
-import type { EngineLogger } from '@open-access-explorer/core';
+import type { EngineLogger } from '@sci-open/core';
 
 /** What `registerTools` records about one call. Never its arguments. */
 export type ToolCall = {

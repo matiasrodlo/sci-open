@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import * as z from 'zod';
-import type { Paper } from '@open-access-explorer/shared';
-import { generateCitationsBatch, getFileExtension, getMimeType } from '@open-access-explorer/shared';
+import type { Paper } from '@sci-open/shared';
+import { generateCitationsBatch, getFileExtension, getMimeType } from '@sci-open/shared';
 import pLimit from '../p-limit';
 import { defineTool } from '../framework/define-tool';
 import { ToolError, toToolError } from '../errors';

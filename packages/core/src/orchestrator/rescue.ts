@@ -1,4 +1,4 @@
-import type { AuthorityReport, Paper } from '@open-access-explorer/shared';
+import type { Paper } from '@sci-open/shared';
 import { AUTHORITIES, type AuthorityEntry } from '../authorities';
 import type { AuthorityCache } from './authority-cache';
 import { enrichPage } from './enrich';
@@ -96,8 +96,6 @@ export type RescueReport = {
    * provider, so it is reported rather than inferred from the counts.
    */
   bounded: boolean;
-  /** What each rescuing authority was asked and what it was worth. */
-  authorities: AuthorityReport[];
 };
 
 export const DEFAULT_RESCUE_LIMIT = 200;
@@ -110,11 +108,11 @@ const DEFAULT_TIMEOUT_MS = 2500;
  * The two defaults cannot both bind. 200 candidates at a concurrency of 16 is
  * 12.5 waves, which fits in five seconds only if the mean Unpaywall lookup is
  * under 400ms, while the per-lookup timeout alone is 2500ms. So on any broad
- * query the budget expires first and the limit is never reached, and an
- * operator who raises `SEARCH_RESCUE_LIMIT` to rescue more papers changes
- * nothing at all.
+ * query the budget expires first and the limit is never reached, and raising
+ * the limit to rescue more papers changes nothing at all.
  *
- * Exported and configurable for that reason. It is the number worth moving.
+ * Exported and configurable (`SearchOptions.rescueBudgetMs`) for that reason.
+ * It is the number worth moving.
  */
 export const DEFAULT_RESCUE_BUDGET_MS = 5000;
 const DEFAULT_CONCURRENCY = 16;
@@ -127,7 +125,7 @@ export type RescueResult = {
 
 const empty = (candidates: number, bounded: boolean): RescueResult => ({
   papers: [],
-  report: { candidates, examined: 0, rescued: 0, bounded, authorities: [] }
+  report: { candidates, examined: 0, rescued: 0, bounded }
 });
 
 export async function rescueCandidates(
@@ -168,7 +166,7 @@ export async function rescueCandidates(
   // it rather than repeating its pool, budget and abort handling is deliberate
   // — the care in `enrichPage` about a lookup that outlives its budget applies
   // here word for word.
-  const { papers, reports, examined: answered } = await enrichPage(attempted, {
+  const { papers, examined: answered, cutShort } = await enrichPage(attempted, {
     authorities: rescuers,
     timeoutMs,
     budgetMs,
@@ -177,10 +175,10 @@ export async function rescueCandidates(
     ...(cache ? { cache } : {})
   });
 
-  // Re-tested in full, not just against the gate that dropped them. A route
-  // arriving from Unpaywall can fail a `filters.oaStatus` the paper satisfied
-  // while it was still `unknown`, and admitting it on the strength of the gate
-  // alone would put a paper on the page that the caller filtered out.
+  // Re-tested in full, not just against the gate that dropped them. An
+  // authority can rewrite a year or a stage the filters were judged on, and
+  // admitting a paper on the strength of the gate alone would put one on the
+  // page that the caller filtered out.
   const rescued = applyPolicy(papers, filters, policy);
 
   return {
@@ -200,12 +198,11 @@ export async function rescueCandidates(
       // the candidates that came back, the first term now carries the limit,
       // the budget and a failed lookup alike.
       //
-      // The timeout check is not redundant behind it. With more than one
-      // rescuing authority, one can answer for every candidate while another is
-      // cut off partway: every paper is examined, and a question that might
-      // have changed the answer still went unasked.
-      bounded: answered < candidates.length || reports.some(r => r.status === 'timeout'),
-      authorities: reports
+      // `cutShort` is not redundant behind it. With more than one rescuing
+      // authority, one can answer for every candidate while another is cut off
+      // partway: every paper is examined, and a question that might have
+      // changed the answer still went unasked.
+      bounded: answered < candidates.length || cutShort
     }
   };
 }

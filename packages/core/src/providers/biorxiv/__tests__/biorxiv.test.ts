@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { canServe } from '@open-access-explorer/shared';
 import { normalize } from '../normalize';
 import { capabilities } from '../capabilities';
 import { translate } from '../index';
@@ -23,11 +22,10 @@ describe('capabilities — why there is no keyword search', () => {
     // older than 30 days.
     expect(RECORDED.messages[0].total).toBe('5940');
     expect(capabilities.keywordSearch).toBe(false);
-    expect(canServe(capabilities, {})).toBe(false);
   });
 
   it('answers a DOI lookup, which is what the API is for', () => {
-    expect(canServe(capabilities, { doi: '10.1101/2025.10.27.684732' })).toBe(true);
+    expect(capabilities.doiLookup).toBe(true);
   });
 
   it('reports no total, having no corpus-wide count to give', () => {
@@ -54,11 +52,10 @@ describe('normalize', () => {
 
   it('treats the string "NA" as absent', () => {
     // The API writes "NA" where a value is missing, so a truthiness check
-    // reads it as present. The old connector's
-    // `updatedAt: result.published || result.date` set `updatedAt` to the
-    // literal "NA" on every unpublished preprint — all of them here.
+    // reads it as present. The old connector wrote the literal "NA" into a
+    // record for every unpublished preprint — all of them here.
     expect(RECORDED.collection.every((r: any) => r.published === 'NA')).toBe(true);
-    expect(recorded().papers.every(p => p.updatedAt === undefined)).toBe(true);
+    expect(JSON.stringify(recorded().papers)).not.toContain('"NA"');
   });
 
   it('records a preprint server as a green route', () => {

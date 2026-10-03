@@ -1,6 +1,6 @@
 import * as z from 'zod';
-import type { Paper } from '@open-access-explorer/shared';
-import type { CitationLink } from '@open-access-explorer/core';
+import type { Paper } from '@sci-open/shared';
+import type { CitationLink } from '@sci-open/core';
 import { defineTool } from '../framework/define-tool';
 import { ToolError } from '../errors';
 import { paperRefKind, resolvePaperRef } from './resolve-paper';

@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import type { ProviderReport } from '@open-access-explorer/shared';
+import type { ProviderReport } from '@sci-open/shared';
 
 /**
  * A provenance block on every result, so a reviewer — or a reviewer agent —

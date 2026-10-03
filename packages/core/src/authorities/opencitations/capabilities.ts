@@ -1,4 +1,4 @@
-import type { AuthorityCapabilities } from '@open-access-explorer/shared';
+import type { AuthorityCapabilities } from '@sci-open/shared';
 
 /**
  * One field, and it is the reason phase 09 lists OpenCitations at all.

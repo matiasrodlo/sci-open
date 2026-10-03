@@ -1,5 +1,4 @@
 import { getPooledClient } from '../../lib/http-client-factory';
-import { getServiceConfig } from '../../lib/http-pool-config';
 
 /**
  * The only I/O in this authority.
@@ -30,7 +29,7 @@ export async function lookupDoi(
 ): Promise<OpenCitationsPayload | null> {
   const { baseUrl = DEFAULT_BASE_URL, timeoutMs, signal, userAgent } = options;
 
-  const client = getPooledClient(baseUrl, getServiceConfig('opencitations'));
+  const client = getPooledClient(baseUrl);
 
   // `validateStatus` is no longer set per request: the pooled client already
   // resolves a 4xx rather than throwing, which is what this call wanted and

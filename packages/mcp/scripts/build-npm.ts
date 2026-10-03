@@ -2,8 +2,7 @@
  * The package published to npm, generated from the workspace one.
  *
  * `packages/mcp/package.json` is private and depends on core and shared by
- * `workspace:*` — right for the monorepo, where apps/api will import this
- * package and share one engine with it, and wrong for npm, where those names
+ * `workspace:*` — right for the monorepo, and wrong for npm, where those names
  * do not exist. This bundles every entry point a user can reach with esbuild,
  * inlining core and shared and leaving the public npm packages external, and
  * writes a manifest whose dependencies are exactly those externals.
@@ -36,7 +35,7 @@ async function main(): Promise<void> {
 
   await build({
     absWorkingDir: ROOT,
-    entryPoints: { 'bin/stdio': 'src/bin/stdio.ts', 'bin/cli': 'src/bin/cli.ts', index: 'src/index.ts' },
+    entryPoints: { 'bin/stdio': 'src/bin/stdio.ts', 'bin/cli': 'src/bin/cli.ts' },
     outdir: path.join(OUT, 'dist'),
     bundle: true,
     platform: 'node',
@@ -56,7 +55,6 @@ async function main(): Promise<void> {
     mcpName: mcp.mcpName,
     repository: { type: 'git', url: 'https://github.com/matiasrodlo/sci-open' }, // npm provenance checks it
     bin: { 'sci-open-mcp': 'dist/bin/stdio.js', 'sci-open': 'dist/bin/cli.js' },
-    main: 'dist/index.js',
     files: ['dist', 'fixtures', 'README.md', 'server.json'],
     engines: mcp.engines,
     dependencies: Object.fromEntries(EXTERNAL.map(name => [name, range(name)]))

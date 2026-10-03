@@ -1,5 +1,5 @@
 import * as z from 'zod';
-import type { SearchResponseV2 } from '@open-access-explorer/shared';
+import type { SearchResponseV2 } from '@sci-open/shared';
 
 export const coverageSchema = z.object({
   complete: z.boolean(),

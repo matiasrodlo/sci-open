@@ -1,5 +1,5 @@
 import { parseArgs } from 'util';
-import { MAX_DEPTH, usableApiKey, type ApiKeys } from '@open-access-explorer/core';
+import { MAX_DEPTH, usableApiKey, type ApiKeys } from '@sci-open/core';
 import { BUILD } from './build-info';
 import type { LogLevel } from './log';
 
@@ -13,7 +13,7 @@ export type McpConfig = {
   textBudgetChars: number;
   structuredBudgetChars: number;
   maxNewSearchesPerMinute: number;
-  /** Records read per source. 300, half the web app's 600: see D11. */
+  /** Records read per source. 300, half the engine's default of 600: see D11. */
   searchDepth: number;
   logLevel: LogLevel;
   openCitationsToken?: string;

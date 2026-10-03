@@ -7,7 +7,6 @@ const parts = (over: Partial<Parameters<typeof providerCacheKey>[0]> = {}) => ({
   nativeQuery: 'crispr AND OPEN_ACCESS:y',
   depth: 600,
   offset: 0,
-  normalizerVersion: 1,
   ...over
 });
 
@@ -18,15 +17,14 @@ describe('providerCacheKey', () => {
     expect(providerCacheKey(parts())).toBe(providerCacheKey(parts()));
   });
 
-  it('keeps the provider readable so one can be invalidated alone', () => {
+  it('keeps the provider readable', () => {
     expect(providerCacheKey(parts())).toMatch(/^provider:europepmc:/);
   });
 
   it.each([
     ['a different native query', { nativeQuery: 'other' }],
     ['a different depth', { depth: 100 }],
-    ['a different offset', { offset: 600 }],
-    ['a bumped normaliser version', { normalizerVersion: 2 }]
+    ['a different offset', { offset: 600 }]
   ])('changes for %s', (_name, over) => {
     expect(providerCacheKey(parts(over as any))).not.toBe(providerCacheKey(parts()));
   });
@@ -114,20 +112,6 @@ describe('ProviderCache', () => {
     expect(work).toHaveBeenCalledTimes(2);
   });
 
-  it('invalidates one provider without touching the others', async () => {
-    // One failed provider can be retried without discarding the ones that worked.
-    const cache = new ProviderCache();
-    const work = vi.fn(async () => outcome());
-
-    await cache.fetch(parts({ provider: 'europepmc' }), work);
-    await cache.fetch(parts({ provider: 'ncbi' }), work);
-    expect(cache.size).toBe(2);
-
-    expect(cache.invalidateProvider('europepmc')).toBe(1);
-    expect(cache.size).toBe(1);
-    expect((await cache.fetch(parts({ provider: 'ncbi' }), work)).hit).toBe(true);
-  });
-
   it('bounds itself, evicting oldest first', async () => {
     // Bounded in bytes, so the budget is stated as a multiple of what one
     // entry is charged rather than as a count of entries.
@@ -201,17 +185,6 @@ describe('ProviderCache byte budget', () => {
 
     expect(cache.size).toBe(1);
     expect((await cache.fetch(parts({ nativeQuery: 'keep-me' }), async () => outcome())).hit).toBe(true);
-  });
-
-  it('gives back what an entry was charged when it goes', async () => {
-    const cache = new ProviderCache();
-
-    await cache.fetch(parts({ provider: 'europepmc' }), async () => big(5));
-    const filled = cache.stats().bytes;
-    expect(filled).toBeGreaterThan(0);
-
-    cache.invalidateProvider('europepmc');
-    expect(cache.stats().bytes).toBe(0);
   });
 
   it('gives back the bytes of an expired entry when a read finds it dead', async () => {

@@ -1,4 +1,4 @@
-import type { ProviderCapabilities } from '@open-access-explorer/shared';
+import type { ProviderCapabilities } from '@sci-open/shared';
 
 /**
  * What the OpenAIRE search API can actually do.
@@ -20,34 +20,10 @@ export const capabilities: ProviderCapabilities = {
     fieldedSearch: 'takes keywords only, with no way to name a field'
   },
 
-  fields: [
-    'title',
-    'abstract',
-    'authors',
-    'year',
-    // The journal, from `container.name`. The old connector used `publisher`
-    // for both, so every record's venue was the publishing house.
-    'venue',
-    'publisher',
-    // From `subjects`, which the old connector never read — it wrote an empty
-    // array on every record.
-    'topics',
-    'language',
-    // Genuinely reported here, not inferred.
-    'oaStatus',
-    'fullText',
-    'landingPage'
-  ],
-
-  // `fromPublicationDate` / `toPublicationDate` are request parameters rather
-  // than query terms, so the bound is applied upstream.
-  yearFilter: true,
-
   // OpenAIRE serves at most 100 results per page; more is HTTP 400.
   maxPageSize: 100,
 
   reportsTotal: true,
-  suppliesCitations: false,
 
   // Published when the instance is refereed, which `isPeerReviewed=true` asks
   // for; everything else is unknown. `normalize` never calls a record a

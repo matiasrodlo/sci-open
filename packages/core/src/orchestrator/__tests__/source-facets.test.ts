@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { CountedFacet, Paper, ProviderId, Query } from '@open-access-explorer/shared';
+import type { CountedFacet, Paper, ProviderId, Query } from '@sci-open/shared';
 import { countSourceFacets, yearWindow } from '../source-facets';
 import type { ProviderSettled } from '../fanout';
 import type { ProviderEntry, ProviderFacetArgs, ProviderFacetOutcome } from '../registry';
@@ -21,13 +21,12 @@ function provider(
     id,
     calls,
     capabilities: {
-      keywordSearch: true, fieldedSearch: true, doiLookup: true, fields: [], yearFilter: true,
-      maxPageSize: 100, reportsTotal: true, suppliesCitations: false,
+      keywordSearch: true, fieldedSearch: true, doiLookup: true,
+      maxPageSize: 100, reportsTotal: true,
       stages: { holds: ['preprint', 'published', 'unknown'], filter: true },
       facets
     },
     translate: q => `native:${q.years?.from ?? '*'}`,
-    normalizerVersion: 1,
     search: async () => ({ papers: [], skipped: [] }),
     facets: args => {
       calls.push(args);

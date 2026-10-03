@@ -1,4 +1,4 @@
-import type { ProviderId, ProviderReport, SearchParams } from '@open-access-explorer/shared';
+import type { ProviderId, ProviderReport, SearchParams } from '@sci-open/shared';
 import { plan } from './plan';
 import { fanOut, isComplete } from './fanout';
 import { queryOf } from './from-search-params';

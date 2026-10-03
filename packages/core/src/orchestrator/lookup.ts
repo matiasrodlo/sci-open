@@ -1,4 +1,4 @@
-import type { Paper, ProviderId } from '@open-access-explorer/shared';
+import type { Paper, ProviderId } from '@sci-open/shared';
 import { parseQuery } from './parse-query';
 import { PROVIDERS, type ProviderEntry } from './registry';
 
@@ -43,15 +43,15 @@ const PROVIDER_ALIASES: Partial<Record<ProviderId, ProviderId>> = { medrxiv: 'bi
 const BARE_ARXIV_ID = /^\d{4}\.\d{4,5}(v\d+)?$/;
 
 /**
- * Older spellings of a native id, and what records carry now.
+ * Other spellings of a native id, and what records carry now.
  *
- * The old paper endpoint wrote OpenAlex's full URL into the id, so a link made
- * then reads `openalex:https://openalex.org/W…`. `fetchWork` strips the URL
- * before asking, and the record comes back as `W…` — which `matches` then
- * compared against the URL and refused, so every such link answered 404 while
- * the fetch below it was written to serve them.
+ * OpenAlex names a work by its URL as often as by its bare id, so a caller —
+ * a model quoting OpenAlex, or a link that carried the URL — may send
+ * `openalex:https://openalex.org/W…`. `fetchWork` strips the URL before
+ * asking, and the record comes back as `W…`; stripping it here too is what
+ * lets `matches` accept that record as the one asked for.
  */
-const LEGACY_PREFIXES: Partial<Record<ProviderId, RegExp>> = {
+const URL_PREFIXES: Partial<Record<ProviderId, RegExp>> = {
   openalex: /^https?:\/\/(?:www\.)?openalex\.org\//i
 };
 
@@ -96,7 +96,7 @@ export function splitPaperId(id: string): PaperRef {
 
   const provider = id.slice(0, separator) as ProviderId;
   const nativeId = id.slice(separator + 1);
-  return { provider, nativeId: nativeId.replace(LEGACY_PREFIXES[provider] ?? /^$/, '') };
+  return { provider, nativeId: nativeId.replace(URL_PREFIXES[provider] ?? /^$/, '') };
 }
 
 export type LookupOptions = {

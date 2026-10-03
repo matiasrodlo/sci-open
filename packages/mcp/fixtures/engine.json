@@ -4039,22 +4039,19 @@
        "provider": "plos",
        "nativeId": "10.1371/journal.pcbi.1005891",
        "rank": 6,
-       "retrievedAt": "2026-10-02T20:22:57.959Z",
-       "latency": 1193
+       "retrievedAt": "2026-10-02T20:22:57.959Z"
       },
       {
        "provider": "arxiv",
        "nativeId": "1705.10424v1",
        "rank": 11,
-       "retrievedAt": "2026-10-02T20:22:57.349Z",
-       "latency": 583
+       "retrievedAt": "2026-10-02T20:22:57.349Z"
       }
      ],
      "fieldSources": {
       "topics": "arxiv",
       "citationCount": "crossref"
      },
-     "retrievedAt": "2026-10-02T20:22:57.959Z",
      "citationCount": 67
     },
     {
@@ -4113,22 +4110,19 @@
        "provider": "openaire",
        "nativeId": "doi_dedup___::a061ae228ce6355be5e1e27211d6eecb",
        "rank": 28,
-       "retrievedAt": "2026-10-02T20:23:01.512Z",
-       "latency": 4745
+       "retrievedAt": "2026-10-02T20:23:01.512Z"
       },
       {
        "provider": "plos",
        "nativeId": "10.1371/journal.pone.0199473",
        "rank": 1,
-       "retrievedAt": "2026-10-02T20:22:57.959Z",
-       "latency": 1193
+       "retrievedAt": "2026-10-02T20:22:57.959Z"
       }
      ],
      "fieldSources": {
       "topics": "plos",
       "citationCount": "crossref"
      },
-     "retrievedAt": "2026-10-02T20:23:01.512Z",
      "citationCount": 9
     },
     {
@@ -4223,22 +4217,19 @@
        "provider": "openaire",
        "nativeId": "doi_dedup___::9359c98c84e4a947e8b2dec860a05bdf",
        "rank": 75,
-       "retrievedAt": "2026-10-02T20:23:01.512Z",
-       "latency": 4745
+       "retrievedAt": "2026-10-02T20:23:01.512Z"
       },
       {
        "provider": "plos",
        "nativeId": "10.1371/journal.pone.0184281",
        "rank": 0,
-       "retrievedAt": "2026-10-02T20:22:57.959Z",
-       "latency": 1193
+       "retrievedAt": "2026-10-02T20:22:57.959Z"
       }
      ],
      "fieldSources": {
       "topics": "plos",
       "citationCount": "crossref"
      },
-     "retrievedAt": "2026-10-02T20:23:01.512Z",
      "citationCount": 23
     },
     {
@@ -4283,22 +4274,19 @@
        "provider": "openalex",
        "nativeId": "W2804566227",
        "rank": 47,
-       "retrievedAt": "2026-10-02T20:23:02.199Z",
-       "latency": 5432
+       "retrievedAt": "2026-10-02T20:23:02.199Z"
       },
       {
        "provider": "ncbi",
        "nativeId": "29801422",
        "rank": 10,
-       "retrievedAt": "2026-10-02T20:23:02.185Z",
-       "latency": 5419
+       "retrievedAt": "2026-10-02T20:23:02.185Z"
       }
      ],
      "fieldSources": {
       "fullText": "ncbi",
       "topics": "ncbi"
      },
-     "retrievedAt": "2026-10-02T20:23:02.199Z",
      "fullText": {
       "url": "https://europepmc.org/articles/PMC6058482?pdf=render",
       "kind": "pdf",
@@ -4355,22 +4343,19 @@
        "provider": "openalex",
        "nativeId": "W2577994754",
        "rank": 77,
-       "retrievedAt": "2026-10-02T20:23:02.199Z",
-       "latency": 5432
+       "retrievedAt": "2026-10-02T20:23:02.199Z"
       },
       {
        "provider": "ncbi",
        "nativeId": "28099430",
        "rank": 2,
-       "retrievedAt": "2026-10-02T20:23:02.185Z",
-       "latency": 5419
+       "retrievedAt": "2026-10-02T20:23:02.185Z"
       }
      ],
      "fieldSources": {
       "abstract": "ncbi",
       "topics": "ncbi"
      },
-     "retrievedAt": "2026-10-02T20:23:02.199Z",
      "abstract": "CRISPR-based genetic screens are accelerating biological discovery, but current methods have inherent limitations. Widely used pooled screens are restricted to simple readouts including cell proliferation and sortable marker proteins. Arrayed screens allow for comprehensive molecular readouts such as transcriptome profiling, but at much lower throughput. Here we combine pooled CRISPR screening with single-cell RNA sequencing into a broadly applicable workflow, directly linking guide RNA expression to transcriptome responses in thousands of individual cells. Our method for CRISPR droplet sequencing (CROP-seq) enables pooled CRISPR screens with single-cell transcriptome resolution, which will facilitate high-throughput functional dissection of complex regulatory mechanisms and heterogeneous cell populations."
     },
     {
@@ -4430,28 +4415,24 @@
        "provider": "openalex",
        "nativeId": "W2062280978",
        "rank": 292,
-       "retrievedAt": "2026-10-02T20:23:02.199Z",
-       "latency": 5432
+       "retrievedAt": "2026-10-02T20:23:02.199Z"
       },
       {
        "provider": "openaire",
        "nativeId": "doi_dedup___::7e4d0dbe6cf801710d92025902167444",
        "rank": 166,
-       "retrievedAt": "2026-10-02T20:23:01.512Z",
-       "latency": 4745
+       "retrievedAt": "2026-10-02T20:23:01.512Z"
       },
       {
        "provider": "plos",
        "nativeId": "10.1371/journal.pone.0011126",
        "rank": 2,
-       "retrievedAt": "2026-10-02T20:22:57.959Z",
-       "latency": 1193
+       "retrievedAt": "2026-10-02T20:22:57.959Z"
       }
      ],
      "fieldSources": {
       "topics": "openaire"
-     },
-     "retrievedAt": "2026-10-02T20:23:02.199Z"
+     }
     },
     {
      "id": "plos:10.1371/journal.pgen.1004065",
@@ -4509,22 +4490,19 @@
        "provider": "plos",
        "nativeId": "10.1371/journal.pgen.1004065",
        "rank": 3,
-       "retrievedAt": "2026-10-02T20:22:57.959Z",
-       "latency": 1193
+       "retrievedAt": "2026-10-02T20:22:57.959Z"
       },
       {
        "provider": "ncbi",
        "nativeId": "24415952",
        "rank": 93,
-       "retrievedAt": "2026-10-02T20:23:02.185Z",
-       "latency": 5419
+       "retrievedAt": "2026-10-02T20:23:02.185Z"
       }
      ],
      "fieldSources": {
       "topics": "ncbi",
       "citationCount": "crossref"
      },
-     "retrievedAt": "2026-10-02T20:22:57.959Z",
      "citationCount": 82
     },
     {
@@ -4604,29 +4582,25 @@
        "provider": "openaire",
        "nativeId": "doi_dedup___::3522818fae8b421a5e73c10171c87b1f",
        "rank": 215,
-       "retrievedAt": "2026-10-02T20:23:01.512Z",
-       "latency": 4745
+       "retrievedAt": "2026-10-02T20:23:01.512Z"
       },
       {
        "provider": "plos",
        "nativeId": "10.1371/journal.pone.0133661",
        "rank": 8,
-       "retrievedAt": "2026-10-02T20:22:57.959Z",
-       "latency": 1193
+       "retrievedAt": "2026-10-02T20:22:57.959Z"
       },
       {
        "provider": "ncbi",
        "nativeId": "26230606",
        "rank": 283,
-       "retrievedAt": "2026-10-02T20:23:02.185Z",
-       "latency": 5419
+       "retrievedAt": "2026-10-02T20:23:02.185Z"
       }
      ],
      "fieldSources": {
       "topics": "plos",
       "citationCount": "crossref"
      },
-     "retrievedAt": "2026-10-02T20:23:01.512Z",
      "citationCount": 89
     },
     {
@@ -4679,22 +4653,19 @@
        "provider": "plos",
        "nativeId": "10.1371/journal.pcbi.1011137",
        "rank": 4,
-       "retrievedAt": "2026-10-02T20:22:57.959Z",
-       "latency": 1193
+       "retrievedAt": "2026-10-02T20:22:57.959Z"
       },
       {
        "provider": "ncbi",
        "nativeId": "37253059",
        "rank": 137,
-       "retrievedAt": "2026-10-02T20:23:02.185Z",
-       "latency": 5419
+       "retrievedAt": "2026-10-02T20:23:02.185Z"
       }
      ],
      "fieldSources": {
       "topics": "ncbi",
       "citationCount": "crossref"
      },
-     "retrievedAt": "2026-10-02T20:22:57.959Z",
      "citationCount": 9
     },
     {
@@ -4742,32 +4713,25 @@
        "provider": "plos",
        "nativeId": "10.1371/journal.pone.0265114",
        "rank": 32,
-       "retrievedAt": "2026-10-02T20:22:57.959Z",
-       "latency": 1193
+       "retrievedAt": "2026-10-02T20:22:57.959Z"
       },
       {
        "provider": "ncbi",
        "nativeId": "35333864",
        "rank": 47,
-       "retrievedAt": "2026-10-02T20:23:02.185Z",
-       "latency": 5419
+       "retrievedAt": "2026-10-02T20:23:02.185Z"
       }
      ],
      "fieldSources": {
       "topics": "ncbi",
       "citationCount": "crossref"
      },
-     "retrievedAt": "2026-10-02T20:22:57.959Z",
      "citationCount": 7
     }
    ],
    "total": 1738,
    "page": 1,
    "pageSize": 10,
-   "sort": "relevance",
-   "filters": {
-    "openAccessOnly": true
-   },
    "facets": {
     "source": [
      {
@@ -4824,13 +4788,11 @@
     "stage": [
      {
       "value": "published",
-      "count": 64800,
-      "from": "openalex"
+      "count": 64800
      },
      {
       "value": "preprint",
-      "count": 13620,
-      "from": "openalex"
+      "count": 13620
      },
      {
       "value": "unknown",
@@ -4840,509 +4802,409 @@
     "year": [
      {
       "value": 2026,
-      "count": 13515,
-      "from": "openalex"
+      "count": 13515
      },
      {
       "value": 2025,
-      "count": 13325,
-      "from": "openalex"
+      "count": 13325
      },
      {
       "value": 2024,
-      "count": 10649,
-      "from": "openalex"
+      "count": 10649
      },
      {
       "value": 2023,
-      "count": 11278,
-      "from": "openalex"
+      "count": 11278
      },
      {
       "value": 2022,
-      "count": 8485,
-      "from": "openalex"
+      "count": 8485
      },
      {
       "value": 2021,
-      "count": 7650,
-      "from": "openalex"
+      "count": 7650
      },
      {
       "value": 2020,
-      "count": 7398,
-      "from": "openalex"
+      "count": 7398
      },
      {
       "value": 2019,
-      "count": 6201,
-      "from": "openalex"
+      "count": 6201
      },
      {
       "value": 2018,
-      "count": 4927,
-      "from": "openalex"
+      "count": 4927
      },
      {
       "value": 2017,
-      "count": 3538,
-      "from": "openalex"
+      "count": 3538
      },
      {
       "value": 2016,
-      "count": 2509,
-      "from": "openalex"
+      "count": 2509
      },
      {
       "value": 2015,
-      "count": 1353,
-      "from": "openalex"
+      "count": 1353
      },
      {
       "value": 2014,
-      "count": 669,
-      "from": "openalex"
+      "count": 669
      },
      {
       "value": 2013,
-      "count": 298,
-      "from": "openalex"
+      "count": 298
      },
      {
       "value": 2012,
-      "count": 139,
-      "from": "openalex"
+      "count": 139
      },
      {
       "value": 2011,
-      "count": 89,
-      "from": "openalex"
+      "count": 89
      },
      {
       "value": 2010,
-      "count": 54,
-      "from": "openalex"
+      "count": 54
      },
      {
       "value": 2009,
-      "count": 28,
-      "from": "openalex"
+      "count": 28
      },
      {
       "value": 2008,
-      "count": 21,
-      "from": "openalex"
+      "count": 21
      },
      {
       "value": 2007,
-      "count": 20,
-      "from": "openalex"
+      "count": 20
      },
      {
       "value": 2006,
-      "count": 8,
-      "from": "openalex"
+      "count": 8
      },
      {
       "value": 2005,
-      "count": 5,
-      "from": "openalex"
+      "count": 5
      },
      {
       "value": 2004,
-      "count": 5,
-      "from": "openalex"
+      "count": 5
      },
      {
       "value": 2003,
-      "count": 6,
-      "from": "openalex"
+      "count": 6
      },
      {
       "value": 2002,
-      "count": 4,
-      "from": "openalex"
+      "count": 4
      }
     ],
     "venue": [
      {
       "value": "PLOS ONE",
-      "count": 2635,
-      "from": "plos"
+      "count": 2635
      },
      {
       "value": "Nature communications",
-      "count": 1493,
-      "from": "openalex"
+      "count": 1493
      },
      {
       "value": "Scientific reports",
-      "count": 1442,
-      "from": "openalex"
+      "count": 1442
      },
      {
       "value": "International journal of molecular sciences",
-      "count": 1384,
-      "from": "openalex"
+      "count": 1384
      },
      {
       "value": "Nucleic acids research",
-      "count": 944,
-      "from": "openalex"
+      "count": 944
      },
      {
       "value": "eLife",
-      "count": 721,
-      "from": "openalex"
+      "count": 721
      },
      {
       "value": "Frontiers in Plant Science",
-      "count": 683,
-      "from": "openalex"
+      "count": 683
      },
      {
       "value": "Blood",
-      "count": 679,
-      "from": "openalex"
+      "count": 679
      },
      {
       "value": "Proceedings of the National Academy of Sciences",
-      "count": 634,
-      "from": "openalex"
+      "count": 634
      },
      {
       "value": "Neuro-Oncology",
-      "count": 592,
-      "from": "openalex"
+      "count": 592
      },
      {
       "value": "Frontiers in Microbiology",
-      "count": 572,
-      "from": "openalex"
+      "count": 572
      },
      {
       "value": "PLOS Genetics",
-      "count": 556,
-      "from": "plos"
+      "count": 556
      },
      {
       "value": "Stem Cell Research",
-      "count": 528,
-      "from": "openalex"
+      "count": 528
      },
      {
       "value": "Plant biotechnology journal",
-      "count": 507,
-      "from": "openalex"
+      "count": 507
      },
      {
       "value": "Journal of Biological Chemistry",
-      "count": 488,
-      "from": "openalex"
+      "count": 488
      },
      {
       "value": "Molecular Therapy",
-      "count": 476,
-      "from": "openalex"
+      "count": 476
      },
      {
       "value": "Cell Reports",
-      "count": 421,
-      "from": "openalex"
+      "count": 421
      },
      {
       "value": "Nature",
-      "count": 400,
-      "from": "openalex"
+      "count": 400
      },
      {
       "value": "Cells",
-      "count": 394,
-      "from": "openalex"
+      "count": 394
      },
      {
       "value": "PLOS Pathogens",
-      "count": 383,
-      "from": "plos"
+      "count": 383
      },
      {
       "value": "Frontiers in Immunology",
-      "count": 381,
-      "from": "openalex"
+      "count": 381
      },
      {
       "value": "Regular and Young Investigator Award Abstracts",
-      "count": 301,
-      "from": "openalex"
+      "count": 301
      },
      {
       "value": "Plants",
-      "count": 296,
-      "from": "openalex"
+      "count": 296
      },
      {
       "value": "Frontiers in Cell and Developmental Biology",
-      "count": 292,
-      "from": "openalex"
+      "count": 292
      },
      {
       "value": "Molecular Therapy — Nucleic Acids",
-      "count": 292,
-      "from": "openalex"
+      "count": 292
      }
     ],
     "publisher": [
      {
       "value": "Elsevier BV",
-      "count": 10323,
-      "from": "openalex"
+      "count": 10323
      },
      {
       "value": "Nature Portfolio",
-      "count": 4884,
-      "from": "openalex"
+      "count": 4884
      },
      {
       "value": "Multidisciplinary Digital Publishing Institute",
-      "count": 4666,
-      "from": "openalex"
+      "count": 4666
      },
      {
       "value": "Wiley",
-      "count": 4184,
-      "from": "openalex"
+      "count": 4184
      },
      {
       "value": "Public Library of Science",
-      "count": 4116,
-      "from": "plos"
+      "count": 4116
      },
      {
       "value": "Oxford University Press",
-      "count": 3839,
-      "from": "openalex"
+      "count": 3839
      },
      {
       "value": "Frontiers Media",
-      "count": 3704,
-      "from": "openalex"
+      "count": 3704
      },
      {
       "value": "BioMed Central",
-      "count": 2775,
-      "from": "openalex"
+      "count": 2775
      },
      {
       "value": "Springer Science+Business Media",
-      "count": 1873,
-      "from": "openalex"
+      "count": 1873
      },
      {
       "value": "Springer Nature",
-      "count": 1869,
-      "from": "openalex"
+      "count": 1869
      },
      {
       "value": "Cell Press",
-      "count": 1484,
-      "from": "openalex"
+      "count": 1484
      },
      {
       "value": "American Society for Microbiology",
-      "count": 970,
-      "from": "openalex"
+      "count": 970
      },
      {
       "value": "eLife Sciences Publications Ltd",
-      "count": 725,
-      "from": "openalex"
+      "count": 725
      },
      {
       "value": "National Academy of Sciences",
-      "count": 634,
-      "from": "openalex"
+      "count": 634
      },
      {
       "value": "Taylor & Francis",
-      "count": 624,
-      "from": "openalex"
+      "count": 624
      },
      {
       "value": "American Chemical Society",
-      "count": 621,
-      "from": "openalex"
+      "count": 621
      },
      {
       "value": "American Association for Cancer Research",
-      "count": 565,
-      "from": "openalex"
+      "count": 565
      },
      {
       "value": "American Association for the Advancement of Science",
-      "count": 547,
-      "from": "openalex"
+      "count": 547
      },
      {
       "value": "Lippincott Williams & Wilkins",
-      "count": 419,
-      "from": "openalex"
+      "count": 419
      },
      {
       "value": "The Company of Biologists",
-      "count": 380,
-      "from": "openalex"
+      "count": 380
      },
      {
       "value": "Wolters Kluwer",
-      "count": 344,
-      "from": "openalex"
+      "count": 344
      },
      {
       "value": "Mary Ann Liebert, Inc.",
-      "count": 331,
-      "from": "openalex"
+      "count": 331
      },
      {
       "value": "Cold Spring Harbor Laboratory Press",
-      "count": 258,
-      "from": "openalex"
+      "count": 258
      },
      {
       "value": "BMJ",
-      "count": 250,
-      "from": "openalex"
+      "count": 250
      },
      {
       "value": "American Association of Immunologists",
-      "count": 250,
-      "from": "openalex"
+      "count": 250
      }
     ],
     "topics": [
      {
       "value": "CRISPR and Genetic Engineering",
-      "count": 37276,
-      "from": "openalex"
+      "count": 37276
      },
      {
       "value": "RNA and protein synthesis mechanisms",
-      "count": 5375,
-      "from": "openalex"
+      "count": 5375
      },
      {
       "value": "Advanced biosensing and bioanalysis techniques",
-      "count": 4770,
-      "from": "openalex"
+      "count": 4770
      },
      {
       "value": "Pluripotent Stem Cells Research",
-      "count": 4704,
-      "from": "openalex"
+      "count": 4704
      },
      {
       "value": "Virus-based gene therapy research",
-      "count": 3317,
-      "from": "openalex"
+      "count": 3317
      },
      {
       "value": "CAR-T cell therapy research",
-      "count": 3256,
-      "from": "openalex"
+      "count": 3256
      },
      {
       "value": "RNA Interference and Gene Delivery",
-      "count": 3203,
-      "from": "openalex"
+      "count": 3203
      },
      {
       "value": "RNA regulation and disease",
-      "count": 2919,
-      "from": "openalex"
+      "count": 2919
      },
      {
       "value": "Plant Virus Research Studies",
-      "count": 2635,
-      "from": "openalex"
+      "count": 2635
      },
      {
       "value": "Bacteriophages and microbial interactions",
-      "count": 2572,
-      "from": "openalex"
+      "count": 2572
      },
      {
       "value": "RNA modifications and cancer",
-      "count": 2480,
-      "from": "openalex"
+      "count": 2480
      },
      {
       "value": "RNA Research and Splicing",
-      "count": 2442,
-      "from": "openalex"
+      "count": 2442
      },
      {
       "value": "Insect symbiosis and bacterial influences",
-      "count": 2278,
-      "from": "openalex"
+      "count": 2278
      },
      {
       "value": "Animal Genetics and Reproduction",
-      "count": 2200,
-      "from": "openalex"
+      "count": 2200
      },
      {
       "value": "Genetics, Aging, and Longevity in Model Organisms",
-      "count": 2117,
-      "from": "openalex"
+      "count": 2117
      },
      {
       "value": "Single-cell and spatial transcriptomics",
-      "count": 2112,
-      "from": "openalex"
+      "count": 2112
      },
      {
       "value": "Epigenetics and DNA Methylation",
-      "count": 2102,
-      "from": "openalex"
+      "count": 2102
      },
      {
       "value": "Chromosomal and Genetic Variations",
-      "count": 2063,
-      "from": "openalex"
+      "count": 2063
      },
      {
       "value": "Plant Molecular Biology Research",
-      "count": 1771,
-      "from": "openalex"
+      "count": 1771
      },
      {
       "value": "Plant tissue culture and regeneration",
-      "count": 1709,
-      "from": "openalex"
+      "count": 1709
      },
      {
       "value": "Bacterial Genetics and Biotechnology",
-      "count": 1655,
-      "from": "openalex"
+      "count": 1655
      },
      {
       "value": "Photosynthetic Processes and Mechanisms",
-      "count": 1580,
-      "from": "openalex"
+      "count": 1580
      },
      {
       "value": "Innovation and Socioeconomic Development",
-      "count": 1575,
-      "from": "openalex"
+      "count": 1575
      },
      {
       "value": "Mosquito-borne diseases and control",
-      "count": 1540,
-      "from": "openalex"
+      "count": 1540
      },
      {
       "value": "interferon and immune responses",
-      "count": 1507,
-      "from": "openalex"
+      "count": 1507
      }
     ]
    },
@@ -5421,52 +5283,7 @@
      "latency": 0,
      "skipReason": "too slow to answer in time"
     }
-   ],
-   "authorities": [
-    {
-     "authority": "crossref",
-     "status": "ok",
-     "asked": 10,
-     "answered": 10,
-     "applied": 7,
-     "latency": 1029
-    },
-    {
-     "authority": "openalex",
-     "status": "ok",
-     "asked": 10,
-     "answered": 10,
-     "applied": 7,
-     "latency": 1455
-    },
-    {
-     "authority": "unpaywall",
-     "status": "ok",
-     "asked": 10,
-     "answered": 10,
-     "applied": 0,
-     "latency": 1084
-    },
-    {
-     "authority": "opencitations",
-     "status": "skipped",
-     "asked": 0,
-     "answered": 0,
-     "applied": 0,
-     "skipReason": "nothing on this page needed it",
-     "latency": 0
-    },
-    {
-     "authority": "preprints",
-     "status": "skipped",
-     "asked": 0,
-     "answered": 0,
-     "applied": 0,
-     "skipReason": "nothing on this page needed it",
-     "latency": 0
-    }
-   ],
-   "duration": 10951
+   ]
   },
   "{\"q\":\"TS=crispr\",\"page\":2}": {
    "papers": [
@@ -5511,15 +5328,13 @@
        "provider": "openaire",
        "nativeId": "doi_dedup___::5a656a8b74ba5e2a792989932d5569f6",
        "rank": 142,
-       "retrievedAt": "2026-10-02T20:23:01.512Z",
-       "latency": 4745
+       "retrievedAt": "2026-10-02T20:23:01.512Z"
       },
       {
        "provider": "ncbi",
        "nativeId": "38909984",
        "rank": 8,
-       "retrievedAt": "2026-10-02T20:23:02.185Z",
-       "latency": 5419
+       "retrievedAt": "2026-10-02T20:23:02.185Z"
       }
      ],
      "fieldSources": {
@@ -5527,7 +5342,6 @@
       "topics": "ncbi",
       "citationCount": "crossref"
      },
-     "retrievedAt": "2026-10-02T20:23:01.512Z",
      "fullText": {
       "url": "https://europepmc.org/articles/PMC11278801?pdf=render",
       "kind": "pdf",
@@ -5580,21 +5394,18 @@
        "provider": "openalex",
        "nativeId": "W3004706073",
        "rank": 197,
-       "retrievedAt": "2026-10-02T20:23:02.199Z",
-       "latency": 5432
+       "retrievedAt": "2026-10-02T20:23:02.199Z"
       },
       {
        "provider": "ncbi",
        "nativeId": "32200959",
        "rank": 4,
-       "retrievedAt": "2026-10-02T20:23:02.185Z",
-       "latency": 5419
+       "retrievedAt": "2026-10-02T20:23:02.185Z"
       }
      ],
      "fieldSources": {
       "topics": "ncbi"
-     },
-     "retrievedAt": "2026-10-02T20:23:02.199Z"
+     }
     },
     {
      "id": "plos:10.1371/journal.pone.0186241",
@@ -5645,22 +5456,19 @@
        "provider": "plos",
        "nativeId": "10.1371/journal.pone.0186241",
        "rank": 11,
-       "retrievedAt": "2026-10-02T20:22:57.959Z",
-       "latency": 1193
+       "retrievedAt": "2026-10-02T20:22:57.959Z"
       },
       {
        "provider": "ncbi",
        "nativeId": "29028814",
        "rank": 141,
-       "retrievedAt": "2026-10-02T20:23:02.185Z",
-       "latency": 5419
+       "retrievedAt": "2026-10-02T20:23:02.185Z"
       }
      ],
      "fieldSources": {
       "topics": "ncbi",
       "citationCount": "crossref"
      },
-     "retrievedAt": "2026-10-02T20:22:57.959Z",
      "citationCount": 20
     },
     {
@@ -5697,15 +5505,13 @@
        "provider": "openaire",
        "nativeId": "doi_dedup___::4904d5113c353d37b385f759acadaf26",
        "rank": 38,
-       "retrievedAt": "2026-10-02T20:23:01.512Z",
-       "latency": 4745
+       "retrievedAt": "2026-10-02T20:23:01.512Z"
       },
       {
        "provider": "ncbi",
        "nativeId": "37459160",
        "rank": 67,
-       "retrievedAt": "2026-10-02T20:23:02.185Z",
-       "latency": 5419
+       "retrievedAt": "2026-10-02T20:23:02.185Z"
       }
      ],
      "fieldSources": {
@@ -5713,7 +5519,6 @@
       "citationCount": "crossref",
       "topics": "openalex"
      },
-     "retrievedAt": "2026-10-02T20:23:01.512Z",
      "fullText": {
       "url": "https://europepmc.org/articles/PMC10457644?pdf=render",
       "kind": "pdf",
@@ -5763,21 +5568,18 @@
        "provider": "openalex",
        "nativeId": "W2097379120",
        "rank": 296,
-       "retrievedAt": "2026-10-02T20:23:02.199Z",
-       "latency": 5432
+       "retrievedAt": "2026-10-02T20:23:02.199Z"
       },
       {
        "provider": "plos",
        "nativeId": "10.1371/journal.pone.0035888",
        "rank": 7,
-       "retrievedAt": "2026-10-02T20:22:57.959Z",
-       "latency": 1193
+       "retrievedAt": "2026-10-02T20:22:57.959Z"
       }
      ],
      "fieldSources": {
       "topics": "plos"
-     },
-     "retrievedAt": "2026-10-02T20:23:02.199Z"
+     }
     },
     {
      "id": "openalex:W2064815984",
@@ -5820,12 +5622,10 @@
        "provider": "openalex",
        "nativeId": "W2064815984",
        "rank": 0,
-       "retrievedAt": "2026-10-02T20:23:02.199Z",
-       "latency": 5432
+       "retrievedAt": "2026-10-02T20:23:02.199Z"
       }
      ],
-     "fieldSources": {},
-     "retrievedAt": "2026-10-02T20:23:02.199Z"
+     "fieldSources": {}
     },
     {
      "id": "europepmc:42804049",
@@ -5864,8 +5664,7 @@
        "provider": "europepmc",
        "nativeId": "42804049",
        "rank": 0,
-       "retrievedAt": "2026-10-02T20:23:00.761Z",
-       "latency": 3994
+       "retrievedAt": "2026-10-02T20:23:00.761Z"
       }
      ],
      "fieldSources": {
@@ -5873,7 +5672,6 @@
       "oaStatus": "unpaywall",
       "topics": "openalex"
      },
-     "retrievedAt": "2026-10-02T20:23:00.761Z",
      "publisher": "Springer Science and Business Media LLC"
     },
     {
@@ -5921,8 +5719,7 @@
        "provider": "ncbi",
        "nativeId": "38786024",
        "rank": 0,
-       "retrievedAt": "2026-10-02T20:23:02.185Z",
-       "latency": 5419
+       "retrievedAt": "2026-10-02T20:23:02.185Z"
       }
      ],
      "fieldSources": {
@@ -5931,7 +5728,6 @@
       "citationCount": "crossref",
       "topics": "openalex"
      },
-     "retrievedAt": "2026-10-02T20:23:02.185Z",
      "publisher": "MDPI AG",
      "citationCount": 110
     },
@@ -5960,12 +5756,10 @@
        "provider": "arxiv",
        "nativeId": "2202.07171v1",
        "rank": 0,
-       "retrievedAt": "2026-10-02T20:22:57.349Z",
-       "latency": 583
+       "retrievedAt": "2026-10-02T20:22:57.349Z"
       }
      ],
-     "fieldSources": {},
-     "retrievedAt": "2026-10-02T20:22:57.349Z"
+     "fieldSources": {}
     },
     {
      "id": "europepmc:42655845",
@@ -6013,8 +5807,7 @@
        "provider": "europepmc",
        "nativeId": "42655845",
        "rank": 1,
-       "retrievedAt": "2026-10-02T20:23:00.761Z",
-       "latency": 3994
+       "retrievedAt": "2026-10-02T20:23:00.761Z"
       }
      ],
      "fieldSources": {
@@ -6022,17 +5815,12 @@
       "oaStatus": "unpaywall",
       "topics": "openalex"
      },
-     "retrievedAt": "2026-10-02T20:23:00.761Z",
      "publisher": "MDPI AG"
     }
    ],
    "total": 1738,
    "page": 2,
    "pageSize": 10,
-   "sort": "relevance",
-   "filters": {
-    "openAccessOnly": true
-   },
    "facets": {
     "source": [
      {
@@ -6089,13 +5877,11 @@
     "stage": [
      {
       "value": "published",
-      "count": 64800,
-      "from": "openalex"
+      "count": 64800
      },
      {
       "value": "preprint",
-      "count": 13620,
-      "from": "openalex"
+      "count": 13620
      },
      {
       "value": "unknown",
@@ -6105,509 +5891,409 @@
     "year": [
      {
       "value": 2026,
-      "count": 13515,
-      "from": "openalex"
+      "count": 13515
      },
      {
       "value": 2025,
-      "count": 13325,
-      "from": "openalex"
+      "count": 13325
      },
      {
       "value": 2024,
-      "count": 10649,
-      "from": "openalex"
+      "count": 10649
      },
      {
       "value": 2023,
-      "count": 11278,
-      "from": "openalex"
+      "count": 11278
      },
      {
       "value": 2022,
-      "count": 8485,
-      "from": "openalex"
+      "count": 8485
      },
      {
       "value": 2021,
-      "count": 7650,
-      "from": "openalex"
+      "count": 7650
      },
      {
       "value": 2020,
-      "count": 7398,
-      "from": "openalex"
+      "count": 7398
      },
      {
       "value": 2019,
-      "count": 6201,
-      "from": "openalex"
+      "count": 6201
      },
      {
       "value": 2018,
-      "count": 4927,
-      "from": "openalex"
+      "count": 4927
      },
      {
       "value": 2017,
-      "count": 3538,
-      "from": "openalex"
+      "count": 3538
      },
      {
       "value": 2016,
-      "count": 2509,
-      "from": "openalex"
+      "count": 2509
      },
      {
       "value": 2015,
-      "count": 1353,
-      "from": "openalex"
+      "count": 1353
      },
      {
       "value": 2014,
-      "count": 669,
-      "from": "openalex"
+      "count": 669
      },
      {
       "value": 2013,
-      "count": 298,
-      "from": "openalex"
+      "count": 298
      },
      {
       "value": 2012,
-      "count": 139,
-      "from": "openalex"
+      "count": 139
      },
      {
       "value": 2011,
-      "count": 89,
-      "from": "openalex"
+      "count": 89
      },
      {
       "value": 2010,
-      "count": 54,
-      "from": "openalex"
+      "count": 54
      },
      {
       "value": 2009,
-      "count": 28,
-      "from": "openalex"
+      "count": 28
      },
      {
       "value": 2008,
-      "count": 21,
-      "from": "openalex"
+      "count": 21
      },
      {
       "value": 2007,
-      "count": 20,
-      "from": "openalex"
+      "count": 20
      },
      {
       "value": 2006,
-      "count": 8,
-      "from": "openalex"
+      "count": 8
      },
      {
       "value": 2005,
-      "count": 5,
-      "from": "openalex"
+      "count": 5
      },
      {
       "value": 2004,
-      "count": 5,
-      "from": "openalex"
+      "count": 5
      },
      {
       "value": 2003,
-      "count": 6,
-      "from": "openalex"
+      "count": 6
      },
      {
       "value": 2002,
-      "count": 4,
-      "from": "openalex"
+      "count": 4
      }
     ],
     "venue": [
      {
       "value": "PLOS ONE",
-      "count": 2635,
-      "from": "plos"
+      "count": 2635
      },
      {
       "value": "Nature communications",
-      "count": 1493,
-      "from": "openalex"
+      "count": 1493
      },
      {
       "value": "Scientific reports",
-      "count": 1442,
-      "from": "openalex"
+      "count": 1442
      },
      {
       "value": "International journal of molecular sciences",
-      "count": 1384,
-      "from": "openalex"
+      "count": 1384
      },
      {
       "value": "Nucleic acids research",
-      "count": 944,
-      "from": "openalex"
+      "count": 944
      },
      {
       "value": "eLife",
-      "count": 721,
-      "from": "openalex"
+      "count": 721
      },
      {
       "value": "Frontiers in Plant Science",
-      "count": 683,
-      "from": "openalex"
+      "count": 683
      },
      {
       "value": "Blood",
-      "count": 679,
-      "from": "openalex"
+      "count": 679
      },
      {
       "value": "Proceedings of the National Academy of Sciences",
-      "count": 634,
-      "from": "openalex"
+      "count": 634
      },
      {
       "value": "Neuro-Oncology",
-      "count": 592,
-      "from": "openalex"
+      "count": 592
      },
      {
       "value": "Frontiers in Microbiology",
-      "count": 572,
-      "from": "openalex"
+      "count": 572
      },
      {
       "value": "PLOS Genetics",
-      "count": 556,
-      "from": "plos"
+      "count": 556
      },
      {
       "value": "Stem Cell Research",
-      "count": 528,
-      "from": "openalex"
+      "count": 528
      },
      {
       "value": "Plant biotechnology journal",
-      "count": 507,
-      "from": "openalex"
+      "count": 507
      },
      {
       "value": "Journal of Biological Chemistry",
-      "count": 488,
-      "from": "openalex"
+      "count": 488
      },
      {
       "value": "Molecular Therapy",
-      "count": 476,
-      "from": "openalex"
+      "count": 476
      },
      {
       "value": "Cell Reports",
-      "count": 421,
-      "from": "openalex"
+      "count": 421
      },
      {
       "value": "Nature",
-      "count": 400,
-      "from": "openalex"
+      "count": 400
      },
      {
       "value": "Cells",
-      "count": 394,
-      "from": "openalex"
+      "count": 394
      },
      {
       "value": "PLOS Pathogens",
-      "count": 383,
-      "from": "plos"
+      "count": 383
      },
      {
       "value": "Frontiers in Immunology",
-      "count": 381,
-      "from": "openalex"
+      "count": 381
      },
      {
       "value": "Regular and Young Investigator Award Abstracts",
-      "count": 301,
-      "from": "openalex"
+      "count": 301
      },
      {
       "value": "Plants",
-      "count": 296,
-      "from": "openalex"
+      "count": 296
      },
      {
       "value": "Frontiers in Cell and Developmental Biology",
-      "count": 292,
-      "from": "openalex"
+      "count": 292
      },
      {
       "value": "Molecular Therapy — Nucleic Acids",
-      "count": 292,
-      "from": "openalex"
+      "count": 292
      }
     ],
     "publisher": [
      {
       "value": "Elsevier BV",
-      "count": 10323,
-      "from": "openalex"
+      "count": 10323
      },
      {
       "value": "Nature Portfolio",
-      "count": 4884,
-      "from": "openalex"
+      "count": 4884
      },
      {
       "value": "Multidisciplinary Digital Publishing Institute",
-      "count": 4666,
-      "from": "openalex"
+      "count": 4666
      },
      {
       "value": "Wiley",
-      "count": 4184,
-      "from": "openalex"
+      "count": 4184
      },
      {
       "value": "Public Library of Science",
-      "count": 4116,
-      "from": "plos"
+      "count": 4116
      },
      {
       "value": "Oxford University Press",
-      "count": 3839,
-      "from": "openalex"
+      "count": 3839
      },
      {
       "value": "Frontiers Media",
-      "count": 3704,
-      "from": "openalex"
+      "count": 3704
      },
      {
       "value": "BioMed Central",
-      "count": 2775,
-      "from": "openalex"
+      "count": 2775
      },
      {
       "value": "Springer Science+Business Media",
-      "count": 1873,
-      "from": "openalex"
+      "count": 1873
      },
      {
       "value": "Springer Nature",
-      "count": 1869,
-      "from": "openalex"
+      "count": 1869
      },
      {
       "value": "Cell Press",
-      "count": 1484,
-      "from": "openalex"
+      "count": 1484
      },
      {
       "value": "American Society for Microbiology",
-      "count": 970,
-      "from": "openalex"
+      "count": 970
      },
      {
       "value": "eLife Sciences Publications Ltd",
-      "count": 725,
-      "from": "openalex"
+      "count": 725
      },
      {
       "value": "National Academy of Sciences",
-      "count": 634,
-      "from": "openalex"
+      "count": 634
      },
      {
       "value": "Taylor & Francis",
-      "count": 624,
-      "from": "openalex"
+      "count": 624
      },
      {
       "value": "American Chemical Society",
-      "count": 621,
-      "from": "openalex"
+      "count": 621
      },
      {
       "value": "American Association for Cancer Research",
-      "count": 565,
-      "from": "openalex"
+      "count": 565
      },
      {
       "value": "American Association for the Advancement of Science",
-      "count": 547,
-      "from": "openalex"
+      "count": 547
      },
      {
       "value": "Lippincott Williams & Wilkins",
-      "count": 419,
-      "from": "openalex"
+      "count": 419
      },
      {
       "value": "The Company of Biologists",
-      "count": 380,
-      "from": "openalex"
+      "count": 380
      },
      {
       "value": "Wolters Kluwer",
-      "count": 344,
-      "from": "openalex"
+      "count": 344
      },
      {
       "value": "Mary Ann Liebert, Inc.",
-      "count": 331,
-      "from": "openalex"
+      "count": 331
      },
      {
       "value": "Cold Spring Harbor Laboratory Press",
-      "count": 258,
-      "from": "openalex"
+      "count": 258
      },
      {
       "value": "BMJ",
-      "count": 250,
-      "from": "openalex"
+      "count": 250
      },
      {
       "value": "American Association of Immunologists",
-      "count": 250,
-      "from": "openalex"
+      "count": 250
      }
     ],
     "topics": [
      {
       "value": "CRISPR and Genetic Engineering",
-      "count": 37276,
-      "from": "openalex"
+      "count": 37276
      },
      {
       "value": "RNA and protein synthesis mechanisms",
-      "count": 5375,
-      "from": "openalex"
+      "count": 5375
      },
      {
       "value": "Advanced biosensing and bioanalysis techniques",
-      "count": 4770,
-      "from": "openalex"
+      "count": 4770
      },
      {
       "value": "Pluripotent Stem Cells Research",
-      "count": 4704,
-      "from": "openalex"
+      "count": 4704
      },
      {
       "value": "Virus-based gene therapy research",
-      "count": 3317,
-      "from": "openalex"
+      "count": 3317
      },
      {
       "value": "CAR-T cell therapy research",
-      "count": 3256,
-      "from": "openalex"
+      "count": 3256
      },
      {
       "value": "RNA Interference and Gene Delivery",
-      "count": 3203,
-      "from": "openalex"
+      "count": 3203
      },
      {
       "value": "RNA regulation and disease",
-      "count": 2919,
-      "from": "openalex"
+      "count": 2919
      },
      {
       "value": "Plant Virus Research Studies",
-      "count": 2635,
-      "from": "openalex"
+      "count": 2635
      },
      {
       "value": "Bacteriophages and microbial interactions",
-      "count": 2572,
-      "from": "openalex"
+      "count": 2572
      },
      {
       "value": "RNA modifications and cancer",
-      "count": 2480,
-      "from": "openalex"
+      "count": 2480
      },
      {
       "value": "RNA Research and Splicing",
-      "count": 2442,
-      "from": "openalex"
+      "count": 2442
      },
      {
       "value": "Insect symbiosis and bacterial influences",
-      "count": 2278,
-      "from": "openalex"
+      "count": 2278
      },
      {
       "value": "Animal Genetics and Reproduction",
-      "count": 2200,
-      "from": "openalex"
+      "count": 2200
      },
      {
       "value": "Genetics, Aging, and Longevity in Model Organisms",
-      "count": 2117,
-      "from": "openalex"
+      "count": 2117
      },
      {
       "value": "Single-cell and spatial transcriptomics",
-      "count": 2112,
-      "from": "openalex"
+      "count": 2112
      },
      {
       "value": "Epigenetics and DNA Methylation",
-      "count": 2102,
-      "from": "openalex"
+      "count": 2102
      },
      {
       "value": "Chromosomal and Genetic Variations",
-      "count": 2063,
-      "from": "openalex"
+      "count": 2063
      },
      {
       "value": "Plant Molecular Biology Research",
-      "count": 1771,
-      "from": "openalex"
+      "count": 1771
      },
      {
       "value": "Plant tissue culture and regeneration",
-      "count": 1709,
-      "from": "openalex"
+      "count": 1709
      },
      {
       "value": "Bacterial Genetics and Biotechnology",
-      "count": 1655,
-      "from": "openalex"
+      "count": 1655
      },
      {
       "value": "Photosynthetic Processes and Mechanisms",
-      "count": 1580,
-      "from": "openalex"
+      "count": 1580
      },
      {
       "value": "Innovation and Socioeconomic Development",
-      "count": 1575,
-      "from": "openalex"
+      "count": 1575
      },
      {
       "value": "Mosquito-borne diseases and control",
-      "count": 1540,
-      "from": "openalex"
+      "count": 1540
      },
      {
       "value": "interferon and immune responses",
-      "count": 1507,
-      "from": "openalex"
+      "count": 1507
      }
     ]
    },
@@ -6686,52 +6372,7 @@
      "latency": 0,
      "skipReason": "too slow to answer in time"
     }
-   ],
-   "authorities": [
-    {
-     "authority": "crossref",
-     "status": "ok",
-     "asked": 9,
-     "answered": 9,
-     "applied": 6,
-     "latency": 815
-    },
-    {
-     "authority": "openalex",
-     "status": "ok",
-     "asked": 9,
-     "answered": 9,
-     "applied": 6,
-     "latency": 1066
-    },
-    {
-     "authority": "unpaywall",
-     "status": "ok",
-     "asked": 9,
-     "answered": 9,
-     "applied": 4,
-     "latency": 826
-    },
-    {
-     "authority": "opencitations",
-     "status": "skipped",
-     "asked": 0,
-     "answered": 0,
-     "applied": 0,
-     "skipReason": "nothing on this page needed it",
-     "latency": 0
-    },
-    {
-     "authority": "preprints",
-     "status": "skipped",
-     "asked": 0,
-     "answered": 0,
-     "applied": 0,
-     "skipReason": "nothing on this page needed it",
-     "latency": 0
-    }
-   ],
-   "duration": 1067
+   ]
   },
   "{\"q\":\"TS=(\\\"base editing\\\" AND plants) AND PY=2022-2026\",\"page\":1}": {
    "papers": [
@@ -6791,42 +6432,36 @@
        "provider": "openalex",
        "nativeId": "W4396227318",
        "rank": 18,
-       "retrievedAt": "2026-10-02T20:23:13.601Z",
-       "latency": 4812
+       "retrievedAt": "2026-10-02T20:23:13.601Z"
       },
       {
        "provider": "europepmc",
        "nativeId": "38679734",
        "rank": 90,
-       "retrievedAt": "2026-10-02T20:23:11.961Z",
-       "latency": 3171
+       "retrievedAt": "2026-10-02T20:23:11.961Z"
       },
       {
        "provider": "openaire",
        "nativeId": "doi_dedup___::2f137c4717ab58caf6642b827c467537",
        "rank": 17,
-       "retrievedAt": "2026-10-02T20:23:12.133Z",
-       "latency": 3344
+       "retrievedAt": "2026-10-02T20:23:12.133Z"
       },
       {
        "provider": "doaj",
        "nativeId": "c8fa5c2c922b431d8245acab5d365ac8",
        "rank": 46,
-       "retrievedAt": "2026-10-02T20:23:09.123Z",
-       "latency": 336
+       "retrievedAt": "2026-10-02T20:23:09.123Z"
       },
       {
        "provider": "ncbi",
        "nativeId": "38679734",
        "rank": 34,
-       "retrievedAt": "2026-10-02T20:23:12.874Z",
-       "latency": 4088
+       "retrievedAt": "2026-10-02T20:23:12.874Z"
       }
      ],
      "fieldSources": {
       "topics": "europepmc"
-     },
-     "retrievedAt": "2026-10-02T20:23:13.601Z"
+     }
     },
     {
      "id": "openalex:W4317434005",
@@ -6882,42 +6517,36 @@
        "provider": "openalex",
        "nativeId": "W4317434005",
        "rank": 3,
-       "retrievedAt": "2026-10-02T20:23:13.601Z",
-       "latency": 4812
+       "retrievedAt": "2026-10-02T20:23:13.601Z"
       },
       {
        "provider": "europepmc",
        "nativeId": "36826004",
        "rank": 51,
-       "retrievedAt": "2026-10-02T20:23:11.961Z",
-       "latency": 3171
+       "retrievedAt": "2026-10-02T20:23:11.961Z"
       },
       {
        "provider": "openaire",
        "nativeId": "doi_dedup___::96e41826523c2ea363138fc28770cea3",
        "rank": 48,
-       "retrievedAt": "2026-10-02T20:23:12.133Z",
-       "latency": 3344
+       "retrievedAt": "2026-10-02T20:23:12.133Z"
       },
       {
        "provider": "doaj",
        "nativeId": "a54596cd32d74a3a9fc0351a603dbe98",
        "rank": 38,
-       "retrievedAt": "2026-10-02T20:23:09.123Z",
-       "latency": 336
+       "retrievedAt": "2026-10-02T20:23:09.123Z"
       },
       {
        "provider": "ncbi",
        "nativeId": "36826004",
        "rank": 29,
-       "retrievedAt": "2026-10-02T20:23:12.874Z",
-       "latency": 4088
+       "retrievedAt": "2026-10-02T20:23:12.874Z"
       }
      ],
      "fieldSources": {
       "topics": "europepmc"
-     },
-     "retrievedAt": "2026-10-02T20:23:13.601Z"
+     }
     },
     {
      "id": "openalex:W4379648150",
@@ -6981,42 +6610,36 @@
        "provider": "openalex",
        "nativeId": "W4379648150",
        "rank": 70,
-       "retrievedAt": "2026-10-02T20:23:13.601Z",
-       "latency": 4812
+       "retrievedAt": "2026-10-02T20:23:13.601Z"
       },
       {
        "provider": "europepmc",
        "nativeId": "37286962",
        "rank": 81,
-       "retrievedAt": "2026-10-02T20:23:11.961Z",
-       "latency": 3171
+       "retrievedAt": "2026-10-02T20:23:11.961Z"
       },
       {
        "provider": "openaire",
        "nativeId": "doi_dedup___::a831f90ae3008b334066923ab7ae54f6",
        "rank": 6,
-       "retrievedAt": "2026-10-02T20:23:12.133Z",
-       "latency": 3344
+       "retrievedAt": "2026-10-02T20:23:12.133Z"
       },
       {
        "provider": "doaj",
        "nativeId": "2bf2eb5f1c0941fbaafa1b29576fd3b8",
        "rank": 7,
-       "retrievedAt": "2026-10-02T20:23:09.123Z",
-       "latency": 336
+       "retrievedAt": "2026-10-02T20:23:09.123Z"
       },
       {
        "provider": "ncbi",
        "nativeId": "37286962",
        "rank": 38,
-       "retrievedAt": "2026-10-02T20:23:12.874Z",
-       "latency": 4088
+       "retrievedAt": "2026-10-02T20:23:12.874Z"
       }
      ],
      "fieldSources": {
       "topics": "europepmc"
-     },
-     "retrievedAt": "2026-10-02T20:23:13.601Z"
+     }
     },
     {
      "id": "openalex:W7148628816",
@@ -7068,36 +6691,31 @@
        "provider": "openalex",
        "nativeId": "W7148628816",
        "rank": 55,
-       "retrievedAt": "2026-10-02T20:23:13.601Z",
-       "latency": 4812
+       "retrievedAt": "2026-10-02T20:23:13.601Z"
       },
       {
        "provider": "europepmc",
        "nativeId": "41928060",
        "rank": 0,
-       "retrievedAt": "2026-10-02T20:23:11.961Z",
-       "latency": 3171
+       "retrievedAt": "2026-10-02T20:23:11.961Z"
       },
       {
        "provider": "openaire",
        "nativeId": "doi_________::f6ab3b4e76cd1194365968a6b0c14bee",
        "rank": 5,
-       "retrievedAt": "2026-10-02T20:23:12.133Z",
-       "latency": 3344
+       "retrievedAt": "2026-10-02T20:23:12.133Z"
       },
       {
        "provider": "ncbi",
        "nativeId": "41928060",
        "rank": 76,
-       "retrievedAt": "2026-10-02T20:23:12.874Z",
-       "latency": 4088
+       "retrievedAt": "2026-10-02T20:23:12.874Z"
       }
      ],
      "fieldSources": {
       "fullText": "europepmc",
       "topics": "europepmc"
      },
-     "retrievedAt": "2026-10-02T20:23:13.601Z",
      "fullText": {
       "url": "https://europepmc.org/articles/PMC13545857?pdf=render",
       "kind": "pdf",
@@ -7150,43 +6768,37 @@
        "provider": "openalex",
        "nativeId": "W4416118479",
        "rank": 59,
-       "retrievedAt": "2026-10-02T20:23:13.601Z",
-       "latency": 4812
+       "retrievedAt": "2026-10-02T20:23:13.601Z"
       },
       {
        "provider": "europepmc",
        "nativeId": "41404502",
        "rank": 25,
-       "retrievedAt": "2026-10-02T20:23:11.961Z",
-       "latency": 3171
+       "retrievedAt": "2026-10-02T20:23:11.961Z"
       },
       {
        "provider": "openaire",
        "nativeId": "doi_dedup___::0ac99aff26f9a7f7a554e7a46a75cb96",
        "rank": 38,
-       "retrievedAt": "2026-10-02T20:23:12.133Z",
-       "latency": 3344
+       "retrievedAt": "2026-10-02T20:23:12.133Z"
       },
       {
        "provider": "doaj",
        "nativeId": "64cc73bf6e124de5a856936b080b65c5",
        "rank": 25,
-       "retrievedAt": "2026-10-02T20:23:09.123Z",
-       "latency": 336
+       "retrievedAt": "2026-10-02T20:23:09.123Z"
       },
       {
        "provider": "ncbi",
        "nativeId": "41404502",
        "rank": 9,
-       "retrievedAt": "2026-10-02T20:23:12.874Z",
-       "latency": 4088
+       "retrievedAt": "2026-10-02T20:23:12.874Z"
       }
      ],
      "fieldSources": {
       "fullText": "europepmc",
       "topics": "europepmc"
      },
-     "retrievedAt": "2026-10-02T20:23:13.601Z",
      "fullText": {
       "url": "https://europepmc.org/articles/PMC12703980?pdf=render",
       "kind": "pdf",
@@ -7245,43 +6857,37 @@
        "provider": "openalex",
        "nativeId": "W4399671832",
        "rank": 16,
-       "retrievedAt": "2026-10-02T20:23:13.601Z",
-       "latency": 4812
+       "retrievedAt": "2026-10-02T20:23:13.601Z"
       },
       {
        "provider": "europepmc",
        "nativeId": "38877035",
        "rank": 59,
-       "retrievedAt": "2026-10-02T20:23:11.961Z",
-       "latency": 3171
+       "retrievedAt": "2026-10-02T20:23:11.961Z"
       },
       {
        "provider": "openaire",
        "nativeId": "doi_dedup___::c41bc1bd45d854f810e084c6d61e4356",
        "rank": 12,
-       "retrievedAt": "2026-10-02T20:23:12.133Z",
-       "latency": 3344
+       "retrievedAt": "2026-10-02T20:23:12.133Z"
       },
       {
        "provider": "doaj",
        "nativeId": "4d3f41c610934d3783cf74779779f267",
        "rank": 21,
-       "retrievedAt": "2026-10-02T20:23:09.123Z",
-       "latency": 336
+       "retrievedAt": "2026-10-02T20:23:09.123Z"
       },
       {
        "provider": "ncbi",
        "nativeId": "38877035",
        "rank": 49,
-       "retrievedAt": "2026-10-02T20:23:12.874Z",
-       "latency": 4088
+       "retrievedAt": "2026-10-02T20:23:12.874Z"
       }
      ],
      "fieldSources": {
       "fullText": "europepmc",
       "topics": "openaire"
      },
-     "retrievedAt": "2026-10-02T20:23:13.601Z",
      "fullText": {
       "url": "https://europepmc.org/articles/PMC11178825?pdf=render",
       "kind": "pdf",
@@ -7337,42 +6943,36 @@
        "provider": "openalex",
        "nativeId": "W4377090926",
        "rank": 43,
-       "retrievedAt": "2026-10-02T20:23:13.601Z",
-       "latency": 4812
+       "retrievedAt": "2026-10-02T20:23:13.601Z"
       },
       {
        "provider": "europepmc",
        "nativeId": "37237553",
        "rank": 46,
-       "retrievedAt": "2026-10-02T20:23:11.961Z",
-       "latency": 3171
+       "retrievedAt": "2026-10-02T20:23:11.961Z"
       },
       {
        "provider": "openaire",
        "nativeId": "doi_dedup___::3de78986a718a835f5a2d4927a50a229",
        "rank": 82,
-       "retrievedAt": "2026-10-02T20:23:12.133Z",
-       "latency": 3344
+       "retrievedAt": "2026-10-02T20:23:12.133Z"
       },
       {
        "provider": "doaj",
        "nativeId": "48b6d76532a04842a5a609bbbaa040ec",
        "rank": 20,
-       "retrievedAt": "2026-10-02T20:23:09.123Z",
-       "latency": 336
+       "retrievedAt": "2026-10-02T20:23:09.123Z"
       },
       {
        "provider": "ncbi",
        "nativeId": "37237553",
        "rank": 17,
-       "retrievedAt": "2026-10-02T20:23:12.874Z",
-       "latency": 4088
+       "retrievedAt": "2026-10-02T20:23:12.874Z"
       }
      ],
      "fieldSources": {
       "topics": "europepmc"
-     },
-     "retrievedAt": "2026-10-02T20:23:13.601Z"
+     }
     },
     {
      "id": "openalex:W4412918610",
@@ -7426,43 +7026,37 @@
        "provider": "openalex",
        "nativeId": "W4412918610",
        "rank": 106,
-       "retrievedAt": "2026-10-02T20:23:13.601Z",
-       "latency": 4812
+       "retrievedAt": "2026-10-02T20:23:13.601Z"
       },
       {
        "provider": "europepmc",
        "nativeId": "40805639",
        "rank": 9,
-       "retrievedAt": "2026-10-02T20:23:11.961Z",
-       "latency": 3171
+       "retrievedAt": "2026-10-02T20:23:11.961Z"
       },
       {
        "provider": "openaire",
        "nativeId": "doi_dedup___::fb0b7fa283ffc07321a3070e38f9859d",
        "rank": 24,
-       "retrievedAt": "2026-10-02T20:23:12.133Z",
-       "latency": 3344
+       "retrievedAt": "2026-10-02T20:23:12.133Z"
       },
       {
        "provider": "doaj",
        "nativeId": "d04a709eb8854c688a47b05664921a08",
        "rank": 50,
-       "retrievedAt": "2026-10-02T20:23:09.123Z",
-       "latency": 336
+       "retrievedAt": "2026-10-02T20:23:09.123Z"
       },
       {
        "provider": "ncbi",
        "nativeId": "40805639",
        "rank": 48,
-       "retrievedAt": "2026-10-02T20:23:12.874Z",
-       "latency": 4088
+       "retrievedAt": "2026-10-02T20:23:12.874Z"
       }
      ],
      "fieldSources": {
       "fullText": "europepmc",
       "topics": "europepmc"
      },
-     "retrievedAt": "2026-10-02T20:23:13.601Z",
      "fullText": {
       "url": "https://europepmc.org/articles/PMC12348465?pdf=render",
       "kind": "pdf",
@@ -7524,36 +7118,31 @@
        "provider": "openalex",
        "nativeId": "W4283724336",
        "rank": 6,
-       "retrievedAt": "2026-10-02T20:23:13.601Z",
-       "latency": 4812
+       "retrievedAt": "2026-10-02T20:23:13.601Z"
       },
       {
        "provider": "europepmc",
        "nativeId": "35767601",
        "rank": 67,
-       "retrievedAt": "2026-10-02T20:23:11.961Z",
-       "latency": 3171
+       "retrievedAt": "2026-10-02T20:23:11.961Z"
       },
       {
        "provider": "openaire",
        "nativeId": "doi_dedup___::8cd49064708944f684a5f33440977c4e",
        "rank": 44,
-       "retrievedAt": "2026-10-02T20:23:12.133Z",
-       "latency": 3344
+       "retrievedAt": "2026-10-02T20:23:12.133Z"
       },
       {
        "provider": "ncbi",
        "nativeId": "35767601",
        "rank": 11,
-       "retrievedAt": "2026-10-02T20:23:12.874Z",
-       "latency": 4088
+       "retrievedAt": "2026-10-02T20:23:12.874Z"
       }
      ],
      "fieldSources": {
       "fullText": "europepmc",
       "topics": "europepmc"
      },
-     "retrievedAt": "2026-10-02T20:23:13.601Z",
      "fullText": {
       "url": "https://europepmc.org/articles/PMC9295155?pdf=render",
       "kind": "pdf",
@@ -7630,51 +7219,41 @@
        "provider": "openalex",
        "nativeId": "W4288734496",
        "rank": 20,
-       "retrievedAt": "2026-10-02T20:23:13.601Z",
-       "latency": 4812
+       "retrievedAt": "2026-10-02T20:23:13.601Z"
       },
       {
        "provider": "europepmc",
        "nativeId": "35983232",
        "rank": 190,
-       "retrievedAt": "2026-10-02T20:23:11.961Z",
-       "latency": 3171
+       "retrievedAt": "2026-10-02T20:23:11.961Z"
       },
       {
        "provider": "openaire",
        "nativeId": "doi_dedup___::d48e67033dae4fa3b56c4f8d996b4561",
        "rank": 59,
-       "retrievedAt": "2026-10-02T20:23:12.133Z",
-       "latency": 3344
+       "retrievedAt": "2026-10-02T20:23:12.133Z"
       },
       {
        "provider": "doaj",
        "nativeId": "46ab17f4488f4e5b8dcc634fa9cf989d",
        "rank": 19,
-       "retrievedAt": "2026-10-02T20:23:09.123Z",
-       "latency": 336
+       "retrievedAt": "2026-10-02T20:23:09.123Z"
       },
       {
        "provider": "ncbi",
        "nativeId": "35983232",
        "rank": 75,
-       "retrievedAt": "2026-10-02T20:23:12.874Z",
-       "latency": 4088
+       "retrievedAt": "2026-10-02T20:23:12.874Z"
       }
      ],
      "fieldSources": {
       "topics": "europepmc"
-     },
-     "retrievedAt": "2026-10-02T20:23:13.601Z"
+     }
     }
    ],
    "total": 597,
    "page": 1,
    "pageSize": 10,
-   "sort": "relevance",
-   "filters": {
-    "openAccessOnly": true
-   },
    "facets": {
     "source": [
      {
@@ -8137,52 +7716,7 @@
      "latency": 0,
      "skipReason": "too slow to answer in time"
     }
-   ],
-   "authorities": [
-    {
-     "authority": "crossref",
-     "status": "ok",
-     "asked": 10,
-     "answered": 10,
-     "applied": 0,
-     "latency": 845
-    },
-    {
-     "authority": "openalex",
-     "status": "ok",
-     "asked": 10,
-     "answered": 10,
-     "applied": 0,
-     "latency": 1334
-    },
-    {
-     "authority": "unpaywall",
-     "status": "ok",
-     "asked": 10,
-     "answered": 10,
-     "applied": 0,
-     "latency": 896
-    },
-    {
-     "authority": "opencitations",
-     "status": "skipped",
-     "asked": 0,
-     "answered": 0,
-     "applied": 0,
-     "skipReason": "nothing on this page needed it",
-     "latency": 0
-    },
-    {
-     "authority": "preprints",
-     "status": "skipped",
-     "asked": 0,
-     "answered": 0,
-     "applied": 0,
-     "skipReason": "nothing on this page needed it",
-     "latency": 0
-    }
-   ],
-   "duration": 9229
+   ]
   },
   "{\"q\":\"TI=\\\"attention is all you need\\\"\",\"page\":1}": {
    "papers": [
@@ -8211,29 +7745,25 @@
        "provider": "openalex",
        "nativeId": "W7158626848",
        "rank": 28,
-       "retrievedAt": "2026-10-02T20:23:19.413Z",
-       "latency": 1395
+       "retrievedAt": "2026-10-02T20:23:19.413Z"
       },
       {
        "provider": "europepmc",
        "nativeId": "42059664",
        "rank": 0,
-       "retrievedAt": "2026-10-02T20:23:18.518Z",
-       "latency": 500
+       "retrievedAt": "2026-10-02T20:23:18.518Z"
       },
       {
        "provider": "openaire",
        "nativeId": "doi_________::fee66494ef83470dd819c842856e3dc9",
        "rank": 4,
-       "retrievedAt": "2026-10-02T20:23:21.274Z",
-       "latency": 3257
+       "retrievedAt": "2026-10-02T20:23:21.274Z"
       }
      ],
      "fieldSources": {
       "fullText": "europepmc",
       "topics": "openaire"
      },
-     "retrievedAt": "2026-10-02T20:23:19.413Z",
      "fullText": {
       "url": "https://europepmc.org/articles/PMC13130204?pdf=render",
       "kind": "pdf",
@@ -8292,28 +7822,24 @@
        "provider": "openalex",
        "nativeId": "W4390678101",
        "rank": 2,
-       "retrievedAt": "2026-10-02T20:23:19.413Z",
-       "latency": 1395
+       "retrievedAt": "2026-10-02T20:23:19.413Z"
       },
       {
        "provider": "europepmc",
        "nativeId": "38189543",
        "rank": 1,
-       "retrievedAt": "2026-10-02T20:23:18.518Z",
-       "latency": 500
+       "retrievedAt": "2026-10-02T20:23:18.518Z"
       },
       {
        "provider": "openaire",
        "nativeId": "doi_dedup___::307fe3454ef94c6ae6952aa89dbcf80a",
        "rank": 43,
-       "retrievedAt": "2026-10-02T20:23:21.274Z",
-       "latency": 3257
+       "retrievedAt": "2026-10-02T20:23:21.274Z"
       }
      ],
      "fieldSources": {
       "topics": "europepmc"
-     },
-     "retrievedAt": "2026-10-02T20:23:19.413Z"
+     }
     },
     {
      "id": "openalex:W4400867263",
@@ -8357,29 +7883,25 @@
        "provider": "openalex",
        "nativeId": "W4400867263",
        "rank": 5,
-       "retrievedAt": "2026-10-02T20:23:19.413Z",
-       "latency": 1395
+       "retrievedAt": "2026-10-02T20:23:19.413Z"
       },
       {
        "provider": "openaire",
        "nativeId": "doi_dedup___::45947e7695c31c608c1b8e1cbd8d1e61",
        "rank": 206,
-       "retrievedAt": "2026-10-02T20:23:21.274Z",
-       "latency": 3257
+       "retrievedAt": "2026-10-02T20:23:21.274Z"
       },
       {
        "provider": "doaj",
        "nativeId": "1df612d8f817479f89d17f369827dad4",
        "rank": 0,
-       "retrievedAt": "2026-10-02T20:23:18.279Z",
-       "latency": 262
+       "retrievedAt": "2026-10-02T20:23:18.279Z"
       }
      ],
      "fieldSources": {
       "topics": "openaire",
       "fullText": "doaj"
      },
-     "retrievedAt": "2026-10-02T20:23:19.413Z",
      "fullText": {
       "url": "https://www.tandfonline.com/doi/10.1080/15481603.2024.2380126",
       "kind": "html",
@@ -8412,21 +7934,18 @@
        "provider": "openalex",
        "nativeId": "W7124707810",
        "rank": 32,
-       "retrievedAt": "2026-10-02T20:23:19.413Z",
-       "latency": 1395
+       "retrievedAt": "2026-10-02T20:23:19.413Z"
       },
       {
        "provider": "openaire",
        "nativeId": "doi_dedup___::0a0a2293279713fb99a344b54f944628",
        "rank": 15,
-       "retrievedAt": "2026-10-02T20:23:21.274Z",
-       "latency": 3257
+       "retrievedAt": "2026-10-02T20:23:21.274Z"
       }
      ],
      "fieldSources": {
       "fullText": "openaire"
      },
-     "retrievedAt": "2026-10-02T20:23:19.413Z",
      "fullText": {
       "url": "https://doebe.li/t33000",
       "kind": "html",
@@ -8495,30 +8014,23 @@
        "provider": "openalex",
        "nativeId": "W7124171396",
        "rank": 51,
-       "retrievedAt": "2026-10-02T20:23:19.413Z",
-       "latency": 1395
+       "retrievedAt": "2026-10-02T20:23:19.413Z"
       },
       {
        "provider": "openaire",
        "nativeId": "doi_dedup___::56a85345891b82d0bec0da91a0ede2c6",
        "rank": 7,
-       "retrievedAt": "2026-10-02T20:23:21.274Z",
-       "latency": 3257
+       "retrievedAt": "2026-10-02T20:23:21.274Z"
       }
      ],
      "fieldSources": {
       "topics": "openaire"
-     },
-     "retrievedAt": "2026-10-02T20:23:19.413Z"
+     }
     }
    ],
    "total": 96,
    "page": 1,
    "pageSize": 5,
-   "sort": "relevance",
-   "filters": {
-    "openAccessOnly": true
-   },
    "facets": {
     "source": [
      {
@@ -8949,52 +8461,7 @@
      "latency": 0,
      "skipReason": "too slow to answer in time"
     }
-   ],
-   "authorities": [
-    {
-     "authority": "crossref",
-     "status": "ok",
-     "asked": 5,
-     "answered": 3,
-     "applied": 1,
-     "latency": 310
-    },
-    {
-     "authority": "openalex",
-     "status": "ok",
-     "asked": 5,
-     "answered": 5,
-     "applied": 0,
-     "latency": 682
-    },
-    {
-     "authority": "unpaywall",
-     "status": "ok",
-     "asked": 5,
-     "answered": 3,
-     "applied": 0,
-     "latency": 470
-    },
-    {
-     "authority": "opencitations",
-     "status": "skipped",
-     "asked": 0,
-     "answered": 0,
-     "applied": 0,
-     "skipReason": "nothing on this page needed it",
-     "latency": 0
-    },
-    {
-     "authority": "preprints",
-     "status": "skipped",
-     "asked": 0,
-     "answered": 0,
-     "applied": 0,
-     "skipReason": "nothing on this page needed it",
-     "latency": 0
-    }
-   ],
-   "duration": 4291
+   ]
   }
  },
  "papers": {
@@ -9031,12 +8498,10 @@
      "provider": "arxiv",
      "nativeId": "1706.03762v7",
      "rank": 0,
-     "retrievedAt": "2026-10-02T20:23:22.317Z",
-     "latency": 10
+     "retrievedAt": "2026-10-02T20:23:22.317Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T20:23:22.317Z"
+   "fieldSources": {}
   },
   "openalex:W2071777774": {
    "id": "openalex:W2071777774",
@@ -9104,56 +8569,48 @@
      "provider": "openalex",
      "nativeId": "W2071777774",
      "rank": 0,
-     "retrievedAt": "2026-10-02T20:23:22.818Z",
-     "latency": 497
+     "retrievedAt": "2026-10-02T20:23:22.818Z"
     },
     {
      "provider": "europepmc",
      "nativeId": "17299597",
      "rank": 0,
-     "retrievedAt": "2026-10-02T20:23:22.798Z",
-     "latency": 477
+     "retrievedAt": "2026-10-02T20:23:22.798Z"
     },
     {
      "provider": "core",
      "nativeId": "84982915",
      "rank": 0,
-     "retrievedAt": "2026-10-02T20:23:23.289Z",
-     "latency": 968
+     "retrievedAt": "2026-10-02T20:23:23.289Z"
     },
     {
      "provider": "openaire",
      "nativeId": "doi_dedup___::feb3a0f804d3a3228e591f0f8deea134",
      "rank": 0,
-     "retrievedAt": "2026-10-02T20:23:22.587Z",
-     "latency": 268
+     "retrievedAt": "2026-10-02T20:23:22.587Z"
     },
     {
      "provider": "plos",
      "nativeId": "10.1371/journal.pone.0000217",
      "rank": 0,
-     "retrievedAt": "2026-10-02T20:23:22.438Z",
-     "latency": 119
+     "retrievedAt": "2026-10-02T20:23:22.438Z"
     },
     {
      "provider": "doaj",
      "nativeId": "d78fdc861d7b49b7a874c554763bbb87",
      "rank": 0,
-     "retrievedAt": "2026-10-02T20:23:22.576Z",
-     "latency": 257
+     "retrievedAt": "2026-10-02T20:23:22.576Z"
     },
     {
      "provider": "ncbi",
      "nativeId": "17299597",
      "rank": 0,
-     "retrievedAt": "2026-10-02T20:23:23.309Z",
-     "latency": 991
+     "retrievedAt": "2026-10-02T20:23:23.309Z"
     }
    ],
    "fieldSources": {
     "topics": "openaire"
-   },
-   "retrievedAt": "2026-10-02T20:23:22.818Z"
+   }
   },
   "arxiv:2404.18021v2": {
    "id": "arxiv:2404.18021v2",
@@ -9196,12 +8653,10 @@
      "provider": "arxiv",
      "nativeId": "2404.18021v2",
      "rank": 0,
-     "retrievedAt": "2026-10-02T21:14:13.512Z",
-     "latency": 406
+     "retrievedAt": "2026-10-02T21:14:13.512Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T21:14:13.512Z"
+   "fieldSources": {}
   },
   "openalex:W2919115771": {
    "id": "openalex:W2919115771",
@@ -9238,8 +8693,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W1901616594": {
    "id": "openalex:W1901616594",
@@ -9271,8 +8725,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2088209891": {
    "id": "openalex:W2088209891",
@@ -9302,8 +8755,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2022730625": {
    "id": "openalex:W2022730625",
@@ -9335,8 +8787,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W3023758415": {
    "id": "openalex:W3023758415",
@@ -9375,8 +8826,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W4229809574": {
    "id": "openalex:W4229809574",
@@ -9406,8 +8856,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2075746068": {
    "id": "openalex:W2075746068",
@@ -9437,8 +8886,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2005702974": {
    "id": "openalex:W2005702974",
@@ -9469,8 +8917,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W1993900316": {
    "id": "openalex:W1993900316",
@@ -9507,8 +8954,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2000690799": {
    "id": "openalex:W2000690799",
@@ -9543,8 +8989,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2117980283": {
    "id": "openalex:W2117980283",
@@ -9582,8 +9027,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2139765685": {
    "id": "openalex:W2139765685",
@@ -9620,8 +9064,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2065153599": {
    "id": "openalex:W2065153599",
@@ -9651,8 +9094,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2052381091": {
    "id": "openalex:W2052381091",
@@ -9687,8 +9129,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2135682495": {
    "id": "openalex:W2135682495",
@@ -9719,8 +9160,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2949684159": {
    "id": "openalex:W2949684159",
@@ -9759,8 +9199,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2108670087": {
    "id": "openalex:W2108670087",
@@ -9798,8 +9237,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2169947310": {
    "id": "openalex:W2169947310",
@@ -9831,8 +9269,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2081938446": {
    "id": "openalex:W2081938446",
@@ -9870,8 +9307,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2180177760": {
    "id": "openalex:W2180177760",
@@ -9908,8 +9344,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2082604907": {
    "id": "openalex:W2082604907",
@@ -9940,8 +9375,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W3002169893": {
    "id": "openalex:W3002169893",
@@ -9978,8 +9412,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2613126601": {
    "id": "openalex:W2613126601",
@@ -10017,8 +9450,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2095637167": {
    "id": "openalex:W2095637167",
@@ -10053,8 +9485,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2938946739": {
    "id": "openalex:W2938946739",
@@ -10087,8 +9518,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W1977728350": {
    "id": "openalex:W1977728350",
@@ -10122,8 +9552,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2153458172": {
    "id": "openalex:W2153458172",
@@ -10156,8 +9585,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2124690596": {
    "id": "openalex:W2124690596",
@@ -10197,8 +9625,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W4243747842": {
    "id": "openalex:W4243747842",
@@ -10229,8 +9656,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W4236185640": {
    "id": "openalex:W4236185640",
@@ -10262,8 +9688,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2918188868": {
    "id": "openalex:W2918188868",
@@ -10303,8 +9728,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2975755517": {
    "id": "openalex:W2975755517",
@@ -10334,8 +9758,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2976257255": {
    "id": "openalex:W2976257255",
@@ -10373,8 +9796,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2993134958": {
    "id": "openalex:W2993134958",
@@ -10412,8 +9834,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2331835223": {
    "id": "openalex:W2331835223",
@@ -10445,8 +9866,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2782872534": {
    "id": "openalex:W2782872534",
@@ -10482,8 +9902,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W332732258": {
    "id": "openalex:W332732258",
@@ -10515,8 +9934,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W3189909973": {
    "id": "openalex:W3189909973",
@@ -10552,8 +9970,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W4322579315": {
    "id": "openalex:W4322579315",
@@ -10585,8 +10002,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W3134956838": {
    "id": "openalex:W3134956838",
@@ -10619,8 +10035,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2031681107": {
    "id": "openalex:W2031681107",
@@ -10658,8 +10073,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2954057334": {
    "id": "openalex:W2954057334",
@@ -10691,8 +10105,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W3007990842": {
    "id": "openalex:W3007990842",
@@ -10727,8 +10140,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2791462835": {
    "id": "openalex:W2791462835",
@@ -10758,8 +10170,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W4236101832": {
    "id": "openalex:W4236101832",
@@ -10797,8 +10208,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W4410347461": {
    "id": "openalex:W4410347461",
@@ -10849,8 +10259,7 @@
      "retrievedAt": "2026-10-02T22:39:25.793Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:25.793Z"
+   "fieldSources": {}
   },
   "openalex:W2014691022": {
    "id": "openalex:W2014691022",
@@ -10898,8 +10307,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2109034822": {
    "id": "openalex:W2109034822",
@@ -10933,8 +10341,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W1520425169": {
    "id": "openalex:W1520425169",
@@ -10964,8 +10371,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2141410747": {
    "id": "openalex:W2141410747",
@@ -11001,8 +10407,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2136280424": {
    "id": "openalex:W2136280424",
@@ -11037,8 +10442,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2061123122": {
    "id": "openalex:W2061123122",
@@ -11069,8 +10473,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2804842145": {
    "id": "openalex:W2804842145",
@@ -11101,8 +10504,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W1538419182": {
    "id": "openalex:W1538419182",
@@ -11139,8 +10541,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2057151160": {
    "id": "openalex:W2057151160",
@@ -11185,8 +10586,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2035983112": {
    "id": "openalex:W2035983112",
@@ -11221,8 +10621,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W1480706413": {
    "id": "openalex:W1480706413",
@@ -11256,8 +10655,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2115792588": {
    "id": "openalex:W2115792588",
@@ -11300,8 +10698,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2097997319": {
    "id": "openalex:W2097997319",
@@ -11333,8 +10730,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2063620817": {
    "id": "openalex:W2063620817",
@@ -11374,8 +10770,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2016838970": {
    "id": "openalex:W2016838970",
@@ -11413,8 +10808,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2046484293": {
    "id": "openalex:W2046484293",
@@ -11451,8 +10845,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2015243851": {
    "id": "openalex:W2015243851",
@@ -11483,8 +10876,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W1990684709": {
    "id": "openalex:W1990684709",
@@ -11520,8 +10912,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2951564707": {
    "id": "openalex:W2951564707",
@@ -11559,8 +10950,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W1564805059": {
    "id": "openalex:W1564805059",
@@ -11597,8 +10987,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2014418062": {
    "id": "openalex:W2014418062",
@@ -11629,8 +11018,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2315987070": {
    "id": "openalex:W2315987070",
@@ -11667,8 +11055,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2068084778": {
    "id": "openalex:W2068084778",
@@ -11704,8 +11091,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2950635205": {
    "id": "openalex:W2950635205",
@@ -11742,8 +11128,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2953115122": {
    "id": "openalex:W2953115122",
@@ -11780,8 +11165,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W75169937": {
    "id": "openalex:W75169937",
@@ -11814,8 +11198,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2064281712": {
    "id": "openalex:W2064281712",
@@ -11857,8 +11240,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W3096371739": {
    "id": "openalex:W3096371739",
@@ -11891,8 +11273,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W3202121548": {
    "id": "openalex:W3202121548",
@@ -11924,8 +11305,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W1987111799": {
    "id": "openalex:W1987111799",
@@ -11956,8 +11336,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2949083793": {
    "id": "openalex:W2949083793",
@@ -11995,8 +11374,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2182708760": {
    "id": "openalex:W2182708760",
@@ -12028,8 +11406,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2010668970": {
    "id": "openalex:W2010668970",
@@ -12067,8 +11444,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W3020815244": {
    "id": "openalex:W3020815244",
@@ -12100,8 +11476,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2844379722": {
    "id": "openalex:W2844379722",
@@ -12134,8 +11509,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W3021771927": {
    "id": "openalex:W3021771927",
@@ -12168,8 +11542,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2108330808": {
    "id": "openalex:W2108330808",
@@ -12202,8 +11575,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W4391098983": {
    "id": "openalex:W4391098983",
@@ -12241,8 +11613,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2782783200": {
    "id": "openalex:W2782783200",
@@ -12280,8 +11651,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2991021351": {
    "id": "openalex:W2991021351",
@@ -12321,8 +11691,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   },
   "openalex:W2745351844": {
    "id": "openalex:W2745351844",
@@ -12359,8 +11728,7 @@
      "retrievedAt": "2026-10-02T22:39:26.448Z"
     }
    ],
-   "fieldSources": {},
-   "retrievedAt": "2026-10-02T22:39:26.448Z"
+   "fieldSources": {}
   }
  }
 }

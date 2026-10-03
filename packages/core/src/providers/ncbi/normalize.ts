@@ -1,5 +1,5 @@
-import type { Paper, FullText, SourceRef } from '@open-access-explorer/shared';
-import { fullTextAt } from '@open-access-explorer/shared';
+import type { Paper, FullText, SourceRef } from '@sci-open/shared';
+import { fullTextAt } from '@sci-open/shared';
 
 /**
  * Parsed PubMed XML -> Paper[]. Pure, and isolated per record.
@@ -20,7 +20,6 @@ import { fullTextAt } from '@open-access-explorer/shared';
 export type NormalizeOptions = {
   retrievedAt: string;
   rankOffset?: number;
-  latency?: number;
 };
 
 export type SkippedRecord = {
@@ -235,13 +234,12 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
     landingPage: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,
 
     sources: [ref],
-    fieldSources: {},
-    retrievedAt: ref.retrievedAt
+    fieldSources: {}
   };
 }
 
 export function normalize(articles: readonly unknown[], options: NormalizeOptions): NormalizeOutcome {
-  const { retrievedAt, rankOffset = 0, latency } = options;
+  const { retrievedAt, rankOffset = 0 } = options;
 
   const papers: Paper[] = [];
   const skipped: SkippedRecord[] = [];
@@ -252,8 +250,7 @@ export function normalize(articles: readonly unknown[], options: NormalizeOption
       provider: 'ncbi',
       nativeId,
       rank: rankOffset + index,
-      retrievedAt,
-      ...(latency !== undefined ? { latency } : {})
+      retrievedAt
     };
 
     try {

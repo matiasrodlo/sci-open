@@ -1,4 +1,4 @@
-import type { Paper } from '@open-access-explorer/shared';
+import type { Paper } from '@sci-open/shared';
 import type { ToolDeps } from '../framework/define-tool';
 import { ToolError } from '../errors';
 

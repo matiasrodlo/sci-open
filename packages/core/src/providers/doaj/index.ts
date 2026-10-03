@@ -1,4 +1,4 @@
-import type { Paper, Query } from '@open-access-explorer/shared';
+import type { Paper, Query } from '@sci-open/shared';
 import { capabilities } from './capabilities';
 import { translate, type TranslateOptions } from './translate';
 import {
@@ -24,7 +24,6 @@ export type ProviderSearchResult = {
   papers: Paper[];
   totalHits?: number;
   skipped: SkippedRecord[];
-  latency: number;
 };
 
 export async function search(query: Query, options: SearchOptions): Promise<ProviderSearchResult> {
@@ -37,9 +36,7 @@ export async function search(query: Query, options: SearchOptions): Promise<Prov
   } = options;
 
   const nativeQuery = translate(query, { openAccessOnly });
-  if (!nativeQuery) return { papers: [], skipped: [], latency: 0 };
-
-  const started = Date.now();
+  if (!nativeQuery) return { papers: [], skipped: [] };
 
   // DOAJ caps a page at 100 and the orchestrator asks for `depth` — 600 by
   // default — so a single page returned a sixth of what was requested and
@@ -53,14 +50,12 @@ export async function search(query: Query, options: SearchOptions): Promise<Prov
     totalOf: payload => (Number.isFinite(Number(payload?.total)) ? Number(payload.total) : undefined)
   });
 
-  const latency = Date.now() - started;
 
   // Rebuilt as the one payload `normalize` reads, which is what keeps this
   // module the only place that knows a read was ever more than one request.
   const { papers, skipped } = normalize({ results: items }, {
     retrievedAt: now().toISOString(),
-    rankOffset: offset,
-    latency
+    rankOffset: offset
   });
 
   log.debug('DOAJ read', { requests, retrieved: papers.length, wanted: pageSize });
@@ -68,8 +63,7 @@ export async function search(query: Query, options: SearchOptions): Promise<Prov
   return {
     papers,
     ...(total !== undefined ? { totalHits: total } : {}),
-    skipped,
-    latency
+    skipped
   };
 }
 
@@ -79,11 +73,9 @@ export type LookupOptions = ArticleFetchOptions & { now?: () => Date };
 export async function lookup(nativeId: string, options: LookupOptions): Promise<Paper | null> {
   const { now = () => new Date(), ...fetchOptions } = options;
 
-  const started = Date.now();
   const payload = await fetchArticle(nativeId, fetchOptions);
-  const latency = Date.now() - started;
 
-  const { papers } = normalize(payload, { retrievedAt: now().toISOString(), latency });
+  const { papers } = normalize(payload, { retrievedAt: now().toISOString() });
   return papers[0] ?? null;
 }
 

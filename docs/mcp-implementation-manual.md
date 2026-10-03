@@ -9,8 +9,34 @@ engine.
 | **Protocol target** | MCP specification `2026-07-28` (serves `2025-11-25` clients too) |
 | **SDK** | `@modelcontextprotocol/server` 2.2 · `@modelcontextprotocol/client` 2.2 · `@modelcontextprotocol/node` 2.1 |
 | **Runtime** | Node.js ≥ 22.12, pnpm 8, TypeScript 5.9, CommonJS (as the rest of the repo) |
-| **Written against** | commit `14e6aba9` of this repository |
+| **Written against** | commit `14e6aba9` of this repository; updated for the MCP-only repository that followed M4 |
 | **Audience** | whoever implements it — every step names the files it touches and how to verify it |
+
+**Status.** All four milestones (§7) are built. After M4 the repository was
+reduced to what the MCP server needs. The web app (`apps/web`), the API
+(`apps/api`) and their Docker and compose setup were deleted, `/api/mcp` with
+them, and `sci-open-mcp --http` now serves the remote endpoint itself
+(Steps 10.4–10.6). The engine lost what only the API or the web UI used: the
+version 1 search response, the per-source upstream stats, the HTTP pool
+metrics and per-service pool settings, the hooks for sharing caches with a
+host, the facet-panel filters (exact years, access route, venue, publisher,
+topics) and the table's title, author and venue sorts. Then what was left over
+from those: per-provider normaliser versions in the cache keys (a guard for a
+Redis cache that outlived a deploy; every cache is in memory now), the API's
+search settings and cache sizes, `Paper.updatedAt`, two capability flags no
+code read (`yearFilter`, `suppliesCitations`), and the response's echoed
+`sort` and `filters`, its `duration` and its per-page authority reports. A
+last pass took out the data nothing read: each source's latency and each
+record's `retrievedAt` (the source's own stays), the providers' declared
+`fields`, the facet bucket's `from`, `Engine.userAgent`, and the authority
+reports themselves — the rescue now reads one flag, `cutShort`, where it read
+their `timeout` status.
+
+Steps that changed the removed apps are kept, condensed, as the record of how
+the current layout came to be; their full text is in git history at
+`14e6aba9` and on `feat/mcp-server`. Every other step describes the server
+as it works now. Its code samples show each file's shape; where a sample and
+the file differ in detail, the file is the authority.
 
 ---
 
@@ -82,7 +108,7 @@ Concretely, every answer is:
   Sci-Hub option, by design.
 - **Light on the sources** — agents search far more often than people do. A
   query still being tuned costs one request per source, not a full read; a
-  search reads half as deep into each source as the web app; and a source
+  search reads half as deep into each source as the engine's default; and a source
   whose quota is spent is left alone until it can answer, and named as missing
   (D11, D13).
 - **Visible while it works** — a new search can take half a minute, and it
@@ -138,7 +164,8 @@ flowchart LR
   end
 
   subgraph mcp[packages/mcp]
-    bin[bin/stdio.ts<br/>serveStdio]
+    bin[bin/stdio.ts<br/>serveStdio · --http]
+    httpserver[http-server.ts<br/>budgets · Origin · /health]
     http[http.ts<br/>createMcpHandler]
     server[server.ts<br/>createServer]
     tools[tools/*]
@@ -157,13 +184,12 @@ flowchart LR
     authorities[5 authorities]
   end
 
-  api[apps/api<br/>Fastify routes + /mcp]
-
   desk -- stdio --> bin
   code -- stdio --> bin
   evals -- stdio --> bin
-  desk -- Streamable HTTP --> api
-  api --> http
+  desk -- Streamable HTTP --> httpserver
+  bin --> httpserver
+  httpserver --> http
   bin --> server
   http --> server
   server --> tools
@@ -179,14 +205,13 @@ flowchart LR
   count --> providers
   run --> authorities
   lookup --> authorities
-  api --> engine
 ```
 
 Three rules hold the architecture together:
 
-1. **One engine, many faces.** The Fastify API and the MCP server call the same
-   `packages/core` engine. Neither re-implements search, merge, rank or
-   enrichment.
+1. **One engine, every face.** The stdio server, the HTTP server and the CLI
+   call the same `packages/core` engine through `createEngine`. None of them
+   re-implements search, merge, rank or enrichment.
 2. **The engine is a seam.** Tools depend on an `Engine` interface, not on the
    orchestrator. Tests and evals swap in a fixture engine; production uses the
    real one.
@@ -219,27 +244,31 @@ because `overwrite: true` replaces an existing file.
 
 ```
 packages/
-  shared/            (unchanged, plus citations.ts moved from apps/web)
-  core/              NEW — the engine, moved out of apps/api
+  shared/            types, query grammar, citation formatter (moved from the
+                     web app in Step 9.4), request and response shapes
+  core/              the engine, moved out of the API in Phase 1
     src/
-      orchestrator/  (moved; count.ts, progress.ts, quota.ts NEW in Steps 3.4–3.6)
-      providers/     (moved)
-      authorities/   (moved)        __fixtures__/ (moved)
-      lib/           (8 modules moved: http-client-factory, http-pool-config,
-                      api-key, logger, contact-email, pdf-url, pdf-proxy,
-                      single-flight; doi-registry.ts NEW in Phase 7,
-                      host-pacer.ts NEW in Phase 8)
-      engine.ts      NEW — createEngine()
-      fulltext/      NEW — types, resolve, jats, html, pdf, cache (Phase 8)
-      graph/         NEW — opencitations.ts (Phase 9)
-      index.ts       NEW — public surface
-      testing.ts     NEW — test helpers apps/api's tests import
-    testing.js  testing.d.ts   NEW — the @open-access-explorer/core/testing entry
-  mcp/               NEW — the MCP server
+      orchestrator/  plan, fan-out, merge, rank, policy, rescue, facets,
+                     caches; count.ts, progress.ts, quota.ts (Steps 3.4–3.6)
+      providers/     the ten sources
+      authorities/   Crossref, OpenAlex, Unpaywall, OpenCitations, preprints
+      __fixtures__/  one recorded response per provider
+      lib/           http-client-factory, api-key, logger, contact-email,
+                     pdf-url, pdf-proxy, single-flight (moved in Phase 1);
+                     doi-registry.ts (Phase 7), host-pacer.ts and
+                     request-budget.ts (Phases 8, 9)
+      engine.ts      createEngine()
+      fulltext/      types, resolve, jats, html, pdf, cache (Phase 8)
+      graph/         opencitations.ts (Phase 9)
+      index.ts       the public surface: what packages/mcp imports
+      testing.ts     test helpers packages/mcp's tests import
+    scripts/         record-fixtures.ts — re-records __fixtures__/
+    testing.js  testing.d.ts   the @sci-open/core/testing entry
+  mcp/               the MCP server
     src/
       bin/           stdio.ts  stdout-guard.ts  cli.ts
       server.ts      instructions.ts   toolsets.ts   config.ts
-      http.ts        log.ts            metrics.ts    build-info.ts
+      http.ts        http-server.ts    log.ts        metrics.ts    build-info.ts
       framework/     define-tool.ts  register.ts
       shape/         paper.ts  budget.ts  markdown.ts  coverage.ts  progress.ts
       safety/        sanitize.ts  untrusted.ts  paths.ts
@@ -255,14 +284,15 @@ packages/
     scripts/         build-npm.ts  generate-tool-docs.ts  record-mcp-fixtures.ts  smoke.ts
     npm/             generated and git-ignored — the package published to npm
     server.json      README.md  CHANGELOG.md
-  mcp-evals/         NEW — evaluation harness (Phase 12)
-apps/
-  api/               imports @open-access-explorer/core; adds /api/mcp (Phase 10)
-  web/               imports citations from shared; forwards /api/mcp (Step 10.6)
-plugin/              NEW — Claude Code plugin + skills (Phase 13)
-.claude-plugin/      NEW — marketplace.json: the repository as a plugin marketplace
-.github/workflows/   mcp-smoke.yml (nightly), mcp-release.yml (tags) — NEW
+  mcp-evals/         evaluation harness (Phase 12)
+plugin/              Claude Code plugin + skills (Phase 13)
+.claude-plugin/      marketplace.json: the repository as a plugin marketplace
+.github/workflows/   ci.yml, mcp-smoke.yml (nightly), mcp-release.yml (tags)
+docs/                this manual
 ```
+
+There is no `apps/` any more (see Status). There is no library entry either:
+the package is two binaries, `sci-open-mcp` and `sci-open` (Phase 13).
 
 ## 6. Design decisions
 
@@ -270,9 +300,10 @@ Short records of the choices that shape everything else. Change them
 deliberately, not by drift.
 
 **D1 — Extract the engine before writing the server.** `packages/mcp` must not
-import from `apps/api`. The engine (orchestrator, providers, authorities and 8
-small `lib` modules) does not import Fastify, so moving it is mechanical
-(Phase 1).
+import from an app. The engine (orchestrator, providers, authorities and 8
+small `lib` modules) did not import Fastify, so moving it out of `apps/api`
+was mechanical (Phase 1). That is also what let the API and the web app be
+deleted later without touching the server.
 
 **D2 — CommonJS, like the rest of the repo.** The SDK v2 packages, `unpdf` and
 `node-html-parser` all ship CommonJS builds. Staying CommonJS avoids a
@@ -328,20 +359,20 @@ second label is `modelcontextprotocol` or `mcp` are reserved by the spec.
 **D11 — Agent traffic is its own workload.** A person runs a search and reads
 it. An agent runs a dozen variants in a few minutes and reads a page or two of
 the last one. Every new result set is a fan-out to ten sources at the full
-depth, and OpenAlex meters each request against a daily budget that the
-configuration docs record a 22-query sweep exhausting at the web app's depth
-(`docs/configuration.md`, `SEARCH_DEPTH`). Three things follow:
+depth, and OpenAlex meters each request against a daily budget that a
+22-query sweep exhausted at the engine's default depth of 600 (measured before
+the server existed, against the web app). Three things follow:
 
-- The MCP reads **300** records per source by default, against the web app's
-  600 (`SEARCH_DEPTH` on stdio, `MCP_SEARCH_DEPTH` over HTTP). OpenAlex serves
+- The MCP reads **300** records per source by default, against the engine's
+  600 (`SEARCH_DEPTH`, on stdio and over HTTP alike). OpenAlex serves
   200 records a page and DOAJ and OpenAIRE 100, so a search costs them 2, 3
   and 3 requests rather than 3, 6 and 6. The access check also has fewer
   papers to ask about. The cost is a smaller read: a paper below position 300
   in every source is not found, which no page an agent reads reaches anyway.
 - Tuning is done by counts (D7), never by full searches.
-- The remote endpoint does not start without an OpenAlex key (Step 10.5). An
-  unkeyed caller gets a tenth of a key's budget, and over HTTP the API process
-  spends that budget for every MCP client *and* for the web UI.
+- The HTTP server does not start without an OpenAlex key (Step 10.4). An
+  unkeyed caller gets a tenth of a key's budget, and over HTTP one process
+  spends that budget for every client.
 
 **D12 — Say what is happening.** A new search can take up to 20 seconds for
 the sources, 5 for the access check and 6 for the page's details. That much
@@ -373,7 +404,7 @@ of Phases 11–14 that apply to what it contains — not with all of them.
 |---|---|---|---|---|
 | **M1 — Search and verify, locally** | `0.1.0` | `search_papers` (with `count_only`), `get_search_page`, `get_paper`, `verify_references`; stdio only | 0–7, 10.1–10.3, 11, 12 (tool selection and reference verification), 13.1, 13.2, 13.5, 13.8, 13.9 | The smallest server that does what others do not: search that says what it missed, and a check for fabricated references. Everything later reuses its engine and framework |
 | **M2 — Read** | `0.2.0` | `read_paper` | 8, its tests, 12 (reading) | The largest phase, with the most new ways to fail (parsers, PDFs, arXiv pacing). Shipping it alone keeps M1 small and makes its failures its own |
-| **M3 — Remote and distribution** | `0.3.0` | `/api/mcp` and its public URL, `remotes` in `server.json`, the plugin and skills, CLI parity | 10.4–10.6, 13.3, 13.4, 13.6, 13.7, 14 (its HTTP rows) | A shared endpoint is where quotas and abuse bite (D11, D13). It comes after the local server has had real use |
+| **M3 — Remote and distribution** | `0.3.0` | the HTTP endpoint and its public URL, `remotes` in `server.json`, the plugin and skills, CLI parity | 10.4–10.6, 13.3, 13.4, 13.6, 13.7, 14 (its HTTP rows) | A shared endpoint is where quotas and abuse bite (D11, D13). It comes after the local server has had real use |
 | **M4 — Graph and export** | `0.4.0` | `get_citations`, `export_citations` | 9 | Opt-in by design (D8); nothing earlier depends on them |
 
 What each release must not do is claim what it does not ship:
@@ -389,6 +420,11 @@ What each release must not do is claim what it does not ship:
 The Definition of done in Appendix C is M4's. Each earlier milestone meets the
 items that apply to what it ships.
 
+M3 first shipped the endpoint as `/api/mcp`, a route on the API behind the web
+tier. When the API was removed, `sci-open-mcp --http` took over the same
+server, budgets and Origin check (Step 10.4); that change is the
+`[Unreleased]` entry in the changelog.
+
 ---
 
 # Part II — Step-by-step implementation
@@ -398,7 +434,15 @@ on) and **Pitfalls**. Phases 1–6 are the minimum viable server; 7–9 add the
 differentiators; 10–13 ship it. The phases are numbered in build order; §7
 groups them into releases, and M1 ships after Phase 7.
 
+Phases 0 and 1, and the parts of Phases 9 and 10 that changed the web app and
+the API, describe a repository that no longer has those apps. They are kept,
+condensed, so the layout can be traced; what they produced is described as it
+is now.
+
 ## Phase 0 — Branch and guardrails
+
+How the work began, at commit `14e6aba9`. On the current repository only
+steps 3 and 4 apply: a green baseline before any change.
 
 **Steps**
 
@@ -433,36 +477,22 @@ groups them into releases, and M1 ships after Phase 7.
 
 ## Phase 1 — Extract the engine into `packages/core`
 
-**Goal:** `apps/api` and the future `packages/mcp` both import the engine from
-`@open-access-explorer/core`. No behaviour changes.
+**Goal:** `packages/mcp` imports the engine from `@sci-open/core`
+and from nothing else. No behaviour changes.
 
 ### Step 1.1 — Move the code with history
 
-```bash
-mkdir -p packages/core/src/lib/__tests__
+Done at the start of the work, with `git mv` so `git log --follow` traces every
+file back into `apps/api/src`: the orchestrator, the providers, the
+authorities, the recorded fixtures and the eight `lib` modules they import —
+`http-client-factory`, `http-pool-config`, `api-key`, `logger`,
+`contact-email`, `pdf-url`, `pdf-proxy` and `single-flight`. None of the eight
+imports anything outside the set, and the fixture paths in provider tests
+(`../../../__fixtures__/arxiv.xml`) kept working because the directory depth
+was preserved.
 
-git mv apps/api/src/orchestrator  packages/core/src/orchestrator
-git mv apps/api/src/providers     packages/core/src/providers
-git mv apps/api/src/authorities   packages/core/src/authorities
-git mv apps/api/src/__fixtures__  packages/core/src/__fixtures__
-
-for m in http-client-factory http-pool-config api-key logger \
-         contact-email pdf-url pdf-proxy single-flight; do
-  git mv "apps/api/src/lib/$m.ts" "packages/core/src/lib/$m.ts"
-  find apps/api/src/lib/__tests__ -name "$m*.test.ts" \
-    -exec git mv {} packages/core/src/lib/__tests__/ \;
-done
-```
-
-`find` rather than a glob: `http-pool-config` has no test file, and in zsh (the
-macOS default shell) a glob that matches nothing aborts the whole loop with "no
-matches found", leaving six of the eight modules where they were.
-
-Why exactly these eight `lib` modules: they are the only `lib` files the
-orchestrator, providers and authorities import, and none of them imports
-anything outside the set. The relative fixture paths in provider tests
-(`../../../__fixtures__/arxiv.xml`) keep working because the directory depth is
-preserved.
+`http-pool-config` has since gone with the API, which was the only thing that
+configured it (see Status). Every pooled client takes the factory's defaults.
 
 ### Step 1.2 — Package manifest and compiler config
 
@@ -470,7 +500,7 @@ preserved.
 
 ```json
 {
-  "name": "@open-access-explorer/core",
+  "name": "@sci-open/core",
   "version": "1.0.0",
   "description": "The sci-open search engine: providers, authorities, orchestrator",
   "main": "dist/index.js",
@@ -481,11 +511,13 @@ preserved.
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
     "test": "vitest run",
-    "lint": "eslint src --ext .ts",
-    "typecheck": "tsc --noEmit"
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src scripts --ext .ts",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.scripts.json",
+    "record:fixtures": "tsx scripts/record-fixtures.ts"
   },
   "dependencies": {
-    "@open-access-explorer/shared": "workspace:*",
+    "@sci-open/shared": "workspace:*",
     "axios": "^1.20.0",
     "axios-retry": "^4.5.0",
     "node-html-parser": "^9.0.4",
@@ -497,7 +529,9 @@ preserved.
     "@types/xml2js": "^0.4.14",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
+    "@vitest/coverage-v8": "^4.1.11",
     "eslint": "^8.57.1",
+    "tsx": "^4.23.13",
     "typescript": "^5.9.3",
     "vitest": "^4.1.11"
   },
@@ -505,24 +539,29 @@ preserved.
 }
 ```
 
-Copy `apps/api/tsconfig.json` to `packages/core/tsconfig.json` unchanged (it
-already has the strict settings the repo relies on), and copy
-`apps/api/vitest.config.ts` next to it. ESLint needs nothing: the root
-`.eslintrc.json` covers every package.
+`tsconfig.json` carries the repo's strict settings, including the dead-code
+checks (`noUnusedLocals`, `noUnusedParameters`). `tsconfig.scripts.json`
+extends it without emitting, so `scripts/record-fixtures.ts` is typechecked
+too. ESLint needs nothing per package: the root `.eslintrc.json` covers them.
 
-`node-html-parser` and `unpdf` are for Phase 8; adding them now keeps the
-lockfile churn in one commit.
+`scripts/record-fixtures.ts` records one live response per provider into
+`src/__fixtures__/`, which the normaliser suites assert against offline.
+Re-record only when a provider changes its response shape, and review the
+diff; name a provider to re-record only its file:
+
+```bash
+pnpm --filter @sci-open/core record:fixtures openaire
+```
 
 ### Step 1.3 — Remove the Fastify type from the logger
 
-`lib/logger.ts` imports `type FastifyBaseLogger` from `fastify`. The engine
-must not depend on Fastify, so replace it with a structural type that Fastify's
-logger (and any other) satisfies:
+`lib/logger.ts` imported `type FastifyBaseLogger` from `fastify`. The engine
+must not depend on a web framework, so it declares the shape it calls instead:
 
 ```ts
 // packages/core/src/lib/logger.ts
-/** The four methods the engine calls. Fastify's logger satisfies this, and so
- * does the stderr logger the MCP binary installs. */
+/** The four methods the engine calls. The MCP binary installs a stderr logger
+ * that satisfies this. */
 export type EngineLogger = {
   debug(fields: Record<string, unknown>, msg: string): void;
   info(fields: Record<string, unknown>, msg: string): void;
@@ -531,58 +570,44 @@ export type EngineLogger = {
 };
 ```
 
-Then replace every `FastifyBaseLogger` in the file with `EngineLogger`. The
-behaviour (`useLogger`, `withLogger`, quiet-until-configured) is unchanged.
+`useLogger(logger)` installs it once at boot; until then the engine stays
+quiet but for warnings and errors. `withLogger`, which ran each API request
+with its own logger, went with the API.
 
 ### Step 1.4 — The public surface
 
-`packages/core/src/index.ts` exports exactly what `apps/api`, its scripts and
-`packages/mcp` need — nothing more:
+`packages/core/src/index.ts` exports exactly what `packages/mcp` imports —
+nothing more:
 
 ```ts
-export * from './orchestrator';
-export { runSearch, runOrchestrator, DEFAULT_SEARCH_SETTINGS, toUserFilters } from './orchestrator/from-search-params';
-export type { SearchSettings, RunOptions } from './orchestrator/from-search-params';
-export { DEFAULT_MAX_BYTES as DEFAULT_PROVIDER_CACHE_BYTES } from './orchestrator/provider-cache';
-export { onlyRefused } from './orchestrator/fanout';
-export type { ProviderEntry } from './orchestrator/registry';
-export { OpenAlexUnavailableError } from './providers/openalex/fetch';
-export { AUTHORITIES, authorityById } from './authorities';
-export type { AuthorityEntry, AuthorityLookupArgs } from './authorities';
-export { useLogger, withLogger, log } from './lib/logger';
-export type { EngineLogger } from './lib/logger';
-export { useApiKeys, usableApiKey, apiKeyFor } from './lib/api-key';
-export type { ApiKeys, KeyedProvider } from './lib/api-key';
-export { configureHttpPools, getServiceConfig, DEFAULT_HTTP_POOL, POOLED_SERVICES } from './lib/http-pool-config';
-export type { HttpPoolSettings, PooledService } from './lib/http-pool-config';
-export { httpClientFactory, getPooledClient } from './lib/http-client-factory';
-export type { HttpPoolConfig, HttpPoolMetrics } from './lib/http-client-factory';
-export { extractContactEmail, isPlaceholderContact } from './lib/contact-email';
-export * from './lib/pdf-proxy';
-export { preferredPdfUrl } from './lib/pdf-url';
-export { SingleFlight } from './lib/single-flight';
 export { createEngine } from './engine';
-export type { Engine, EngineOptions } from './engine';
+export type { Engine, EngineOptions, SearchOutcome, SearchCallOptions, DoiResolution } from './engine';
+export { parseQuery } from './orchestrator/parse-query';
+export { PROVIDERS } from './orchestrator/registry';
+export { MAX_DEPTH } from './orchestrator';
+export type { CountOutcome } from './orchestrator/count';
+export type { SearchProgress } from './orchestrator/progress';
+export { useLogger } from './lib/logger';
+export type { EngineLogger } from './lib/logger';
+export { usableApiKey } from './lib/api-key';
+export type { ApiKeys } from './lib/api-key';
+export { PdfProxyError } from './lib/pdf-proxy';
+export { SourceBusyError } from './lib/host-pacer';
+export type { FullTextDocument } from './fulltext/types';
+export { OpenCitationsUnavailableError, OPENCITATIONS_HOST } from './graph/opencitations';
+export type { CitationLink, CitationDirection } from './graph/opencitations';
 ```
 
-Check each re-exported name against its module while writing this file — the
-compiler will name any that does not exist.
+A name added here should be one a tool or a script of the server needs; the
+engine's own modules import each other directly.
 
-`export * from './orchestrator'` already carries `PROVIDERS`, `parseQuery`,
-`MAX_DEPTH`, the caches and `lookupPaper`. The three explicit additions are for
-code that stays in `apps/api`: `config.ts` imports the provider cache's
-`DEFAULT_MAX_BYTES` under the name `DEFAULT_PROVIDER_CACHE_BYTES`, and
-`client-error.test.ts` and `http-performance-monitor.test.ts` need
-`OpenAlexUnavailableError` and `HttpPoolMetrics`.
-
-Two API tests (`__tests__/app.test.ts` and
-`lib/__tests__/paper-cache-manager.test.ts`) build papers with
-`orchestrator/__tests__/helpers.ts`, which moves into core. Give them a second
-entry point rather than putting test fixtures on the production surface:
+The MCP's tests build papers with `orchestrator/__tests__/helpers.ts`. Give
+them a second entry point rather than putting test fixtures on the production
+surface:
 
 ```ts
 // packages/core/src/testing.ts
-export { AT, paper, ref } from './orchestrator/__tests__/helpers';
+export { paper, ref } from './orchestrator/__tests__/helpers';
 ```
 
 The repo resolves modules the `node10` way (`"module": "commonjs"` with no
@@ -599,74 +624,36 @@ module.exports = require('./dist/testing');
 export * from './dist/testing';
 ```
 
-The two tests then import from `@open-access-explorer/core/testing`.
+The tests then import from `@sci-open/core/testing`.
 
-### Step 1.5 — Repoint `apps/api`
+### Step 1.5 — The fixture recorder (was: repoint `apps/api`)
 
-1. Add the dependency: `"@open-access-explorer/core": "workspace:*"` in
-   `apps/api/package.json`, then `pnpm install`.
-2. Replace relative imports of moved code. Run this after the move, so only
-   the files that stayed behind match:
+While the API existed, it imported the engine from core: seventeen of its
+files, scripts and tests were repointed from relative paths to
+`@sci-open/core`. Of all that, one piece outlived the API: the
+provider-fixture recorder, which moved from `apps/api/scripts/` to
+`packages/core/scripts/record-fixtures.ts` (Step 1.2).
 
-   ```bash
-   grep -rnE "from '(\.\./)+(src/)?(orchestrator|providers|authorities)|(lib/|\./|\.\./)(http-client-factory|http-pool-config|api-key|logger|contact-email|pdf-url|pdf-proxy|single-flight)'" apps/api/src apps/api/scripts
-   ```
+### Step 1.6 — CI
 
-   It must list these 17 files. Each import becomes
-   `from '@open-access-explorer/core'`, or `/testing` for the test helpers
-   (Step 1.4):
-
-   - `app.ts`, `config.ts`, `index.ts`;
-   - `lib/search-key.ts` (`onlyRefused`), `lib/client-error.ts`
-     (`PdfProxyError`), `lib/cache-manager.ts` and `lib/shutdown.ts` (`log`),
-     and `lib/http-performance-monitor.ts` (`httpClientFactory`, `log`). The
-     last four import their old neighbours as `./logger` and `./pdf-proxy`,
-     which is why the pattern matches `./` as well as `lib/`;
-   - `__tests__/app.test.ts`, `__tests__/config.test.ts`,
-     `lib/__tests__/client-error.test.ts`,
-     `lib/__tests__/http-performance-monitor.test.ts` and
-     `lib/__tests__/paper-cache-manager.test.ts`;
-   - four scripts: `core-doi-cost.ts`, `enrichment-report.ts` and
-     `lookup-depth.ts` (which import `../src/orchestrator` and
-     `../src/authorities`), and `http-performance-test.ts`.
-3. `apps/api/scripts/record-fixtures.ts` imports nothing that moves, but it
-   writes into `src/__fixtures__`. Point it at `packages/core/src/__fixtures__`.
-4. `packages/core/src/orchestrator/__tests__/from-search-params.test.ts`
-   imports `../../config` (the API's config). Either move the assertions that
-   need API config to `apps/api/src/__tests__/`, or import the defaults they
-   need from `@open-access-explorer/core` instead.
-5. Remove `axios-retry` and `xml2js` from `apps/api/package.json` if nothing in
-   the API imports them any more (`grep -rn "xml2js\|axios-retry" apps/api/src`).
-
-### Step 1.6 — Docker and CI
-
-`apps/api/Dockerfile` copies `packages/shared` explicitly. Add `packages/core`
-in both places:
-
-```dockerfile
-COPY packages/core/package.json ./packages/core/
-# ...
-COPY packages/core ./packages/core
-```
-
-CI needs no change: `pnpm typecheck`, `pnpm lint`, `pnpm test` and
-`pnpm build` run through turbo over every workspace, and `^build` orders
-`shared → core → api`.
+`ci.yml`'s `verify` job runs `pnpm typecheck`, `pnpm lint`, `pnpm test` and
+`pnpm build`. They run through turbo over every workspace, and `^build`
+orders `shared → core → mcp`. There are no images to build or scan any more;
+the secret scan and the dependency audit run as before.
 
 **Acceptance**
 
 - [ ] `pnpm typecheck && pnpm lint && pnpm test && pnpm build` are green.
-- [ ] The passing-test count equals the Phase 0 baseline.
 - [ ] `grep -rn "from 'fastify'" packages/core/src` finds nothing.
-- [ ] `docker compose build api` succeeds.
-- [ ] One commit: `refactor(core): extract the search engine into packages/core`.
+- [ ] `packages/mcp` imports nothing from core but `@sci-open/core`
+      and `@sci-open/core/testing`.
 
 **Pitfalls**
 
 - Do not "improve" code while moving it. A move plus edits makes the diff
   unreviewable; `git log --follow` should show a pure rename.
-- `vitest` resolves `@open-access-explorer/shared` from `dist/`. Run
-  `pnpm --filter @open-access-explorer/shared build` before testing core in
+- `vitest` resolves `@sci-open/shared` from `dist/`. Run
+  `pnpm --filter @sci-open/shared build` before testing core in
   isolation (turbo does this for you through `^build`).
 
 ## Phase 2 — Scaffold `packages/mcp`
@@ -678,44 +665,55 @@ CI needs no change: `pnpm typecheck`, `pnpm lint`, `pnpm test` and
 ```json
 {
   "name": "sci-open-mcp",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "private": true,
-  "description": "MCP server for open-access scientific literature: search ten sources, verify references, read full text — and see what was not found.",
+  "description": "MCP server for open-access scientific literature: search ten sources, verify references, read full text, follow and export citations — and see what was not found.",
   "license": "MIT",
   "mcpName": "io.github.matiasrodlo/sci-open",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "bin": {
     "sci-open-mcp": "dist/bin/stdio.js",
     "sci-open": "dist/bin/cli.js"
   },
-  "files": ["dist", "README.md", "server.json"],
+  "files": [
+    "dist",
+    "fixtures",
+    "README.md",
+    "server.json"
+  ],
   "scripts": {
     "build": "tsc && chmod +x dist/bin/stdio.js dist/bin/cli.js",
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
     "test": "vitest run",
-    "lint": "eslint src test --ext .ts",
-    "typecheck": "tsc --noEmit",
+    "lint": "eslint src test scripts --ext .ts",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "inspect": "npx @modelcontextprotocol/inspector node dist/bin/stdio.js",
     "docs:tools": "tsx scripts/generate-tool-docs.ts",
     "build:npm": "tsx scripts/build-npm.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/server": "^2.2.0",
-    "@open-access-explorer/core": "workspace:*",
-    "@open-access-explorer/shared": "workspace:*",
+    "@modelcontextprotocol/node": "^2.1.1",
+    "@modelcontextprotocol/server": "^2.3.0",
+    "@sci-open/core": "workspace:*",
+    "@sci-open/shared": "workspace:*",
+    "proxy-addr": "^2.0.7",
     "zod": "^4.2.0"
   },
   "devDependencies": {
-    "@modelcontextprotocol/client": "^2.2.0",
+    "@modelcontextprotocol/client": "^2.3.0",
     "@types/node": "^20.19.43",
+    "@types/proxy-addr": "^2.0.3",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
     "esbuild": "^0.28.2",
+    "eslint": "^8.57.1",
     "tsx": "^4.23.13",
     "typescript": "^5.9.3",
     "vitest": "^4.1.11"
   },
-  "engines": { "node": ">=22.12" }
+  "engines": {
+    "node": ">=22.12"
+  }
 }
 ```
 
@@ -728,30 +726,27 @@ Notes:
   verify that you own the npm package (Phase 13).
 - `zod` is a direct dependency because tool schemas are declared with it; the
   SDK depends on `zod ^4.2` too, so they dedupe.
+- `@modelcontextprotocol/node` and `proxy-addr` serve the HTTP server
+  (Step 10.4): the Node adapter and the SDK's Origin and Host guards, and the
+  reading of `X-Forwarded-For` from trusted proxies.
 - `"private": true` keeps `pnpm publish` from ever shipping this manifest: its
-  `workspace:*` dependencies name packages that do not exist on npm. They are
-  right for the monorepo — `apps/api` imports this package and must share one
-  copy of the engine with it. Phase 13 generates the package that is published.
+  `workspace:*` dependencies name packages that do not exist on npm. Phase 13
+  generates the package that is published.
+- No `main` or `types`: the package is two binaries, not a library.
 
 ### Step 2.2 — Compiler config
 
 Same as `packages/core/tsconfig.json`. The `bin/` entry points need a shebang;
-TypeScript preserves a first-line `#!/usr/bin/env node`.
+TypeScript preserves a first-line `#!/usr/bin/env node`. `tsconfig.test.json`
+extends it without emitting, so the tests and scripts are typechecked against
+the `src` they reach into.
 
 ### Step 2.3 — Skeleton files
 
-Create the tree from §5 with empty modules, plus `src/index.ts`:
-
-```ts
-export { createServer, createServerFactory } from './server';
-export type { ServerDeps } from './server';
-export { createHttpHandler } from './http';
-export { AdmissionError } from './errors';
-export { readMcpConfig, defaultMcpConfig } from './config';
-export type { McpConfig } from './config';
-export { createMetrics, nullMetrics } from './metrics';
-export type { Metrics } from './metrics';
-```
+Create the tree from §5 with empty modules. There is no `src/index.ts`: the
+entry points are `src/bin/stdio.ts` and `src/bin/cli.ts`. (Until the API was
+removed, an index exported the server factory and the HTTP handler for it to
+mount; nothing else imported it.)
 
 **Acceptance:** `pnpm --filter sci-open-mcp build` produces `dist/` with no
 errors.
@@ -765,40 +760,25 @@ exposes exactly the operations the tools need. Tools depend on the `Engine`
 ### Step 3.1 — `packages/core/src/engine.ts`
 
 ```ts
-import type { Paper, SearchParams, SearchResponseV2 } from '@open-access-explorer/shared';
+import type { Paper, SearchParams, SearchResponseV2 } from '@sci-open/shared';
 import { runSearch, DEFAULT_SEARCH_SETTINGS, type SearchSettings } from './orchestrator/from-search-params';
 import { ProviderCache } from './orchestrator/provider-cache';
 import { ResultSetCache } from './orchestrator/result-set';
 import { AuthorityCache, AuthorityFactsCache } from './orchestrator/authority-cache';
-import { UpstreamStats } from './orchestrator/upstream-stats';
 import { lookupPaper } from './orchestrator/lookup';
 import { enrichPage } from './orchestrator/enrich';
 import { PROVIDERS, type ProviderEntry } from './orchestrator/registry';
 import type { AuthorityEntry } from './authorities';
 import { useApiKeys, type ApiKeys } from './lib/api-key';
-import { configureHttpPools, type HttpPoolSettings } from './lib/http-pool-config';
-
-export type EngineCaches = {
-  providerCache: ProviderCache;
-  resultSets: ResultSetCache;
-  authorityFacts: AuthorityFactsCache;
-  stats: UpstreamStats;
-};
 
 export type EngineOptions = {
   /** Sent to every upstream; must carry a real contact (see UNPAYWALL_EMAIL). */
   userAgent: string;
-  /** Installed process-wide. Omit when embedding in a host that already did
-   * (the API): passing `{}` would clear the host's keys. */
+  /** Installed process-wide. */
   apiKeys?: ApiKeys;
-  /** Likewise process-wide, and likewise omitted by a host that configured it. */
-  httpPool?: HttpPoolSettings;
+  /** Only `depth` is a setting now (D11): the facet-count switch and the
+   * rescue's limits were the API's environment variables. */
   search?: Partial<SearchSettings>;
-  /** A host's own caches, so the host and this engine share held sets.
-   * Without it the engine makes its own. */
-  caches?: EngineCaches;
-  providerCacheBytes?: number;
-  resultSetBytes?: number;
   /** Subsets of the registries: how the engine is driven offline in tests. */
   providers?: readonly ProviderEntry[];
   authorities?: readonly AuthorityEntry[];
@@ -811,8 +791,7 @@ export type SearchOutcome = { response: SearchResponseV2; fromCache: boolean };
 type Admit = () => Promise<void>;
 
 export type Engine = {
-  readonly userAgent: string;
-  /** The same pipeline as POST /api/v2/search. `admit` is asked only when a
+  /** A federated search across the sources. `admit` is asked only when a
    * new result set must be resolved, never for a page of a held one.
    * `sources` narrows the fan-out to those providers. */
   search(params: SearchParams, options?: { admit?: Admit; sources?: readonly string[] }): Promise<SearchOutcome>;
@@ -823,33 +802,26 @@ export type Engine = {
    * source that holds it. A DOI lookup is a search, and spends an admission
    * like one. */
   lookupDoi(doi: string, options?: { admit?: Admit }): Promise<Paper | null>;
-  stats: UpstreamStats;
 };
 
 export function createEngine(options: EngineOptions): Engine {
   if (options.apiKeys) useApiKeys(options.apiKeys);
-  if (options.httpPool) configureHttpPools(options.httpPool);
 
   const settings: SearchSettings = { ...DEFAULT_SEARCH_SETTINGS, ...options.search };
-  const { providerCache, resultSets, authorityFacts, stats } = options.caches ?? {
-    providerCache: new ProviderCache(
-      options.providerCacheBytes !== undefined ? { maxBytes: options.providerCacheBytes } : {}
-    ),
-    resultSets: new ResultSetCache(options.resultSetBytes !== undefined ? { maxBytes: options.resultSetBytes } : {}),
-    authorityFacts: new AuthorityFactsCache(),
-    stats: new UpstreamStats()
-  };
+  // Default byte budgets: the per-cache knobs were the API's settings.
+  const providerCache = new ProviderCache();
+  const resultSets = new ResultSetCache();
+  const authorityFacts = new AuthorityFactsCache();
   const { userAgent } = options;
   const providers = options.providers ?? PROVIDERS;
   const authorities = options.authorities ? { authorities: options.authorities } : {};
 
   const search: Engine['search'] = async (params, extra = {}) => {
-    const { responseV2, fromCache } = await runSearch(params, {
+    const { response, fromCache } = await runSearch(params, {
       settings,
       cache: providerCache,
       resultSets,
       authorityFacts,
-      stats,
       userAgent,
       ...authorities,
       ...(extra.admit ? { admit: extra.admit } : {}),
@@ -857,12 +829,10 @@ export function createEngine(options: EngineOptions): Engine {
       // list, so a narrowed set never answers a full search, or the reverse.
       providers: extra.sources?.length ? providers.filter(p => extra.sources!.includes(p.id)) : providers
     });
-    return { response: responseV2, fromCache };
+    return { response, fromCache };
   };
 
   return {
-    userAgent,
-    stats,
     search,
     async lookup(id) {
       const found = await lookupPaper(id, { userAgent, providers });
@@ -879,14 +849,13 @@ export function createEngine(options: EngineOptions): Engine {
 ```
 
 Check the constructor options of `ProviderCache` and `ResultSetCache` against
-their files while writing this; `app.ts` already passes `{ maxBytes }` to
-`ProviderCache` and nothing to `ResultSetCache`.
+their files while writing this. `runSearch` returns the search response the
+tools present (`SearchResponseV2` in shared) and whether its set was held.
 
-Two of the options exist for embedding. The API (Step 10.4) hands over its own
-caches, so a set the web UI resolved serves an MCP page and the other way
-round, and it passes neither `apiKeys` nor `httpPool`: both install
-process-wide state the API already set at boot, and `useApiKeys({})` would
-clear its keys.
+The engine owns its caches: one engine per process, made once by the binary.
+Until the API was removed, `EngineOptions` also took a host's caches, an HTTP
+pool configuration and an upstream-stats tally, so the API could embed an
+engine beside its own routes; nothing passes them now, and they are gone.
 
 The `Engine` type grows in Steps 3.4–3.6 below (`count`, `onProgress` and the
 quota state behind both), and three times later, and only there: Phase 7 adds
@@ -921,15 +890,13 @@ function matches(paper: Paper, provider: ProviderId, nativeId: string): boolean 
 
 Add a case to `orchestrator/__tests__/lookup.test.ts`: a stub answering
 `1706.03762v7` for `lookupPaper('arxiv:1706.03762')` returns the record, and
-one answering `1706.03762v7` for `arxiv:1706.0376` does not. The API's
-`/api/paper/arxiv:<id>` gains the same behaviour; note it in `docs/api.md`.
+one answering `1706.03762v7` for `arxiv:1706.0376` does not.
 
-### Step 3.3 — (Optional) use it in the API
+### Step 3.3 — (Retired) use it in the API
 
-`app.ts` can build its caches through `createEngine` too, but nothing forces
-it. Leave the API untouched unless a later change needs it. One consequence of
-leaving it: the quota state of Step 3.6 lives in the engine, so the web UI's
-searches neither consult it nor feed it.
+The API could have built its caches through `createEngine` too. It never did,
+and it has since been removed: the engine is now the only way into the
+orchestrator, and every search consults and feeds the quota state of Step 3.6.
 
 The next three steps change core, each in its own commit, after the Phase 1
 move and before any tool is written.
@@ -957,20 +924,22 @@ into a function both call:
 export function queryOf(params: SearchParams) {
   // The lines of `runSearch` from `const filters = params.filters ?? {}` to
   // `const openAccessOnly = filters.openAccessOnly ?? true`, moved unchanged.
-  return { filters, query, ask, bound, userFilters, openAccessOnly };
+  // `withoutStages` is the query before the publication types are added: the
+  // stage facet is counted under it, with its own selection lifted.
+  return { filters, query, withoutStages, userFilters, openAccessOnly };
 }
 
 // runSearch now opens with:
-const { filters, query, ask, bound, userFilters, openAccessOnly } = queryOf(params);
+const { filters, query, withoutStages, userFilters, openAccessOnly } = queryOf(params);
 const settings = options.settings ?? DEFAULT_SEARCH_SETTINGS;
-const { facetQueries, filtersSent } = sourceCounting(filters, query, ask, bound, settings.facetCounts);
+const { facetQueries, filtersSent } = sourceCounting(filters, query, withoutStages);
 ```
 
 Then the count itself:
 
 ```ts
 // packages/core/src/orchestrator/count.ts
-import type { ProviderId, ProviderReport, SearchParams } from '@open-access-explorer/shared';
+import type { ProviderId, ProviderReport, SearchParams } from '@sci-open/shared';
 import { plan } from './plan';
 import { fanOut, isComplete } from './fanout';
 import { queryOf } from './from-search-params';
@@ -1040,8 +1009,9 @@ export async function countSearch(params: SearchParams, options: CountOptions): 
 }
 ```
 
-Export `countSearch`, `CountOutcome` and `queryOf` from `packages/core/src/index.ts`,
-and give the engine a method for it:
+Export `CountOutcome` from `packages/core/src/index.ts` (the tools present it;
+`countSearch` stays inside core, behind the engine), and give the engine a
+method for it:
 
 ```ts
 // packages/core/src/engine.ts — in the Engine type
@@ -1077,7 +1047,7 @@ is a second listener, not a new mechanism:
 
 ```ts
 // packages/core/src/orchestrator/progress.ts
-import type { ProviderReport } from '@open-access-explorer/shared';
+import type { ProviderReport } from '@sci-open/shared';
 
 /**
  * What a search is doing, for a caller that shows it: each source as it
@@ -1202,7 +1172,7 @@ OpenAlex would otherwise still be asked for its counts.
 
 ```ts
 // packages/core/src/orchestrator/quota.ts
-import type { ProviderId, ProviderReport } from '@open-access-explorer/shared';
+import type { ProviderId, ProviderReport } from '@sci-open/shared';
 
 /** Long enough not to spend a request per search on a known refusal; short
  * enough that a burst limit, mistaken for a spent budget, costs minutes. */
@@ -1268,16 +1238,16 @@ const authoritiesNow = (unavailable: ReadonlyMap<ProviderId, string>) =>
 
 const search: Engine['search'] = async (params, extra = {}) => {
   const unavailable = quota.unavailable();
-  const { responseV2, fromCache } = await runSearch(params, {
-    settings, cache: providerCache, resultSets, authorityFacts, stats, userAgent,
+  const { response, fromCache } = await runSearch(params, {
+    settings, cache: providerCache, resultSets, authorityFacts, userAgent,
     ...authoritiesNow(unavailable),
     ...(unavailable.size ? { unavailable } : {}),
     ...(extra.admit ? { admit: extra.admit } : {}),
     ...(extra.onProgress ? { onProgress: extra.onProgress } : {}),
     providers: narrowed(extra.sources)
   });
-  if (!fromCache) quota.note(responseV2.providers);
-  return { response: responseV2, fromCache };
+  if (!fromCache) quota.note(response.providers);
+  return { response, fromCache };
 };
 ```
 
@@ -1289,8 +1259,8 @@ is not gated — but its enrichment uses `authoritiesNow` like a search's.
 **Acceptance**
 
 - [ ] A unit test in `packages/core` calls `createEngine({ userAgent })` with
-      `providers`/`authorities` stubbed (the registries already accept
-      subsets — see how `app.test.ts` drives routes offline) and checks that
+      `providers`/`authorities` stubbed (the registries accept subsets, which
+      is how `engine.test.ts` runs offline) and checks that
       a second `search()` for page 2 reports `fromCache: true`.
 - [ ] A search with `sources: ['arxiv']` asks only arXiv, and its set is held
       under a different key from the same search across every source.
@@ -1345,8 +1315,8 @@ that tells the model what to do next (Anthropic: "specific and actionable
 improvements", not tracebacks).
 
 ```ts
-import { QueryParseError } from '@open-access-explorer/shared';
-import { PdfProxyError } from '@open-access-explorer/core';
+import { QueryParseError } from '@sci-open/shared';
+import { PdfProxyError } from '@sci-open/core';
 
 export type ToolErrorCode =
   | 'invalid_input' | 'invalid_handle' | 'not_found' | 'no_full_text'
@@ -1417,7 +1387,7 @@ nobody else in literature aggregation ships it.
 
 ```ts
 import { createHash } from 'crypto';
-import type { ProviderReport } from '@open-access-explorer/shared';
+import type { ProviderReport } from '@sci-open/shared';
 
 export const PROVENANCE_KEY = 'io.github.matiasrodlo/provenance';
 
@@ -1495,7 +1465,7 @@ differ, which turns forgetting to bump one into a red test.
 ```ts
 import { createHash } from 'crypto';
 import * as z from 'zod';
-import { PROVIDERS } from '@open-access-explorer/core';
+import { PROVIDERS } from '@sci-open/core';
 import { canonicalJson } from './provenance';
 import { ToolError } from './errors';
 
@@ -1676,7 +1646,7 @@ default everywhere; the full view adds provenance detail.
 
 ```ts
 import * as z from 'zod';
-import type { Paper } from '@open-access-explorer/shared';
+import type { Paper } from '@sci-open/shared';
 import { sanitizeText } from '../safety/sanitize';
 
 export function compact<T extends Record<string, unknown>>(obj: T): Partial<T> {
@@ -1815,7 +1785,7 @@ response says so and says how to continue — it never silently drops data.
 
 ```ts
 import * as z from 'zod';
-import type { SearchResponseV2 } from '@open-access-explorer/shared';
+import type { SearchResponseV2 } from '@sci-open/shared';
 
 export const coverageSchema = z.object({
   complete: z.boolean(),
@@ -1893,9 +1863,9 @@ The bucket is per minute and protects the sources from bursts. A source's
 daily budget is a different limit, and the engine handles it by the source's
 own signal, its 429 (Step 3.6), not by a counter here.
 
-On the HTTP endpoint, reuse the API's existing per-client `newSearchLimit`
-instead. That limit is keyed by the Fastify request, so it has to be found per
-request; Step 10.4 shows the wiring.
+Over HTTP the bucket is per client, not per process: the HTTP server keeps one
+bucket per client and finds the client per request; Step 10.4 shows the
+wiring.
 
 ### Step 4.9 — Bounded concurrency (`src/p-limit.ts`)
 
@@ -1944,7 +1914,7 @@ limit, all settle, and a rejection does not stall the queue.
 
 ```ts
 import type * as z from 'zod';
-import type { Engine } from '@open-access-explorer/core';
+import type { Engine } from '@sci-open/core';
 import type { ProvenanceInput } from '../provenance';
 import type { McpConfig } from '../config';
 import type { Metrics } from '../metrics';
@@ -2094,7 +2064,7 @@ The search tools turn the engine's progress events (Step 3.5) into messages
 with one helper, `src/shape/progress.ts`:
 
 ```ts
-import type { SearchProgress } from '@open-access-explorer/core';
+import type { SearchProgress } from '@sci-open/core';
 import type { ToolDeps } from '../framework/define-tool';
 
 const SETTLED: Record<string, string> = { ok: 'answered', timeout: 'timed out', error: 'failed', skipped: 'skipped' };
@@ -2217,7 +2187,7 @@ Recipes:
 ```ts
 import { McpServer } from '@modelcontextprotocol/server';
 import type { McpServerFactory } from '@modelcontextprotocol/server';
-import type { Engine } from '@open-access-explorer/core';
+import type { Engine } from '@sci-open/core';
 import { INSTRUCTIONS } from './instructions';
 import { selectTools } from './toolsets';
 import { registerTools } from './framework/register';
@@ -2281,8 +2251,8 @@ when `deps.config.allowWrites` is false, which is always the case over HTTP
 Note the token bucket is created **once per process** and shared by every
 per-request instance; a bucket per instance would never run dry. That is right
 for stdio, where the process is one user. Over HTTP it would be one bucket for
-every client, so the API passes its own `admit`, which finds the client per
-request (Step 10.4), and the fallback bucket is never built.
+every client, so the HTTP server passes its own `admit`, which finds the
+client per request (Step 10.4), and the fallback bucket is never built.
 
 ### Step 5.6 — Logging and metrics (`src/log.ts`, `src/metrics.ts`)
 
@@ -2293,7 +2263,7 @@ logs a rescue with `query`, and nothing above `debug` should hold a query or a
 reference (Phase 14):
 
 ```ts
-import type { EngineLogger } from '@open-access-explorer/core';
+import type { EngineLogger } from '@sci-open/core';
 
 const LEVELS = ['debug', 'info', 'warn', 'error'] as const;
 type Level = (typeof LEVELS)[number];
@@ -2312,12 +2282,13 @@ export function stderrLogger(min: Level): EngineLogger {
 }
 ```
 
-`metrics.ts` aggregates per tool in memory. On stdio it logs a summary line
-every ten minutes; over HTTP the API exposes the snapshot on an admin route
-(Step 10.4). It never sees arguments, only what `registerTools` records:
+`metrics.ts` aggregates per tool in memory. It logs a summary line every ten
+minutes; over HTTP the server also answers the snapshot at `GET /metrics` to
+whoever holds the admin key (Step 10.4). It never sees arguments, only what
+`registerTools` records:
 
 ```ts
-import type { EngineLogger } from '@open-access-explorer/core';
+import type { EngineLogger } from '@sci-open/core';
 
 export type ToolCall = {
   tool: string;
@@ -2375,8 +2346,8 @@ export const nullMetrics: Metrics = {
 };
 ```
 
-Over HTTP, pass the API's logger: the periodic line lands in the container
-log, and the admin route reads `snapshot()` for anything finer.
+Over HTTP the server uses the same stderr logger: the periodic line lands in
+the process log, and `GET /metrics` reads `snapshot()` for anything finer.
 
 **Acceptance for Phase 5**
 
@@ -2395,7 +2366,7 @@ Both search tools return the same shape, so they share one function.
 
 ```ts
 import * as z from 'zod';
-import type { SearchResponseV2 } from '@open-access-explorer/shared';
+import type { SearchResponseV2 } from '@sci-open/shared';
 import { encodeSearchHandle, type SearchSpec } from '../handles';
 import { shapePaper, paperSchema } from '../shape/paper';
 import { fitWholeItems } from '../shape/budget';
@@ -2481,7 +2452,7 @@ export function presentPage(
 
 ```ts
 import * as z from 'zod';
-import { parseQuery } from '@open-access-explorer/core';
+import { parseQuery } from '@sci-open/core';
 import { defineTool } from '../framework/define-tool';
 import { presentPage } from './present-page';
 import { presentCounts, searchOutputSchema } from './present-counts';
@@ -2564,8 +2535,9 @@ export const searchPapers = defineTool({
 });
 ```
 
-The schema deliberately exposes only the sorts that mean something to an agent
-(the API also has title/author/venue sorts for the table UI).
+The schema exposes the sorts the engine has: relevance, and date and citations
+either way. (The web app's table also sorted by title, author and venue; those
+went with it.)
 
 `count_only` is the tuning loop of D7, and its answer is shaped to be used
 that way: counts per source, the largest of them, the coverage sentence, and
@@ -2574,8 +2546,8 @@ what to do next — and no handle, since nothing was resolved to page through.
 
 ```ts
 import * as z from 'zod';
-import type { ProviderReport } from '@open-access-explorer/shared';
-import type { CountOutcome } from '@open-access-explorer/core';
+import type { ProviderReport } from '@sci-open/shared';
+import type { CountOutcome } from '@sci-open/core';
 import { pageSchema } from './present-page';
 import { coverageOf, coverageSchema, coverageSentence } from '../shape/coverage';
 import type { ToolOutcome } from '../framework/define-tool';
@@ -2730,7 +2702,7 @@ export const getPaper = defineTool({
 string. One helper decides what it is, so the three agree:
 
 ```ts
-import type { Paper } from '@open-access-explorer/shared';
+import type { Paper } from '@sci-open/shared';
 import type { ToolDeps } from '../framework/define-tool';
 import { ToolError } from '../errors';
 
@@ -2769,16 +2741,16 @@ in order, or temporarily wire `serveStdio` in a scratch file.)
 **Acceptance**
 
 - [ ] `search_papers {query: "TS=crispr AND PY=2023"}` returns results, a handle
-      and a coverage sentence; `get_search_page` page 2 reports a cache hit in
-      the API's stats.
+      and a coverage sentence; `get_search_page` page 2 is served from the
+      held set (`rerun` is absent), with no new admission spent.
 - [ ] A query with `NEAR` returns `invalid_input` with the parser's position.
 - [ ] After `search_papers {query, page_size: 1}`, the `next` call returns
       result 2, not result 11.
 - [ ] `search_papers {query: "TS=crispr", count_only: true}` returns
       `counts` with one entry per source and no `handle`, and its text says
       no results were read. With `doi` it is `invalid_input`. Against the live
-      engine it costs one upstream request per planned source (count them in
-      the API's `UpstreamStats`, or with a logging stub).
+      engine it costs one upstream request per planned source (the count tests
+      in core pin it with stub providers that record their calls).
 - [ ] With a client that sends a progress token (check the Inspector's
       settings), a new search shows one progress line per source as it
       answers; a page of a held set shows only the details line.
@@ -2864,7 +2836,7 @@ pass.
 ### Step 7.2 — Matching (`src/references/match.ts`)
 
 ```ts
-import type { Paper } from '@open-access-explorer/shared';
+import type { Paper } from '@sci-open/shared';
 import type { ParsedReference } from './parse';
 
 const STOP = new Set(['a', 'an', 'the', 'of', 'in', 'on', 'for', 'and', 'or', 'to', 'with', 'by', 'from', 'at', 'via']);
@@ -2975,7 +2947,6 @@ and `10.48550/arXiv.1706.03762` (DataCite), both `1`, and
 ```ts
 // packages/core/src/lib/doi-registry.ts
 import { getPooledClient } from './http-client-factory';
-import { getServiceConfig } from './http-pool-config';
 
 /**
  * Whether any registration agency holds this DOI — the Handle System's own
@@ -2987,7 +2958,7 @@ export async function doiRegistered(
   doi: string,
   options: { userAgent: string; timeoutMs?: number }
 ): Promise<boolean | undefined> {
-  const client = getPooledClient('https://doi.org', getServiceConfig('doi'));
+  const client = getPooledClient('https://doi.org');
   // The slashes stay: they separate the handle's parts, they are not in one.
   const path = `/api/handles/${doi.split('/').map(encodeURIComponent).join('/')}`;
   try {
@@ -3007,8 +2978,9 @@ export async function doiRegistered(
 
 Add it to the `Engine` type as `doiRegistered(doi: string): Promise<boolean |
 undefined>` and to `createEngine` as
-`doiRegistered: doi => doiRegistered(doi, { userAgent })`. `doi` is not one of
-`POOLED_SERVICES`, so `getServiceConfig` returns the pool defaults.
+`doiRegistered: doi => doiRegistered(doi, { userAgent })`. Like every pooled
+client it takes the factory's defaults: keep-alive, a 10-second timeout and
+three retries.
 
 **Admission.** Every lookup above that resolves something new — a DOI lookup
 or a title search — spends one admission, like any other search; a result
@@ -3021,7 +2993,7 @@ never loses a batch.
 ```ts
 import * as z from 'zod';
 import pLimit from '../p-limit'; // src/p-limit.ts, a 15-line local helper; no dependency needed
-import type { Paper } from '@open-access-explorer/shared';
+import type { Paper } from '@sci-open/shared';
 import { defineTool, type ToolDeps } from '../framework/define-tool';
 import { toToolError } from '../errors';
 import { parseReference, type ParsedReference } from '../references/parse';
@@ -3277,9 +3249,8 @@ type Clock = { now(): number; sleep(ms: number): Promise<void> };
  * sleeps until it. One whose slot is further off than it will wait gets
  * `SourceBusyError` and takes nothing, so a refusal never delays anyone else.
  *
- * Per process, not per deployment: two API replicas would each send at this
- * rate. Divide the interval among them, or keep the slot in Redis, before
- * running more than one.
+ * Per process, not per deployment: two server replicas would each send at
+ * this rate. Divide the interval among them before running more than one.
  */
 export class HostPacer {
   private nextSlot = 0;
@@ -3311,23 +3282,20 @@ export function pacerFor(url: string): HostPacer | undefined {
 ```
 
 A caller waits for a slot up to 20 seconds: time enough to queue behind one
-other reader, and well inside the HTTP endpoint's 70-second budget
-(Step 10.6). Beyond that the tier is *deferred*, not failed. If no other tier
+other reader, and well inside what a client waits for a tool call. Beyond
+that the tier is *deferred*, not failed. If no other tier
 has a copy, the answer is "retry in N seconds", not "no full text": the paper
 has a copy, it just cannot be fetched yet. A paper read once is cached
-(Step 8.5), so its sections never wait. Two arXiv paths stay outside this
-pacer: the search provider, which talks to `export.arxiv.org`'s API under that
-API's own terms, and the API's PDF route, which serves one file to a person
-who clicked.
+(Step 8.5), so its sections never wait. The search provider stays outside
+this pacer: it talks to `export.arxiv.org`'s API under that API's own terms.
 
-Use the pooled clients so the MCP's traffic shares the pool, timeouts and
-metrics with everything else. The pooled clients resolve a 4xx rather than
+Use the pooled clients so full-text traffic shares the pool, timeouts and
+retry policy with everything else. The pooled clients resolve a 4xx rather than
 throw, so every response is checked for its status.
 
 ```ts
-import type { Paper } from '@open-access-explorer/shared';
+import type { Paper } from '@sci-open/shared';
 import { getPooledClient } from '../lib/http-client-factory';
-import { getServiceConfig } from '../lib/http-pool-config';
 import { ARXIV_PACER, pacerFor, SourceBusyError } from '../lib/host-pacer';
 import { log } from '../lib/logger';
 import { jatsToSections } from './jats';
@@ -3387,7 +3355,7 @@ async function fromEuropePmc(paper: Paper, options: ResolveOptions): Promise<Ful
   const query = paper.doi ? `DOI:"${paper.doi}"` : pmid ? `EXT_ID:${pmid} AND SRC:MED` : undefined;
   if (!query) return null;
 
-  const client = getPooledClient(EPMC, getServiceConfig('europepmc'));
+  const client = getPooledClient(EPMC);
   const timeout = options.timeoutMs ?? 15_000;
   const found = await client.get('/search', {
     params: { query, resultType: 'core', format: 'json', pageSize: 1 },
@@ -3415,7 +3383,7 @@ async function fromArxivHtml(paper: Paper, options: ResolveOptions): Promise<Ful
   const id = arxivIdOf(paper);
   if (!id) return null;
 
-  const client = getPooledClient('https://arxiv.org', getServiceConfig('arxiv'));
+  const client = getPooledClient('https://arxiv.org');
   const path = `/html/${encodeURI(id)}`; // encodeURI: old-style ids (hep-th/9901001) keep their slash
   await ARXIV_PACER.acquire(options.maxWaitMs ?? MAX_WAIT_MS);
   const page = await client.get<string>(path, {
@@ -3607,8 +3575,8 @@ import { assertPublicHttpUrl, fetchPdfStream, MAX_PDF_BYTES } from '../lib/pdf-p
 import type { Section } from './types';
 
 export async function pdfToSections(rawUrl: string, userAgent: string): Promise<Section[]> {
-  const url = await assertPublicHttpUrl(rawUrl);         // the SSRF guard the API's /pdf route uses
-  const { stream } = await fetchPdfStream(url, userAgent);
+  const url = await assertPublicHttpUrl(rawUrl);         // the SSRF guard, before any request
+  const stream = await fetchPdfStream(url, userAgent);   // capped at MAX_PDF_BYTES, decoded
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of stream) {
@@ -3687,12 +3655,12 @@ export class FullTextCache {
 }
 ```
 
-In `engine.ts`, add `fullTextBytes?: number` to `EngineOptions`,
+In `engine.ts`, add
 `readFullText(paper: Paper, options: { trustedOnly: boolean }): Promise<FullTextDocument | null>`
 to `Engine`, and to `createEngine`:
 
 ```ts
-const fullTexts = new FullTextCache(options.fullTextBytes !== undefined ? { maxBytes: options.fullTextBytes } : {});
+const fullTexts = new FullTextCache(); // 32 MB of full texts held between reads
 const fullTextFlights = new SingleFlight(); // two calls for one paper fetch it once
 
 // ...in the returned object:
@@ -3710,8 +3678,8 @@ async readFullText(paper, { trustedOnly }) {
 }
 ```
 
-Export the types from `packages/core/src/index.ts`:
-`export type { FullTextDocument, FullTextTier, Section as FullTextSection } from './fulltext/types';`.
+Export the type the tool reads from `packages/core/src/index.ts`:
+`export type { FullTextDocument } from './fulltext/types';`.
 
 ### Step 8.6 — The tool (`packages/mcp/src/tools/read-paper.ts`)
 
@@ -3745,7 +3713,7 @@ The Markdown for `save_to` comes from `src/shape/markdown.ts`. A file is for
 the user, not the model, so it carries no fence:
 
 ```ts
-import type { FullTextDocument } from '@open-access-explorer/core';
+import type { FullTextDocument } from '@sci-open/core';
 import { sanitizeText } from '../safety/sanitize';
 
 /** A heading per section, one level deeper per segment of its id (s2.1 → ###). */
@@ -3960,7 +3928,6 @@ to the same host and encodes the DOI the same way.
 
 ```ts
 import { getPooledClient } from '../lib/http-client-factory';
-import { getServiceConfig } from '../lib/http-pool-config';
 
 export type CitationLink = { doi?: string; pmid?: string; created?: string; journalSelfCitation: boolean; authorSelfCitation: boolean };
 
@@ -3977,7 +3944,7 @@ function ids(field: string): { doi?: string; pmid?: string } {
 }
 
 export async function citationLinks(doi: string, direction: 'references' | 'cited_by', options: { userAgent: string; token?: string; timeoutMs?: number }): Promise<CitationLink[]> {
-  const client = getPooledClient('https://api.opencitations.net/index/v2', getServiceConfig('opencitations'));
+  const client = getPooledClient('https://api.opencitations.net/index/v2');
   const path = `/${direction === 'references' ? 'references' : 'citations'}/doi:${encodeURIComponent(doi)}`;
   const response = await client.get<Array<Record<string, string>>>(path, {
     timeout: options.timeoutMs ?? 10_000,
@@ -4156,16 +4123,11 @@ export const getCitations = defineTool({
 
 ### Step 9.4 — Move the citation formatter to `shared`
 
-`apps/web/lib/citations.ts` is pure (it imports only `doiUrl` and `Paper` from
-shared) except for `downloadCitation`, which uses the DOM.
-
-1. `git mv apps/web/lib/citations.ts packages/shared/src/citations.ts`.
-2. Move `downloadCitation` back into a new `apps/web/lib/citations.ts` that
-   re-exports everything else from `@open-access-explorer/shared`, so no web
-   import changes.
-3. Move its tests (`apps/web/lib/__tests__/citations.test.ts`) to
-   `packages/shared/src/__tests__/`.
-4. Export from `packages/shared/src/index.ts`: `export * from './citations';`.
+The BibTeX and RIS formatter was the web app's `lib/citations.ts`, pure but
+for a browser download helper. It moved with `git mv` to
+`packages/shared/src/citations.ts`, its tests with it, and `shared` exports it
+(`export * from './citations';`); the download helper stayed in the web app
+and went with it. `export_citations` is now the formatter's only caller.
 
 ### Step 9.5 — `export_citations` (toolset `export`, `src/tools/export-citations.ts`)
 
@@ -4180,8 +4142,8 @@ resource, so the client can save it verbatim, and the text is one line.
 ```ts
 import { createHash } from 'crypto';
 import * as z from 'zod';
-import type { Paper } from '@open-access-explorer/shared';
-import { generateCitationsBatch, getFileExtension, getMimeType } from '@open-access-explorer/shared';
+import type { Paper } from '@sci-open/shared';
+import { generateCitationsBatch, getFileExtension, getMimeType } from '@sci-open/shared';
 import pLimit from '../p-limit';
 import { defineTool } from '../framework/define-tool';
 import { ToolError, toToolError } from '../errors';
@@ -4251,8 +4213,8 @@ export const exportCitations = defineTool({
 });
 ```
 
-`getFileExtension` and `getMimeType` already live beside the formatter, so
-the extension and MIME type cannot drift from what the web app downloads.
+`getFileExtension` and `getMimeType` live beside the formatter, so the
+extension and MIME type cannot drift from the file.
 
 **Acceptance**
 
@@ -4261,7 +4223,7 @@ the extension and MIME type cannot drift from what the web app downloads.
       request.
 - [ ] `export_citations` with `save_to` writes a file that BibTeX parses;
       without it, the resource text is byte-identical to the file.
-- [ ] The web app's export still works (its tests pass from `shared`).
+- [ ] The formatter's tests pass from `shared`.
 
 ## Phase 10 — Transports: stdio binary and HTTP endpoint
 
@@ -4274,7 +4236,7 @@ for `--help`, `--version` and a bad flag.
 
 ```ts
 import { parseArgs } from 'util';
-import { usableApiKey, type ApiKeys } from '@open-access-explorer/core';
+import { MAX_DEPTH, usableApiKey, type ApiKeys } from '@sci-open/core';
 import { BUILD } from './build-info';
 
 export type McpConfig = {
@@ -4287,13 +4249,31 @@ export type McpConfig = {
   textBudgetChars: number;
   structuredBudgetChars: number;
   maxNewSearchesPerMinute: number;
-  /** Records read per source. 300, half the web app's 600: see D11. */
+  /** Records read per source. 300, half the engine's default of 600: see D11. */
   searchDepth: number;
   logLevel: 'error' | 'warn' | 'info' | 'debug';
   openCitationsToken?: string;
   /** `fixture` serves recorded answers, for evals and demos (Step 11.2). */
   engine: 'live' | 'fixture';
   fixturesPath?: string;
+  /** Serve Streamable HTTP instead of stdio (`--http`, Step 10.4). */
+  http?: HttpConfig;
+};
+
+/** The HTTP server's own settings (Step 10.5). */
+export type HttpConfig = {
+  host: string;
+  port: number;
+  /** Hostnames a browser may call from. Empty refuses every browser `Origin`. */
+  allowedOrigins: string[];
+  /** Proxies trusted to name the client in X-Forwarded-For, as proxy-addr reads them. */
+  trustProxy: string[];
+  /** Requests a minute per client, any kind. */
+  requestsPerMinute: number;
+  /** Serve without an OpenAlex key. For a trial, never a shared deployment. */
+  allowUnkeyed: boolean;
+  /** Enables GET /metrics for whoever sends it as a bearer token. */
+  adminKey?: string;
 };
 
 export type ConfigResult = { config: McpConfig; warnings: string[]; exit?: { code: number; output: string } };
@@ -4301,7 +4281,7 @@ export type ConfigResult = { config: McpConfig; warnings: string[]; exit?: { cod
 const LOG_LEVELS = ['error', 'warn', 'info', 'debug'] as const;
 const KEYED = ['core', 'ncbi', 'doaj', 'datacite', 'openalex'] as const;
 
-export const USAGE = `sci-open-mcp: MCP server for open-access scientific literature, over stdio.
+export const USAGE = `sci-open-mcp: MCP server for open-access scientific literature, over stdio or HTTP.
 
   --toolsets <list>         core, read, graph, export, all, default  [SCI_OPEN_TOOLSETS]
   --tools <list>            extra tools by name                      [SCI_OPEN_TOOLS]
@@ -4310,12 +4290,20 @@ export const USAGE = `sci-open-mcp: MCP server for open-access scientific litera
   --engine <live|fixture>   fixture serves recorded answers          [SCI_OPEN_ENGINE]
   --fixtures <path>         the recordings for --engine fixture      [SCI_OPEN_FIXTURES]
   --log-level <level>       error, warn, info or debug, to stderr    [SCI_OPEN_LOG_LEVEL]
+  --http                    serve Streamable HTTP at /mcp, not stdio [SCI_OPEN_HTTP=1]
+  --port <n>                HTTP port, 8080 by default               [SCI_OPEN_HTTP_PORT]
+  --host <address>          HTTP address, 127.0.0.1 by default       [SCI_OPEN_HTTP_HOST]
   --help, --version
+
+Over HTTP: OPENALEX_API_KEY is required (SCI_OPEN_ALLOW_UNKEYED=1 for a trial),
+SCI_OPEN_ALLOWED_ORIGINS names hostnames a browser may call from,
+SCI_OPEN_TRUST_PROXY the proxies that may name the client, SCI_OPEN_ADMIN_KEY
+enables GET /metrics, and save_to is always refused.
 
 Set UNPAYWALL_EMAIL to a real address. Every setting is listed in Appendix A of
 docs/mcp-implementation-manual.md.`;
 
-/** Every default, nothing read. The API starts from this for HTTP. */
+/** Every default, nothing read. */
 export function defaultMcpConfig(userAgent: string): McpConfig {
   return {
     userAgent,
@@ -4348,6 +4336,9 @@ export function readMcpConfig(env: NodeJS.ProcessEnv, argv: string[]): ConfigRes
         engine: { type: 'string' },
         fixtures: { type: 'string' },
         'log-level': { type: 'string' },
+        http: { type: 'boolean' },
+        port: { type: 'string' },
+        host: { type: 'string' },
         help: { type: 'boolean' },
         version: { type: 'boolean' }
       }
@@ -4394,6 +4385,27 @@ export function readMcpConfig(env: NodeJS.ProcessEnv, argv: string[]): ConfigRes
   const openCitationsToken = read('OPENCITATIONS_TOKEN');
   const fixturesPath = flags.fixtures ?? read('SCI_OPEN_FIXTURES');
 
+  let http: HttpConfig | undefined;
+  if (flags.http || isOn('SCI_OPEN_HTTP')) {
+    const port = flags.port ?? read('SCI_OPEN_HTTP_PORT');
+    const portNumber = Number(port ?? 8080);
+    if (!Number.isInteger(portNumber) || portNumber < 0 || portNumber > 65535) {
+      return { config: fallback, warnings, exit: { code: 2, output: `--port ${port} is not a port number\n\n${USAGE}` } };
+    }
+    const adminKey = read('SCI_OPEN_ADMIN_KEY');
+    http = {
+      host: flags.host ?? read('SCI_OPEN_HTTP_HOST') ?? '127.0.0.1',
+      port: portNumber,
+      allowedOrigins: list(read('SCI_OPEN_ALLOWED_ORIGINS')) ?? [],
+      trustProxy: list(read('SCI_OPEN_TRUST_PROXY')) ?? [],
+      requestsPerMinute: whole('SCI_OPEN_REQUESTS_PER_MIN', 60, 1, 6000),
+      allowUnkeyed: isOn('SCI_OPEN_ALLOW_UNKEYED'),
+      ...(adminKey ? { adminKey } : {})
+    };
+  } else if (flags.port || flags.host) {
+    warnings.push('--port and --host apply only with --http; serving stdio');
+  }
+
   return {
     config: {
       userAgent: `sci-open-mcp/${BUILD.version} (+https://github.com/matiasrodlo/sci-open${email ? `; mailto:${email}` : ''})`,
@@ -4405,11 +4417,13 @@ export function readMcpConfig(env: NodeJS.ProcessEnv, argv: string[]): ConfigRes
       textBudgetChars: whole('SCI_OPEN_TEXT_BUDGET_CHARS', fallback.textBudgetChars, 2_000, 400_000),
       structuredBudgetChars: whole('SCI_OPEN_STRUCTURED_BUDGET_CHARS', fallback.structuredBudgetChars, 2_000, 1_000_000),
       maxNewSearchesPerMinute: whole('SCI_OPEN_MAX_NEW_SEARCHES_PER_MIN', fallback.maxNewSearchesPerMinute, 1, 600),
-      searchDepth: whole('SEARCH_DEPTH', fallback.searchDepth, 1, 2000),
+      searchDepth: whole('SEARCH_DEPTH', fallback.searchDepth, 1, MAX_DEPTH),
       logLevel: oneOf('log level', flags['log-level'] ?? read('SCI_OPEN_LOG_LEVEL'), LOG_LEVELS, 'warn'),
       ...(openCitationsToken ? { openCitationsToken } : {}),
       engine: oneOf('engine', flags.engine ?? read('SCI_OPEN_ENGINE'), ['live', 'fixture'] as const, 'live'),
-      ...(fixturesPath ? { fixturesPath } : {})
+      ...(fixturesPath ? { fixturesPath } : {}),
+      // Over HTTP the path a caller names is on their machine, not this one.
+      ...(http ? { http, allowWrites: false } : {})
     },
     warnings
   };
@@ -4417,16 +4431,19 @@ export function readMcpConfig(env: NodeJS.ProcessEnv, argv: string[]): ConfigRes
 ```
 
 Without `UNPAYWALL_EMAIL` the server still starts, logs the warning to stderr,
-and Unpaywall is asked anonymously (it may refuse) — the same behaviour as the
-API's `config.ts`. `usableApiKey` is the API's own filter, which drops the
-placeholder values `.env.example` ships with. `SEARCH_DEPTH` defaults to 300,
-not the engine's 600 (D11), and is capped at the orchestrator's `MAX_DEPTH`,
-2,000.
+and Unpaywall is asked anonymously (it may refuse). `usableApiKey` (core)
+drops placeholder values such as `your_datacite_api_key_here`, which a `.env`
+copied from a sample file carries in every slot and which DataCite answers
+with a 401. `SEARCH_DEPTH` defaults to 300, not the engine's 600 (D11), and is
+capped at the orchestrator's `MAX_DEPTH`, 2,000.
 
 `config.test.ts`: a flag beats its variable; `--no-writes` and
 `SCI_OPEN_ALLOW_WRITES=0` both turn writes off; an out-of-range number and an
 unknown log level each warn and fall back; `--help` and `--version` exit 0 and
-an unknown flag exits 2, all three without touching stdout.
+an unknown flag exits 2, all three without touching stdout. For HTTP: `--http`
+with `--port` and `--host` and the `SCI_OPEN_` variables builds the
+`HttpConfig`, `SCI_OPEN_HTTP=1` alone gives the defaults, a port that is not
+one exits 2, and `--port` without `--http` warns and serves stdio.
 
 ### Step 10.2 — The stdio binary (`src/bin/stdio.ts`)
 
@@ -4455,7 +4472,7 @@ console.debug = (...a: unknown[]) => console.error(...a);
 import './stdout-guard';
 import path from 'path';
 import { serveStdio } from '@modelcontextprotocol/server/stdio';
-import { createEngine, useLogger, type Engine } from '@open-access-explorer/core';
+import { createEngine, useLogger, type Engine } from '@sci-open/core';
 import { createServerFactory } from '../server';
 import { selectTools } from '../toolsets';
 import { readMcpConfig, type McpConfig } from '../config';
@@ -4512,6 +4529,9 @@ function main(): void {
 main();
 ```
 
+With `config.http` set, `main` serves HTTP instead and returns before
+`serveStdio` (Step 10.4).
+
 **Acceptance**
 
 - [ ] `npx @modelcontextprotocol/inspector node packages/mcp/dist/bin/stdio.js`
@@ -4545,261 +4565,216 @@ Claude Desktop (`claude_desktop_config.json`):
 }
 ```
 
-### Step 10.4 — The HTTP endpoint in the API (`apps/api`)
+### Step 10.4 — The HTTP server (`src/http-server.ts`)
 
-Mount the same factory on the existing Fastify app, so the remote endpoint
-inherits its rate limits, helmet, logging and shutdown. It lives at
-**`/api/mcp`**, under the prefix the web tier already forwards — which is what
-lets the public URL reuse the trust chain the rate limit depends on (Step 10.6).
+`sci-open-mcp --http` serves the same factory over Streamable HTTP at **`/mcp`**,
+on `127.0.0.1:8080` unless `--host` and `--port` say otherwise. It is the
+remote endpoint: one Node process, no framework, the same engine and tools as
+stdio. (M3 first shipped it as `/api/mcp`, a route on the API behind the web
+tier, which lent it the API's rate limits and trust chain. When the API went,
+this server took over all of that itself.)
 
-`packages/mcp/src/http.ts`:
-
-```ts
-import { createMcpHandler } from '@modelcontextprotocol/server';
-import { createServerFactory, type ServerDeps } from './server';
-
-export function createHttpHandler(deps: Omit<ServerDeps, 'transport'>) {
-  return createMcpHandler(createServerFactory({ ...deps, transport: 'http' }), {
-    legacy: 'stateless',   // 2025-era clients get stateless serving from the same factory
-    // No `responseMode`. The default answers a call as JSON and upgrades it to an
-    // SSE stream only when the handler emits a notification before its result —
-    // which ours do only for a client that asked for progress (D12). `'json'`
-    // would drop those notifications.
-    onerror: () => { /* counted by metrics; never logged with request bodies */ }
-  });
-}
-```
-
-The web tier already streams responses through (Step 10.6), so a progress
-stream reaches the client with no change there.
-
-`apps/api/src/mcp-route.ts`:
+`src/http.ts` turns the factory into a web-standard handler:
 
 ```ts
-import { AsyncLocalStorage } from 'async_hooks';
-import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { originValidation, toNodeHandler } from '@modelcontextprotocol/node';
-import { AdmissionError, createHttpHandler, type ServerDeps } from 'sci-open-mcp';
+import { createMcpHandler, type McpHttpHandler } from '@modelcontextprotocol/server';
+import { createServerFactory, selectionFrom, type ServerDeps } from './server';
+import { selectTools } from './toolsets';
 
-type NewSearchLimit = ReturnType<FastifyInstance['createRateLimit']>;
-
-export type McpRouteOptions = {
-  deps: Omit<ServerDeps, 'transport' | 'admit'>;
-  newSearchLimit: NewSearchLimit;
-  /** Hostnames a browser may call this endpoint from. A request without an
-   * `Origin` — every MCP client that is not a browser — always passes. */
-  allowedOrigins: readonly string[];
-};
-
-/**
- * The handler is built once, but the new-search budget is per client, and only
- * the Fastify request knows the client. Each MCP request runs inside its own
- * store, which `admit` reads however deep in a tool it is called.
- */
-export function mcpRoute(fastify: FastifyInstance, { deps, newSearchLimit, allowedOrigins }: McpRouteOptions): void {
-  const current = new AsyncLocalStorage<FastifyRequest>();
-  const admit = async () => {
-    const request = current.getStore();
-    if (!request) throw new Error('admit was called outside an MCP request');
-    const verdict = await newSearchLimit(request);
-    if (!verdict.isAllowed && verdict.isExceeded) throw new AdmissionError(verdict.ttlInSeconds);
-  };
-
-  // The spec's DNS-rebinding defence, and the cross-site one: a page on
-  // another origin must not drive this endpoint from a visitor's browser. The
-  // SDK's guard answers 403 itself and returns false.
-  const originAllowed = originValidation([...allowedOrigins]);
-  const node = toNodeHandler(createHttpHandler({ ...deps, admit }));
-
-  fastify.route({
-    method: ['GET', 'POST', 'DELETE'],
-    url: '/api/mcp',
-    config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
-    handler: async (request, reply) => {
-      reply.hijack(); // the SDK writes the response itself
-      if (!originAllowed(request.raw, reply.raw)) return;
-      // Fastify has already parsed the JSON body.
-      await current.run(request, () => node(request.raw, reply.raw, request.body));
+export function createHttpHandler(
+  deps: Omit<ServerDeps, 'transport'>,
+  options: { onerror?: (error: Error) => void; maxRequestBodySize?: number } = {}
+): McpHttpHandler {
+  const handler = createMcpHandler(
+    createServerFactory({ ...deps, config: { ...deps.config, allowWrites: false }, transport: 'http' }),
+    {
+      legacy: 'stateless',   // 2025-era clients get stateless serving from the same factory
+      // No `responseMode`. The default answers a call as JSON and upgrades it to an
+      // SSE stream only when the handler emits a notification before its result —
+      // which ours do only for a client that asked for progress (D12). `'json'`
+      // would drop those notifications.
+      ...(options.maxRequestBodySize ? { maxRequestBodySize: options.maxRequestBodySize } : {}),
+      onerror: options.onerror ?? (() => {})
     }
-  });
+  );
+  return {
+    ...handler,
+    // A typo in `?toolsets=` would otherwise throw inside the factory, which the
+    // SDK answers as an opaque 500. It is the caller's mistake: answer 400 with
+    // the valid names, as `--toolsets` does on stdio.
+    fetch: async (request, requestOptions) => {
+      try {
+        selectTools(selectionFrom(new URL(request.url)));
+      } catch (error) {
+        return Response.json({ jsonrpc: '2.0', id: null, error: { code: -32602, message: (error as Error).message } }, { status: 400 });
+      }
+      return handler.fetch(request, requestOptions);
+    }
+  };
 }
 ```
 
-Register it in `app.ts`, inside the existing `routes` plugin and after
-`newSearchLimit` is created — so it sits behind `@fastify/rate-limit` and can
-use that limit — only when `MCP_HTTP_ENABLED=true`:
+`src/http-server.ts` puts it on a Node server and adds what a shared endpoint
+needs, each for a reason:
+
+- **Two budgets per client.** Every request spends the client's allowance
+  (`SCI_OPEN_REQUESTS_PER_MIN`, 60): a `tools/list` or a page of a held set is
+  cheap, not free, and past it the answer is 429 with `Retry-After`. A call
+  that resolves something new also spends the client's new-search budget
+  (`SCI_OPEN_MAX_NEW_SEARCHES_PER_MIN`, 30), which reaches the tools as an
+  `admit` (Step 5.5). A process-wide budget would let one client spend
+  everyone's. The 10,000 most recent clients are remembered; the idlest are
+  forgotten first.
+- **The client is the visitor, not the proxy.** Behind a reverse proxy every
+  request comes from the proxy's address. `X-Forwarded-For` is believed only
+  from the hops named in `SCI_OPEN_TRUST_PROXY`, walked from the right
+  (`proxy-addr`); a value a client wrote itself sits further left and is
+  never read. With nothing trusted, the client is the socket's address.
+- **Browsers.** A request carrying an `Origin` — only a browser sends one — is
+  refused with 403 unless its hostname is in `SCI_OPEN_ALLOWED_ORIGINS`, so a
+  page elsewhere cannot drive the server from a visitor's browser (the SDK's
+  `originValidation`). Bound to loopback, the `Host` header must name loopback
+  too: the spec's DNS-rebinding defence (`hostHeaderValidation`).
+- **Bounded and read-only.** Bodies are capped at 256 KiB (200 references or
+  papers of 300 characters, with room), and writes are always refused:
+  `save_to` names a path on the caller's machine.
+- **Two side routes.** `GET /health` answers the version — not the user agent,
+  which carries the operator's contact. `GET /metrics` answers the metrics
+  snapshot (Step 5.6) to a bearer token equal to `SCI_OPEN_ADMIN_KEY`, 401 to
+  anyone else, and 404 when no key is set. Every other path is 404.
+
+The per-client `admit` is the one part with a trap in it. The handler is built
+once, but the client is known per request, so each MCP request runs inside an
+`AsyncLocalStorage` store that `admit` reads however deep in a tool it is
+called:
 
 ```ts
-// apps/api/src/app.ts, in routes(), after `const newSearchLimit = …`
-if (config.mcp.httpEnabled && !config.apiKeys.openalex && !config.mcp.allowUnkeyed) {
-  // D11: unkeyed, OpenAlex gives this process a tenth of a key's budget, and
-  // every MCP client and the web UI would share it. Refuse rather than warn: a
-  // warning in a container log is read after the budget is gone.
-  fastify.log.error('MCP_HTTP_ENABLED is true but OPENALEX_API_KEY is unset: /api/mcp stays off. Set the key, or MCP_ALLOW_UNKEYED=true for a local trial.');
-} else if (config.mcp.httpEnabled) {
-  const metrics = createMetrics(fastify.log);
-  mcpRoute(fastify, {
-    deps: {
-      // The API's caches, so MCP sets count against the same byte budgets. At
-      // MCP_SEARCH_DEPTH ≠ SEARCH_DEPTH the result-set keys differ, so the web
-      // UI and MCP clients no longer serve each other's sets; set the two equal
-      // to get that back, at the price D11 describes. No apiKeys or httpPool —
-      // the API set both at boot.
-      engine: createEngine({
-        userAgent,
-        search: { ...config.search, depth: config.mcp.searchDepth },
-        caches: { providerCache, resultSets, authorityFacts, stats },
-        ...upstream,
-        ...(config.openCitationsToken ? { openCitationsToken: config.openCitationsToken } : {})
-      }),
-      // allowWrites stays false: save_to is always refused over HTTP.
-      config: { ...defaultMcpConfig(userAgent), searchDepth: config.mcp.searchDepth },
-      metrics
-    },
-    newSearchLimit,
-    allowedOrigins: config.mcp.allowedOrigins
+const current = new AsyncLocalStorage<string>();
+const admit = async () => {
+  const client = current.getStore();
+  if (client === undefined) throw new Error('admit was called outside an HTTP request');
+  await searchBudget(client)();
+};
+const handler = createHttpHandler({ ...deps, config: { ...deps.config, allowWrites: false }, admit }, { maxRequestBodySize: MAX_BODY_BYTES });
+const node = toNodeHandler(handler, { maxRequestBodySize: MAX_BODY_BYTES });
+
+// per request, after the path, Host, Origin and request-allowance checks:
+await current.run(clientOf(req), () => node(req, res));
+```
+
+The binary (`src/bin/stdio.ts`) starts it when `config.http` is set, and
+refuses to without an OpenAlex key:
+
+```ts
+async function serveHttp(config: McpConfig, http: HttpConfig, logger: EngineLogger): Promise<void> {
+  // D11: unkeyed, OpenAlex gives this process a tenth of a key's daily budget,
+  // and every client would share it. Refuse rather than warn: a warning in a
+  // container log is read after the budget is gone.
+  if (config.engine === 'live' && !config.apiKeys.openalex && !http.allowUnkeyed) {
+    process.stderr.write('Serving HTTP needs OPENALEX_API_KEY. Set it, or SCI_OPEN_ALLOW_UNKEYED=1 for a trial.\n');
+    process.exit(2);
+  }
+  const metrics = createMetrics(logger);
+  const server = await startHttpServer({
+    deps: { engine: engineFor(config), config, metrics },
+    http,
+    newSearchesPerMinute: config.maxNewSearchesPerMinute,
+    logger
   });
-  fastify.get('/api/performance/mcp', admin, async () => metrics.snapshot());
-  fastify.addHook('onClose', async () => metrics.stop());
+  process.stderr.write(`sci-open-mcp ${BUILD.version} serving ${server.url}\n`);
+  // No stdin handler: a container closes stdin, and that must not stop a server.
+  const stop = () => void server.close().finally(() => { metrics.stop(); process.exit(0); });
+  process.on('SIGINT', stop);
+  process.on('SIGTERM', stop);
 }
 ```
 
-`upstream` is the provider and authority subsets the tests drive the routes
-with, so the MCP route runs offline under `app.test.ts` exactly as the search
-route does. `newSearchLimit` reaches the tools as an `admit` that finds the
-client per request, so an MCP client spends the same per-client budget as a
-browser; a process-wide `admit` — what `createServerFactory` falls back to
-without one — would be a single bucket for every client.
+### Step 10.5 — Its settings
 
-Add `"sci-open-mcp": "workspace:*"` and `"@modelcontextprotocol/node": "^2.1.0"`
-to `apps/api/package.json` (the graph stays acyclic: `shared → core → mcp →
-api`). The API image now needs the MCP package as well. Add it to
-`apps/api/Dockerfile` next to the core lines from Step 1.6, or
-`pnpm install --frozen-lockfile` cannot resolve the new workspace dependency:
-
-```dockerfile
-COPY packages/mcp/package.json ./packages/mcp/
-# ...
-COPY packages/mcp ./packages/mcp
-```
-
-### Step 10.5 — The API's new settings
-
-Five settings, and each is two edits that `compose-env.test.ts` checks
-against each other: the API must declare every setting it reads in `SETTINGS`
-(`apps/api/src/config.ts`), and `docker-compose.yml` must pass every one of
-them to the `api` service or name it in the test's `NOT_PASSED` with a reason.
-Miss either edit and the test fails.
+Read by `readMcpConfig` (Step 10.1) beside the stdio settings; Appendix A
+lists them all.
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `MCP_HTTP_ENABLED` | `false` | Mounts `/api/mcp` — only when `OPENALEX_API_KEY` is set, or `MCP_ALLOW_UNKEYED` is `true` (D11) |
-| `MCP_ALLOWED_ORIGINS` | empty | Comma-separated hostnames a browser may call `/api/mcp` from; empty refuses every browser `Origin` |
-| `MCP_SEARCH_DEPTH` | `300` | Records read per source for MCP searches; the web UI keeps `SEARCH_DEPTH` (600). At most 2,000 |
-| `MCP_ALLOW_UNKEYED` | `false` | Mounts `/api/mcp` without an OpenAlex key. For a local trial, never a shared deployment |
-| `OPENCITATIONS_TOKEN` | unset | Passed to the engine for `get_citations` |
+| `SCI_OPEN_HTTP` [`--http`] | off | Serve Streamable HTTP at `/mcp` instead of stdio |
+| `SCI_OPEN_HTTP_PORT` [`--port`] | `8080` | Port; `0` picks a free one. A value that is not a port exits 2 |
+| `SCI_OPEN_HTTP_HOST` [`--host`] | `127.0.0.1` | Address to bind. Loopback turns on the `Host` check |
+| `SCI_OPEN_ALLOWED_ORIGINS` | empty | Comma-separated hostnames a browser may call from; empty refuses every browser `Origin` |
+| `SCI_OPEN_TRUST_PROXY` | empty | Proxies trusted to name the client in `X-Forwarded-For`: addresses, CIDRs or `proxy-addr` names such as `loopback` |
+| `SCI_OPEN_REQUESTS_PER_MIN` | `60` | Requests a minute per client, of any kind |
+| `SCI_OPEN_MAX_NEW_SEARCHES_PER_MIN` | `30` | New searches a minute per client — the stdio setting, applied per client |
+| `SCI_OPEN_ADMIN_KEY` | unset | Bearer token for `GET /metrics`; unset hides the route |
+| `SCI_OPEN_ALLOW_UNKEYED` | off | Serve without `OPENALEX_API_KEY`. For a trial, never a shared deployment (D11) |
 
-In `config.ts`: add the five names to `SETTINGS`; add
-`mcp: { httpEnabled: boolean; allowedOrigins: string[]; searchDepth: number; allowUnkeyed: boolean }`
-and `openCitationsToken: string | undefined` to `Config`; and read them in
-`loadConfig` with its own `text()` and `number()` helpers, warning — the
-file's pattern — on an `MCP_HTTP_ENABLED` that is neither `true` nor `false`:
+`--port` or `--host` without `--http` warns and serves stdio. `SEARCH_DEPTH`
+and every other stdio setting apply over HTTP too, except writes, which are
+always off.
 
-```ts
-const mcpRaw = text('MCP_HTTP_ENABLED');
-if (mcpRaw !== undefined && mcpRaw !== 'true' && mcpRaw !== 'false') {
-  warnings.push(`MCP_HTTP_ENABLED=${mcpRaw} is neither true nor false; the MCP endpoint stays off`);
-}
-// ...in the returned config:
-mcp: {
-  httpEnabled: mcpRaw === 'true',
-  allowedOrigins: (text('MCP_ALLOWED_ORIGINS') ?? '').split(',').map(s => s.trim()).filter(Boolean),
-  searchDepth: number('MCP_SEARCH_DEPTH', 300, { max: MAX_DEPTH }),
-  allowUnkeyed: text('MCP_ALLOW_UNKEYED') === 'true'
-},
-openCitationsToken: text('OPENCITATIONS_TOKEN'),
-```
+These replace the API's settings for `/api/mcp`: `MCP_HTTP_ENABLED` is
+`--http`, `MCP_ALLOWED_ORIGINS` is `SCI_OPEN_ALLOWED_ORIGINS`,
+`MCP_SEARCH_DEPTH` is `SEARCH_DEPTH`, `MCP_ALLOW_UNKEYED` is
+`SCI_OPEN_ALLOW_UNKEYED`, the API's `TRUST_PROXY` and
+`RATE_LIMIT_NEW_SEARCH_MAX` are `SCI_OPEN_TRUST_PROXY` and
+`SCI_OPEN_MAX_NEW_SEARCHES_PER_MIN`, and the admin route
+`/api/performance/mcp` is `GET /metrics`.
 
-In `docker-compose.yml`, in the `api` service's `environment:`:
+### Step 10.6 — The public URL, behind a reverse proxy
 
-```yaml
-      - MCP_HTTP_ENABLED=${MCP_HTTP_ENABLED:-false}
-      - MCP_ALLOWED_ORIGINS=${MCP_ALLOWED_ORIGINS:-}
-      - MCP_SEARCH_DEPTH=${MCP_SEARCH_DEPTH:-300}
-      - MCP_ALLOW_UNKEYED=${MCP_ALLOW_UNKEYED:-false}
-      - OPENCITATIONS_TOKEN=${OPENCITATIONS_TOKEN:-}
-```
+Put a TLS-terminating reverse proxy in front, bind the server to an address
+the proxy reaches (`--host 0.0.0.0` in a container), and forward `/mcp`. Three
+things about the proxy matter:
 
-Add the five to `docs/env.example` too, commented, with their defaults, and
-say beside `MCP_HTTP_ENABLED` that it needs `OPENALEX_API_KEY`.
+1. **It names the visitor.** Trust it in `SCI_OPEN_TRUST_PROXY` — by address or
+   CIDR — only once it appends the client's address to `X-Forwarded-For`.
+   Untrusted, every client looks like the proxy: one budget for all of them.
+   Trusted while it passes on a header the client wrote, any client could pick
+   its own budget.
+2. **It streams.** A call with a `progressToken` is answered as an SSE stream
+   (D12). A proxy that buffers responses (nginx's default; turn it off with
+   `proxy_buffering off`) holds the progress events until the result.
+3. **It waits.** A `verify_references` batch can take a minute; give the
+   proxy's read timeout more than that.
 
-### Step 10.6 — The public URL, through the web tier
-
-Do not route `/mcp` from the edge straight to the API. In the compose setup
-the edge (`deploy/edge.conf`) proxies everything to the web tier, and the API
-trusts exactly one proxy — the web tier, `TRUST_PROXY=10.203.0.10` — to pass
-on the visitor's address. The edge has no fixed address, so an edge → API
-route would make every MCP client look like the edge: one rate-limit bucket
-for all of them.
-
-The web tier's proxy (`apps/web/app/api/[...path]/route.ts`) already forwards
-`/api/*` with the address chain intact, and forwards every header but the
-hop-by-hop ones — `Accept`, `Content-Type`, `Origin`, `MCP-Protocol-Version`
-all reach the API. It only forwards the paths `isPublic` names, so `/api/mcp`
-is private until it is added there:
-
-```ts
-// apps/web/app/api/[...path]/route.ts, in isPublic's switch
-    case 'mcp':
-      return rest.length === 0;
-```
-
-and it needs a budget of its own. A `verify_references` batch can take a
-minute; the edge waits 75 seconds for an answer (`proxy_read_timeout`), so stay
-under that:
-
-```ts
-/** A verify_references batch can take a minute; the edge gives up at 75 s. */
-const MCP_TIMEOUT_MS = 70_000;
-
-function budgetFor(path: readonly string[]): number {
-  if (path[0] === 'mcp') return MCP_TIMEOUT_MS;
-  const route = path[0] === 'v2' ? path[1] : path[0];
-  return route === 'search' ? SEARCH_TIMEOUT_MS : UPSTREAM_TIMEOUT_MS;
-}
-```
-
-The rest already fits: the 64 KiB body cap is three times the largest request
-this server accepts (25 references of 800 characters), responses stream
-through, and the handler exports no `DELETE`, so Next answers it 405 — which is
-what the SDK's stateless mode answers too. `deploy/edge.conf` needs no change.
-The public URL is `https://<host>/api/mcp`. Add the `/api/mcp` cases to
-`apps/web/app/api/__tests__/route.test.ts`: forwarded, with its budget, and
-`/api/mcp/x` refused.
+The public URL is `https://<host>/mcp`. Add it to `server.json` as a remote
+(Step 13.2) once it is deployed.
 
 **Acceptance**
 
-- [ ] `curl -s -X POST localhost:4000/api/mcp -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{}}'`
-      returns the server identity and supported versions; the same request to
-      `localhost:3000/api/mcp` (through the edge and the web tier) does too.
-- [ ] The same request with `-H 'Origin: https://evil.example'` answers 403.
-- [ ] The Inspector connects over Streamable HTTP and lists the tools.
-- [ ] `read_paper` with `save_to` over HTTP returns `writes_disabled`.
-- [ ] Two clients at different addresses get separate new-search budgets,
-      and a client over its budget gets `rate_limited` (an `app.test.ts` case
-      with `inject()` and two `X-Forwarded-For` values). This also proves the
-      request's store reaches the tool through the SDK; do not assume it.
-- [ ] `compose-env.test.ts` passes with the five new settings.
-- [ ] With `MCP_HTTP_ENABLED=true` and no `OPENALEX_API_KEY`, `/api/mcp`
-      answers 404 and the log has the error line; with `MCP_ALLOW_UNKEYED=true`
-      as well, it mounts.
+- [ ] `server/discover` as curl sends it — the revision requires the
+      `MCP-Protocol-Version` and `Mcp-Method` headers and the `_meta`
+      envelope; without them the request is served as a 2025-era one —
+      returns the server identity and supported versions:
+
+      ```bash
+      curl -s -X POST localhost:8080/mcp \
+        -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+        -H 'mcp-protocol-version: 2026-07-28' -H 'mcp-method: server/discover' \
+        -d '{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{},"io.modelcontextprotocol/clientInfo":{"name":"curl","version":"0"}}}}'
+      ```
+- [ ] The same request with `-H 'Origin: https://evil.example'` answers 403;
+      bound to loopback, one with `-H 'Host: evil.example'` does too.
+- [ ] A 2025-era client is served statelessly: `GET` and `DELETE` on `/mcp`
+      answer 405.
+- [ ] The Inspector connects over Streamable HTTP and lists the tools;
+      `?toolsets=all` lists seven, and `?toolsets=nope` answers 400 naming the
+      valid ones.
+- [ ] `read_paper` or `export_citations` with `save_to` over HTTP returns
+      `writes_disabled`.
+- [ ] Two clients a trusted proxy names differently get separate new-search
+      budgets; an `X-Forwarded-For` from an untrusted hop is ignored; a client
+      over its budget gets `rate_limited`, and one over its requests a minute
+      gets 429 with `Retry-After`. This also proves the request's store
+      reaches the tool through the SDK; do not assume it.
 - [ ] A `search_papers` call whose request carries a `progressToken` is
-      answered as an SSE stream with progress events before the result, and
-      through the web tier too; the same call without a token is a single
-      JSON response.
-- [ ] `GET /api/performance/mcp` answers the metrics snapshot with the admin
-      key and 401 without it.
-- [ ] `docker compose build api` succeeds with the MCP package in the image.
+      answered as an SSE stream with progress events before the result; the
+      same call without a token is a single JSON response.
+- [ ] `GET /health` answers the version; `GET /metrics` answers the snapshot
+      with the admin key, 401 without it, and 404 when no key is set.
+- [ ] `sci-open-mcp --http` without `OPENALEX_API_KEY` exits 2 with the
+      message; with `SCI_OPEN_ALLOW_UNKEYED=1` it serves.
+
+`test/http-server.test.ts` covers all but the last over a real socket, in both
+protocol eras.
 
 ## Phase 11 — Tests
 
@@ -4819,8 +4794,8 @@ tool-selection evals and demos run `--engine fixture` (Step 10.2), and only
 
 ```ts
 import { readFileSync } from 'fs';
-import type { Paper, SearchParams, SearchResponseV2 } from '@open-access-explorer/shared';
-import { UpstreamStats, type Engine } from '@open-access-explorer/core';
+import type { Paper, SearchParams, SearchResponseV2 } from '@sci-open/shared';
+import type { Engine } from '@sci-open/core';
 
 export type Fixtures = { searches: Record<string, SearchResponseV2>; papers: Record<string, Paper> };
 
@@ -4842,7 +4817,6 @@ export function fixtureEngine(fixtures: Fixtures, options: { strict?: boolean } 
   const byDoi = (doi: string) => Object.values(fixtures.papers).find(p => p.doi?.toLowerCase() === doi.toLowerCase()) ?? null;
   return {
     userAgent: 'sci-open-mcp fixture engine',
-    stats: new UpstreamStats(),
     async search(params, options = {}) {
       const key = fixtureKey(params);
       const response = fixtures.searches[key];
@@ -4875,8 +4849,8 @@ export function fixtureEngine(fixtures: Fixtures, options: { strict?: boolean } 
 
 function emptyResponse(params: SearchParams): SearchResponseV2 {
   return {
-    papers: [], total: 0, page: params.page ?? 1, pageSize: params.pageSize ?? 10, sort: params.sort ?? 'relevance',
-    facets: {}, complete: true, bounded: false, countsFromSources: false, providers: [], authorities: [], duration: 0
+    papers: [], total: 0, page: params.page ?? 1, pageSize: params.pageSize ?? 10,
+    facets: {}, complete: true, bounded: false, countsFromSources: false, providers: []
   };
 }
 ```
@@ -4895,7 +4869,7 @@ provider responses (`scripts/record-mcp-fixtures.ts`):
 // UNPAYWALL_EMAIL=you@example.org pnpm --filter sci-open-mcp exec tsx scripts/record-mcp-fixtures.ts
 import { writeFileSync } from 'fs';
 import path from 'path';
-import { createEngine } from '@open-access-explorer/core';
+import { createEngine } from '@sci-open/core';
 import { fixtureKey, type Fixtures } from '../src/fixture-engine';
 
 /** What the evals' first calls ask. Add a line when a dataset asks something new. */
@@ -5669,23 +5643,23 @@ keep it only if the held-out score improves.
 
 ### Step 13.1 — Build the npm package
 
-`@open-access-explorer/core` and `shared` are private workspace packages, and
+`@sci-open/core` and `shared` are private workspace packages, and
 `packages/mcp/package.json` depends on them by `workspace:*`. That is right for
-the monorepo — `apps/api` imports `sci-open-mcp` and must share one copy of the
-engine with it — and wrong for npm, where those names do not exist. So the
+the monorepo and wrong for npm, where those names do not exist. So the
 workspace manifest stays `private` (Step 2.1) and is never published; a script
 generates the package that is. It:
 
-1. bundles every entry point a user can reach — `src/bin/stdio.ts`,
-   `src/bin/cli.ts` and `src/index.ts`, not the server binary alone — with
-   `esbuild` into `packages/mcp/npm/dist/`, inlining core and shared and
-   leaving the public npm packages external;
+1. bundles both entry points a user can reach — `src/bin/stdio.ts` and
+   `src/bin/cli.ts` — with `esbuild` into `packages/mcp/npm/dist/`, inlining
+   core and shared (and the HTTP server's `@modelcontextprotocol/node` and
+   `proxy-addr`) and leaving the public npm packages external;
 2. writes `packages/mcp/npm/package.json` with the identity fields of the
    workspace manifest, no `private`, and `dependencies` exactly the externals
    at the ranges core and mcp declare. No `types`: the published package is a
-   server and a CLI. If others need to import the engine, publish the packages
-   under a scope instead (`@sci-open/core`, `@sci-open/shared`,
-   `sci-open-mcp`) — more moving parts, only worth it then;
+   server and a CLI. If others need to import the engine, publish the
+   workspace packages themselves (`@sci-open/core`, `@sci-open/shared`) beside
+   `sci-open-mcp` — it needs the `@sci-open` npm scope and more moving parts,
+   and is only worth it then;
 3. copies `README.md` and `server.json` next to it.
 
 `packages/mcp/scripts/build-npm.ts` — run it after `pnpm build`, since it
@@ -5718,7 +5692,7 @@ async function main(): Promise<void> {
 
   await build({
     absWorkingDir: ROOT,
-    entryPoints: { 'bin/stdio': 'src/bin/stdio.ts', 'bin/cli': 'src/bin/cli.ts', index: 'src/index.ts' },
+    entryPoints: { 'bin/stdio': 'src/bin/stdio.ts', 'bin/cli': 'src/bin/cli.ts' },
     outdir: path.join(OUT, 'dist'),
     bundle: true,
     platform: 'node',
@@ -5738,8 +5712,7 @@ async function main(): Promise<void> {
     mcpName: mcp.mcpName,
     repository: { type: 'git', url: 'https://github.com/matiasrodlo/sci-open' }, // npm provenance checks it
     bin: { 'sci-open-mcp': 'dist/bin/stdio.js', 'sci-open': 'dist/bin/cli.js' },
-    main: 'dist/index.js',
-    files: ['dist', 'README.md', 'server.json'],
+    files: ['dist', 'fixtures', 'README.md', 'server.json'],
     engines: mcp.engines,
     dependencies: Object.fromEntries(EXTERNAL.map(name => [name, range(name)]))
   };
@@ -5789,7 +5762,7 @@ npx -y ./packages/mcp/npm/sci-open-mcp-0.1.0.tgz --help
 }
 ```
 
-Add a `remotes: [{ "type": "streamable-http", "url": "https://<your-host>/api/mcp" }]`
+Add a `remotes: [{ "type": "streamable-http", "url": "https://<your-host>/mcp" }]`
 entry once the HTTP endpoint is deployed (Step 10.6). The registry's
 `mcp-publisher` CLI validates the file against the schema when it publishes —
 from CI with GitHub OIDC (Step 13.9), or by hand with
@@ -5948,7 +5921,7 @@ CLI is also the fastest manual test.
 import { readFileSync } from 'fs';
 import { parseArgs } from 'util';
 import * as z from 'zod';
-import { createEngine, useLogger } from '@open-access-explorer/core';
+import { createEngine, useLogger } from '@sci-open/core';
 import { readMcpConfig } from '../config';
 import { stderrLogger } from '../log';
 import { nullMetrics } from '../metrics';
@@ -6122,21 +6095,24 @@ BioContextAI registry (Europe PMC and NCBI are among the sources).
 
 ### Step 13.7 — Repository docs
 
-Nothing outside `packages/mcp` documents the server until these change:
+Two READMEs, one audience each:
 
-- `docs/README.md`, under **Documentation**: a line for this manual and one
-  for `packages/mcp/README.md` (the definition of done asks for both).
-- `docs/api.md`, under **Endpoints**: an **MCP** section — `POST /api/mcp`,
-  Streamable HTTP, stateless, JSON responses (`GET` and `DELETE` answer 405);
-  off unless `MCP_HTTP_ENABLED=true`; a 60-a-minute route bucket plus the same
-  new-search budget as `POST /api/search`; browser requests only from
-  `MCP_ALLOWED_ORIGINS`; `save_to` always refused. Under **Performance**:
-  `GET /api/performance/mcp`, admin only.
-- `docs/configuration.md`, under **API Server**: `MCP_HTTP_ENABLED`,
-  `MCP_ALLOWED_ORIGINS` and `OPENCITATIONS_TOKEN` (Step 10.5); and a new
-  **MCP server (stdio)** section with the `SCI_OPEN_*` settings from
-  Appendix A, which stays the manual's copy.
-- `docs/env.example`: the three API settings (Step 10.5).
+- The root `README.md` says what the repository is — the MCP server and the
+  engine it is built on — gives the one-line install and the plugin, maps
+  `packages/`, `plugin/` and `docs/`, lists the development commands, and
+  links `packages/mcp/README.md` and this manual.
+- `packages/mcp/README.md` is the server's: install for every client, the
+  generated tools table (Step 13.5), the CLI, hosting over HTTP with the
+  `SCI_OPEN_` settings (Step 10.5), the evaluations and the development
+  commands. It ships in the npm package, so it must read on its own.
+
+Appendix A stays this manual's copy of every setting; `--help` prints the
+same list.
+
+(Before the API and the web app were removed, this step also added an MCP
+section to `docs/api.md` and the endpoint's settings to
+`docs/configuration.md` and `docs/env.example`. Those files went with the
+apps.)
 
 ### Step 13.8 — Changelog (`packages/mcp/CHANGELOG.md`)
 
@@ -6254,8 +6230,8 @@ not re-run the whole job.
 - [ ] `sci-open verify refs.txt` prints the same verdicts as the tool.
 - [ ] `docs:tools --check` passes in CI, and fails after a schema change
       until the README is regenerated.
-- [ ] `docs/README.md`, `docs/api.md`, `docs/configuration.md` and
-      `docs/env.example` describe the server and its settings.
+- [ ] The root `README.md` and `packages/mcp/README.md` describe the server,
+      its install and its settings, and link this manual.
 
 ## Phase 14 — Operations and security review
 
@@ -6265,7 +6241,7 @@ Per tool call: tool, ok/error code, duration, text characters returned, and
 how many new result sets it resolved — `registerTools` counts the admissions
 each call spends (Step 5.2). The code is in Step 5.6: aggregated in memory, a
 summary line every 10 minutes in the log, and over HTTP the snapshot at
-`GET /api/performance/mcp`, behind the API's admin key (Step 10.4). **Never
+`GET /metrics`, behind `SCI_OPEN_ADMIN_KEY` (Step 10.4). **Never
 record query text or reference text** above `debug` — the official OpenAlex
 server records per-call metrics without query text, and so should this one;
 `stderrLogger` drops those fields above `debug`, and metrics never see them.
@@ -6281,7 +6257,7 @@ server records per-call metrics without query text, and so should this one;
   through OpenAlex keeps citation listing to two upstream calls per page.
 - arXiv: one full-text request every 15 seconds per process, HTML and PDF
   together, as its `robots.txt` `Crawl-delay` asks (Step 8.2). More than one
-  API replica means dividing that interval among them.
+  server replica means dividing that interval among them.
 - Respect upstream `Retry-After`; the pooled clients' retry settings already
   do.
 - Read 300 records per source, not 600 (D11): two OpenAlex requests a search
@@ -6290,7 +6266,7 @@ server records per-call metrics without query text, and so should this one;
 - A source that answers 429 is left out for a cool-down — ten minutes by
   default — and reported as rate-limited, not asked again on every search
   (Step 3.6). The OpenAlex authority sits out the same cool-down.
-- The remote endpoint does not start without `OPENALEX_API_KEY` (Step 10.5).
+- The HTTP server does not start without `OPENALEX_API_KEY` (Step 10.4).
 
 ### Step 14.3 — Security checklist
 
@@ -6303,11 +6279,12 @@ server records per-call metrics without query text, and so should this one;
 | Context flooding | page sizes, `max_chars`, budgets with continuation | Phases 4, 6, 8 |
 | Leaking internals in errors | `toToolError` maps everything to stable codes and generic messages | Phase 4 |
 | stdout corruption (stdio) | console redirect, stderr logger, quiet dotenv | Phase 10 |
-| DNS rebinding and cross-site calls (HTTP) | the SDK's `originValidation`: a browser `Origin` outside `MCP_ALLOWED_ORIGINS` gets 403; clients that send none pass | Step 10.4 |
-| Abuse of the public endpoint | per-client rate limit + new-search budget shared with the web UI, keyed on the visitor through the web tier's trust chain | Steps 10.4, 10.6 |
-| Agent traffic spending an upstream quota the web UI also needs | depth 300, counts for tuning, cool-down after a 429, OpenAlex key required on the remote endpoint | D11, D13; Steps 3.4, 3.6, 10.5 |
+| DNS rebinding and cross-site calls (HTTP) | the SDK's `originValidation`: a browser `Origin` outside `SCI_OPEN_ALLOWED_ORIGINS` gets 403; clients that send none pass. Bound to loopback, a `Host` that is not loopback gets 403 | Step 10.4 |
+| Abuse of the public endpoint | per-client request allowance + new-search budget, keyed on the visitor a trusted proxy names (`SCI_OPEN_TRUST_PROXY`); body cap; writes refused | Steps 10.4, 10.6 |
+| Agent traffic spending an upstream quota | depth 300, counts for tuning, cool-down after a 429, OpenAlex key required over HTTP | D11, D13; Steps 3.4, 3.6, 10.4 |
+| Operator details leaking | `/health` answers the version only, never the contact-bearing user agent; `/metrics` behind a bearer key compared in constant time | Step 10.4 |
 | Publishing compromise | tag-triggered release in a protected environment; npm provenance; registry login by OIDC, no stored token; pinned publisher | Step 13.9 |
-| Supply chain | lockfile, pinned CI, `pnpm audit` in CI, image scanning (already in CI) | existing CI |
+| Supply chain | lockfile, actions pinned to commits, `pnpm audit` gate and secret scan in CI | `ci.yml` |
 | Schema drift breaking clients | toolsnaps + aliases | Phases 5, 11 |
 
 ### Step 14.4 — Versioning
@@ -6339,7 +6316,7 @@ In rough order of value:
    support it.
 4. **MCP Apps.** An interactive result table or citation graph rendered by the
    client, through the first official MCP extension.
-5. **Remote deployment** with its public URL (`https://<host>/api/mcp`,
+5. **Remote deployment** with its public URL (`https://<host>/mcp`,
    Step 10.6) in `server.json`'s `remotes`. (Part of M3, §7.)
 6. **Cancellation.** A client that cancels a call (`ctx.mcpReq.signal`) gets
    no result, but the server still waits out the fan-out: `fanOut` makes its
@@ -6352,13 +6329,14 @@ In rough order of value:
 
 ## A. Configuration
 
-Environment variables of the stdio server and the CLI (flags in brackets
-override them). `sci-open-mcp --help` prints the same list.
+Environment variables of the server, over stdio and HTTP, and of the CLI
+(flags in brackets override them). `sci-open-mcp --help` prints the same
+list.
 
 | Variable | Default | Meaning |
 |---|---|---|
 | `UNPAYWALL_EMAIL` | — (warns if unset) | Contact for Unpaywall and OpenAlex; put in the `User-Agent` |
-| `OPENALEX_API_KEY`, `CORE_API_KEY`, `NCBI_API_KEY`, `DOAJ_API_KEY`, `DATACITE_API_KEY` | unset | Optional provider keys, same names as the API |
+| `OPENALEX_API_KEY`, `CORE_API_KEY`, `NCBI_API_KEY`, `DOAJ_API_KEY`, `DATACITE_API_KEY` | unset | Provider keys. Optional on stdio; `OPENALEX_API_KEY` is required over HTTP (D11) |
 | `OPENCITATIONS_TOKEN` | unset | Optional OpenCitations access token, for `get_citations` |
 | `SCI_OPEN_TOOLSETS` [`--toolsets`] | `core,read` | Comma-separated: `core`, `read`, `graph`, `export`, `all`, `default` |
 | `SCI_OPEN_TOOLS` [`--tools`] | unset | Extra individual tools, added to the toolsets |
@@ -6366,26 +6344,26 @@ override them). `sci-open-mcp --help` prints the same list.
 | `SCI_OPEN_TRUSTED_FULLTEXT_ONLY` [`--trusted-fulltext-only`] | `0` | Full text only from Europe PMC and arXiv |
 | `SCI_OPEN_TEXT_BUDGET_CHARS` | `40000` | Maximum `content` text per result |
 | `SCI_OPEN_STRUCTURED_BUDGET_CHARS` | `80000` | Maximum `structuredContent` per result |
-| `SCI_OPEN_MAX_NEW_SEARCHES_PER_MIN` | `30` | Admission bucket for new result sets, DOI lookups and counts included (stdio). The same default as the API's `RATE_LIMIT_NEW_SEARCH_MAX`, which governs HTTP |
-| `SEARCH_DEPTH` | `300` | Records read per provider, at most 2,000. Half the web app's 600, for agent traffic (D11) |
+| `SCI_OPEN_MAX_NEW_SEARCHES_PER_MIN` | `30` | Admission bucket for new result sets, DOI lookups and counts included: one per process on stdio, one per client over HTTP |
+| `SEARCH_DEPTH` | `300` | Records read per provider, at most 2,000. Half the engine's default of 600, for agent traffic (D11) |
 | `SCI_OPEN_LOG_LEVEL` [`--log-level`] | `warn` | `error`, `warn`, `info`, `debug` (stderr only) |
 | `SCI_OPEN_ENGINE` [`--engine`] | `live` | `fixture` serves recorded answers (evals and demos, Step 11.2) |
 | `SCI_OPEN_FIXTURES` [`--fixtures`] | `packages/mcp/fixtures/engine.json` | The recordings `--engine fixture` reads |
 
-The API reads five more for its endpoint (Step 10.5), each declared in its
-`SETTINGS` and passed by `docker-compose.yml`:
+Over HTTP (`--http`, Steps 10.4–10.5), eight more:
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `MCP_HTTP_ENABLED` | `false` | Mounts `/api/mcp` on the API, if `OPENALEX_API_KEY` is set |
-| `MCP_ALLOWED_ORIGINS` | empty | Hostnames a browser may call `/api/mcp` from; empty refuses every browser `Origin` |
-| `MCP_SEARCH_DEPTH` | `300` | Records read per provider for MCP searches; the web UI keeps `SEARCH_DEPTH` |
-| `MCP_ALLOW_UNKEYED` | `false` | Mounts `/api/mcp` without an OpenAlex key; local trials only |
-| `OPENCITATIONS_TOKEN` | unset | As above, for the API's engine |
+| `SCI_OPEN_HTTP` [`--http`] | off | Serve Streamable HTTP at `/mcp` instead of stdio |
+| `SCI_OPEN_HTTP_PORT` [`--port`] | `8080` | Port to listen on |
+| `SCI_OPEN_HTTP_HOST` [`--host`] | `127.0.0.1` | Address to bind; loopback also checks `Host` |
+| `SCI_OPEN_ALLOWED_ORIGINS` | empty | Hostnames a browser may call from; empty refuses every browser `Origin` |
+| `SCI_OPEN_TRUST_PROXY` | empty | Proxies trusted to name the client in `X-Forwarded-For` |
+| `SCI_OPEN_REQUESTS_PER_MIN` | `60` | Requests a minute per client, of any kind |
+| `SCI_OPEN_ADMIN_KEY` | unset | Bearer token for `GET /metrics`; unset hides the route |
+| `SCI_OPEN_ALLOW_UNKEYED` | off | Serve without `OPENALEX_API_KEY`; trials only |
 
-Over HTTP the server's own settings are the defaults in `defaultMcpConfig`,
-with `save_to` always refused; the per-client new-search budget is the API's
-`RATE_LIMIT_NEW_SEARCH_MAX`.
+Over HTTP `save_to` is always refused, whatever `SCI_OPEN_ALLOW_WRITES` says.
 
 ## B. Error codes
 
@@ -6414,19 +6392,19 @@ what it ships.
       and over HTTP (SSE); a client that did not ask sees no change.
 - [ ] A source's 429 starts its cool-down, the coverage sentence names it,
       and a set without it is never held.
-- [ ] MCP searches read 300 records per source; the remote endpoint refuses
-      to mount without `OPENALEX_API_KEY`.
+- [ ] MCP searches read 300 records per source; the HTTP server refuses to
+      start without `OPENALEX_API_KEY`.
 - [ ] Every result has `structuredContent`, a fenced text rendering and a
       provenance block; every error has a code and a hint.
-- [ ] stdio binary passes the silent-stdout check; HTTP endpoint answers
-      `server/discover` at `/api/mcp`, directly and through the web tier, and
-      refuses a foreign `Origin`.
+- [ ] stdio binary passes the silent-stdout check; `sci-open-mcp --http`
+      answers `server/discover` at `/mcp`, refuses a foreign `Origin`, and
+      keeps a budget per client.
 - [ ] Eval table published in the README, with baselines and a date.
 - [ ] Published to npm and the MCP Registry by the release workflow; plugin
       with two skills installable from the repository's marketplace.
 - [ ] Nightly live smoke test running, its badge in the README.
-- [ ] `docs/README.md`, `docs/api.md`, `docs/configuration.md` and
-      `docs/env.example` updated (Step 13.7); `CHANGELOG.md` has the release.
+- [ ] The root and package READMEs updated (Step 13.7); `CHANGELOG.md` has
+      the release.
 
 ## D. Sources
 

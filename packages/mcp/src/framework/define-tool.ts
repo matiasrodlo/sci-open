@@ -1,5 +1,5 @@
 import type * as z from 'zod';
-import type { Engine } from '@open-access-explorer/core';
+import type { Engine } from '@sci-open/core';
 import type { ProvenanceInput } from '../provenance';
 import type { McpConfig } from '../config';
 import type { Metrics } from '../metrics';

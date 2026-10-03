@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { search as searchWith, ProviderCache, parseQuery } from '../index';
+import { search as searchWith } from '../index';
+import { ProviderCache } from '../provider-cache';
+import { parseQuery } from '../parse-query';
 import type { SearchOptions } from '../index';
 import type { ProviderEntry } from '../registry';
 import { paper, ref } from './helpers';
@@ -18,12 +20,11 @@ function stub(id: any, papers: any[], over: Partial<ProviderEntry> = {}): Provid
   return {
     id,
     capabilities: {
-      keywordSearch: true, fieldedSearch: true, doiLookup: true, fields: [], yearFilter: true,
-      maxPageSize: 1000, reportsTotal: true, suppliesCitations: false,
+      keywordSearch: true, fieldedSearch: true, doiLookup: true,
+      maxPageSize: 1000, reportsTotal: true,
       stages: { holds: ['published'], filter: false }, facets: []
     },
     translate: () => `native(${id})`,
-    normalizerVersion: 1,
     search: async () => ({ papers, totalHits: papers.length * 10, skipped: [] }),
     ...over
   };
@@ -139,15 +140,15 @@ describe('orchestrator search', () => {
     expect(result.papers[0].sources.map(s => s.provider)).toEqual(['europepmc', 'ncbi']);
   });
 
-  it('filters by oaStatus, which changes the result set', async () => {
+  it('filters by stage, which changes the result set', async () => {
     const papers = [
-      paper({ id: 'g', doi: '10.1/g', oaStatus: 'gold', sources: [ref('europepmc', { rank: 0 })] }),
-      paper({ id: 'b', doi: '10.1/b', oaStatus: 'bronze', sources: [ref('europepmc', { rank: 1 })] })
+      paper({ id: 'p', doi: '10.1/p', stage: 'published', sources: [ref('europepmc', { rank: 0 })] }),
+      paper({ id: 'r', doi: '10.1/r', stage: 'preprint', sources: [ref('europepmc', { rank: 1 })] })
     ];
     const providers = [stub('europepmc', papers)];
 
     expect((await search(QUERY, { providers })).total).toBe(2);
-    expect((await search(QUERY, { providers, filters: { oaStatus: ['gold'] } })).total).toBe(1);
+    expect((await search(QUERY, { providers, filters: { stage: ['preprint'] } })).total).toBe(1);
   });
 
   it('counts facets over the filtered set, so buckets reconcile with the total', async () => {
@@ -195,8 +196,8 @@ describe('orchestrator search', () => {
     // only ever had to be a real provider.
     const doiOnly = stub('datacite', [], {
       capabilities: {
-        keywordSearch: false, fieldedSearch: false, doiLookup: true, fields: [], yearFilter: false,
-        maxPageSize: 100, reportsTotal: false, suppliesCitations: true,
+        keywordSearch: false, fieldedSearch: false, doiLookup: true,
+        maxPageSize: 100, reportsTotal: false,
         stages: { holds: ['published'], filter: false }, facets: []
       }
     });
@@ -245,7 +246,6 @@ describe('orchestrator search — authorities and enrichment', () => {
 
     expect(result.total).toBe(200);
     expect(lookups).toHaveBeenCalledTimes(20);
-    expect(result.authorities[0]).toMatchObject({ authority: 'crossref', asked: 20 });
   });
 
   it('carries fieldSources naming another provider for two fields on a paper', async () => {
@@ -334,7 +334,6 @@ describe('orchestrator search — authorities and enrichment', () => {
     });
 
     expect(result.papers).toHaveLength(5);
-    expect(result.authorities[0].status).toBe('error');
     // The result set is whole without enrichment; only the detail is missing.
     expect(result.complete).toBe(true);
   });
@@ -525,40 +524,34 @@ describe('the rescue pass', () => {
   });
 });
 
-describe('facets after a filter is ticked', () => {
+describe('facets after a filter is selected', () => {
   // The end-to-end half of `facet.test.ts`: through plan, merge, rank, the
   // policy partition and the rescue, which is where `admitted` comes from.
   const corpus = [
-    paper({ id: 'a', title: 'A', doi: '10.1/a', year: 2021, venue: 'Nature',
+    paper({ id: 'a', title: 'A', doi: '10.1/a', year: 2021, stage: 'published',
             sources: [ref('europepmc', { nativeId: 'a', rank: 0 })] }),
-    paper({ id: 'b', title: 'B', doi: '10.1/b', year: 2022, venue: 'Science',
+    paper({ id: 'b', title: 'B', doi: '10.1/b', year: 2022, stage: 'preprint',
             sources: [ref('europepmc', { nativeId: 'b', rank: 1 })] }),
-    paper({ id: 'c', title: 'C', doi: '10.1/c', year: 2023, venue: 'Cell',
+    paper({ id: 'c', title: 'C', doi: '10.1/c', year: 2023, stage: 'accepted',
             sources: [ref('europepmc', { nativeId: 'c', rank: 2 })] })
   ];
 
   const providers = [stub('europepmc', corpus)];
 
-  it('leaves the unticked years selectable', async () => {
-    const result = await search(QUERY, { providers, filters: { year: ['2022'] } });
+  it('leaves the unselected stages selectable', async () => {
+    const result = await search(QUERY, { providers, filters: { stage: ['preprint'] } });
 
     expect(result.total).toBe(1);
     expect(result.papers.map(p => p.id)).toEqual(['b']);
-    // The whole point: 2021 and 2023 are still in the panel to be added.
-    expect(result.facets.year.map(b => b.value).sort()).toEqual([2021, 2022, 2023]);
-  });
-
-  it('leaves the unticked venues selectable', async () => {
-    const result = await search(QUERY, { providers, filters: { venue: ['Nature'] } });
-
-    expect(result.total).toBe(1);
-    expect(result.facets.venue.map(b => b.value).sort()).toEqual(['Cell', 'Nature', 'Science']);
+    // The whole point: the other stages are still there to be added.
+    expect(result.facets.stage.map(b => b.value).sort()).toEqual(['accepted', 'preprint', 'published']);
   });
 
   it('returns the union when a second value is added', async () => {
-    const result = await search(QUERY, { providers, filters: { year: ['2021', '2023'] } });
+    const result = await search(QUERY, { providers, filters: { stage: ['published', 'accepted'] } });
 
     expect(result.total).toBe(2);
     expect(result.papers.map(p => p.id).sort()).toEqual(['a', 'c']);
   });
 });
+

@@ -1,9 +1,8 @@
-import type { Paper, ProviderId, SearchParams, SearchResponseV2 } from '@open-access-explorer/shared';
+import type { Paper, ProviderId, SearchParams, SearchResponseV2 } from '@sci-open/shared';
 import { runSearch, DEFAULT_SEARCH_SETTINGS, type SearchSettings } from './orchestrator/from-search-params';
 import { ProviderCache } from './orchestrator/provider-cache';
 import { ResultSetCache } from './orchestrator/result-set';
 import { AuthorityCache, AuthorityFactsCache } from './orchestrator/authority-cache';
-import { UpstreamStats } from './orchestrator/upstream-stats';
 import { lookupPaper } from './orchestrator/lookup';
 import { countSearch, type CountOutcome } from './orchestrator/count';
 import type { SearchProgress } from './orchestrator/progress';
@@ -14,7 +13,6 @@ import { enrichPage } from './orchestrator/enrich';
 import { PROVIDERS, type ProviderEntry } from './orchestrator/registry';
 import { AUTHORITIES, type AuthorityEntry } from './authorities';
 import { useApiKeys, type ApiKeys } from './lib/api-key';
-import { configureHttpPools, type HttpPoolSettings } from './lib/http-pool-config';
 import { doiRegistered } from './lib/doi-registry';
 import { SingleFlight } from './lib/single-flight';
 import { resolveFullText } from './fulltext/resolve';
@@ -33,36 +31,19 @@ import { log } from './lib/logger';
 
 /**
  * One object, made once per process, that owns the caches and exposes exactly
- * what a caller other than the API's routes needs: the MCP server's tools, its
- * CLI, the scripts that record its fixtures.
+ * what the MCP server's tools, its CLI and the scripts that record its
+ * fixtures need.
  *
  * Callers depend on the `Engine` type, not on this function, so a test or an
- * eval can hand them a fixture engine instead. The API keeps building its own
- * caches and calling the orchestrator; it can hand those caches to an engine
- * (`caches`) so the two hold one set of results between them.
+ * eval can hand them a fixture engine instead.
  */
-
-export type EngineCaches = {
-  providerCache: ProviderCache;
-  resultSets: ResultSetCache;
-  authorityFacts: AuthorityFactsCache;
-  stats: UpstreamStats;
-};
 
 export type EngineOptions = {
   /** Sent to every upstream; must carry a real contact (see UNPAYWALL_EMAIL). */
   userAgent: string;
-  /** Installed process-wide. Omit when embedding in a host that already did
-   * (the API): passing `{}` would clear the host's keys. */
+  /** Installed process-wide. */
   apiKeys?: ApiKeys;
-  /** Likewise process-wide, and likewise omitted by a host that configured it. */
-  httpPool?: HttpPoolSettings;
   search?: Partial<SearchSettings>;
-  /** A host's own caches, so the host and this engine share held sets.
-   * Without it the engine makes its own. */
-  caches?: EngineCaches;
-  providerCacheBytes?: number;
-  resultSetBytes?: number;
   /** Subsets of the registries: how the engine is driven offline in tests. */
   providers?: readonly ProviderEntry[];
   authorities?: readonly AuthorityEntry[];
@@ -70,8 +51,6 @@ export type EngineOptions = {
   quotaCoolDownMs?: number;
   /** The clock the cool-down runs on, for tests. */
   now?: () => number;
-  /** Byte budget for full texts held between reads. 32 MB by default. */
-  fullTextBytes?: number;
   /** OpenCitations' access token, which raises its rate limit. */
   openCitationsToken?: string;
   /** Citation-link requests a minute this process may send to OpenCitations.
@@ -100,8 +79,7 @@ export type SearchCallOptions = {
 };
 
 export type Engine = {
-  readonly userAgent: string;
-  /** The same pipeline as POST /api/v2/search. `admit` is asked only when a
+  /** A federated search across the sources. `admit` is asked only when a
    * new result set must be resolved, never for a page of a held one.
    * `sources` narrows the fan-out to those providers. */
   search(params: SearchParams, options?: SearchCallOptions): Promise<SearchOutcome>;
@@ -132,22 +110,15 @@ export type Engine = {
    * OpenAlex alone has them: not merged with other sources, not enriched.
    * Enough to cite a paper or list it. Not a search, and no admission. */
   resolveDois(dois: readonly string[]): Promise<DoiResolution>;
-  stats: UpstreamStats;
 };
 
 export function createEngine(options: EngineOptions): Engine {
   if (options.apiKeys) useApiKeys(options.apiKeys);
-  if (options.httpPool) configureHttpPools(options.httpPool);
 
   const settings: SearchSettings = { ...DEFAULT_SEARCH_SETTINGS, ...options.search };
-  const { providerCache, resultSets, authorityFacts, stats } = options.caches ?? {
-    providerCache: new ProviderCache(
-      options.providerCacheBytes !== undefined ? { maxBytes: options.providerCacheBytes } : {}
-    ),
-    resultSets: new ResultSetCache(options.resultSetBytes !== undefined ? { maxBytes: options.resultSetBytes } : {}),
-    authorityFacts: new AuthorityFactsCache(),
-    stats: new UpstreamStats()
-  };
+  const providerCache = new ProviderCache();
+  const resultSets = new ResultSetCache();
+  const authorityFacts = new AuthorityFactsCache();
   const { userAgent } = options;
   const providers = options.providers ?? PROVIDERS;
   const authorities = options.authorities ? { authorities: options.authorities } : {};
@@ -186,7 +157,7 @@ export function createEngine(options: EngineOptions): Engine {
     heldLinks -= held.links.length;
   };
 
-  const fullTexts = new FullTextCache(options.fullTextBytes !== undefined ? { maxBytes: options.fullTextBytes } : {});
+  const fullTexts = new FullTextCache();
   /** Two reads of one paper at once fetch it once. */
   const fullTextFlights = new SingleFlight();
 
@@ -210,12 +181,11 @@ export function createEngine(options: EngineOptions): Engine {
 
   const search: Engine['search'] = async (params, extra = {}) => {
     const unavailable = quota.unavailable();
-    const { responseV2, fromCache } = await runSearch(params, {
+    const { response, fromCache } = await runSearch(params, {
       settings,
       cache: providerCache,
       resultSets,
       authorityFacts,
-      stats,
       userAgent,
       ...authoritiesNow(unavailable),
       ...(unavailable.size ? { unavailable } : {}),
@@ -226,13 +196,11 @@ export function createEngine(options: EngineOptions): Engine {
       providers: narrowed(extra.sources)
     });
     // A held set's reports are what was learned when it was resolved.
-    if (!fromCache) quota.note(responseV2.providers);
-    return { response: responseV2, fromCache };
+    if (!fromCache) quota.note(response.providers);
+    return { response, fromCache };
   };
 
   return {
-    userAgent,
-    stats,
     search,
     async count(params, extra = {}) {
       // The provider cache keys on the depth, so a count and a search never

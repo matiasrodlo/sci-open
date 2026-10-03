@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import type { Query, SearchParams } from '@open-access-explorer/shared';
+import type { Query, SearchParams } from '@sci-open/shared';
 import type { ProviderEntry } from '../registry';
-import { runOrchestrator, toUserFilters } from '../from-search-params';
+import { runSearch, toUserFilters } from '../from-search-params';
 import { paper, ref } from './helpers';
 
 /**
@@ -21,12 +21,11 @@ function recorder(papers = pageOf(3)): { entry: ProviderEntry; calls: Recorded[]
   const entry: ProviderEntry = {
     id: 'europepmc',
     capabilities: {
-      keywordSearch: true, fieldedSearch: true, doiLookup: true, fields: [], yearFilter: true,
-      maxPageSize: 1000, reportsTotal: true, suppliesCitations: false,
+      keywordSearch: true, fieldedSearch: true, doiLookup: true,
+      maxPageSize: 1000, reportsTotal: true,
       stages: { holds: ['published'], filter: false }, facets: []
     },
     translate: () => 'native',
-    normalizerVersion: 1,
     search: async ({ query, openAccessOnly, depth }) => {
       calls.push({ query, openAccessOnly, depth });
       return { papers, totalHits: papers.length, skipped: [] };
@@ -47,18 +46,13 @@ const pageOf = (n: number) =>
     }));
 
 // Offline: the authorities are real I/O and nothing here is about them.
-const run = (params: SearchParams, providers: ProviderEntry[]) =>
-  runOrchestrator(params, { providers, authorities: [] });
+const run = async (params: SearchParams, providers: ProviderEntry[]) =>
+  (await runSearch(params, { providers, authorities: [] })).response;
 
 describe('toUserFilters', () => {
   it('carries every filter the orchestrator can act on', () => {
-    expect(toUserFilters({
-      source: ['europepmc'], yearFrom: 2020, yearTo: 2024,
-      oaStatus: ['gold'], venue: ['Nature'], publisher: ['NPG'], topics: ['crispr']
-    })).toEqual({
-      source: ['europepmc'], yearFrom: 2020, yearTo: 2024,
-      oaStatus: ['gold'], venue: ['Nature'], publisher: ['NPG'], topics: ['crispr']
-    });
+    expect(toUserFilters({ source: ['europepmc'], yearFrom: 2020, yearTo: 2024 }))
+      .toEqual({ source: ['europepmc'], yearFrom: 2020, yearTo: 2024 });
   });
 
   it('omits absent filters rather than setting them undefined', () => {
@@ -78,7 +72,7 @@ describe('toUserFilters', () => {
   });
 });
 
-describe('runOrchestrator: what the providers are asked', () => {
+describe('runSearch: what the providers are asked', () => {
   it('parses the query text into terms and phrases', async () => {
     const { entry, calls } = recorder();
     await run({ q: '"gut microbiome" obesity' }, [entry]);
@@ -96,12 +90,11 @@ describe('runOrchestrator: what the providers are asked', () => {
   });
 
   it('asks no source a year range that ends before it starts, however it arose', async () => {
-    // Filters out of order, a ticked year outside the bound, and PY= disjoint
-    // from the filter each intersect to an empty range. Each used to cost a
-    // whole fan-out for an answer that could only be empty.
+    // Filters out of order, and PY= disjoint from the filter, each intersect
+    // to an empty range. Each used to cost a whole fan-out for an answer that
+    // could only be empty.
     for (const params of [
       { q: 'crispr', filters: { yearFrom: 2024, yearTo: 2020 } },
-      { q: 'crispr', filters: { yearFrom: 2022, year: ['2019'] } },
       { q: 'crispr PY=2010', filters: { yearFrom: 2020 } }
     ] satisfies SearchParams[]) {
       const { entry, calls } = recorder();
@@ -144,7 +137,7 @@ describe('runOrchestrator: what the providers are asked', () => {
     const { entry } = recorder([closed]);
 
     expect((await run({ q: 'crispr' }, [entry])).total).toBe(0);
-    expect((await run({ q: 'crispr', filters: { openAccessOnly: false } }, [entry])).hits.map(h => h.id)).toEqual(['europepmc:9']);
+    expect((await run({ q: 'crispr', filters: { openAccessOnly: false } }, [entry])).papers.map(p => p.id)).toEqual(['europepmc:9']);
   });
 
   it('asks for open access only unless the request says otherwise', async () => {
@@ -157,46 +150,36 @@ describe('runOrchestrator: what the providers are asked', () => {
   });
 });
 
-describe('runOrchestrator: the response', () => {
-  it('is the shape the old path returns', async () => {
+describe('runSearch: the response', () => {
+  it('is a page of the set, with every provider\'s report', async () => {
     const { entry } = recorder(pageOf(5));
     const response = await run({ q: 'crispr', page: 1, pageSize: 2 }, [entry]);
 
-    expect(response.hits).toHaveLength(2);
+    expect(response.papers).toHaveLength(2);
     expect(response.total).toBe(5);
     expect(response.page).toBe(1);
     expect(response.pageSize).toBe(2);
-    expect(response.sort).toBe('relevance');
-    expect(response.providerTotals).toEqual([
-      { source: 'europepmc', totalHits: 5, retrieved: 5 }
-    ]);
-    expect(typeof response.duration).toBe('number');
+    expect(response.providers).toHaveLength(1);
+    expect(response.providers[0]).toMatchObject({ provider: 'europepmc', status: 'ok', totalHits: 5, retrieved: 5 });
   });
 
-  it('defaults page and pageSize the way the old path did', async () => {
+  it('defaults to the first page of twenty', async () => {
     const { entry } = recorder(pageOf(30));
     const response = await run({ q: 'crispr' }, [entry]);
 
     expect(response.page).toBe(1);
     expect(response.pageSize).toBe(20);
-    expect(response.hits).toHaveLength(20);
+    expect(response.papers).toHaveLength(20);
   });
 
-  it('echoes filters only when the request carried them', async () => {
-    const { entry } = recorder();
-    expect((await run({ q: 'crispr' }, [entry])).filters).toBeUndefined();
-    expect((await run({ q: 'crispr', filters: { yearFrom: 2020 } }, [entry])).filters)
-      .toEqual({ yearFrom: 2020 });
-  });
-
-  it('reports completeness, which the old path had no way to express', async () => {
+  it('reports completeness, and the failure that cost it', async () => {
     const { entry } = recorder();
     expect((await run({ q: 'crispr' }, [entry])).complete).toBe(true);
 
     const failing: ProviderEntry = { ...entry, search: async () => { throw new Error('upstream down'); } };
     const response = await run({ q: 'crispr' }, [failing]);
     expect(response.complete).toBe(false);
-    expect(response.providerTotals?.[0]?.error).toContain('upstream down');
+    expect(response.providers[0]?.error).toContain('upstream down');
   });
 
   it('applies the requested sort to the whole set, not to the page', async () => {
@@ -204,17 +187,16 @@ describe('runOrchestrator: the response', () => {
     const response = await run({ q: 'crispr', sort: 'date', pageSize: 2 }, [entry]);
 
     // pageOf ascends by year, so a date sort has to bring the last ones forward.
-    expect(response.hits.map(h => h.year)).toEqual([2024, 2023]);
-    expect(response.sort).toBe('date');
+    expect(response.papers.map(p => p.year)).toEqual([2024, 2023]);
   });
 });
 
 /**
- * The year and publication-type facets are sent to the sources, so that
- * ticking 2024 reads 2024 from each of them and counts 2024 across all they
- * hold — rather than narrowing a read of the top of their whole answer. And
- * each facet is counted across the sources under the query with its own
- * selection lifted, so ticking one year leaves the others countable.
+ * The year bound and the publication types are sent to the sources, so that a
+ * search for 2024 reads 2024 from each of them and counts 2024 across all they
+ * hold — rather than narrowing a read of the top of their whole answer. The
+ * stage facet is counted with its own selection lifted, so selecting
+ * preprints leaves the other stages countable.
  */
 describe('facets sent to the sources, and counted by them', () => {
   type Counted = { facet: string; query: Query };
@@ -225,13 +207,12 @@ describe('facets sent to the sources, and counted by them', () => {
     const entry: ProviderEntry = {
       id: 'openalex',
       capabilities: {
-        keywordSearch: true, fieldedSearch: false, doiLookup: true, fields: [], yearFilter: true,
-        maxPageSize: 200, reportsTotal: true, suppliesCitations: false,
+        keywordSearch: true, fieldedSearch: false, doiLookup: true,
+        maxPageSize: 200, reportsTotal: true,
         stages: { holds: ['preprint', 'published', 'unknown'], filter: true },
         facets: ['year', 'stage', 'venue', 'publisher', 'topics']
       },
       translate: () => 'native',
-      normalizerVersion: 1,
       search: async ({ query }) => {
         searched.push(query);
         return { papers: pageOf(3), totalHits: 5000, skipped: [] };
@@ -247,60 +228,45 @@ describe('facets sent to the sources, and counted by them', () => {
 
   const queryFor = (counted: Counted[], facet: string) => counted.find(c => c.facet === facet)?.query;
 
-  it('sends a ticked year as a bound, and a ticked type as stages', async () => {
+  const IN_2024 = { yearFrom: 2024, yearTo: 2024 };
+
+  it('sends a year range as a bound, and a type as stages', async () => {
     const { entry, searched } = counter();
-    await run({ q: 'crispr', filters: { year: ['2024'], publicationType: ['preprint'] } }, [entry]);
+    await run({ q: 'crispr', filters: { ...IN_2024, publicationType: ['preprint'] } }, [entry]);
 
     expect(searched[0]!.years).toEqual({ from: 2024, to: 2024 });
     expect(searched[0]!.stages).toEqual(['preprint']);
   });
 
-  it('counts each facet with its own selection lifted', async () => {
+  it('counts the stage facet with its own selection lifted', async () => {
     const { entry, counted } = counter();
-    await run({ q: 'crispr', filters: { year: ['2024'], publicationType: ['preprint'] } }, [entry]);
+    await run({ q: 'crispr', filters: { ...IN_2024, publicationType: ['preprint'] } }, [entry]);
 
-    // The year facet: every year, still only preprints.
-    expect(queryFor(counted, 'year')!.years).toBeUndefined();
-    expect(queryFor(counted, 'year')!.stages).toEqual(['preprint']);
     // The type facet: every type, still only 2024.
     expect(queryFor(counted, 'stage')!.years).toEqual({ from: 2024, to: 2024 });
     expect(queryFor(counted, 'stage')!.stages).toBeUndefined();
     // Everything else: the search as sent.
+    expect(queryFor(counted, 'year')!.years).toEqual({ from: 2024, to: 2024 });
+    expect(queryFor(counted, 'year')!.stages).toEqual(['preprint']);
     expect(queryFor(counted, 'venue')).toEqual(queryFor(counted, 'topics'));
     expect(queryFor(counted, 'venue')!.stages).toEqual(['preprint']);
   });
 
-  it('keeps a year range the reader typed while lifting the ticked years', async () => {
-    const { entry, counted } = counter();
-    await run({ q: 'crispr', filters: { yearFrom: 2020, yearTo: 2025, year: ['2024'] } }, [entry]);
-
-    expect(queryFor(counted, 'year')!.years).toEqual({ from: 2020, to: 2025 });
-  });
-
   it('raises the facets to the sources’ counts and says the counts describe this search', async () => {
     const { entry } = counter();
-    const response = await run({ q: 'crispr', filters: { year: ['2024'] } }, [entry]);
+    const response = await run({ q: 'crispr', filters: IN_2024 }, [entry]);
 
     expect(response.countsFromSources).toBe(true);
-    expect(response.facets.year).toContainEqual({ value: 2021, count: 999, from: 'openalex' });
+    expect(response.facets.year).toContainEqual({ value: 2021, count: 999 });
   });
 
-  it('counts only the ticked facet’s own group when a filter no source can be sent is ticked', async () => {
-    // A source's count of 2024 knows nothing about the venue ticked.
+  it('counts nothing across the sources when a source filter is set', async () => {
+    // A source filter is this service's own label: no source can be sent it,
+    // so no source's count describes the search.
     const { entry, counted } = counter();
-    const response = await run({ q: 'crispr', filters: { venue: ['Journal 1'] } }, [entry]);
+    const response = await run({ q: 'crispr', filters: { source: ['openalex'] } }, [entry]);
 
-    expect(counted.map(c => c.facet)).toEqual(['venue']);
-    expect(response.countsFromSources).toBe(false);
-  });
-
-  it('does not claim the counts describe ticked years with a gap between them', async () => {
-    // Sent as the span 2020–2024, so a source's count is of all five years.
-    const { entry, searched, counted } = counter();
-    const response = await run({ q: 'crispr', filters: { year: ['2020', '2024'] } }, [entry]);
-
-    expect(searched[0]!.years).toEqual({ from: 2020, to: 2024 });
-    expect(counted.map(c => c.facet)).toEqual(['year']);
+    expect(counted).toEqual([]);
     expect(response.countsFromSources).toBe(false);
   });
 

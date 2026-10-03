@@ -1,19 +1,18 @@
-import type { Paper, SourceRef } from '@open-access-explorer/shared';
-import { fullTextAt, stripMarkup } from '@open-access-explorer/shared';
+import type { Paper, SourceRef } from '@sci-open/shared';
+import { fullTextAt, stripMarkup } from '@sci-open/shared';
 import type { BiorxivServer, ServerCollection } from './fetch';
 
 /** bioRxiv/medRxiv records -> Paper[]. Pure, and isolated per record. */
 
-export type NormalizeOptions = { retrievedAt: string; rankOffset?: number; latency?: number };
+export type NormalizeOptions = { retrievedAt: string; rankOffset?: number };
 export type SkippedRecord = { index: number; nativeId?: string; reason: string };
 export type NormalizeOutcome = { papers: Paper[]; skipped: SkippedRecord[] };
 
 /**
  * The API writes the string `"NA"` where a value is absent, so an ordinary
- * truthiness check treats it as present. The old connector's
- * `updatedAt: result.published || result.date` therefore set `updatedAt` to
- * the literal `"NA"` on every unpublished preprint — which is all of them in
- * the recorded window.
+ * truthiness check treats it as present: the old connector wrote the literal
+ * `"NA"` into a record for every unpublished preprint — which is all of them
+ * in the recorded window.
  */
 function present(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
@@ -36,11 +35,6 @@ function normalizeOne(raw: any, server: BiorxivServer, ref: SourceRef): Paper {
   const date = present(raw?.date);
   const year = date ? new Date(date).getFullYear() : undefined;
   const version = present(raw?.version) ?? '1';
-
-  // The DOI of the published version, when the preprint has been published.
-  // Not used as this record's `doi` — that stays the preprint's, which is what
-  // this record is — but it is the reason `published` is read at all.
-  const publishedDoi = present(raw?.published);
 
   const abstract = stripMarkup(present(raw?.abstract));
 
@@ -73,9 +67,7 @@ function normalizeOne(raw: any, server: BiorxivServer, ref: SourceRef): Paper {
     landingPage: `https://www.${server}.org/content/${doi}v${version}`,
 
     sources: [ref],
-    fieldSources: {},
-    retrievedAt: ref.retrievedAt,
-    ...(publishedDoi ? { updatedAt: ref.retrievedAt } : {})
+    fieldSources: {}
   };
 }
 
@@ -111,7 +103,7 @@ export function normalize(
   collections: readonly ServerCollection[],
   options: NormalizeOptions
 ): NormalizeOutcome {
-  const { retrievedAt, rankOffset = 0, latency } = options;
+  const { retrievedAt, rankOffset = 0 } = options;
 
   const papers: Paper[] = [];
   const skipped: SkippedRecord[] = [];
@@ -124,8 +116,7 @@ export function normalize(
         provider: server,
         nativeId,
         rank: rankOffset + index,
-        retrievedAt,
-        ...(latency !== undefined ? { latency } : {})
+        retrievedAt
       };
 
       try {

@@ -1,4 +1,4 @@
-import type { PaperStage, ProviderId, ProvenancedField } from './paper';
+import type { PaperStage, ProviderId } from './paper';
 
 /**
  * What happened when the orchestrator asked one provider, and what that
@@ -132,16 +132,10 @@ export type ProviderCapabilities = {
    * translation comes back empty.
    */
   fieldedSearch: boolean;
-  /** Fields this provider actually populates. */
-  fields: readonly ProvenancedField[];
-  /** Can express a year bound in the query, rather than us filtering after. */
-  yearFilter: boolean;
   /** Largest page the API will serve in one request. */
   maxPageSize: number;
   /** Reports a corpus-wide match count, so `totalHits` can be filled in. */
   reportsTotal: boolean;
-  /** Supplies a citation count. */
-  suppliesCitations: boolean;
   /**
    * The versions of a work this provider's records can be — what `normalize`
    * sets `Paper.stage` to — and whether a query can ask for only some of them.
@@ -192,16 +186,3 @@ export type FacetCount = { value: string | number; count: number };
  * the provider has no papers carrying any value of it, which is a claim.
  */
 export type SourceFacets = Partial<Record<CountedFacet, FacetCount[]>>;
-
-/** True when the provider can serve this query at all. */
-export function canServe(
-  capabilities: ProviderCapabilities,
-  query: { doi?: string; years?: { from?: number; to?: number } }
-): boolean {
-  if (query.doi) return capabilities.doiLookup;
-  if (!capabilities.keywordSearch) return false;
-  // A year bound the provider cannot express is not disqualifying on its own —
-  // the orchestrator can filter afterwards — so it is not tested here. The
-  // capability exists so that decision is explicit rather than accidental.
-  return true;
-}

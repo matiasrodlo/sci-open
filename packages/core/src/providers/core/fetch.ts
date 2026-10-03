@@ -1,5 +1,4 @@
 import { getPooledClient } from '../../lib/http-client-factory';
-import { getServiceConfig } from '../../lib/http-pool-config';
 import { usableApiKey } from '../../lib/api-key';
 import type { CorePayload } from './normalize';
 
@@ -50,7 +49,7 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
   // under a second, where no header at all answers 200.
   const key = usableApiKey(apiKey);
 
-  const client = getPooledClient(baseUrl, getServiceConfig('core'));
+  const client = getPooledClient(baseUrl);
 
   const response = await client.get<CorePayload>('/search/works/', {
     params: {

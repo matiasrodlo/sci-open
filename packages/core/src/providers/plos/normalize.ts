@@ -1,10 +1,10 @@
-import type { Paper, SourceRef } from '@open-access-explorer/shared';
-import { fullTextAt, stripMarkup } from '@open-access-explorer/shared';
+import type { Paper, SourceRef } from '@sci-open/shared';
+import { fullTextAt, stripMarkup } from '@sci-open/shared';
 import type { PlosPayload } from './fetch';
 
 /** PLOS Solr payload -> Paper[]. Pure, and isolated per record. */
 
-export type NormalizeOptions = { retrievedAt: string; rankOffset?: number; latency?: number };
+export type NormalizeOptions = { retrievedAt: string; rankOffset?: number };
 export type SkippedRecord = { index: number; nativeId?: string; reason: string };
 export type NormalizeOutcome = { papers: Paper[]; skipped: SkippedRecord[] };
 
@@ -97,13 +97,12 @@ function normalizeOne(doc: any, ref: SourceRef): Paper {
     ...(doi ? { landingPage: `https://doi.org/${doi}` } : {}),
 
     sources: [ref],
-    fieldSources: {},
-    retrievedAt: ref.retrievedAt
+    fieldSources: {}
   };
 }
 
 export function normalize(payload: PlosPayload, options: NormalizeOptions): NormalizeOutcome {
-  const { retrievedAt, rankOffset = 0, latency } = options;
+  const { retrievedAt, rankOffset = 0 } = options;
   const docs = payload?.response?.docs ?? [];
 
   const papers: Paper[] = [];
@@ -115,8 +114,7 @@ export function normalize(payload: PlosPayload, options: NormalizeOptions): Norm
       provider: 'plos',
       nativeId,
       rank: rankOffset + index,
-      retrievedAt,
-      ...(latency !== undefined ? { latency } : {})
+      retrievedAt
     };
 
     try {

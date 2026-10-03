@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { Paper, ProviderId } from '@open-access-explorer/shared';
+import type { Paper, ProviderId } from '@sci-open/shared';
 import { lookupPaper, splitPaperId } from '../lookup';
 import type { ProviderEntry, ProviderLookupArgs, ProviderSearchArgs } from '../registry';
 import { paper, ref } from './helpers';
@@ -16,11 +16,8 @@ import { paper, ref } from './helpers';
 const capabilities = {
   keywordSearch: true, fieldedSearch: true,
   doiLookup: true,
-  fields: [] as const,
-  yearFilter: false,
   maxPageSize: 100,
   reportsTotal: true,
-  suppliesCitations: false,
   stages: { holds: ['published'] as const, filter: false },
   facets: [] as const
 };
@@ -37,7 +34,6 @@ function provider(id: ProviderId, papers: Paper[], withLookup = false): Fake {
   const entry: Fake = {
     id,
     capabilities,
-    normalizerVersion: 1,
     translate: () => 'native',
     searched,
     lookedUp,

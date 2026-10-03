@@ -1,8 +1,8 @@
-import type { Paper, Query } from '@open-access-explorer/shared';
+import type { Paper, Query } from '@sci-open/shared';
 import { capabilities } from './capabilities';
 import { translate, type TranslateOptions } from './translate';
 import { fetchPage, fetchFacets, PlosUnavailableError, type FetchOptions, type PlosFacetPayload } from './fetch';
-import type { CountedFacet, FacetCount, SourceFacets } from '@open-access-explorer/shared';
+import type { CountedFacet, FacetCount, SourceFacets } from '@sci-open/shared';
 import type { ProviderFacetArgs, ProviderFacetOutcome } from '../count-facets';
 import { normalize, totalHits, type SkippedRecord } from './normalize';
 
@@ -20,35 +20,30 @@ export type ProviderSearchResult = {
   papers: Paper[];
   totalHits?: number;
   skipped: SkippedRecord[];
-  latency: number;
 };
 
 export async function search(query: Query, options: SearchOptions): Promise<ProviderSearchResult> {
   const { openAccessOnly, pageSize = 50, offset = 0, now = () => new Date(), ...fetchOptions } = options;
 
   const nativeQuery = translate(query, { openAccessOnly });
-  if (!nativeQuery) return { papers: [], skipped: [], latency: 0 };
+  if (!nativeQuery) return { papers: [], skipped: [] };
 
-  const started = Date.now();
   const payload = await fetchPage(nativeQuery, {
     ...fetchOptions,
     pageSize: Math.min(Math.max(pageSize, 1), capabilities.maxPageSize),
     offset
   });
 
-  const latency = Date.now() - started;
   const { papers, skipped } = normalize(payload, {
     retrievedAt: now().toISOString(),
-    rankOffset: offset,
-    latency
+    rankOffset: offset
   });
 
   const reported = totalHits(payload);
   return {
     papers,
     ...(reported !== undefined ? { totalHits: reported } : {}),
-    skipped,
-    latency
+    skipped
   };
 }
 
@@ -118,7 +113,7 @@ function toFacets(facets: readonly CountedFacet[], payload: PlosFacetPayload): S
 /**
  * Year, stage, venue and publisher counts across everything PLOS matches, one
  * request for each distinct query among the facets asked for — so one request
- * unless a ticked year or stage lifts a facet onto a query of its own.
+ * unless a publication type lifts the stage facet onto a query of its own.
  */
 export async function facets(args: ProviderFacetArgs): Promise<ProviderFacetOutcome> {
   const byQuery = new Map<string, CountedFacet[]>();

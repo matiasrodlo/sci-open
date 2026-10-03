@@ -19,7 +19,6 @@ function record(over: Partial<Paper> = {}): Paper {
     stage: 'published',
     sources: [{ provider: 'europepmc', nativeId: '1', rank: 0, retrievedAt: '2024-01-01T00:00:00.000Z' }],
     fieldSources: {},
-    retrievedAt: '2024-01-01T00:00:00.000Z',
     ...over
   };
 }

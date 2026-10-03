@@ -4,13 +4,12 @@ import type { Section } from './types';
 
 /**
  * A PDF as one section a page. Only a URL from the engine's own record is ever
- * passed here; the SSRF guard the API's /pdf route uses is the second line,
- * not the first. Text hidden in a PDF (white on white) is not detectable here;
+ * passed here; the SSRF guard is the second line, not the first. Text hidden in a PDF (white on white) is not detectable here;
  * the fence `read_paper` puts around it is the defence.
  */
 export async function pdfToSections(rawUrl: string, userAgent: string): Promise<Section[]> {
   const url = await assertPublicHttpUrl(rawUrl);
-  const { stream } = await fetchPdfStream(url, userAgent);
+  const stream = await fetchPdfStream(url, userAgent);
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of stream) {

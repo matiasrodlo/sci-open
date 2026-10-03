@@ -35,13 +35,13 @@ to add it.
 ## Re-recording
 
 ```
-pnpm --filter @open-access-explorer/api exec tsx scripts/record-fixtures.ts
+pnpm --filter @sci-open/core record:fixtures
 ```
 
 Do this only when a provider changes its response shape, and read the diff:
 a fixture is the contract its suite asserts against, so a change here is a
 change to what the connector is expected to handle. Name the provider to
-re-record only its file — `… record-fixtures.ts openaire`.
+re-record only its file — `… record:fixtures openaire`.
 
 ## Known upstream oddities
 
@@ -61,7 +61,7 @@ in place, they are the kind of input the normalisers have to survive:
   carries `&gt;` in a description — nothing renders HTML, so a tag that
   survives normalisation is shown to the reader as a tag.
   **Fixed** — every provider except arXiv and PubMed now runs these two fields
-  through `stripMarkup` from `@open-access-explorer/shared`, which
+  through `stripMarkup` from `@sci-open/shared`, which
   `packages/shared/src/__tests__/text.test.ts` pins. The two exceptions are
   deliberate and the reason is in each normaliser: arXiv metadata is LaTeX,
   where `<` and `>` are inequalities, and xml2js has already resolved PubMed's

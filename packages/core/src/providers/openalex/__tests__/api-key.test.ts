@@ -62,9 +62,9 @@ describe('the OpenAlex API key', () => {
   });
 
   it('is not sent when it is still the placeholder from the sample env file', async () => {
-    // `usableApiKey`'s reason, applied here: a `.env` copied from
-    // `docs/env.example` has the placeholder in every slot, and a wrong
-    // credential is worse than none.
+    // `usableApiKey`'s reason, applied here: a `.env` copied from the sample
+    // env file has the placeholder in every slot, and a wrong credential is
+    // worse than none.
     get.mockResolvedValue(resolved(200, { results: [WORK] }));
 
     await fetchPage(

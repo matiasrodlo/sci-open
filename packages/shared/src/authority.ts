@@ -43,36 +43,6 @@ export type AuthorityCapabilities = {
   authoritative: readonly ProvenancedField[];
 };
 
-export type AuthorityStatus = 'ok' | 'timeout' | 'error' | 'skipped';
-
-/**
- * What happened when one authority was consulted about a page.
- *
- * The sibling of `ProviderReport`, and it counts three things rather than one
- * because "we asked" and "it answered" and "it told us something we did not
- * already know" are all different, and only the third is worth the request.
- */
-export type AuthorityReport = {
-  /**
-   * Which authority this describes. It said `ProviderId` while that name meant
-   * every source there is, so the type allowed `authority: 'arxiv'` — a report
-   * about a search provider being consulted per DOI, which cannot happen.
-   */
-  authority: AuthorityId;
-  status: AuthorityStatus;
-  /** DOIs this authority was asked about. */
-  asked: number;
-  /** Of those, how many came back with a record. */
-  answered: number;
-  /** Fields actually written onto a paper. Zero means the requests bought nothing. */
-  applied: number;
-  /** Present when `status` is `error` or `timeout`. */
-  error?: string;
-  /** Why it was not consulted. Present when `status` is `skipped`. */
-  skipReason?: string;
-  latency: number;
-};
-
 /**
  * A source that answers per-DOI questions about a record somebody else
  * returned.

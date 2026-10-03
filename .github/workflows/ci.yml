@@ -40,8 +40,8 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      # `typecheck` and `test` both depend on ^build, so turbo builds the
-      # shared package first; the apps compile against its dist output.
+      # `typecheck` and `test` both depend on ^build, so turbo builds shared
+      # and core first; the MCP server compiles against their dist output.
       - name: Typecheck
         run: pnpm typecheck
 
@@ -61,81 +61,6 @@ jobs:
       - name: MCP tools table is current
         run: pnpm --filter sci-open-mcp exec tsx scripts/generate-tool-docs.ts --check
 
-  images:
-    name: docker images
-    runs-on: ubuntu-latest
-    # `compose` is the shipping path and nothing in CI touched it, so a
-    # Dockerfile could break and land on `main` with every check green. The
-    # ways it breaks are ones the other jobs cannot see by construction: they
-    # run against the workspace with `node_modules` present and every package
-    # linked, while the images install from the lockfile inside a scratch
-    # container and copy a deliberately narrow subset of the tree. A new
-    # workspace package, a dependency that needs a build toolchain the Alpine
-    # base lacks, a file the `COPY` lines do not name — each is invisible until
-    # something builds the image.
-    #
-    # Build only. Nothing is pushed and nothing is run: the assertion is that
-    # both images build from a clean checkout, which is the part that was
-    # unasserted.
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-
-      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
-
-      # Separate steps rather than one `docker compose build` so a failure names
-      # which image failed, and so the two get their own cache scopes — they
-      # share a base layer but diverge immediately, and one scope would have
-      # them evicting each other.
-      - name: Build API image
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
-        with:
-          context: .
-          file: apps/api/Dockerfile
-          push: false
-          load: true
-          tags: open-access-explorer-api:ci
-          cache-from: type=gha,scope=api
-          cache-to: type=gha,scope=api,mode=max
-
-      - name: Build web image
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
-        with:
-          context: .
-          file: apps/web/Dockerfile
-          push: false
-          load: true
-          tags: open-access-explorer-web:ci
-          cache-from: type=gha,scope=web
-          cache-to: type=gha,scope=web,mode=max
-
-      # The dependency audit sees the lockfile; this sees what ships — the
-      # Alpine packages and Node underneath the app as well as its modules.
-      # It fails on a high or critical vulnerability that has a fix, the bar
-      # the audit job holds the lockfile to: one with no fix yet is reported
-      # and does not fail, since nothing in this repository could clear it.
-      #
-      # The scanner is the Trivy image, pinned by digest, rather than
-      # aquasecurity/trivy-action. In March 2026 that action's tags were moved
-      # to credential-stealing code (GHSA-69fq-xp46-6x23), and an image named
-      # by digest was unaffected by any of it. Trivy reports usage and checks
-      # for updates unless told not to; a pinned scanner in CI needs neither.
-      - name: Scan images
-        run: |
-          for image in open-access-explorer-api:ci open-access-explorer-web:ci; do
-            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-              aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa \
-              image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed --no-progress \
-              --disable-telemetry --skip-version-check "$image"
-          done
-
-      # The images are only half of what compose has to get right. This parses
-      # the file, resolves every interpolation and validates the schema, which
-      # is what catches a typo in a service name or an environment entry that
-      # does not parse — cheap, and the file is edited more often than the
-      # Dockerfiles are.
-      - name: Validate compose file
-        run: docker compose config --quiet
-
   secrets:
     name: secret scan
     runs-on: ubuntu-latest
@@ -147,7 +72,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      # The gitleaks image, pinned by digest for the reason the scanner above is.
+      # The gitleaks image, pinned by digest rather than by a tag that can be
+      # moved to other code after it was reviewed.
       - name: Scan for secrets
         run: |
           docker run --rm -v "$PWD:/repo" -w /repo \

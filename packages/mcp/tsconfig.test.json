@@ -1,7 +1,7 @@
 {
   // The build emits from `src` alone; this adds the tests and scripts back
   // without emitting, so they fail the typecheck rather than rotting quietly
-  // against the `src` they reach into. The same arrangement as apps/api's
+  // against the `src` they reach into. The same arrangement as core's
   // tsconfig.scripts.json.
   "extends": "./tsconfig.json",
   "compilerOptions": {

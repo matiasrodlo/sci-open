@@ -2,7 +2,7 @@
 import { readFileSync } from 'fs';
 import { parseArgs } from 'util';
 import * as z from 'zod';
-import { createEngine, useLogger } from '@open-access-explorer/core';
+import { createEngine, useLogger } from '@sci-open/core';
 import { readMcpConfig } from '../config';
 import { stderrLogger } from '../log';
 import { nullMetrics } from '../metrics';
