@@ -1,0 +1,82 @@
+{
+  "id": "refs-17",
+  "split": "tune",
+  "source": "A social science bibliography in APA style, built for this suite from records checked against Crossref and DataCite on 2026-10-03; errors planted by hand. Invented DOIs checked unregistered at doi.org, and closed_real papers checked closed in OpenAlex, the same day.",
+  "items": [
+    {
+      "text": "Schelling, T. C. (1975). Dynamic models of segregation. The Journal of Mathematical Sociology, 1(2), 143–186.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Barabasi, A.-L., & Albert, R. (1999). Emergence of scaling in random networks. arXiv. https://doi.org/10.48550/arXiv.cond-mat/9910332",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Bond, R. M., Fariss, C. J., Jones, J. J., Kramer, A. D. I., Marlow, C., Settle, J. E., & Fowler, J. H. (2012). A 61-million-person experiment in social influence and political mobilization. Nature, 489(7415), 295–298. https://doi.org/10.1038/nature11421",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Putnam, R. D. (1995). Bowling Alone: America's Declining Social Capital. Journal of Democracy, 6(1), 65–78. https://doi.org/10.1126/science.162.3859.1243",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Vosoughi, S., Roy, D., & Aral, S. (2018). The spread of true and false news online. Science, 359(6380), 1146–1151. https://doi.org/10.1126/science.aap9559",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Ferreira, L., Nakamura, T., & Osei, K. (2009). Computational Social Science. Science, 323(5915), 721–723.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Watts, D. J., & Strogatz, S. H. (1998). Collective dynamics of ‘small-world’ networks. Nature, 393(6684), 440–442. https://doi.org/10.1038/30918",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Christakis, N. A., & Fowler, J. H. (2007). The Spread of Obesity in a Large Social Network over 32 Years. New England Journal of Medicine, 357(4), 370–379. https://doi.org/10.1056/NEJMsa069999",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Granovetter, M. S. (1973). The Strength of Weak Ties. American Journal of Sociology, 78(6), 1360–1380. https://doi.org/10.1086/225469",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Brennan, S., & Adeyemi, F. (2017). Neighborhood trust and the diffusion of civic participation across 40 European cities. American Sociological Review, 82(4), 715–742.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ]
+    }
+  ]
+}

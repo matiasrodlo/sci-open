@@ -1,0 +1,82 @@
+{
+  "id": "refs-09",
+  "split": "tune",
+  "source": "A physics and astronomy bibliography in Nature style, built for this suite from records checked against Crossref and DataCite on 2026-10-03; errors planted by hand. Invented DOIs checked unregistered at doi.org, and closed_real papers checked closed in OpenAlex, the same day.",
+  "items": [
+    {
+      "text": "Brandt, K., Moreau, J. & Ilić, D. Experimental Test of Bell's Inequalities Using Time-Varying Analyzers. Phys. Rev. Lett. 49, 1804–1807 (1982).",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Riess, A. G. et al. Observational Evidence from Supernovae for an Accelerating Universe and a Cosmological Constant. Astron. J. 116, 1009–1038 (1998).",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Abernathy, T. R., Kwon, S. & Delacroix, M. Topological suppression of phonon drag in twisted bilayer tungsten diselenide. Phys. Rev. Lett. 124, 186802 (2020).",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ]
+    },
+    {
+      "text": "Arute, F. et al. Quantum supremacy using a programmable superconducting processor. Nature 574, 505–510 (2019).",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Castro Neto, A. H., Guinea, F., Peres, N. M. R., Novoselov, K. S. & Geim, A. K. The electronic properties of graphene. Rev. Mod. Phys. 81, 109–162 (2009). https://doi.org/10.1103/RevModPhys.81.10999",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Einstein, A., Podolsky, B. & Rosen, N. Can Quantum-Mechanical Description of Physical Reality Be Considered Complete? Phys. Rev. 47, 777–780 (1939).",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Anderson, P. W. Absence of Diffusion in Certain Random Lattices. Phys. Rev. 109, 1492–1505 (1958).",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Novoselov, K. S. et al. Electric Field Effect in Atomically Thin Carbon Films. Science 306, 666–669 (2004).",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Perlmutter, S. et al. Measurements of Ω and Λ from 42 High-Redshift Supernovae. Astrophys. J. 517, 565–586 (1999). https://doi.org/10.1103/PhysRevLett.13.508",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "LIGO Scientific Collaboration & Virgo Collaboration. Observation of Gravitational Waves from a Binary Black Hole Merger. Preprint at https://arxiv.org/abs/1602.03837 (2016).",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    }
+  ]
+}

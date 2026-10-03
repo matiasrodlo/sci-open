@@ -1,0 +1,82 @@
+{
+  "id": "refs-13",
+  "split": "holdout",
+  "source": "A economics bibliography in APA style, built for this suite from records checked against Crossref and DataCite on 2026-10-03; errors planted by hand. Invented DOIs checked unregistered at doi.org, and closed_real papers checked closed in OpenAlex, the same day.",
+  "items": [
+    {
+      "text": "Marquez, D. L., & Fenwick, R. (1988). On the mechanics of economic development. Journal of Monetary Economics, 22(1), 3–42.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Chetty, R., Hendren, N., Kline, P., & Saez, E. (2014). Where is the Land of Opportunity? The Geography of Intergenerational Mobility in the United States. The Quarterly Journal of Economics, 129(4), 1553–1623. https://doi.org/10.1093/qje/qju022",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Acemoglu, D., Johnson, S., & Robinson, J. A. (2001). The Colonial Origins of Comparative Development: An Empirical Investigation. American Economic Review, 91(5), 1369–1401. https://doi.org/10.1257/aer.91.5.1369",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Solow, R. M. (1961). A Contribution to the Theory of Economic Growth. The Quarterly Journal of Economics, 70(1), 65–94.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Kahneman, D., & Tversky, A. (1979). Prospect Theory: An Analysis of Decision under Risk. Econometrica, 47(2), 263–291. https://doi.org/10.1257/jep.31.2.211",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Athey, S., & Imbens, G. (2015). Recursive Partitioning for Heterogeneous Causal Effects. arXiv. https://doi.org/10.48550/arXiv.1504.01132",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Piketty, T., & Saez, E. (2003). Income Inequality in the United States, 1913-1998. The Quarterly Journal of Economics, 118(1), 1–41. https://doi.org/10.1162/00335530360599999",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Okonkwo, C., & Steinbach, M. (2019). Credit rationing and the geography of rural entrepreneurship: Evidence from mobile lending in Kenya. The Quarterly Journal of Economics, 134(3), 1601–1648.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ]
+    },
+    {
+      "text": "Banerjee, A., Duflo, E., Goldberg, N., Karlan, D., Osei, R., Parienté, W., Shapiro, J., Thuysbaert, B., & Udry, C. (2015). A multifaceted program causes lasting progress for the very poor: Evidence from six countries. Science, 348(6236), 1260799. https://doi.org/10.1126/science.1260799",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Akerlof, G. A. (1970). The Market for \"Lemons\": Quality Uncertainty and the Market Mechanism. The Quarterly Journal of Economics, 84(3), 488–500. https://doi.org/10.2307/1879431",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    }
+  ]
+}

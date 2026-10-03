@@ -1,0 +1,82 @@
+{
+  "id": "refs-11",
+  "split": "tune",
+  "source": "A neuroscience bibliography in Vancouver style, built for this suite from records checked against Crossref and DataCite on 2026-10-03; errors planted by hand. Invented DOIs checked unregistered at doi.org, and closed_real papers checked closed in OpenAlex, the same day.",
+  "items": [
+    {
+      "text": "Boyden ES, Zhang F, Bamberg E, Nagel G, Deisseroth K. Millisecond-timescale, genetically targeted optical control of neural activity. Nat Neurosci. 2005;8(9):1263-1268.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Deisseroth K. Optogenetics. Nat Methods. 2011;8(1):26-29. doi:10.1038/nmeth.f.324",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Mathis A, Mamidanna P, Abe T, et al. Markerless tracking of user-defined features with deep learning. arXiv:1804.03142. 2018.",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Logothetis NK, Pauls J, Augath M, Trinath T, Oeltermann A. Neurophysiological investigation of the basis of the fMRI signal. Nature. 2005;412(6843):150-157.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Raichle ME, MacLeod AM, Snyder AZ, Powers WJ, Gusnard DA, Shulman GL. A default mode of brain function. Proc Natl Acad Sci U S A. 2001;98(2):676-682. doi:10.1016/j.neuron.2007.06.026",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "O'Keefe J, Dostrovsky J. The hippocampus as a spatial map. Preliminary evidence from unit activity in the freely-moving rat. Brain Res. 1971;34(1):171-175.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Hartmann P, Okafor C. The mirror-neuron system. Annu Rev Neurosci. 2004;27(1):169-192.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Delgado-Rios M, Fenner J, Okoro E. Thalamic gating of interoceptive prediction errors in the posterior insula of awake mice. Neuron. 2021;109(14):2290-2305.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ]
+    },
+    {
+      "text": "Glasser MF, Coalson TS, Robinson EC, et al. A multi-modal parcellation of human cerebral cortex. Nature. 2016;536(7615):171-178. doi:10.1038/nature18933x",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Hafting T, Fyhn M, Molden S, Moser MB, Moser EI. Microstructure of a spatial map in the entorhinal cortex. Nature. 2005;436(7052):801-806.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    }
+  ]
+}

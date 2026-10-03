@@ -1,0 +1,82 @@
+{
+  "id": "refs-14",
+  "split": "tune",
+  "source": "A public health and epidemiology bibliography in Vancouver style, built for this suite from records checked against Crossref and DataCite on 2026-10-03; errors planted by hand. Invented DOIs checked unregistered at doi.org, and closed_real papers checked closed in OpenAlex, the same day.",
+  "items": [
+    {
+      "text": "Ferguson NM, Cummings DAT, Fraser C, Cajka JC, Cooley PC, Burke DS. Strategies for mitigating an influenza pandemic. Nature. 2006;442(7101):448-452.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Keys A, Menotti A, Karvonen MJ, et al. The diet and 15-year death rate in the Seven Countries Study. Am J Epidemiol. 1986;124(6):903-915.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Okeke A, Lindqvist M, Barros F. The global distribution and burden of dengue. Nature. 2013;496(7446):504-507.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Barker DJP, Osmond C. Infant mortality, childhood nutrition, and ischaemic heart disease in England and Wales. Lancet. 1990;327(8489):1077-1081.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Kermack WO, McKendrick AG. A contribution to the mathematical theory of epidemics. Proc R Soc Lond A. 1927;115(772):700-721. doi:10.1098/rspa.1927.9118",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Hill AB. The Environment and Disease: Association or Causation? Proc R Soc Med. 1965;58(5):295-300. doi:10.1136/bmj.2.4682.739",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Doll R, Peto R, Boreham J, Sutherland I. Mortality in relation to smoking: 50 years' observations on male British doctors. BMJ. 2004;328(7455):1519.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Marmot M. Social determinants of health inequalities. Lancet. 2005;365(9464):1099-1104.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Mwangi P, Sorensen H, Delacroix A. Household air pollution and tuberculosis incidence in 31 sub-Saharan cohorts: a pooled analysis. Lancet Glob Health. 2020;8(6):e812-e821.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ]
+    },
+    {
+      "text": "Lim SS, Vos T, Flaxman AD, et al. A comparative risk assessment of burden of disease and injury attributable to 67 risk factors and risk factor clusters in 21 regions, 1990–2010: a systematic analysis for the Global Burden of Disease Study 2010. Lancet. 2012;380(9859):2224-2260. doi:10.1016/S0140-6736(12)61766-8",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    }
+  ]
+}

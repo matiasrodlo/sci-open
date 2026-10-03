@@ -1,0 +1,82 @@
+{
+  "id": "refs-18",
+  "split": "tune",
+  "source": "A earth science bibliography in Nature style, built for this suite from records checked against Crossref and DataCite on 2026-10-03; errors planted by hand. Invented DOIs checked unregistered at doi.org, and closed_real papers checked closed in OpenAlex, the same day.",
+  "items": [
+    {
+      "text": "Halvorsen, I., Mbeki, D. & Quintero, L. Seasonal reversal of basal meltwater routing beneath the Thwaites Glacier grounding zone. Nat. Geosci. 13, 455–461 (2020).",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ]
+    },
+    {
+      "text": "Morgan, W. J. Rises, trenches, great faults, and crustal blocks. J. Geophys. Res. 73, 1959–1982 (1972).",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Vine, F. J. & Matthews, D. H. Magnetic Anomalies Over Oceanic Ridges. Nature 199, 947–949 (1963).",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Kowalczyk, M. & Tremblay, J. Preliminary reference Earth model. Phys. Earth Planet. Inter. 25, 297–356 (1981).",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Gorelick, N. et al. Google Earth Engine: Planetary-scale geospatial analysis for everyone. Remote Sens. Environ. 202, 18–27 (2017).",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Alvarez, L. W., Alvarez, W., Asaro, F. & Michel, H. V. Extraterrestrial Cause for the Cretaceous-Tertiary Extinction. Science 208, 1095–1108 (1980). https://doi.org/10.1126/science.208.4448.9095",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Pekel, J.-F., Cottam, A., Gorelick, N. & Belward, A. S. High-resolution mapping of global surface water and its long-term changes. Nature 540, 418–422 (2016).",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Steffen, W. et al. Trajectories of the Earth System in the Anthropocene. Proc. Natl Acad. Sci. USA 115, 8252–8259 (2018).",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Hersbach, H. et al. The ERA5 global reanalysis. Q. J. R. Meteorol. Soc. 146, 1999–2049 (2020).",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Hansen, M. C. et al. High-Resolution Global Maps of 21st-Century Forest Cover Change. Science 342, 850–853 (2013). https://doi.org/10.1029/2010RG000345",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ]
+    }
+  ]
+}

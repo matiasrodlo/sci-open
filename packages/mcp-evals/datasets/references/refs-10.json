@@ -1,0 +1,82 @@
+{
+  "id": "refs-10",
+  "split": "holdout",
+  "source": "A chemistry and materials bibliography in IEEE style, built for this suite from records checked against Crossref and DataCite on 2026-10-03; errors planted by hand. Invented DOIs checked unregistered at doi.org, and closed_real papers checked closed in OpenAlex, the same day.",
+  "items": [
+    {
+      "text": "A. D. Becke, “Density-functional thermochemistry. III. The role of exact exchange,” J. Chem. Phys., vol. 98, no. 7, pp. 5648–5652, 1993.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "T. Okonjo, L. Varga, and M. Esposito, “Click Chemistry: Diverse Chemical Function from a Few Good Reactions,” Angew. Chem. Int. Ed., vol. 40, no. 11, pp. 2004–2021, 2001.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "J. P. Perdew, K. Burke, and M. Ernzerhof, “Generalized Gradient Approximation Made Simple,” Phys. Rev. Lett., vol. 77, no. 18, pp. 3865–3868, 1996.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "R. Gómez-Bombarelli et al., “Automatic chemical design using a data-driven continuous representation of molecules,” 2016, arXiv:1610.02415.",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "O. M. Yaghi, M. O'Keeffe, N. W. Ockwig, H. K. Chae, M. Eddaoudi, and J. Kim, “Reticular synthesis and the design of new materials,” Nature, vol. 423, no. 6941, pp. 705–714, 2003.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "G. Kresse and J. Furthmüller, “Efficient iterative schemes for ab initio total-energy calculations using a plane-wave basis set,” Phys. Rev. B, vol. 54, no. 16, pp. 11169–11186, 1996, doi: 10.1103/PhysRevB.37.785.",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "S. Grimme, J. Antony, S. Ehrlich, and H. Krieg, “A consistent and accurate ab initio parametrization of density functional dispersion correction (DFT-D) for the 94 elements H-Pu,” J. Chem. Phys., vol. 132, no. 15, Art. no. 154104, 2014.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "H. Nakashima, P. Oduya, and C. R. Whitlock, “Cobalt-free layered cathodes stabilized by entropic oxygen sublattices,” J. Am. Chem. Soc., vol. 143, no. 18, pp. 7012–7021, 2021.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ]
+    },
+    {
+      "text": "A. Jain et al., “Commentary: The Materials Project: A materials genome approach to accelerating materials innovation,” APL Mater., vol. 1, no. 1, Art. no. 011002, 2013, doi: 10.1063/1.4812323.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "A. Kojima, K. Teshima, Y. Shirai, and T. Miyasaka, “Organometal Halide Perovskites as Visible-Light Sensitizers for Photovoltaic Cells,” J. Am. Chem. Soc., vol. 131, no. 17, pp. 6050–6051, 2009, doi: 10.1021/ja809598zz.",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ]
+    }
+  ]
+}

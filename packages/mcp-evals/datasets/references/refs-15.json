@@ -1,0 +1,82 @@
+{
+  "id": "refs-15",
+  "split": "tune",
+  "source": "A genomics and evolution bibliography in Nature style, built for this suite from records checked against Crossref and DataCite on 2026-10-03; errors planted by hand. Invented DOIs checked unregistered at doi.org, and closed_real papers checked closed in OpenAlex, the same day.",
+  "items": [
+    {
+      "text": "Ostrowski, J., Banerjee, N. & Faulkner, R. Recurrent horizontal transfer of telomerase cassettes between rotifers and fungi. Nature 571, 412–417 (2019).",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ]
+    },
+    {
+      "text": "Lieberman-Aiden, E. et al. Comprehensive Mapping of Long-Range Interactions Reveals Folding Principles of the Human Genome. Science 326, 289–293 (2009).",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Green, R. E. et al. A Draft Sequence of the Neandertal Genome. Science 328, 710–722 (2010).",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "King, M.-C. & Wilson, A. C. Evolution at Two Levels in Humans and Chimpanzees. Science 188, 107–116 (1979).",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "The 1000 Genomes Project Consortium. A global reference for human genetic variation. Nature 526, 68–74 (2015).",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Rasmussen, H. Confidence limits on phylogenies: an approach using the bootstrap. Evolution 39, 783–791 (1985).",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Kimura, M. Evolutionary Rate at the Molecular Level. Nature 217, 624–626 (1968).",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Danecek, P. et al. The variant call format and VCFtools. Bioinformatics 27, 2156–2158 (2011). https://doi.org/10.1093/bioinformatics/btp352",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "McKenna, A. et al. The Genome Analysis Toolkit: A MapReduce framework for analyzing next-generation DNA sequencing data. Genome Res. 20, 1297–1303 (2010). https://doi.org/10.1101/gr.107524.999",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Nurk, S. et al. The complete sequence of a human genome. Preprint at https://doi.org/10.1101/2021.05.26.445798 (2021).",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    }
+  ]
+}

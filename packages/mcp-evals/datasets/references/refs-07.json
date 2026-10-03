@@ -1,0 +1,82 @@
+{
+  "id": "refs-07",
+  "split": "tune",
+  "source": "A ecology and conservation bibliography in Vancouver style, built for this suite from records checked against Crossref and DataCite on 2026-10-03; errors planted by hand. Invented DOIs checked unregistered at doi.org, and closed_real papers checked closed in OpenAlex, the same day.",
+  "items": [
+    {
+      "text": "Parmesan C, Yohe G. A globally coherent fingerprint of climate change impacts across natural systems. Nature. 2007;421(6918):37-42.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Hooper DU, Chapin FS, Ewel JJ, et al. Effects of biodiversity on ecosystem functioning: a consensus of current knowledge. Ecol Monogr. 2005;75(1):3-35. doi:10.1038/nature09678",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Lindholm E, Mbeki T. A safe operating space for humanity. Nature. 2009;461(7263):472-475.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Hallmann CA, Sorg M, Jongejans E, et al. More than 75 percent decline over 27 years in total flying insect biomass in protected areas. PLoS One. 2017;12(10):e0185809.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Ceballos G, Ehrlich PR, Barnosky AD, García A, Pringle RM, Palmer TM. Accelerated modern human–induced species losses: Entering the sixth mass extinction. Sci Adv. 2015;1(5):e1400253. doi:10.1126/sciadv.1499977",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Cardinale BJ, Duffy JE, Gonzalez A, et al. Biodiversity loss and its impact on humanity. Nature. 2012;486(7401):59-67.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Connell JH. Diversity in Tropical Rain Forests and Coral Reefs. Science. 1978;199(4335):1302-1310.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Myers N, Mittermeier RA, Mittermeier CG, da Fonseca GAB, Kent J. Biodiversity hotspots for conservation priorities. Nature. 2000;403(6772):853-858. doi:10.1038/35002501",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Bar-On YM, Phillips R, Milo R. The biomass distribution on Earth. Proc Natl Acad Sci U S A. 2018;115(25):6506-6511.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Halvorsen K, Achebe N, Ruiz-Castillo P. Nocturnal pollinator collapse drives seed-set failure in boreal peatlands. Ecol Lett. 2019;22(7):1103-1114.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ]
+    }
+  ]
+}

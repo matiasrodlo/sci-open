@@ -20,7 +20,9 @@ starts its stdio binary as a client would.
 
 The references suite asks the live sources for every reference — up to three
 searches each — and is billed against their quotas like any other search, the
-OpenAlex key's daily budget included. Run it deliberately, not in a loop.
+OpenAlex key's daily budget included. Run it deliberately, not in a loop: a
+holdout run is 70 references, up to 210 searches, and a tune run 130, which
+together can spend more than a day's budget.
 
 ## Baselines
 
@@ -72,12 +74,19 @@ and cuts any tool result at 100,000 characters, as a client cuts one over
   (`toolsets`, the default ones when absent: `get_citations` and
   `export_citations` are opt-in). Cases that need a tool a release does not
   ship stay out until it ships.
-- `datasets/references/*.json`: lists of real references with errors planted
-  and labelled: `none`, `closed_real`, `preprint_version` (all real — flagging
-  them is the error that hurts most), `fabricated`, `doi_wrong`,
-  `doi_invented`, `year_wrong` and `author_wrong`. `accept` is the verdicts
-  that count as right. Every real record was checked against Crossref or
-  DataCite, and every invented DOI against doi.org, when the list was written.
+- `datasets/references/*.json`: twenty lists of ten real references with
+  errors planted and labelled: `none`, `closed_real`, `preprint_version` (all
+  real — flagging them is the error that hurts most), `fabricated`,
+  `doi_wrong`, `doi_invented`, `year_wrong` and `author_wrong`. `accept` is
+  the verdicts that count as right. Every real record was checked against
+  Crossref or DataCite, and every invented DOI against doi.org, when the list
+  was written. Thirteen lists are `tune` (130 references), seven `holdout`
+  (70). `refs-07` to `refs-20` are each one field's bibliography in one
+  citation style (Vancouver, APA, Nature, IEEE or Chicago), their citations
+  written from the records' metadata, their `closed_real` papers checked
+  closed in OpenAlex, and no paper in two lists. `refs-01` to `refs-06` are
+  machine learning, laboratory methods, statistics and medicine in Vancouver
+  style, and some of their papers recur between their tune and holdout lists.
 
 - `datasets/reading.jsonl`: twenty questions about open-access papers in
   Europe PMC, each answered by a sentence in a methods or results section,

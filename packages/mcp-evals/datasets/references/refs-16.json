@@ -1,0 +1,82 @@
+{
+  "id": "refs-16",
+  "split": "holdout",
+  "source": "A immunology and microbiology bibliography in Chicago author-date style, built for this suite from records checked against Crossref and DataCite on 2026-10-03; errors planted by hand. Invented DOIs checked unregistered at doi.org, and closed_real papers checked closed in OpenAlex, the same day.",
+  "items": [
+    {
+      "text": "Hollis, Margaret, and Daniel Achterberg. 1974. “Restriction of in vitro T cell-mediated cytotoxicity in lymphocytic choriomeningitis within a syngeneic or semiallogeneic system.” Nature 248 (5450): 701–702.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Turnbaugh, Peter J., Ruth E. Ley, Michael A. Mahowald, Vincent Magrini, Elaine R. Mardis, and Jeffrey I. Gordon. 2006. “An obesity-associated gut microbiome with increased capacity for energy harvest.” Nature 444 (7122): 1027–1031. https://doi.org/10.1038/nature05414.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Sakaguchi, S., N. Sakaguchi, M. Asano, M. Itoh, and M. Toda. 1995. “Immunologic self-tolerance maintained by activated T cells expressing IL-2 receptor α-chains (CD25). Breakdown of a single mechanism of self-tolerance causes various autoimmune diseases.” The Journal of Immunology 155 (3): 1151–1164. https://doi.org/10.4049/jimmunol.155.3.1151.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Bolyen, Evan, Jai Ram Rideout, Matthew R. Dillon, Nicholas A. Bokulich, Christian Abnet, Gabriel A. Al-Ghalith, Harriet Alexander, et al. 2018. “QIIME 2: Reproducible, interactive, scalable, and extensible microbiome data science.” PeerJ Preprints. https://doi.org/10.7287/peerj.preprints.27295v2.",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Köhler, G., and C. Milstein. 1975. “Continuous cultures of fused cells secreting antibody of predefined specificity.” Nature 256 (5517): 495–497. https://doi.org/10.1038/256495a0.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Lindgren, Erik, Thandiwe Mokoena, and Hiroshi Sato. 2020. “Commensal Bacteroides Prime Alveolar Macrophages through Bile Acid Signaling.” Cell Host & Microbe 27 (5): 789–802.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ]
+    },
+    {
+      "text": "Steinman, Ralph M., and Zanvil A. Cohn. 1973. “Identification of a novel cell type in peripheral lymphoid organs of mice. I. Morphology, quantitation, tissue distribution.” The Journal of Experimental Medicine 137 (5): 1142–1162. https://doi.org/10.1084/jem.137.5.9142.",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Callahan, Benjamin J., Paul J. McMurdie, Michael J. Rosen, Andrew W. Han, Amy Jo A. Johnson, and Susan P. Holmes. 2016. “DADA2: High-resolution sample inference from Illumina amplicon data.” Nature Methods 13 (7): 581–583. https://doi.org/10.1038/nmeth.3869.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Medzhitov, Ruslan, Paula Preston-Hurlburt, and Charles A. Janeway. 1997. “A human homologue of the Drosophila Toll protein signals activation of adaptive immunity.” Nature 388 (6640): 394–397. https://doi.org/10.1016/j.cell.2006.02.015.",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Mosmann, T. R., H. Cherwinski, M. W. Bond, M. A. Giedlin, and R. L. Coffman. 1990. “Two types of murine helper T cell clone. I. Definition according to profiles of lymphokine activities and secreted proteins.” The Journal of Immunology 136 (7): 2348–2357.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    }
+  ]
+}

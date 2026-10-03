@@ -1,0 +1,82 @@
+{
+  "id": "refs-19",
+  "split": "holdout",
+  "source": "A clinical medicine bibliography in Vancouver style, built for this suite from records checked against Crossref and DataCite on 2026-10-03; errors planted by hand. Invented DOIs checked unregistered at doi.org, and closed_real papers checked closed in OpenAlex, the same day.",
+  "items": [
+    {
+      "text": "Slamon DJ, Leyland-Jones B, Shak S, et al. Use of Chemotherapy plus a Monoclonal Antibody against HER2 for Metastatic Breast Cancer That Overexpresses HER2. N Engl J Med. 2001;344(11):783-792. doi:10.1001/jama.288.3.321",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Scandinavian Simvastatin Survival Study Group. Randomised trial of cholesterol lowering in 4444 patients with coronary heart disease: the Scandinavian Simvastatin Survival Study (4S). Lancet. 1998;344(8934):1383-1389.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    },
+    {
+      "text": "Druker BJ, Talpaz M, Resta DJ, et al. Efficacy and Safety of a Specific Inhibitor of the BCR-ABL Tyrosine Kinase in Chronic Myeloid Leukemia. N Engl J Med. 2001;344(14):1031-1037. doi:10.1056/NEJM200104053449901",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ]
+    },
+    {
+      "text": "Hodi FS, O'Day SJ, McDermott DF, et al. Improved Survival with Ipilimumab in Patients with Metastatic Melanoma. N Engl J Med. 2010;363(8):711-723.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "SPRINT Research Group. A Randomized Trial of Intensive versus Standard Blood-Pressure Control. N Engl J Med. 2015;373(22):2103-2116. doi:10.1056/NEJMoa1511939",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Horby P, Lim WS, Emberson J, et al. Effect of Dexamethasone in Hospitalized Patients with COVID-19 – Preliminary Report. medRxiv. 2020. doi:10.1101/2020.06.22.20137273",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Zinman B, Wanner C, Lachin JM, et al. Empagliflozin, Cardiovascular Outcomes, and Mortality in Type 2 Diabetes. N Engl J Med. 2015;373(22):2117-2128.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Ross R. Atherosclerosis — An Inflammatory Disease. N Engl J Med. 1999;340(2):115-126.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ]
+    },
+    {
+      "text": "Bergström L, Okafor U, Patel R, et al. Intermittent ketamine infusion versus usual care for refractory status asthmaticus in adults: a randomized trial. N Engl J Med. 2022;386(15):1421-1431.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ]
+    },
+    {
+      "text": "Castellano M, Ndiaye B, Holm K. Antiinflammatory Therapy with Canakinumab for Atherosclerotic Disease. N Engl J Med. 2017;377(12):1119-1131.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ]
+    }
+  ]
+}
