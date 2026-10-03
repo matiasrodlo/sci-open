@@ -1,29 +1,38 @@
-import path from 'path';
 import Anthropic from '@anthropic-ai/sdk';
-import { Client } from '@modelcontextprotocol/client';
+import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
-
-/** The workspace's built binary, found through the dependency rather than a
- * path relative to wherever the harness happens to run. */
-const STDIO_BIN = path.join(path.dirname(require.resolve('sci-open-mcp/package.json')), 'dist', 'bin', 'stdio.js');
+import type { Server } from './servers';
 
 /** The model every case runs on, at a fixed effort so runs are comparable. */
 export const MODEL = 'claude-opus-5-5';
 const EFFORT = 'medium';
+
+/** Claude Code cuts a tool result at 25,000 tokens; so does the harness, for
+ * every server alike. sci-open's own budget keeps it far below. */
+const MAX_RESULT_CHARS = 100_000;
 
 let client: Anthropic | undefined;
 /** Made on first use, so the suites that call no model need no credentials.
  * ANTHROPIC_API_KEY, or an `ant auth login` profile. */
 const anthropic = () => (client ??= new Anthropic());
 
-/** The stdio server, started as a client would start it. */
-export async function connect(serverArgs: string[], env: Record<string, string> = {}): Promise<Client> {
+/** A server, started or reached as a client would: a command line over stdio,
+ * or a URL over Streamable HTTP with a bearer token. */
+export async function connect(server: Server): Promise<Client> {
   const mcp = new Client({ name: 'sci-open-evals', version: '0.1.0' });
-  await mcp.connect(new StdioClientTransport({
-    command: process.execPath,
-    args: [STDIO_BIN, ...serverArgs],
-    env: { ...process.env, SCI_OPEN_LOG_LEVEL: 'error', ...env } as Record<string, string>
-  }));
+  const { transport } = server;
+  await mcp.connect(
+    transport.kind === 'stdio'
+      ? new StdioClientTransport({
+          command: transport.command,
+          args: [...transport.args],
+          env: { ...process.env, SCI_OPEN_LOG_LEVEL: 'error', ...transport.env } as Record<string, string>,
+          ...(transport.cwd ? { cwd: transport.cwd } : {})
+        })
+      : new StreamableHTTPClientTransport(new URL(transport.url), {
+          ...(transport.token ? { authProvider: { token: async () => transport.token } } : {})
+        })
+  );
   return mcp;
 }
 
@@ -42,11 +51,11 @@ export type RunResult = {
  * of turns. A manual loop rather than the SDK's tool runner: the tools come
  * from an MCP client at run time, and every turn's usage is recorded.
  */
-export async function runCase(prompt: string, serverArgs: string[], maxTurns = 8): Promise<RunResult> {
-  const mcp = await connect(serverArgs);
+export async function runCase(prompt: string, server: Server, maxTurns = 8): Promise<RunResult> {
+  const mcp = await connect(server);
 
   try {
-    const { tools } = await mcp.listTools();
+    const tools = (await mcp.listTools()).tools.filter(t => !server.hidden?.includes(t.name));
     // Claude Desktop and Claude Code put these in front of the model. Without
     // them the eval measures the tools minus the grammar and the recipes.
     const instructions = mcp.getInstructions();
@@ -96,7 +105,11 @@ export async function runCase(prompt: string, serverArgs: string[], maxTurns = 8
       const results: Anthropic.Beta.BetaToolResultBlockParam[] = [];
       for (const block of response.content) {
         if (block.type !== 'tool_use') continue;
-        const result = await mcp.callTool({ name: block.name, arguments: block.input as Record<string, unknown> });
+        // Only a tool that was offered is ever called.
+        const offered = tools.some(t => t.name === block.name);
+        const result = offered
+          ? await mcp.callTool({ name: block.name, arguments: block.input as Record<string, unknown> })
+          : { isError: true, content: [{ type: 'text', text: `No tool named ${block.name}.` }] };
         calls.push({ name: block.name, input: block.input, isError: Boolean(result.isError) });
         results.push({
           type: 'tool_result',
@@ -104,7 +117,7 @@ export async function runCase(prompt: string, serverArgs: string[], maxTurns = 8
           is_error: Boolean(result.isError),
           content: (result.content as Array<{ type: string; text?: string }>)
             .filter(c => c.type === 'text')
-            .map(c => ({ type: 'text' as const, text: c.text ?? '' }))
+            .map(c => ({ type: 'text' as const, text: clamp(c.text ?? '') }))
         });
       }
       messages.push({ role: 'user', content: results }); // all results in one message
@@ -113,4 +126,10 @@ export async function runCase(prompt: string, serverArgs: string[], maxTurns = 8
   } finally {
     await mcp.close();
   }
+}
+
+function clamp(text: string): string {
+  return text.length <= MAX_RESULT_CHARS
+    ? text
+    : `${text.slice(0, MAX_RESULT_CHARS)}\n\n[Cut by the eval harness at ${MAX_RESULT_CHARS} characters, as a client cuts a result over 25,000 tokens.]`;
 }

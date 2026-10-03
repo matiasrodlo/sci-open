@@ -5138,9 +5138,10 @@ packages/mcp-evals/
     references/              reference lists with planted errors + truth
     reading.jsonl            questions answerable only from a paper's full text
   src/
-    run.ts                   connect() and the agent loop over the stdio server
+    servers.ts               sci-open and the baselines: how each is reached, and its own reference checker
+    run.ts                   connect() and the agent loop, over any of them
     scorers.ts               tool-selection, verdict accuracy, answer match
-    report.ts                writes results/<date>-<suite>.json and .md
+    report.ts                writes results/<date>-<suite>-<split>[-<server>].json and .md
     main.ts                  one suite: load, run, score, report
   results/                   committed: the published numbers and their history
   package.json
@@ -5178,38 +5179,53 @@ wherever it runs from (`connect()` below), and `^build` builds it first.
 
 ### Step 12.2 — The agent loop
 
-The loop connects to the server over stdio, offers its tools to Claude, runs
-the calls, and records everything. It uses the manual loop rather than the
-SDK's tool runner because tools come from an MCP client at run time and every
-turn's usage must be recorded.
+The loop connects to a server — sci-open's stdio binary, or a baseline
+(Step 12.4) — offers its tools to Claude, runs the calls, and records
+everything. It uses the manual loop rather than the SDK's tool runner because
+tools come from an MCP client at run time and every turn's usage must be
+recorded.
+
+A `Server` (`src/servers.ts`) says how to reach one: a command line over
+stdio, or a URL over Streamable HTTP with a bearer token. `sciOpen(args)` is
+the workspace's built binary, found through the `sci-open-mcp` dependency
+rather than a path relative to wherever the harness happens to run.
 
 ```ts
-import path from 'path';
 import Anthropic from '@anthropic-ai/sdk';
-import { Client } from '@modelcontextprotocol/client';
+import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
+import type { Server } from './servers';
 
 const anthropic = new Anthropic();   // ANTHROPIC_API_KEY or an `ant auth login` profile
 
-/** The workspace's built binary, found through the dependency rather than a
- * path relative to wherever the harness happens to run. */
-const STDIO_BIN = path.join(path.dirname(require.resolve('sci-open-mcp/package.json')), 'dist', 'bin', 'stdio.js');
+/** Claude Code cuts a tool result at 25,000 tokens; so does the harness, for
+ * every server alike. sci-open's own budget keeps it far below. */
+const MAX_RESULT_CHARS = 100_000;
 
-export async function connect(serverArgs: string[]): Promise<Client> {
+export async function connect(server: Server): Promise<Client> {
   const mcp = new Client({ name: 'sci-open-evals', version: '0.1.0' });
-  await mcp.connect(new StdioClientTransport({
-    command: process.execPath,
-    args: [STDIO_BIN, ...serverArgs],
-    env: { ...process.env, SCI_OPEN_LOG_LEVEL: 'error' } as Record<string, string>
-  }));
+  const { transport } = server;
+  await mcp.connect(
+    transport.kind === 'stdio'
+      ? new StdioClientTransport({
+          command: transport.command,
+          args: [...transport.args],
+          env: { ...process.env, SCI_OPEN_LOG_LEVEL: 'error', ...transport.env } as Record<string, string>,
+          ...(transport.cwd ? { cwd: transport.cwd } : {})
+        })
+      : new StreamableHTTPClientTransport(new URL(transport.url), {
+          ...(transport.token ? { authProvider: { token: async () => transport.token } } : {})
+        })
+  );
   return mcp;
 }
 
-export async function runCase(prompt: string, serverArgs: string[], maxTurns = 8) {
-  const mcp = await connect(serverArgs);
+export async function runCase(prompt: string, server: Server, maxTurns = 8) {
+  const mcp = await connect(server);
 
   try {
-    const { tools } = await mcp.listTools();
+    // A baseline's tools this project will not use are never offered (Step 12.4).
+    const tools = (await mcp.listTools()).tools.filter(t => !server.hidden?.includes(t.name));
     // Claude Desktop and Claude Code put these in front of the model. Without
     // them the eval measures the tools minus the grammar and the recipes.
     const instructions = mcp.getInstructions();
@@ -5256,7 +5272,11 @@ export async function runCase(prompt: string, serverArgs: string[], maxTurns = 8
       const results: Anthropic.Beta.BetaToolResultBlockParam[] = [];
       for (const block of response.content) {
         if (block.type !== 'tool_use') continue;
-        const result = await mcp.callTool({ name: block.name, arguments: block.input as Record<string, unknown> });
+        // Only a tool that was offered is ever called.
+        const offered = tools.some(t => t.name === block.name);
+        const result = offered
+          ? await mcp.callTool({ name: block.name, arguments: block.input as Record<string, unknown> })
+          : { isError: true, content: [{ type: 'text', text: `No tool named ${block.name}.` }] };
         calls.push({ name: block.name, input: block.input, isError: Boolean(result.isError) });
         results.push({
           type: 'tool_result',
@@ -5264,7 +5284,7 @@ export async function runCase(prompt: string, serverArgs: string[], maxTurns = 8
           is_error: Boolean(result.isError),
           content: (result.content as Array<{ type: string; text?: string }>)
             .filter(c => c.type === 'text')
-            .map(c => ({ type: 'text' as const, text: c.text ?? '' }))
+            .map(c => ({ type: 'text' as const, text: (c.text ?? '').slice(0, MAX_RESULT_CHARS) }))
         });
       }
       messages.push({ role: 'user', content: results });  // all results in one message
@@ -5514,12 +5534,15 @@ export function writeReport(suite: string, split: string, cases: readonly CaseRe
 }
 ```
 
-`src/main.ts` — `tsx src/main.ts <suite> [tune|holdout]`, default `tune`:
+`src/main.ts` — `tsx src/main.ts <suite> [tune|holdout] [--server <name>]
+[--via-model]`, default `tune` against sci-open. The sample shows sci-open's
+path; the baselines' are described after it:
 
 ```ts
 import { readFileSync, readdirSync } from 'fs';
 import path from 'path';
 import { connect, runCase } from './run';
+import { sciOpen } from './servers';
 import { scoreReading, scoreReferences, scoreSelection, type ReferenceItem, type SelectionCase } from './scorers';
 import { writeReport, type CaseRecord } from './report';
 
@@ -5549,7 +5572,7 @@ async function main(): Promise<void> {
     for (const c of jsonl<SelectionCase>('tool-selection.jsonl').filter(c => c.split === split)) {
       const started = Date.now();
       // Four turns are plenty to see the first calls; the fixture engine answers them.
-      const run = await runCase(c.prompt, ['--engine', 'fixture'], 4);
+      const run = await runCase(c.prompt, sciOpen(['--engine', 'fixture']), 4);
       records.push(record(c.id, scoreSelection(c, run.calls), run, Date.now() - started));
     }
     console.log(writeReport('selection', split, records));
@@ -5557,17 +5580,17 @@ async function main(): Promise<void> {
   }
 
   if (suite === 'references') {
-    const client = await connect(['--toolsets', 'core']);
+    const server = sciOpen(['--toolsets', 'core']);
+    const client = await connect(server);
     const items: ReferenceItem[] = [];
     const verdicts: string[] = [];
     try {
       for (const file of readdirSync(path.join(DATA, 'references')).filter(f => f.endsWith('.json'))) {
         const list = JSON.parse(readFileSync(path.join(DATA, 'references', file), 'utf8')) as { split: string; items: ReferenceItem[] };
         if (list.split !== split) continue;
-        const result = await client.callTool({ name: 'verify_references', arguments: { references: list.items.map(i => i.text) } });
-        const structured = result.structuredContent as { results: Array<{ verdict: string }> } | undefined;
+        // sci-open's checker: verify_references, its verdicts as they come.
         items.push(...list.items);
-        verdicts.push(...list.items.map((_, i) => structured?.results[i]?.verdict ?? 'not_checked'));
+        verdicts.push(...await server.verify!(client, list.items.map(i => i.text)));
       }
     } finally {
       await client.close();
@@ -5584,7 +5607,7 @@ async function main(): Promise<void> {
     for (const c of jsonl<ReadingCase>('reading.jsonl').filter(c => c.split === split)) {
       const started = Date.now();
       const prompt = `${c.question} The paper: ${c.paper}. Read it with the tools; do not answer from memory. End with one line: Answer: <value>`;
-      const run = await runCase(prompt, []);
+      const run = await runCase(prompt, sciOpen(['--toolsets', 'core,read']));
       records.push(record(c.id, scoreReading(c.answers, run.answer), run, Date.now() - started));
     }
     console.log(writeReport('reading', split, records));
@@ -5617,9 +5640,47 @@ Report, for each run:
 | Mean tool calls and tokens per task | Cost and context efficiency |
 
 Compare against baselines in the same harness: the official OpenAlex MCP
-server and `paper-search-mcp` for verification and recall. Generalise
-`connect()` to take any command line, start theirs, and score their answers
-with the same scorers.
+server and `paper-search-mcp`, for verification and reading. `connect()`
+takes a `Server`, not sci-open's arguments, so `--server <name>` runs the
+references or reading suite against a baseline and scores its answers with
+the same scorers; the report's file name carries the server's name. The
+selection suite stays sci-open's: it scores sci-open's tool names.
+
+| `--server` | Reached as | Its reference checker |
+|---|---|---|
+| `sci-open` (default) | the workspace's stdio binary | `verify_references` |
+| `openalex` | Streamable HTTP at `https://mcp.openalex.org/mcp` (or `OPENALEX_MCP_URL`), bearer `OPENALEX_MCP_TOKEN` | `resolve_references`: `exact` → `verified`, `likely` → `likely`, `uncertain` → `ambiguous`, `none` → `not_found` |
+| `paper-search` | `uvx paper-search-mcp@0.1.4` over stdio, in a temporary directory | none: Claude checks each list with its tools |
+
+Three things the baselines forced, each checked against their source on
+2026-10-03:
+
+- **OpenAlex's server is remote only.** It is a Cloudflare Worker that is its
+  own OAuth 2.1 provider, and every `/mcp` request carries a bearer token from
+  that sign-in, which spends the signed-in account's OpenAlex budget. There is
+  no command line to start, so a `Server` is a URL as well as a command line,
+  and the harness takes the token from the environment rather than running a
+  browser sign-in. A token the server refuses fails the run at connection,
+  before anything is scored.
+- **Not every baseline has a checker.** A server with one is called directly,
+  with no model, like `verify_references`; `resolve_references` has no word
+  for a DOI that names the wrong paper, so such a reference resolves `exact`,
+  counts as `verified`, and counts against it, as it would for a user. A
+  server without one (paper-search) has Claude check each list with its tools
+  and end with one `Verdict <n>: <word>` line a reference, the words defined
+  as `judge` draws them. `--via-model` does the same for any server, sci-open
+  included: the like-for-like comparison. A reference with no verdict line is
+  scored wrong; a list a fallback model answered is `not_checked`.
+- **What the harness will not offer.** paper-search-mcp has Sci-Hub routes
+  (`download_scihub`, and `download_with_fallback`, whose `use_scihub` is on by
+  default in 0.1.4). They are never offered to the model: the comparison is
+  of legal copies, as §1 promises for sci-open. And a tool result is cut at
+  100,000 characters for every server, as a client cuts one over 25,000
+  tokens, so a baseline that returns a whole paper does not exhaust the
+  context; sci-open's own budget keeps it far below.
+
+paper-search reads `UNPAYWALL_EMAIL`, `CORE_API_KEY` and `DOAJ_API_KEY` under
+the names sci-open does, so both run with the keys they share.
 
 ### Step 12.5 — Use the transcripts
 
@@ -5637,7 +5698,12 @@ keep it only if the held-out score improves.
       model, and writes `results/<date>-references-holdout.md` with recall by
       planted type, flag precision and the false-fabricated rate.
 - [ ] `pnpm test` runs none of the suites.
-- [ ] The README shows the latest held-out table with its date.
+- [ ] `eval:references holdout --server openalex` (with `OPENALEX_MCP_TOKEN`)
+      and `eval:reading holdout --server paper-search` run against those
+      servers and write reports carrying their names; `--via-model` scores
+      sci-open the way paper-search is scored.
+- [ ] The README shows the latest held-out table with its date and the
+      baselines beside it.
 
 ## Phase 13 — Packaging and distribution
 

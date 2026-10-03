@@ -21,7 +21,14 @@ export type CaseRecord = {
  * `results/`, which is committed: the published numbers and their history. A
  * case the fallback model answered is reported but not scored.
  */
-export function writeReport(suite: string, split: string, cases: readonly CaseRecord[], extra: Record<string, unknown> = {}): string {
+export function writeReport(
+  suite: string,
+  split: string,
+  cases: readonly CaseRecord[],
+  extra: Record<string, unknown> = {},
+  /** Added to the file name, for a run against a baseline. */
+  label = ''
+): string {
   const date = new Date().toISOString().slice(0, 10);
   const scored = cases.filter(c => c.fallbackTurns === 0 && c.stopReason !== 'refusal');
   const passed = scored.filter(c => c.pass).length;
@@ -44,11 +51,13 @@ export function writeReport(suite: string, split: string, cases: readonly CaseRe
 
   const dir = path.join(__dirname, '..', 'results');
   mkdirSync(dir, { recursive: true });
-  writeFileSync(path.join(dir, `${date}-${suite}-${split}.json`), `${JSON.stringify({ summary, cases }, null, 2)}\n`);
+  const base = `${date}-${suite}-${split}${label ? `-${label}` : ''}`;
+  writeFileSync(path.join(dir, `${base}.json`), `${JSON.stringify({ summary, cases }, null, 2)}\n`);
 
-  const value = (v: unknown) => (typeof v === 'number' ? (Number.isInteger(v) ? String(v) : v.toFixed(3)) : JSON.stringify(v));
+  const value = (v: unknown) =>
+    typeof v === 'number' ? (Number.isInteger(v) ? String(v) : v.toFixed(3)) : typeof v === 'string' ? v : JSON.stringify(v);
   const md = [
-    `## ${suite} (${split}), ${date}`,
+    `## ${suite} (${split}${label ? `, ${label}` : ''}), ${date}`,
     '',
     '| Metric | Value |',
     '|---|---|',
@@ -68,6 +77,6 @@ export function writeReport(suite: string, split: string, cases: readonly CaseRe
     ...((extra.misses as Array<{ text: string; planted: string; verdict: string }> | undefined) ?? [])
       .map(m => `- ${m.planted}, graded ${m.verdict}: ${m.text}`)
   ].join('\n');
-  writeFileSync(path.join(dir, `${date}-${suite}-${split}.md`), `${md}\n`);
+  writeFileSync(path.join(dir, `${base}.md`), `${md}\n`);
   return md;
 }

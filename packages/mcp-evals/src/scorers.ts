@@ -55,6 +55,33 @@ export function scoreReading(answers: readonly string[], text: string): { pass: 
 
 export type ReferenceItem = { text: string; planted: string; accept: string[] };
 
+/** verify_references' verdicts, as a model checking references with another
+ * server's tools is asked to give them (the thresholds of `judge`, in words). */
+export const VERDICT_MEANINGS: Readonly<Record<string, string>> = {
+  verified: 'a real paper whose title, authors and year agree with the reference',
+  likely: 'a real paper whose title is close but not exact, with nothing that contradicts it',
+  ambiguous: 'a real paper may be meant, but its year or its authors disagree with the reference, or only part of the title matches',
+  mismatch: 'the DOI is wrong: it names a different paper, or no paper at all while the rest of the reference names a real one',
+  not_found: 'no source holds a paper like it'
+};
+
+/**
+ * The `Verdict <n>: <word>` lines a model ended with, one per reference. A
+ * reference it gave no line for, or a word that is not a verdict, is
+ * `no_verdict`: scored wrong, as a reader would count it, never flagged and
+ * never called fabricated. The last line for a number wins.
+ */
+export function parseVerdicts(text: string, count: number): string[] {
+  const given = new Map<number, string>();
+  for (const [, n, word] of text.matchAll(/^\s*\**\s*Verdict\s+(\d+)\s*\**\s*:\s*\**\s*([a-z_]+)/gim)) {
+    given.set(Number(n), word!.toLowerCase());
+  }
+  return Array.from({ length: count }, (_, i) => {
+    const word = given.get(i + 1);
+    return word && word in VERDICT_MEANINGS ? word : 'no_verdict';
+  });
+}
+
 const FLAGS = new Set(['ambiguous', 'mismatch', 'not_found']);
 const REAL = new Set(['none', 'closed_real', 'preprint_version']);
 

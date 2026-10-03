@@ -22,6 +22,48 @@ The references suite asks the live sources for every reference — up to three
 searches each — and is billed against their quotas like any other search, the
 OpenAlex key's daily budget included. Run it deliberately, not in a loop.
 
+## Baselines
+
+`--server <name>` runs the references or reading suite against another MCP
+server instead, scored by the same scorers, and writes its report under a
+file name that carries the server's name. pnpm passes the flag through, with
+or without a `--` before it:
+
+```bash
+pnpm --filter mcp-evals eval:references holdout --server openalex
+pnpm --filter mcp-evals eval:reading holdout --server paper-search
+```
+
+| Server | How the harness reaches it | Needs |
+|---|---|---|
+| `openalex` | The official OpenAlex server, remote only: Streamable HTTP at `https://mcp.openalex.org/mcp`, or `OPENALEX_MCP_URL` | `OPENALEX_MCP_TOKEN`: an access token from its OAuth sign-in. Every call spends the signed-in account's OpenAlex budget |
+| `paper-search` | paper-search-mcp 0.1.4 from PyPI, over stdio through `uvx`, in a temporary directory | `uv`. It reads the same `UNPAYWALL_EMAIL`, `CORE_API_KEY` and `DOAJ_API_KEY` as sci-open, so both run with the keys they share; 0.1.4 takes no OpenAlex key |
+
+For the OpenAlex token: the server's repository
+(`ourresearch/openalex-mcp-server`) has `scripts/oauth-login.ts`, which runs
+its OAuth flow without a browser, your own OpenAlex API key standing in for
+the consent click; any MCP client that has signed in holds one too.
+
+The references suite calls a server's own checker when it has one, with no
+model: `verify_references` for sci-open, `resolve_references` for OpenAlex,
+whose match levels count as verdicts — `exact` as `verified`, `likely` as
+`likely`, `uncertain` as `ambiguous`, `none` as `not_found`. It has no verdict
+for a DOI that names the wrong paper, so such a reference counts as
+`verified`, and against it. A server without a checker (paper-search) has
+Claude check each list with its tools and end with one `Verdict <n>:` line a
+reference; `--via-model` does the same for any server, sci-open included,
+which is the like-for-like comparison. A reference the model gave no verdict
+for is scored wrong. Model runs cost API credit, and report tool calls and
+tokens per list.
+
+The selection suite is sci-open's alone: it scores sci-open's tool names.
+
+The harness never offers a model paper-search's Sci-Hub routes
+(`download_scihub`, and `download_with_fallback`, which falls back to it
+unless told not to),
+and cuts any tool result at 100,000 characters, as a client cuts one over
+25,000 tokens; sci-open's own budget keeps its results far below that.
+
 ## Datasets
 
 - `datasets/tool-selection.jsonl`: one prompt per line, with the tool expected
@@ -49,5 +91,6 @@ thresholds against `tune` only; `holdout` is the number that gets published.
 ## Results
 
 Each run writes `results/<date>-<suite>-<split>.json` (every case) and `.md`
-(the table). Commit the ones that are published, with the commit they were
+(the table); a baseline's carry its name, and `-model` when Claude did the
+checking (`2026-10-03-references-holdout-openalex.md`). Commit the ones that are published, with the commit they were
 measured on.
