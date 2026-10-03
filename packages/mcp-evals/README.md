@@ -86,7 +86,10 @@ and cuts any tool result at 100,000 characters, as a client cuts one over
   written from the records' metadata, their `closed_real` papers checked
   closed in OpenAlex, and no paper in two lists. `refs-01` to `refs-06` are
   machine learning, laboratory methods, statistics and medicine in Vancouver
-  style, and some of their papers recur between their tune and holdout lists.
+  style; a paper may recur among their tune lists. No holdout paper appears
+  in a tune list or among the reference parser's test cases
+  (`packages/mcp/test/fixtures/references.json`): add a parser case from a
+  tune list, never from a holdout one.
 
 - `datasets/reading.jsonl`: twenty questions about open-access papers in
   Europe PMC, each answered by a sentence in a methods or results section,

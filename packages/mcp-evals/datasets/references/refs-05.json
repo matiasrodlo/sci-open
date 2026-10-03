@@ -1,7 +1,7 @@
 {
   "id": "refs-05",
   "split": "holdout",
-  "source": "Built for this suite from records checked against Crossref and DataCite on 2026-10-02; errors planted by hand. Invented DOIs checked unregistered at doi.org the same day.",
+  "source": "Built for this suite from records checked against Crossref and DataCite on 2026-10-02; errors planted by hand. Invented DOIs checked unregistered at doi.org the same day. On 2026-10-03, every item whose paper also appears in a tune list or in the reference parser's test cases was replaced with a paper of the same planted type, its record checked against Crossref and DataCite, its closed_real status in OpenAlex and its invented DOI at doi.org.",
   "items": [
     {
       "text": "Zhu N, Zhang D, Wang W, et al. A novel coronavirus from patients with pneumonia in China, 2019. N Engl J Med. 2020;382(8):727-733.",
@@ -12,7 +12,7 @@
       ]
     },
     {
-      "text": "Hanahan D, Weinberg RA. Hallmarks of cancer: the next generation. Cell. 2011;144(5):646-674.",
+      "text": "Mullis KB, Faloona FA. Specific synthesis of DNA in vitro via a polymerase-catalyzed chain reaction. Methods Enzymol. 1987;155:335-350.",
       "planted": "closed_real",
       "accept": [
         "verified",
@@ -20,7 +20,7 @@
       ]
     },
     {
-      "text": "Jumper J, Evans R, Pritzel A, et al. Highly accurate protein structure prediction with AlphaFold. Nature. 2021;596(7873):583-589. doi:10.1038/s41586-021-03819-2",
+      "text": "Ritchie ME, Phipson B, Wu D, et al. limma powers differential expression analyses for RNA-sequencing and microarray studies. Nucleic Acids Res. 2015;43(7):e47. doi:10.1093/nar/gkv007",
       "planted": "none",
       "accept": [
         "verified",
@@ -49,28 +49,28 @@
       ]
     },
     {
-      "text": "Polack FP, Thomas SJ, Kitchin N, et al. Safety and efficacy of the BNT162b2 mRNA Covid-19 vaccine. N Engl J Med. 2023;383(27):2603-2615.",
+      "text": "Chomczynski P, Sacchi N. Single-step method of RNA isolation by acid guanidinium thiocyanate-phenol-chloroform extraction. Anal Biochem. 1991;162(1):156-159.",
       "planted": "year_wrong",
       "accept": [
         "ambiguous"
       ]
     },
     {
-      "text": "Takahashi K, Yamanaka S. Induction of pluripotent stem cells from mouse embryonic and adult fibroblast cultures by defined factors. Cell. 2006;126(4):663-676. doi:10.1016/j.cell.2006.99.999",
+      "text": "Mortazavi A, Williams BA, McCue K, Schaeffer L, Wold B. Mapping and quantifying mammalian transcriptomes by RNA-Seq. Nat Methods. 2008;5(7):621-628. doi:10.1038/nmeth.12266",
       "planted": "doi_invented",
       "accept": [
         "mismatch"
       ]
     },
     {
-      "text": "Becker L, Moore D. Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. Genome Biol. 2014;15:550.",
+      "text": "Okonkwo R, Haldane M. Gene set enrichment analysis: a knowledge-based approach for interpreting genome-wide expression profiles. Proc Natl Acad Sci U S A. 2005;102(43):15545-15550.",
       "planted": "author_wrong",
       "accept": [
         "ambiguous"
       ]
     },
     {
-      "text": "Tenaillon O, Silander OK, Uzan JP, Chao L. Quantifying organismal complexity using a population genetic approach. PLoS One. 2007;2(2):e217.",
+      "text": "Weinstein JN, Collisson EA, Mills GB, et al. The Cancer Genome Atlas Pan-Cancer analysis project. Nat Genet. 2013;45(10):1113-1120.",
       "planted": "none",
       "accept": [
         "verified",
