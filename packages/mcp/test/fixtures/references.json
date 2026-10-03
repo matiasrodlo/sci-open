@@ -70,6 +70,51 @@
       "style": "Accented author",
       "raw": "Müller, K., & Østergaard, L. (2020). Ice sheet dynamics under warming scenarios. Journal of Glaciology, 66(255), 1-14.",
       "expect": { "year": 2020, "title": "Ice sheet dynamics under warming scenarios", "surnames": ["müller", "østergaard"] }
+    },
+    {
+      "style": "Vancouver with years in the title",
+      "raw": "Lim SS, Vos T, Flaxman AD, et al. A comparative risk assessment of burden of disease and injury attributable to 67 risk factors and risk factor clusters in 21 regions, 1990–2010: a systematic analysis for the Global Burden of Disease Study 2010. Lancet. 2012;380(9859):2224-2260.",
+      "expect": { "year": 2012, "title": "A comparative risk assessment of burden of disease and injury attributable to 67 risk factors and risk factor clusters in 21 regions, 1990–2010: a systematic analysis for the Global Burden of Disease Study 2010", "surnames": ["lim", "vos", "flaxman"] }
+    },
+    {
+      "style": "IEEE with years in the title",
+      "raw": "M. H. Forouzanfar et al., “Global, regional, and national comparative risk assessment of 79 behavioural, environmental and occupational, and metabolic risks or clusters of risks in 188 countries, 1990–2013,” Lancet, vol. 386, no. 10010, pp. 2287–2323, 2015.",
+      "expect": { "year": 2015, "title": "Global, regional, and national comparative risk assessment of 79 behavioural, environmental and occupational, and metabolic risks or clusters of risks in 188 countries, 1990–2013", "surnames": ["forouzanfar"] }
+    },
+    {
+      "style": "Nature, a Title Case title after initials",
+      "raw": "Vine, F. J. & Matthews, D. H. Magnetic Anomalies Over Oceanic Ridges. Nature 199, 947–949 (1963).",
+      "expect": { "year": 1963, "title": "Magnetic Anomalies Over Oceanic Ridges", "surnames": ["vine", "matthews"] }
+    },
+    {
+      "style": "Nature, three authors",
+      "raw": "Einstein, A., Podolsky, B. & Rosen, N. Can Quantum-Mechanical Description of Physical Reality Be Considered Complete? Phys. Rev. 47, 777–780 (1935).",
+      "expect": { "year": 1935, "title": "Can Quantum-Mechanical Description of Physical Reality Be Considered Complete", "surnames": ["einstein", "podolsky", "rosen"] }
+    },
+    {
+      "style": "Nature, hyphenated initials",
+      "raw": "Pekel, J.-F., Cottam, A., Gorelick, N. & Belward, A. S. High-resolution mapping of global surface water and its long-term changes. Nature 540, 418–422 (2016).",
+      "expect": { "year": 2016, "title": "High-resolution mapping of global surface water and its long-term changes", "surnames": ["pekel", "cottam", "gorelick", "belward"] }
+    },
+    {
+      "style": "Nature, one author",
+      "raw": "Anderson, P. W. Absence of Diffusion in Certain Random Lattices. Phys. Rev. 109, 1492–1505 (1958).",
+      "expect": { "year": 1958, "title": "Absence of Diffusion in Certain Random Lattices", "surnames": ["anderson"] }
+    },
+    {
+      "style": "Nature, a two-word surname",
+      "raw": "Castro Neto, A. H., Guinea, F., Peres, N. M. R., Novoselov, K. S. & Geim, A. K. The electronic properties of graphene. Rev. Mod. Phys. 81, 109–162 (2009).",
+      "expect": { "year": 2009, "title": "The electronic properties of graphene", "surnames": ["castro", "guinea", "geim"] }
+    },
+    {
+      "style": "Chicago, two authors",
+      "raw": "Hubel, D. H., and T. N. Wiesel. 1962. “Receptive fields, binocular interaction and functional architecture in the cat’s visual cortex.” Journal of Physiology 160 (1): 106–154.",
+      "expect": { "year": 1962, "title": "Receptive fields, binocular interaction and functional architecture in the cat’s visual cortex", "surnames": ["hubel", "wiesel"] }
+    },
+    {
+      "style": "Chicago, initials after the first name",
+      "raw": "Billingham, R. E., L. Brent, and P. B. Medawar. 1953. “Actively acquired tolerance of foreign cells.” Nature 172 (4379): 603–606.",
+      "expect": { "year": 1953, "title": "Actively acquired tolerance of foreign cells", "surnames": ["billingham", "brent", "medawar"] }
     }
   ]
 }

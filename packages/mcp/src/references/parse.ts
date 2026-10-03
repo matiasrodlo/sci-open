@@ -34,6 +34,23 @@ const JOINERS = new Set(['and', '&', 'et', 'al', 'al.', 'jr', 'jr.']);
 /** Lower-case parts of surnames: de la Cruz, van der Waals. */
 const PARTICLES = new Set(['van', 'von', 'de', 'der', 'den', 'da', 'di', 'del', 'della', 'la', 'le', 'du', 'dos', 'das', 'ter', 'ten', 'bin', 'al-']);
 
+/** `Surname, I. I.`: a surname, with its particles or of two words (van der
+ * Walt, Castro Neto), then initials only, each with its stop (J.-F. included). */
+const INVERTED_NAME = String.raw`(?:(?:${[...PARTICLES].filter(p => /^\p{L}+$/u.test(p)).join('|')})\s+)*` +
+  String.raw`\p{Lu}[\p{L}'’-]+(?:\s+\p{Lu}[\p{L}'’-]+)*,\s+\p{Lu}\.(?:[\s-]*\p{Lu}\.)*`;
+/** A list of them up to where the title starts, joined by `&`, `and` or a
+ * space: the comma after an initial is gone by then, since the clean-up of
+ * `Title., 2017.` also folds `A.,` into `A.`. */
+const INVERTED_AUTHORS = new RegExp(
+  String.raw`^(${INVERTED_NAME}(?:(?:\s*,?\s+(?:(?:&|and)\s+)?)${INVERTED_NAME})*)\s+(?!et al\b)(?=\S)`,
+  'u'
+);
+
+/** A year in brackets, as APA and Nature give it; otherwise the first year standing alone. */
+function yearIn(text: string): string | undefined {
+  return text.match(PAREN_YEAR)?.[1] ?? text.match(YEAR)?.[1];
+}
+
 export function parseReference(raw: string): ParsedReference {
   const text = raw.replace(/\s+/g, ' ').trim();
   if (BIBTEX.test(text)) return parseBibtex(raw, text);
@@ -55,13 +72,14 @@ export function parseReference(raw: string): ParsedReference {
     .replace(/\s+/g, ' ')
     .trim();
 
-  const parenYear = rest.match(PAREN_YEAR)?.[1];
-  const yearText = parenYear ?? rest.match(YEAR)?.[1];
-  const year = yearText ? Number(yearText) : undefined;
-
   const quoted = rest.match(QUOTED)?.[1];
   const split = splitAuthors(rest);
-  const title = clean(quoted ?? (split ? firstSentence(split.after)[0] : undefined) ?? guessTitle(rest, yearText));
+  const title = clean(quoted ?? (split ? firstSentence(split.after)[0] : undefined) ?? guessTitle(rest, yearIn(rest)));
+  // The paper's year is outside its title, which can hold years of its own
+  // ("in 21 regions, 1990–2010", "Study 2010"). Those count only when the
+  // reference gives no other.
+  const yearText = (title ? yearIn(rest.replace(title, ' ')) : undefined) ?? yearIn(rest);
+  const year = yearText ? Number(yearText) : undefined;
   const surnames = split ? surnamesIn(split.authors) : quoted ? surnamesIn(rest.slice(0, rest.search(QUOTED))) : [];
 
   return {
@@ -81,6 +99,7 @@ export function parseReference(raw: string): ParsedReference {
  * - Chicago, `Names. 1962. Title.` — a bare year closing the first sentence;
  * - `Name et al. Title.` — Nature and most journals with long author lists;
  * - Vancouver, `Surname AB, Surname C. Title.` — initials without stops;
+ * - Nature, `Surname, A. B., Surname, C. & Surname, D. Title.` — the last initial;
  * - a first sentence that is nothing but names, as arXiv listings write it.
  * Undefined when none of them fits: then nothing is known about the authors.
  */
@@ -100,6 +119,19 @@ function splitAuthors(text: string): { authors: string; after: string } | undefi
   const name = String.raw`\p{Lu}[\p{L}'’-]+(?:\s+\p{Lu}[\p{L}'’-]+)*\s+\p{Lu}{1,3}`;
   const vancouver = text.match(new RegExp(String.raw`^((?:${name},\s*)*${name}(?:,?\s+et al)?)\.\s+`, 'u'));
   if (vancouver) return { authors: vancouver[1]!, after: text.slice(vancouver[0].length) };
+
+  // Nature's `Surname, I. I., Surname, I. & Surname, I. Title.` ends at the last
+  // initial. Read by sentence instead, a title in Title Case would look like
+  // more names, and the whole first sentence would be taken for authors.
+  const inverted = text.match(INVERTED_AUTHORS);
+  if (inverted) {
+    const rest = text.slice(inverted[0].length);
+    // Chicago inverts the first name only (`Billingham, R. E., L. Brent, and
+    // P. B. Medawar.`), so a match can stop inside its list. What follows must
+    // read as a title, not as more names.
+    const [next] = firstSentence(rest);
+    if (!/^(?:and|&)\s/i.test(next) && !/(?:^|\s)\p{Lu}\.(?=[\s,]|$)/u.test(next)) return { authors: inverted[1]!, after: rest };
+  }
 
   if (after && looksLikeNames(first) && /,|\band\b|&/.test(first)) return { authors: first, after };
   return undefined;
