@@ -24,6 +24,18 @@
           "isSecret": false
         },
         {
+          "name": "OPENALEX_API_KEY",
+          "description": "OpenAlex API key, free from openalex.org/settings/api. Strongly recommended: without one OpenAlex allows a tenth of a key's daily budget, and searches stop reaching it once that is spent.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "NCBI_API_KEY",
+          "description": "NCBI E-utilities API key, for PubMed. Optional: it raises PubMed's limit from 3 to 10 requests a second, which a busy search can reach.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
           "name": "OPENCITATIONS_TOKEN",
           "description": "OpenCitations access token, for get_citations. Optional: OpenCitations allows 180 requests a minute without one.",
           "isRequired": false,

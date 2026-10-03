@@ -30,8 +30,13 @@ methods section.
 Or the server alone:
 
 ```bash
-claude mcp add sci-open --env UNPAYWALL_EMAIL=you@example.org -- npx -y sci-open-mcp
+claude mcp add sci-open --env UNPAYWALL_EMAIL=you@example.org --env OPENALEX_API_KEY=<key> -- npx -y sci-open-mcp
 ```
+
+An OpenAlex key is free from [openalex.org/settings/api](https://openalex.org/settings/api).
+It is optional, but without one OpenAlex allows a tenth of a key's daily
+budget, and once that is spent your searches go on without OpenAlex until it
+resets.
 
 **Claude Desktop** (`claude_desktop_config.json`), Cursor (`.cursor/mcp.json`)
 and other clients that start a server as a command take the same block:
@@ -42,7 +47,7 @@ and other clients that start a server as a command take the same block:
     "sci-open": {
       "command": "npx",
       "args": ["-y", "sci-open-mcp"],
-      "env": { "UNPAYWALL_EMAIL": "you@example.org" }
+      "env": { "UNPAYWALL_EMAIL": "you@example.org", "OPENALEX_API_KEY": "<key>" }
     }
   }
 }
@@ -142,7 +147,9 @@ request its description. Over HTTP, `?toolsets=all` does the same.
 | Variable | Flag | Default | Meaning |
 |---|---|---|---|
 | `UNPAYWALL_EMAIL` | | unset (warns) | Contact sent to Unpaywall and OpenAlex in the `User-Agent` |
-| `OPENALEX_API_KEY`, `CORE_API_KEY`, `NCBI_API_KEY`, `DOAJ_API_KEY`, `DATACITE_API_KEY` | | unset | Optional provider keys |
+| `OPENALEX_API_KEY` | | unset | OpenAlex key. Strongly recommended: unkeyed, OpenAlex allows a tenth of a key's daily budget. Required over HTTP |
+| `NCBI_API_KEY` | | unset | PubMed key: 10 requests a second rather than 3 |
+| `CORE_API_KEY`, `DOAJ_API_KEY`, `DATACITE_API_KEY` | | unset | Sent when set; the public APIs answer without them |
 | `OPENCITATIONS_TOKEN` | | unset | Optional OpenCitations token, for `get_citations`; 180 requests a minute without one |
 | `SCI_OPEN_TOOLSETS` | `--toolsets` | `core,read` | Toolsets to serve |
 | `SCI_OPEN_TOOLS` | `--tools` | unset | Extra tools by name |

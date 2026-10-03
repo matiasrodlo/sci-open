@@ -6124,6 +6124,16 @@ one, Step 13.1) must equal `name`.
 `isRequired` is `false` because the server starts without the variable
 (Step 10.1); the description says what it costs to leave it out.
 
+An installer driven by the registry asks only for what the file declares, so
+it declares every setting that changes what the server can do on stdio:
+`UNPAYWALL_EMAIL`, `OPENALEX_API_KEY` (unkeyed, OpenAlex allows a tenth of a
+key's daily budget, D11), `NCBI_API_KEY` (PubMed's 3 requests a second become
+10) and `OPENCITATIONS_TOKEN`, the three keys secret. `CORE_API_KEY`,
+`DOAJ_API_KEY` and `DATACITE_API_KEY` are left out: CORE's key changes nothing
+that matters (`providers/core/capabilities.ts`) and DOAJ and DataCite answer
+public searches without one. The plugin's `.mcp.json` passes the same four,
+and a test in `test/modules.test.ts` keeps the two lists equal.
+
 The registry's schema caps the top-level `description` at **100 characters**,
 and `mcp-publisher publish` refuses a longer one — after npm has already
 published the version (Step 13.9). So the server's description is shorter

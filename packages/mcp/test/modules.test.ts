@@ -242,4 +242,12 @@ describe('build info', () => {
     // The registry's schema caps it, and refuses the publish past it.
     expect(json('server.json').description.length).toBeLessThanOrEqual(100);
   });
+
+  it('asks an installer for the OpenAlex key, and the plugin passes on whatever the registry entry asks for', () => {
+    // An installer driven by the registry prompts only for what it declares,
+    // and the key decides whether OpenAlex lasts the day (D11).
+    const declared = json('server.json').packages[0].environmentVariables.map((v: { name: string }) => v.name);
+    expect(declared).toContain('OPENALEX_API_KEY');
+    expect(Object.keys(json('..', '..', 'plugin', '.mcp.json').mcpServers['sci-open'].env).sort()).toEqual([...declared].sort());
+  });
 });

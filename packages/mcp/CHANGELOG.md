@@ -19,6 +19,8 @@ in `test/__toolsnaps__/` are the record of every schema change.
   `debug` for an answer such as `not_found`. A reference verify_references
   could not check, or a paper export_citations could not resolve, is logged
   the same way, though its call succeeds.
+- `server.json` and the plugin declare `OPENALEX_API_KEY` and `NCBI_API_KEY`,
+  so an installer driven by the registry asks for them.
 
 ### Fixed
 
