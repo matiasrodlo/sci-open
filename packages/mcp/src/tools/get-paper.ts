@@ -3,8 +3,7 @@ import { defineTool } from '../framework/define-tool';
 import { ToolError } from '../errors';
 import { shapePaper, paperSchema, retractionWarning } from '../shape/paper';
 import { fenceUntrusted } from '../safety/untrusted';
-
-const DOI_URL = /^https?:\/\/(dx\.)?doi\.org\//i;
+import { doiIn, paperRefKind } from './resolve-paper';
 
 export const getPaper = defineTool({
   name: 'get_paper',
@@ -20,11 +19,14 @@ export const getPaper = defineTool({
   output: z.object({ paper: paperSchema }),
   async run(args, deps) {
     const id = args.id?.trim();
-    const doi = args.doi?.trim().replace(DOI_URL, '');
+    const doi = args.doi?.trim();
     if (Boolean(id) === Boolean(doi)) throw new ToolError('invalid_input', 'Pass exactly one of id or doi.');
-    const paper = doi
-      ? await deps.engine.lookupDoi(doi, { admit: deps.admit })
-      : await deps.engine.lookup(id!);
+    // `doi` is a DOI on the caller's word; an id that is one, `doi:10.…` as the
+    // other tools print it, is looked up as one too.
+    const ref = doi ? { doi: doiIn(doi) ?? doi } : paperRefKind(id!);
+    const paper = 'doi' in ref
+      ? await deps.engine.lookupDoi(ref.doi, { admit: deps.admit })
+      : await deps.engine.lookup(ref.id);
     if (!paper) {
       throw new ToolError('not_found', 'No source holds this paper.', 'Ids look like openalex:W2741809807 or arxiv:2101.00001. Try search_papers, or pass doi.');
     }
@@ -40,7 +42,7 @@ export const getPaper = defineTool({
       retractionWarning(shaped.retracted ? ['This paper'] : []),
       shaped.doi ? `DOI: ${shaped.doi}` : '',
       `Access: ${shaped.access}${shaped.full_text ? ` · full text: ${shaped.full_text.kind}${shaped.full_text.verified ? ' (verified)' : ' (unverified)'}` : ''}`,
-      `Found in: ${shaped.found_in.join(', ')}${id ? ' (looked up by id, which asks only that source; pass doi to see every source that holds it)' : ''}`,
+      `Found in: ${shaped.found_in.join(', ')}${'id' in ref ? ' (looked up by id, which asks only that source; pass doi to see every source that holds it)' : ''}`,
       fenceUntrusted('paper record', record)
     ].filter(Boolean).join('\n');
     return { structured: { paper: shaped }, text };

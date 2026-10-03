@@ -14,6 +14,18 @@ in `test/__toolsnaps__/` are the record of every schema change.
   Host check, `GET /health` and an admin-keyed `GET /metrics`. Settings are
   `SCI_OPEN_` variables; see the README.
 
+### Fixed
+
+- A DOI written `doi:10.…` — as get_citations and verify_references print
+  one, and as citations write it — was taken for a sci-open id, and
+  get_paper, read_paper, get_citations and export_citations answered a real
+  paper with `not_found`. Every tool now reads a DOI by the engine's own
+  rule: bare, as a doi.org URL or after `doi:`, search_papers' query
+  included. `arXiv:…` and `PMID: …` are read as the ids `arxiv:…` and
+  `ncbi:…`.
+- search_papers refuses a `doi` that is not a DOI, rather than searching for
+  its words and listing what it found under that DOI.
+
 ### Removed
 
 - The sci-open web app and API, and with them `/api/mcp`,

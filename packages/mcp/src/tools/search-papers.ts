@@ -7,8 +7,7 @@ import { searchProgress } from '../shape/progress';
 import { ToolError } from '../errors';
 import { hasVisibleText } from '../safety/sanitize';
 import { PUBLICATION_TYPES, SORTS, SOURCES, type SearchSpec } from '../handles';
-
-const DOI_URL = /^https?:\/\/(dx\.)?doi\.org\//i;
+import { doiIn } from './resolve-paper';
 
 export const searchPapers = defineTool({
   name: 'search_papers',
@@ -36,9 +35,15 @@ export const searchPapers = defineTool({
   output: searchOutputSchema,
   async run(args, deps) {
     const query = args.query?.trim();
-    const doi = args.doi?.trim().replace(DOI_URL, '');
-    if (Boolean(query) === Boolean(doi)) {
+    const doiText = args.doi?.trim();
+    if (Boolean(query) === Boolean(doiText)) {
       throw new ToolError('invalid_input', 'Pass exactly one of query or doi.', 'Use query to search and doi to look up one paper.');
+    }
+    // Text that is not a DOI would reach the sources as keywords, and its
+    // results would be listed as that DOI's.
+    const doi = doiText ? doiIn(doiText) : undefined;
+    if (doiText && !doi) {
+      throw new ToolError('invalid_input', 'doi is not a DOI.', 'A DOI looks like 10.1234/abc, doi:10.1234/abc or https://doi.org/10.1234/abc. Use query to search for words.');
     }
     if (query && !hasVisibleText(query)) throw new ToolError('invalid_input', 'The query has no visible characters.');
     // Parsed here as well as in the engine: a syntax error is answered before

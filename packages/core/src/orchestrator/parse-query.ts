@@ -25,10 +25,13 @@ import { flatten, intersectYears, parseExpression, soleDoi } from '@sci-open/sha
  *
  * A DOI still short-circuits the whole grammar. `10.1038/nature12373` is not a
  * keyword search and parsing it as one would scope a slash-bearing token to the
- * title, so the pattern is tried first, exactly as before.
+ * title, so the pattern is tried first, exactly as before. Bare, as a doi.org
+ * URL, or after `doi:` — how citations write one, and the MCP server's own
+ * lists too, so a DOI copied from either is looked up rather than searched as
+ * the words `doi` and `10.1038`.
  */
 
-const DOI_PATTERN = /^(?:https?:\/\/(?:dx\.)?doi\.org\/)?(10\.\d{4,9}\/[^\s]+)$/i;
+const DOI_PATTERN = /^(?:doi\s*:\s*|https?:\/\/(?:dx\.)?doi\.org\/)?(10\.\d{4,9}\/[^\s]+)$/i;
 
 export type ParseOptions = {
   /**

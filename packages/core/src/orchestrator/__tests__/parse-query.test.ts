@@ -64,6 +64,11 @@ describe('parseQuery', () => {
     expect(parseQuery('https://doi.org/10.1038/nature12373').doi).toBe('10.1038/nature12373');
   });
 
+  it('recognises a DOI written as citations and lists write it, after doi:', () => {
+    expect(parseQuery('doi:10.1038/nature12373').doi).toBe('10.1038/nature12373');
+    expect(parseQuery('DOI: 10.1038/nature12373').doi).toBe('10.1038/nature12373');
+  });
+
   it('does not mistake a sentence containing a DOI for a DOI lookup', () => {
     expect(parseQuery('see 10.1038/nature12373 for details').doi).toBeUndefined();
   });

@@ -2493,9 +2493,15 @@ export const searchPapers = defineTool({
   output: searchOutputSchema,
   async run(args, deps) {
     const query = args.query?.trim();
-    const doi = args.doi?.trim().replace(/^https?:\/\/(dx\.)?doi\.org\//i, '');
-    if (Boolean(query) === Boolean(doi)) {
+    const doiText = args.doi?.trim();
+    if (Boolean(query) === Boolean(doiText)) {
       throw new ToolError('invalid_input', 'Pass exactly one of query or doi.', 'Use query to search and doi to look up one paper.');
+    }
+    // Text that is not a DOI would reach the sources as keywords, and its
+    // results would be listed as that DOI's. `doiIn` is Step 6.5's.
+    const doi = doiText ? doiIn(doiText) : undefined;
+    if (doiText && !doi) {
+      throw new ToolError('invalid_input', 'doi is not a DOI.', 'A DOI looks like 10.1234/abc, doi:10.1234/abc or https://doi.org/10.1234/abc. Use query to search for words.');
     }
     if (query && !hasVisibleText(query)) throw new ToolError('invalid_input', 'The query has no visible characters.');
     // Parsed here as well as in the engine: a syntax error is answered before
@@ -2705,21 +2711,47 @@ export const getPaper = defineTool({
 ### Step 6.5 — Resolving a paper argument (`src/tools/resolve-paper.ts`)
 
 `read_paper`, `get_citations` and `export_citations` take "a paper" as one
-string. One helper decides what it is, so the three agree:
+string, and `get_paper` and `search_papers` a `doi`. One helper decides what
+each is, so they all agree — with each other and with the engine, whose own
+rule (`parseQuery`) reads a DOI bare, as a doi.org URL or after `doi:`.
+
+That last form matters: `get_citations` and `verify_references` print DOIs as
+`doi:10.…`, and citations write them so. Read as an id, it named no
+provider, and every tool answered a real paper with "No source holds this
+paper".
 
 ```ts
 import type { Paper } from '@sci-open/shared';
+import { parseQuery, PROVIDERS } from '@sci-open/core';
 import type { ToolDeps } from '../framework/define-tool';
 import { ToolError } from '../errors';
 
-const DOI_URL = /^https?:\/\/(dx\.)?doi\.org\//i;
+/** The DOI `text` is, bare, when the whole of it is one: the engine's rule. */
+export function doiIn(text: string): string | undefined {
+  try {
+    return parseQuery(text).doi;
+  } catch {
+    return undefined; // not even a query, let alone a DOI
+  }
+}
 
-/** `10.…` or a doi.org URL is a DOI; anything else is a sci-open id. */
+const PROVIDER_IDS = new Set<string>([...PROVIDERS.map(p => p.id), 'medrxiv']);
+const ID_PREFIX = /^([a-z]+)\s*:\s*/i;
+
+/** `arXiv:2101.00001` and `PMID: 12345` as the sci-open ids `arxiv:…` and `ncbi:…`. */
+function canonicalId(ref: string): string {
+  const match = ref.match(ID_PREFIX);
+  if (!match) return ref;
+  const named = match[1]!.toLowerCase();
+  const provider = named === 'pmid' ? 'ncbi' : named;
+  return PROVIDER_IDS.has(provider) ? `${provider}:${ref.slice(match[0].length)}` : ref;
+}
+
+/** A DOI in any form `doiIn` reads is a DOI; anything else is a sci-open id. */
 export function paperRefKind(ref: string): { doi: string } | { id: string } {
   const trimmed = ref.trim();
-  return DOI_URL.test(trimmed) || /^10\.\d{4,9}\//.test(trimmed)
-    ? { doi: trimmed.replace(DOI_URL, '') }
-    : { id: trimmed };
+  const doi = doiIn(trimmed);
+  return doi ? { doi } : { id: canonicalId(trimmed) };
 }
 
 export async function resolvePaperRef(ref: string, deps: ToolDeps): Promise<Paper> {

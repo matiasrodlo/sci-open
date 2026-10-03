@@ -82,6 +82,17 @@ describe('search_papers and get_search_page', () => {
     expect(outcome.structured.results?.map(r => r.id)).toEqual(['openalex:W7']);
     expect(outcome.structured.query).toEqual({ doi: '10.1234/s.7', sort: 'relevance' });
   });
+
+  it('looks a DOI up written doi:10.…, and refuses a doi that is not one before asking anything', async () => {
+    const { deps, searches } = fakeEngine(WORLD);
+    const outcome = await searchPapers.run(searchArgs({ doi: 'doi:10.1234/s.7' }), deps);
+    expect(outcome.structured.results?.map(r => r.id)).toEqual(['openalex:W7']);
+    expect(outcome.structured.query).toEqual({ doi: '10.1234/s.7', sort: 'relevance' });
+
+    // Searched as words, it would list somebody else's papers under that DOI.
+    await expect(searchPapers.run(searchArgs({ doi: 'crispr study' }), deps)).rejects.toMatchObject({ code: 'invalid_input' });
+    expect(searches).toEqual(['10.1234/s.7']);
+  });
 });
 
 describe('get_paper', () => {
@@ -98,6 +109,26 @@ describe('get_paper', () => {
     const outcome = await getPaper.run({ doi: 'https://doi.org/10.1234/s.4' }, deps);
     expect(outcome.structured.paper.id).toBe('openalex:W4');
     expect(admitted()).toBe(1);
+  });
+
+  it('reads a DOI in the forms the other tools print and citations write, as doi or as id', async () => {
+    const { deps } = fakeEngine(WORLD);
+    for (const args of [
+      { doi: 'doi:10.1234/s.4' }, { doi: 'DOI: 10.1234/s.4' },
+      { id: 'doi:10.1234/s.4' }, { id: '10.1234/s.4' }, { id: 'https://doi.org/10.1234/s.4' }
+    ]) {
+      const outcome = await getPaper.run(args, deps);
+      expect(outcome.structured.paper.id, JSON.stringify(args)).toBe('openalex:W4');
+      expect(outcome.text).not.toContain('looked up by id');
+    }
+  });
+
+  it('reads an id written as its source writes it: arXiv:…, PMID: …', async () => {
+    const preprint = paper({ id: 'arxiv:2101.00001v2', title: 'A preprint', sources: [ref('arxiv', { nativeId: '2101.00001v2' })] });
+    const indexed = paper({ id: 'ncbi:33816816', title: 'An indexed paper', sources: [ref('ncbi', { nativeId: '33816816' })] });
+    const { deps } = fakeEngine([preprint, indexed]);
+    expect((await getPaper.run({ id: 'arXiv:2101.00001' }, deps)).structured.paper.id).toBe('arxiv:2101.00001v2');
+    expect((await getPaper.run({ id: 'PMID: 33816816' }, deps)).structured.paper.id).toBe('ncbi:33816816');
   });
 
   it('says what to do when no source holds it, and refuses both or neither', async () => {

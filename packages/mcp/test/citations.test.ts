@@ -59,6 +59,13 @@ describe('get_citations', () => {
     expect(structured).toMatchObject({ doi: '10.7717/peerj-cs.421', total_links: 4, returned: 4, next_offset: null, records_incomplete: false });
   });
 
+  it('reads a DOI as its own list prints one, doi:10.…', async () => {
+    const fake = fakeEngine([SUBJECT, PREPRINT, ARTICLE, OTHER], { citations });
+    const outcome = await getCitations.run(getCitations.input.parse({ paper: 'doi:10.7717/peerj-cs.421', direction: 'references' }), fake.deps);
+    expect(outcome.text).toContain('of doi:10.7717/peerj-cs.421');
+    expect(outcome.structured).toMatchObject({ doi: '10.7717/peerj-cs.421', total_links: 4 });
+  });
+
   it('shows the published version of a work listed under two DOIs, and keeps the other', async () => {
     const fake = fakeEngine([PREPRINT, ARTICLE, OTHER], { citations });
     const { structured } = await getCitations.run(getCitations.input.parse({ paper: '10.7717/peerj-cs.421', direction: 'references' }), fake.deps);
