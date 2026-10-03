@@ -201,11 +201,44 @@ rather than the proxy. A browser may call it only from a hostname in
 answers the version, and `GET /metrics` opens to a bearer token set in
 `SCI_OPEN_ADMIN_KEY`.
 
+## Compared with other servers
+
+Two servers cover the same ground: OpenAlex's official server, for breadth
+in one index, and paper-search-mcp, for breadth across sources. sci-open
+trades some of both for checking: what a search missed, whether a citation
+is real, and where a full text legally comes from. Read from their source on
+2026-10-03, OpenAlex MCP 0.5.0 and paper-search-mcp 0.1.4:
+
+| | sci-open | OpenAlex MCP | paper-search-mcp |
+|---|---|---|---|
+| Runs | Locally over stdio (`npx`), or on your own HTTP host | Remote only, on OpenAlex's host, after an OAuth sign-in | Locally over stdio (`uvx`) |
+| Searches | Ten sources, merged; open access by default, closed papers' records on request | One index, OpenAlex's 250M+ works, open and closed | 21 sources, among them Google Scholar, Semantic Scholar, Crossref, dblp and SSRN, deduplicated |
+| Queries | Web of Science grammar; each source's match count, nothing read, to tune one | Keyword, exact or semantic; a full-text match over about 100M works | One query string to each source; the year filter reaches Semantic Scholar only |
+| What was missed | Each source answered, failed, skipped or rate-limited; a lower-bound total says so | One index, so nothing to be missing from; retracted works hidden by default, and said so | Errors per source in the combined search |
+| Paging | A handle; pages of a held search cost the sources nothing | Page numbers | Five results a source by default, no paging |
+| Reference checks | Up to 25 at once. A DOI on another paper is `mismatch`; a DOI no source holds is asked of the DOI registry before it is called invented | Up to 25 at once, graded on the title: exact, likely, uncertain or none. An identifier is looked up as given, so a DOI on another paper resolves `exact` | None |
+| Full text | Legal open-access copies only, read in sections: Europe PMC's JATS, arXiv's HTML, then the PDF | None to read | PDFs downloaded to disk and their text extracted; Sci-Hub routes among them, one the default last resort |
+| Citations | OpenCitations, opt-in | OpenAlex's citing, referenced and related works | None |
+| Export | BibTeX and RIS from the records | None | None |
+| Beyond papers | None | Authors, institutions, journals and topics; grouped counts; author-profile curation | None |
+| What it costs you | The sources' free tiers; keys optional | Your OpenAlex budget, $1 a day on a free key | The sources' free tiers; keys optional |
+
+Choose OpenAlex's server for one index of open and closed work, semantic
+search, or questions about authors, institutions and topics. Choose
+paper-search-mcp for a source sci-open does not ask, or PDFs on disk — and
+mind its Sci-Hub routes. Choose sci-open to check a bibliography, to know
+what a search left out, to read open papers a section at a time, or to cite
+without retyping. sci-open's own gaps: no semantic search, no author or
+institution tools, a new search that takes up to half a minute across ten
+sources, 300 records read per source, and no public endpoint yet.
+
 ## Evaluations
 
-Tool-selection and reference-verification evaluations live in
-`packages/mcp-evals`. No held-out results are published yet; this section
-will carry the latest table, with its date, once they run.
+Tool-selection, reading and reference-verification evaluations live in
+`packages/mcp-evals`, and the reading and reference suites also run against
+OpenAlex's server and paper-search-mcp (`--server`), scored the same way. No
+held-out results are published yet; this section will carry the latest
+table, with the baselines beside it and its date, once they run.
 
 ## Development
 
