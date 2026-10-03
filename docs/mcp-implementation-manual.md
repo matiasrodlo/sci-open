@@ -1209,6 +1209,12 @@ export class QuotaState {
     return out;
   }
 
+  /** A refusal seen outside a fan-out — a batch lookup by DOI (Step 9.2) —
+   * starts the same cool-down a refused search would. */
+  refuse(provider: ProviderId): void {
+    this.until.set(provider, this.now() + this.coolDownMs);
+  }
+
   /** What a fan-out learned. Only a refusal starts a cool-down; a report of one
    * already running does not extend it. */
   note(reports: readonly ProviderReport[]): void {
@@ -3150,19 +3156,44 @@ async function findByTitle(ref: ParsedReference, deps: ToolDeps): Promise<{ p: P
 
 `pLimit` is the local helper from Step 4.9.
 
-### Step 7.4 — (Recommended) retractions
+### Step 7.4 — Retractions
 
 A retracted paper is the most important thing a bibliography check can flag.
-OpenAlex exposes `is_retracted`. Add it end to end:
+It was built after M4, end to end, from three sources — each checked on
+2026-10-02 against the Wakefield paper, `10.1016/S0140-6736(97)11096-0`,
+PMID 9500320:
 
-1. `packages/shared/src/paper.ts`: add `retracted?: boolean` to `Paper` and to
-   `ProvenancedField`.
-2. `packages/core/src/authorities/openalex/normalize.ts`: map `is_retracted`
-   into the facts; add `'retracted'` to its `capabilities.fields`.
-3. `shapePaper`: when `p.retracted`, put `retracted: true` *first* in the
-   object and a warning line first in every rendering.
-4. `judge`: push issue `retracted` and keep the verdict (the paper exists; it
-   is just not evidence).
+1. **The field.** `Paper.retracted?: true` (`packages/shared/src/paper.ts`),
+   and `'retracted'` in `ProvenancedField`. Only ever `true`: a source that
+   says nothing is not evidence the work stands, and a `false` could hide
+   another source's `true` in a merge.
+2. **Who sets it.** OpenAlex's `is_retracted` (added to the provider's
+   selected fields in `providers/openalex/fetch.ts`, and read by
+   `providers/openalex/normalize.ts`), and the MeSH publication type
+   "Retracted Publication" in Europe PMC's `pubTypeList` and PubMed's
+   `PublicationTypeList` (`providers/europepmc/normalize.ts`,
+   `providers/ncbi/normalize.ts`). That type marks the retracted article
+   itself; the notice is "Retraction of Publication", which is not read.
+3. **Keeping it.** `'retracted'` is one of the fields `merge.ts` chooses
+   between (`MERGEABLE`), so any source's flag survives whichever record is the
+   base. The OpenAlex authority shares the provider's selected fields and
+   declares `'retracted'` in its `capabilities.fields`, so an enrichment fills
+   it in for a paper only another source returned.
+4. **Saying it.** `shapePaper` puts `retracted: true` first in the record.
+   Every rendering opens with the server's own warning, outside the untrusted
+   fence because it is this server's statement (`retractionWarning`), and a
+   listed title reads `RETRACTED — …` unless the publisher already renamed it
+   so (`listedTitle`): search pages, `get_paper`, every `read_paper` view,
+   `get_citations` rows and `export_citations`, which exports the paper all
+   the same and names it in `retracted`. The instructions tell the model to
+   say so and never to cite such a paper as support.
+5. **In a reference check.** `verify_references` keeps the verdict — the paper
+   exists; it is just not evidence — puts the issue `retracted` first, and
+   counts such references in `summary.retracted`.
+
+`packages/core/src/__tests__/retraction.test.ts` covers reading and keeping
+the flag; `packages/mcp/test/retraction.test.ts` covers every tool's
+rendering.
 
 **Acceptance**
 
@@ -3920,40 +3951,97 @@ OpenCitations Index API v2:
 
 Each row has `oci`, `citing`, `cited`, `creation`, `timespan`, `journal_sc`,
 `author_sc`. `citing`/`cited` are **space-separated identifier lists**, e.g.
-`"omid:br/06101801781 doi:10.7717/peerj-cs.421 pmid:33817056"`. The limit is
-180 requests per minute per IP; an optional access token raises it (send it in
-the `authorization` header; read it from `OPENCITATIONS_TOKEN`). The existing
-citation-count authority (`authorities/opencitations/fetch.ts`) already talks
-to the same host and encodes the DOI the same way.
+`"omid:br/06101801781 doi:10.7717/peerj-cs.421 openalex:W3134956838 pmid:33817056"`.
+A work can carry more than one DOI there, and the first is not reliably the
+publisher's: measured on 2026-10-02, a reference of `10.7717/peerj-cs.421` is
+listed as `doi:10.7287/peerj.preprints.26727v1 doi:10.7717/peerj-cs.163`, the
+preprint before the published article. So a link keeps every DOI, and the
+record they resolve to decides which one to show (Step 9.3). The `openalex:`
+id names a record even without a DOI. An unknown DOI is answered `200` with
+an empty list, not a `404` — the same answer as a paper nobody cites.
+
+The limit is 180 requests per minute per IP; an optional access token raises
+it (send it in the `authorization` header; read it from
+`OPENCITATIONS_TOKEN`). The existing citation-count authority
+(`authorities/opencitations/fetch.ts`) already talks to the same host and
+encodes the DOI the same way.
 
 ```ts
 import { getPooledClient } from '../lib/http-client-factory';
 
-export type CitationLink = { doi?: string; pmid?: string; created?: string; journalSelfCitation: boolean; authorSelfCitation: boolean };
+export type CitationDirection = 'references' | 'cited_by';
 
-/** The first DOI, not the last: one work can carry two — measured, the PLOS
- * paper 10.1371/journal.pone.0000217 is listed with a repository copy's DOI
- * after its own — and the first is the publisher's. */
-function ids(field: string): { doi?: string; pmid?: string } {
-  const out: { doi?: string; pmid?: string } = {};
-  for (const id of field.split(' ')) {
-    if (id.startsWith('doi:')) out.doi ??= id.slice(4);
-    else if (id.startsWith('pmid:')) out.pmid ??= id.slice(5);
+/** One link: the work at the other end, by every identifier OpenCitations gives it. */
+export type CitationLink = {
+  /** In OpenCitations' order, which is not a ranking: see `idsIn`. */
+  dois: string[];
+  pmid?: string;
+  /** OpenAlex's work id, `W…`, which names a record even without a DOI. */
+  openalex?: string;
+  /** When the citing work was published. Only for a paper's citers: for its
+   * references the citing work is the paper itself, the same on every link. */
+  created?: string;
+  journalSelfCitation: boolean;
+  authorSelfCitation: boolean;
+};
+
+export const OPENCITATIONS_HOST = 'api.opencitations.net';
+
+/** OpenCitations answered with something other than a list of links. */
+export class OpenCitationsUnavailableError extends Error {
+  constructor(readonly status: number, detail: string, readonly retryAfterSeconds?: number) {
+    super(`OpenCitations ${status}: ${detail}`);
+    this.name = 'OpenCitationsUnavailableError';
   }
-  return out;
 }
 
-export async function citationLinks(doi: string, direction: 'references' | 'cited_by', options: { userAgent: string; token?: string; timeoutMs?: number }): Promise<CitationLink[]> {
-  const client = getPooledClient('https://api.opencitations.net/index/v2');
+/** `Retry-After` in seconds, when it is a number of them. */
+function retryAfter(headers: unknown): number | undefined {
+  const raw = (headers as Record<string, unknown> | undefined)?.['retry-after'];
+  const seconds = Number(raw);
+  return typeof raw === 'string' && Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
+}
+
+/** Every DOI, not the first: one work can carry two, and the first is not
+ * reliably the publisher's. Which one to cite is decided by the records they
+ * resolve to. */
+export function idsIn(field: string): { dois: string[]; pmid?: string; openalex?: string } {
+  const dois: string[] = [];
+  let pmid: string | undefined;
+  let openalex: string | undefined;
+  for (const id of field.split(' ')) {
+    if (id.startsWith('doi:') && id.length > 4) {
+      if (!dois.some(d => d.toLowerCase() === id.slice(4).toLowerCase())) dois.push(id.slice(4));
+    } else if (id.startsWith('pmid:') && id.length > 5) pmid ??= id.slice(5);
+    else if (id.startsWith('openalex:') && id.length > 9) openalex ??= id.slice(9);
+  }
+  return { dois, ...(pmid ? { pmid } : {}), ...(openalex ? { openalex } : {}) };
+}
+
+export async function citationLinks(
+  doi: string,
+  direction: CitationDirection,
+  options: { userAgent: string; token?: string; timeoutMs?: number; baseUrl?: string }
+): Promise<CitationLink[]> {
+  const client = getPooledClient(options.baseUrl ?? 'https://api.opencitations.net/index/v2');
   const path = `/${direction === 'references' ? 'references' : 'citations'}/doi:${encodeURIComponent(doi)}`;
-  const response = await client.get<Array<Record<string, string>>>(path, {
-    timeout: options.timeoutMs ?? 10_000,
+  const response = await client.get<unknown>(path, {
+    // A much-cited paper's list is every citing work at once: the 24,956
+    // citers of 10.48550/arXiv.1706.03762 came back as 8.5 MB in 15.8 s.
+    timeout: options.timeoutMs ?? 40_000,
     headers: { Accept: 'application/json', 'User-Agent': options.userAgent, ...(options.token ? { authorization: options.token } : {}) }
   });
-  if (response.status >= 400) throw new Error(`OpenCitations ${response.status}`);
-  return (response.data ?? []).map(row => ({
-    ...ids(direction === 'references' ? row.cited ?? '' : row.citing ?? ''),
-    ...(row.creation ? { created: row.creation } : {}),
+  // The pooled client resolves a 4xx rather than throwing; a 429 carries its Retry-After.
+  if (response.status >= 400) {
+    throw new OpenCitationsUnavailableError(response.status, response.statusText || 'no message given', retryAfter(response.headers));
+  }
+  if (!Array.isArray(response.data)) throw new OpenCitationsUnavailableError(response.status, 'a 2xx response carrying no list');
+
+  // The other end of each link. An unknown DOI is an empty list, not a 404.
+  const end = direction === 'references' ? 'cited' : 'citing';
+  return (response.data as Array<Record<string, unknown>>).map(row => ({
+    ...idsIn(typeof row[end] === 'string' ? row[end] : ''),
+    ...(direction === 'cited_by' && typeof row.creation === 'string' && row.creation ? { created: row.creation } : {}),
     journalSelfCitation: row.journal_sc === 'yes',
     authorSelfCitation: row.author_sc === 'yes'
   }));
@@ -3963,30 +4051,55 @@ export async function citationLinks(doi: string, direction: 'references' | 'cite
 OpenCitations answers with every link at once, so paging is ours. The engine
 holds a list for ten minutes, so reading a much-cited paper's citers page by
 page asks OpenCitations once. The token comes from `EngineOptions`
-(`openCitationsToken`, Step 3.1); add the method to the `Engine` type as
-`citationLinks(doi: string, direction: 'references' | 'cited_by'): Promise<CitationLink[]>`,
-and `export type { CitationLink } from './graph/opencitations';` to core's
-index:
+(`openCitationsToken`, Step 3.1); the method on the `Engine` type is
+`citationLinks(doi: string, direction: CitationDirection): Promise<CitationLink[]>`,
+and core's index exports `CitationLink`, `CitationDirection`,
+`OpenCitationsUnavailableError` and `OPENCITATIONS_HOST`.
+
+Three things guard the host, all in `engine.ts`:
+
+- **Held lists are bounded by links, not lists.** A much-cited paper has tens
+  of thousands of citers, so 200 lists could hold millions of links. The
+  engine holds at most 200,000 links, oldest list dropped first, and a list
+  larger than that is served but not held. Two pages asked for at once fetch
+  the list once (`SingleFlight`).
+- **An allowance.** A `RequestBudget` (`lib/request-budget.ts`, a sliding
+  window of the last minute's sends) lets the links spend 150 requests a
+  minute of the 180 OpenCitations allows an address; the citation-count
+  authority has the rest (`openCitationsPerMinute` changes it; divide it among
+  replicas behind one address). Over it, the call answers `SourceBusyError`,
+  which reaches the model as `rate_limited` with a wait.
+- **A cool-down.** A 429 is a state, not an error per call (D13): the engine
+  leaves OpenCitations alone for its `Retry-After` (60 s without one), for the
+  links and for the citation-count authority alike, which spend one
+  allowance. Meanwhile `citationLinks` answers `SourceBusyError` without
+  asking, and enrichment leaves the authority out (`authoritiesNow`).
 
 ```ts
-// engine.ts
-import { citationLinks as fetchCitationLinks, type CitationLink } from './graph/opencitations';
-
-// ...in createEngine:
-const linkLists = new Map<string, { expires: number; links: CitationLink[] }>();
-
-// ...in the returned object:
+// engine.ts, in the returned object (abridged: the held-list bookkeeping is in the file)
 async citationLinks(doi, direction) {
-  const key = `${direction}|${doi.toLowerCase()}`;
+  const key = `${direction}|${normalizeDoi(doi)}`;
   const held = linkLists.get(key);
-  if (held && held.expires > Date.now()) return held.links;
-  const links = await fetchCitationLinks(doi, direction, {
-    userAgent,
-    ...(options.openCitationsToken ? { token: options.openCitationsToken } : {})
+  if (held && held.expires > now()) return held.links;
+  dropList(key);
+  const { value } = await linkFlights.run(key, async () => {
+    if (now() < citationsCoolUntil) throw new SourceBusyError(OPENCITATIONS_HOST, citationsCoolUntil - now());
+    linkRequests.take();                                  // the allowance; throws SourceBusyError past it
+    let links: CitationLink[];
+    try {
+      links = await fetchCitationLinks(doi, direction, { userAgent, ...(options.openCitationsToken ? { token: options.openCitationsToken } : {}) });
+    } catch (error) {
+      if (error instanceof OpenCitationsUnavailableError && error.status === 429) {
+        citationsCoolUntil = now() + (error.retryAfterSeconds ?? 60) * 1000;
+        throw new SourceBusyError(OPENCITATIONS_HOST, citationsCoolUntil - now());
+      }
+      throw error;
+    }
+    // ...held under its key, oldest lists dropped to stay within LINK_BUDGET
+    // (200,000) links; a list larger than that alone is served, not held.
+    return links;
   });
-  if (linkLists.size >= 200) linkLists.delete(linkLists.keys().next().value!); // the oldest
-  linkLists.set(key, { expires: Date.now() + 600_000, links });
-  return links;
+  return value;
 }
 ```
 
@@ -4016,40 +4129,89 @@ export async function fetchWorksByDoi(
 }
 ```
 
-On the engine this is `resolveDois(dois: readonly string[]): Promise<Map<string,
-Paper>>`, keyed by lower-cased DOI. It is not a search and spends no
-admission: one request resolves fifty, where `lookupDoi` would run fifty
-fan-outs. The records are OpenAlex's alone, not merged or enriched — enough
-for a citation and a list entry, which is all they are used for.
+On the engine this is `resolveDois(dois: readonly string[]): Promise<DoiResolution>`,
+where `DoiResolution` is `{ found: Map<string, Paper>; unasked: string[] }`:
+the records by lower-cased DOI, and the DOIs it could not ask about — those
+holding `|` or `,`, and every DOI of a batch OpenAlex failed on or was cooling
+down for. A DOI in neither was asked about and is not in OpenAlex. It is not
+a search and spends no admission: one request resolves fifty, where
+`lookupDoi` would run fifty fan-outs. The records are OpenAlex's alone, not
+merged or enriched — enough for a citation and a list entry, which is all
+they are used for. OpenAlex the batch is billed against the same budget as
+OpenAlex the source, so it honours the quota state of Step 3.6 both ways: a
+cooled-down OpenAlex is not asked, and a 429 here starts its cool-down.
 
 ```ts
-// engine.ts
-import { fetchWorksByDoi } from './providers/openalex/fetch';
-import { normalize as normalizeOpenAlex } from './providers/openalex/normalize';
-import { apiKeyFor } from './lib/api-key';
-
-// ...in the returned object:
+// engine.ts, in the returned object
 async resolveDois(dois) {
-  const usable = [...new Set(dois.map(d => d.toLowerCase()))].filter(d => !/[|,]/.test(d));
+  const wanted = [...new Set(dois.map(normalizeDoi))].filter(Boolean);
   const found = new Map<string, Paper>();
-  for (let i = 0; i < usable.length; i += 50) {
-    const payload = await fetchWorksByDoi(usable.slice(i, i + 50), { userAgent, timeoutMs: 15_000, ...apiKeyFor('openalex') });
-    const { papers } = normalizeOpenAlex(payload, { retrievedAt: new Date().toISOString() });
-    for (const paper of papers) if (paper.doi) found.set(paper.doi.toLowerCase(), paper);
+  const unasked = wanted.filter(doi => /[|,]/.test(doi));
+  const listable = wanted.filter(doi => !/[|,]/.test(doi));
+  for (let i = 0; i < listable.length; i += WORKS_BY_DOI_MAX) {
+    const batch = listable.slice(i, i + WORKS_BY_DOI_MAX);
+    if (quota.unavailable().has('openalex')) {
+      unasked.push(...listable.slice(i));
+      break;
+    }
+    try {
+      const payload = await fetchWorksByDoi(batch, { userAgent, timeoutMs: 15_000, ...apiKeyFor('openalex') });
+      const { papers } = normalizeOpenAlex(payload, { retrievedAt: new Date().toISOString() });
+      for (const paper of papers) if (paper.doi) found.set(normalizeDoi(paper.doi), paper);
+    } catch (error) {
+      // One batch's failure is its own, unless it was refused for the budget.
+      if (error instanceof OpenAlexUnavailableError && error.status === 429) quota.refuse('openalex');
+      unasked.push(...batch);
+    }
   }
-  return found;
+  return { found, unasked };
 }
 ```
 
 ### Step 9.3 — `get_citations` (toolset `graph`, `src/tools/get-citations.ts`)
 
+What a link carries follows from Step 9.1. A link has every DOI
+OpenCitations gave its work, so the page resolves all of them, and the record
+shown is the published version's when the DOIs resolve to more than one —
+a reference listed as preprint-then-article reads as the article. The row's
+`doi` is that record's, the rest are `other_dois`, and `id` is the record's
+sci-open id, or `openalex:W…` from the link when OpenAlex has no record for
+its DOIs, so `get_paper` can still be asked. Three answers are told apart:
+
+- **An unknown DOI.** OpenCitations answers it with an empty list, as it does
+  a paper nobody cites, so an empty list asks the DOI registry
+  (`engine.doiRegistered`, Step 7.3): an unregistered DOI is `not_found`; a
+  registered one is an honest zero, said in the text.
+- **No record, or not asked.** `resolveDois` names the DOIs it could not ask
+  OpenAlex about; when a row without a record has one of them,
+  `records_incomplete` is true and the text says "no record" may only mean
+  not looked up.
+- **A DOI as given.** OpenCitations is keyed by DOI, so a DOI argument is used
+  as it is: looking the paper up first would be a search of every source, for
+  nothing. Only an id is resolved to a paper, for its DOI.
+
 ```ts
 import * as z from 'zod';
+import type { Paper } from '@sci-open/shared';
+import type { CitationLink } from '@sci-open/core';
 import { defineTool } from '../framework/define-tool';
 import { ToolError } from '../errors';
-import { resolvePaperRef } from './resolve-paper';
-import { shapePaper, paperSchema } from '../shape/paper';
+import { paperRefKind, resolvePaperRef } from './resolve-paper';
+import { shapePaper, paperSchema, listedTitle, retractionWarning } from '../shape/paper';
 import { fenceUntrusted } from '../safety/untrusted';
+
+/** A linked work's record, without its abstract: a list entry, not a reading. */
+const linkedRecord = paperSchema.omit({ abstract: true });
+
+/**
+ * The record to show for a link: of the records its DOIs resolve to, the
+ * published version's, so a reference listed as preprint-then-article reads
+ * as the article; otherwise the first found.
+ */
+function recordFor(link: CitationLink, found: ReadonlyMap<string, Paper>): Paper | undefined {
+  const records = link.dois.flatMap(doi => found.get(doi.toLowerCase()) ?? []);
+  return records.find(r => r.stage === 'published') ?? records[0];
+}
 
 export const getCitations = defineTool({
   name: 'get_citations',
@@ -4057,9 +4219,10 @@ export const getCitations = defineTool({
   toolset: 'graph',
   description:
     'The references of a paper (direction="references") or the papers citing it (direction="cited_by"), from OpenCitations, ' +
-    'each resolved to a record where OpenAlex holds it. Paged by offset. The paper needs a DOI.',
+    'each resolved to a record where OpenAlex holds it, with self-citations flagged. Paged by offset. The paper needs a DOI; ' +
+    'pass the DOI itself when you have it, which skips looking the paper up.',
   input: z.object({
-    paper: z.string().max(300).describe('sci-open id or DOI'),
+    paper: z.string().min(1).max(300).describe('DOI (preferred) or sci-open id, e.g. 10.7717/peerj-cs.421 or openalex:W3134956838'),
     direction: z.enum(['references', 'cited_by']),
     limit: z.number().int().min(1).max(50).default(20),
     offset: z.number().int().min(0).default(0)
@@ -4072,48 +4235,102 @@ export const getCitations = defineTool({
     offset: z.number().int(),
     returned: z.number().int(),
     next_offset: z.number().int().nullable(),
+    /** True when OpenAlex could not be asked about some DOIs on this page,
+     * so a link without a record may still be in it. */
+    records_incomplete: z.boolean(),
     links: z.array(z.object({
       doi: z.string().optional(),
+      other_dois: z.array(z.string()).optional(),
       pmid: z.string().optional(),
+      /** A sci-open id for get_paper, when one is known. */
+      id: z.string().optional(),
       created: z.string().optional(),
       journal_self_citation: z.boolean(),
       author_self_citation: z.boolean(),
-      record: paperSchema.optional()
+      record: linkedRecord.optional()
     }))
   }),
   async run(args, deps) {
-    const paper = await resolvePaperRef(args.paper, deps);
-    if (!paper.doi) {
-      throw new ToolError('not_found', 'This paper has no DOI, and OpenCitations is keyed by DOI.', 'Check get_paper for a DOI; without one there are no citation links to read.');
+    // A DOI is what OpenCitations is keyed by, so it is used as given: looking
+    // the paper up first would be a search of every source, for nothing.
+    const kind = paperRefKind(args.paper);
+    let doi: string;
+    if ('doi' in kind) {
+      doi = kind.doi;
+    } else {
+      const paper = await resolvePaperRef(args.paper, deps);
+      if (!paper.doi) {
+        throw new ToolError(
+          'not_found',
+          'This paper has no DOI, and OpenCitations is keyed by DOI.',
+          'Check get_paper for a DOI; without one there are no citation links to read.'
+        );
+      }
+      doi = paper.doi;
     }
-    const all = await deps.engine.citationLinks(paper.doi, args.direction);
+
+    const all = await deps.engine.citationLinks(doi, args.direction);
+    // OpenCitations answers an unknown DOI with an empty list, the same as a
+    // paper nobody cites; the DOI registry tells the two apart.
+    if (all.length === 0 && (await deps.engine.doiRegistered(doi)) === false) {
+      throw new ToolError('not_found', `No DOI registry holds ${doi}.`, 'Check the DOI, or find the paper with search_papers.');
+    }
+    if (args.offset > 0 && args.offset >= all.length) {
+      throw new ToolError('not_found', `There are ${all.length} links; offset ${args.offset} is past the end.`, 'Use a smaller offset.');
+    }
+
     const page = all.slice(args.offset, args.offset + args.limit);
-    const records = await deps.engine.resolveDois(page.flatMap(l => (l.doi ? [l.doi] : [])));
-    const links = page.map(l => {
-      const record = l.doi ? records.get(l.doi.toLowerCase()) : undefined;
+    const { found, unasked } = await deps.engine.resolveDois(page.flatMap(l => l.dois));
+    const notAsked = new Set(unasked.map(d => d.toLowerCase()));
+
+    const links = page.map(link => {
+      const record = recordFor(link, found);
+      const chosen = record?.doi ?? link.dois[0];
+      const others = link.dois.filter(d => d.toLowerCase() !== chosen?.toLowerCase());
+      const id = record?.id ?? (link.openalex ? `openalex:${link.openalex}` : undefined);
+      let shaped: z.infer<typeof linkedRecord> | undefined;
+      if (record) {
+        const { abstract: _abstract, ...rest } = shapePaper(record, 'concise');
+        shaped = rest;
+      }
       return {
-        ...(l.doi ? { doi: l.doi } : {}),
-        ...(l.pmid ? { pmid: l.pmid } : {}),
-        ...(l.created ? { created: l.created } : {}),
-        journal_self_citation: l.journalSelfCitation,
-        author_self_citation: l.authorSelfCitation,
-        ...(record ? { record: shapePaper(record, 'concise') } : {})
+        ...(chosen ? { doi: chosen } : {}),
+        ...(others.length ? { other_dois: others } : {}),
+        ...(link.pmid ? { pmid: link.pmid } : {}),
+        ...(id ? { id } : {}),
+        ...(link.created ? { created: link.created } : {}),
+        journal_self_citation: link.journalSelfCitation,
+        author_self_citation: link.authorSelfCitation,
+        ...(shaped ? { record: shaped } : {})
       };
     });
+    const recordsIncomplete = page.some(l => !recordFor(l, found) && l.dois.some(d => notAsked.has(d.toLowerCase())));
+
     const next_offset = args.offset + page.length < all.length ? args.offset + page.length : null;
-    const rows = links.map((l, i) =>
-      `${args.offset + i + 1}. ${l.record ? `${l.record.title} (${l.record.year ?? 'n.d.'})` : 'not in OpenAlex'}` +
-      `${l.doi ? ` doi:${l.doi}` : ''}${l.author_self_citation ? ' [author self-citation]' : ''}${l.journal_self_citation ? ' [journal self-citation]' : ''}`
-    );
-    const what = args.direction === 'references' ? 'references' : 'citing papers';
+    const rows = links.map((l, i) => {
+      const what = l.record
+        ? `${listedTitle(l.record)} (${l.record.year ?? 'n.d.'})${l.record.authors.length ? ` — ${l.record.authors.join(', ')}` : ''}`
+        : 'no record';
+      const flags = `${l.author_self_citation ? ' [author self-citation]' : ''}${l.journal_self_citation ? ' [journal self-citation]' : ''}`;
+      return `${args.offset + i + 1}. ${what}${l.doi ? ` doi:${l.doi}` : ''}${l.id ? ` id:${l.id}` : ''}${flags}`;
+    });
+    const noun = args.direction === 'references' ? 'references' : 'citing papers';
+    const retractedRows = links.flatMap((l, i) => (l.record?.retracted ? [`#${args.offset + i + 1}`] : []));
+    const shown = page.length ? `, ${args.offset + 1}–${args.offset + page.length} shown` : '';
     return {
-      structured: { paper: paper.id, doi: paper.doi, direction: args.direction, total_links: all.length, offset: args.offset, returned: page.length, next_offset, links },
+      structured: {
+        paper: args.paper, doi, direction: args.direction, total_links: all.length, offset: args.offset,
+        returned: page.length, next_offset, records_incomplete: recordsIncomplete, links
+      },
       text: [
-        `# ${all.length.toLocaleString('en')} ${what}${page.length ? `, ${args.offset + 1}–${args.offset + page.length} shown` : ''}`,
-        'Links from OpenCitations, which holds most but not all citations; records from OpenAlex.',
+        ...(retractedRows.length ? [retractionWarning(retractedRows.length === 1 ? [`Link ${retractedRows[0]}`] : [`Links ${retractedRows.join(', ')}`])] : []),
+        `# ${all.length.toLocaleString('en')} ${noun} of doi:${doi}${shown}`,
+        'Links from OpenCitations, which holds most open citation data but not every citation; records from OpenAlex.',
+        ...(recordsIncomplete ? ['OpenAlex could not be asked about some of these, so "no record" may only mean not looked up; retry later for them.'] : []),
+        ...(all.length === 0 ? [`OpenCitations holds no ${noun} for this DOI. A very new paper, or one whose publisher does not deposit references, can have none here.`] : []),
         '',
-        rows.length ? fenceUntrusted('linked works', rows.join('\n')) : 'No links on this page.',
-        ...(next_offset !== null ? ['', `Next: get_citations(paper="${args.paper}", direction="${args.direction}", offset=${next_offset})`] : [])
+        ...(rows.length ? [fenceUntrusted('linked works', rows.join('\n'))] : []),
+        ...(next_offset !== null ? ['', `Next: get_citations(paper="${args.paper}", direction="${args.direction}", offset=${next_offset}, limit=${args.limit})`] : [])
       ].join('\n'),
       provenance: { negativeResult: all.length === 0 }
     };
@@ -4174,12 +4391,12 @@ export const exportCitations = defineTool({
   }),
   async run(args, deps) {
     const kinds = args.papers.map(paperRefKind);
-    const byDoi = await deps.engine.resolveDois(kinds.flatMap(k => ('doi' in k ? [k.doi] : [])));
+    const { found } = await deps.engine.resolveDois(kinds.flatMap(k => ('doi' in k ? [k.doi] : [])));
     const limit = pLimit(3);
     const resolved = await Promise.all(kinds.map(k => limit(async (): Promise<Paper | { reason: string }> => {
       try {
         const paper = 'doi' in k
-          ? byDoi.get(k.doi.toLowerCase()) ?? (await deps.engine.lookupDoi(k.doi, { admit: deps.admit }))
+          ? found.get(k.doi.toLowerCase()) ?? (await deps.engine.lookupDoi(k.doi, { admit: deps.admit }))
           : await deps.engine.lookup(k.id);
         return paper ?? { reason: 'not_found' };
       } catch (error) {
@@ -4221,6 +4438,10 @@ extension and MIME type cannot drift from the file.
 - [ ] `get_citations` for a well-cited DOI returns resolved records and
       self-citation flags; paging it to the end makes one OpenCitations
       request.
+- [ ] A link listed with a preprint DOI and then the article's shows the
+      article's record and DOI, the preprint's under `other_dois`.
+- [ ] An unregistered DOI answers `not_found`; a registered DOI nobody cites
+      answers zero links, not an error.
 - [ ] `export_citations` with `save_to` writes a file that BibTeX parses;
       without it, the resource text is byte-identical to the file.
 - [ ] The formatter's tests pass from `shared`.
@@ -5838,6 +6059,14 @@ one, Step 13.1) must equal `name`.
 
 `isRequired` is `false` because the server starts without the variable
 (Step 10.1); the description says what it costs to leave it out.
+
+The registry's schema caps the top-level `description` at **100 characters**,
+and `mcp-publisher publish` refuses a longer one — after npm has already
+published the version (Step 13.9). So the server's description is shorter
+than the npm package's: "Search ten open-access sources, verify references,
+read and cite papers, and see what was not found." is exactly 100. A test in
+`test/modules.test.ts` holds it to the limit, beside the one that keeps its
+`version` equal to `package.json`'s.
 
 ### Step 13.3 — Claude Code plugin with skills
 
