@@ -20,6 +20,24 @@ export type McpConfig = {
   /** `fixture` serves recorded answers, for evals and demos. */
   engine: 'live' | 'fixture';
   fixturesPath?: string;
+  /** Serve Streamable HTTP instead of stdio (`--http`). */
+  http?: HttpConfig;
+};
+
+/** The HTTP server's own settings. See `http-server.ts`. */
+export type HttpConfig = {
+  host: string;
+  port: number;
+  /** Hostnames a browser may call from. Empty refuses every browser `Origin`. */
+  allowedOrigins: string[];
+  /** Proxies trusted to name the client in X-Forwarded-For, as proxy-addr reads them. */
+  trustProxy: string[];
+  /** Requests a minute per client, any kind. */
+  requestsPerMinute: number;
+  /** Serve without an OpenAlex key. For a trial, never a shared deployment. */
+  allowUnkeyed: boolean;
+  /** Enables GET /metrics for whoever sends it as a bearer token. */
+  adminKey?: string;
 };
 
 /** The config, warnings to log once a logger exists, and — for `--help`,
@@ -29,7 +47,7 @@ export type ConfigResult = { config: McpConfig; warnings: string[]; exit?: { cod
 const LOG_LEVELS = ['error', 'warn', 'info', 'debug'] as const;
 const KEYED = ['core', 'ncbi', 'doaj', 'datacite', 'openalex'] as const;
 
-export const USAGE = `sci-open-mcp: MCP server for open-access scientific literature, over stdio.
+export const USAGE = `sci-open-mcp: MCP server for open-access scientific literature, over stdio or HTTP.
 
   --toolsets <list>         core, read, graph, export, all, default  [SCI_OPEN_TOOLSETS]
   --tools <list>            extra tools by name                      [SCI_OPEN_TOOLS]
@@ -38,7 +56,15 @@ export const USAGE = `sci-open-mcp: MCP server for open-access scientific litera
   --engine <live|fixture>   fixture serves recorded answers          [SCI_OPEN_ENGINE]
   --fixtures <path>         the recordings for --engine fixture      [SCI_OPEN_FIXTURES]
   --log-level <level>       error, warn, info or debug, to stderr    [SCI_OPEN_LOG_LEVEL]
+  --http                    serve Streamable HTTP at /mcp, not stdio [SCI_OPEN_HTTP=1]
+  --port <n>                HTTP port, 8080 by default               [SCI_OPEN_HTTP_PORT]
+  --host <address>          HTTP address, 127.0.0.1 by default       [SCI_OPEN_HTTP_HOST]
   --help, --version
+
+Over HTTP: OPENALEX_API_KEY is required (SCI_OPEN_ALLOW_UNKEYED=1 for a trial),
+SCI_OPEN_ALLOWED_ORIGINS names hostnames a browser may call from,
+SCI_OPEN_TRUST_PROXY the proxies that may name the client, SCI_OPEN_ADMIN_KEY
+enables GET /metrics, and save_to is always refused.
 
 Set UNPAYWALL_EMAIL to a real address. Every setting is listed in Appendix A of
 docs/mcp-implementation-manual.md.`;
@@ -80,6 +106,9 @@ export function readMcpConfig(env: NodeJS.ProcessEnv, argv: string[]): ConfigRes
         engine: { type: 'string' },
         fixtures: { type: 'string' },
         'log-level': { type: 'string' },
+        http: { type: 'boolean' },
+        port: { type: 'string' },
+        host: { type: 'string' },
         help: { type: 'boolean' },
         version: { type: 'boolean' }
       }
@@ -126,6 +155,27 @@ export function readMcpConfig(env: NodeJS.ProcessEnv, argv: string[]): ConfigRes
   const openCitationsToken = read('OPENCITATIONS_TOKEN');
   const fixturesPath = flags.fixtures ?? read('SCI_OPEN_FIXTURES');
 
+  let http: HttpConfig | undefined;
+  if (flags.http || isOn('SCI_OPEN_HTTP')) {
+    const port = flags.port ?? read('SCI_OPEN_HTTP_PORT');
+    const portNumber = Number(port ?? 8080);
+    if (!Number.isInteger(portNumber) || portNumber < 0 || portNumber > 65535) {
+      return { config: fallback, warnings, exit: { code: 2, output: `--port ${port} is not a port number\n\n${USAGE}` } };
+    }
+    const adminKey = read('SCI_OPEN_ADMIN_KEY');
+    http = {
+      host: flags.host ?? read('SCI_OPEN_HTTP_HOST') ?? '127.0.0.1',
+      port: portNumber,
+      allowedOrigins: list(read('SCI_OPEN_ALLOWED_ORIGINS')) ?? [],
+      trustProxy: list(read('SCI_OPEN_TRUST_PROXY')) ?? [],
+      requestsPerMinute: whole('SCI_OPEN_REQUESTS_PER_MIN', 60, 1, 6000),
+      allowUnkeyed: isOn('SCI_OPEN_ALLOW_UNKEYED'),
+      ...(adminKey ? { adminKey } : {})
+    };
+  } else if (flags.port || flags.host) {
+    warnings.push('--port and --host apply only with --http; serving stdio');
+  }
+
   return {
     config: {
       userAgent: `sci-open-mcp/${BUILD.version} (+https://github.com/matiasrodlo/sci-open${email ? `; mailto:${email}` : ''})`,
@@ -141,7 +191,9 @@ export function readMcpConfig(env: NodeJS.ProcessEnv, argv: string[]): ConfigRes
       logLevel: oneOf('log level', flags['log-level'] ?? read('SCI_OPEN_LOG_LEVEL'), LOG_LEVELS, 'warn'),
       ...(openCitationsToken ? { openCitationsToken } : {}),
       engine: oneOf('engine', flags.engine ?? read('SCI_OPEN_ENGINE'), ['live', 'fixture'] as const, 'live'),
-      ...(fixturesPath ? { fixturesPath } : {})
+      ...(fixturesPath ? { fixturesPath } : {}),
+      // Over HTTP the path a caller names is on their machine, not this one.
+      ...(http ? { http, allowWrites: false } : {})
     },
     warnings
   };

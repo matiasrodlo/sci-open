@@ -22,12 +22,13 @@ import { selectTools } from './toolsets';
  */
 export function createHttpHandler(
   deps: Omit<ServerDeps, 'transport'>,
-  options: { onerror?: (error: Error) => void } = {}
+  options: { onerror?: (error: Error) => void; maxRequestBodySize?: number } = {}
 ): McpHttpHandler {
   const handler = createMcpHandler(
     createServerFactory({ ...deps, config: { ...deps.config, allowWrites: false }, transport: 'http' }),
     {
       legacy: 'stateless',
+      ...(options.maxRequestBodySize ? { maxRequestBodySize: options.maxRequestBodySize } : {}),
       // Reporting only; it never alters the response. A host logs the message,
       // never the request, which can hold a query or a reference.
       onerror: options.onerror ?? (() => {})

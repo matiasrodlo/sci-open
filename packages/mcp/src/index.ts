@@ -1,10 +1,12 @@
 export { createServer, createServerFactory } from './server';
 export type { ServerDeps } from './server';
 export { createHttpHandler } from './http';
+export { startHttpServer } from './http-server';
+export type { HttpServerOptions, RunningHttpServer } from './http-server';
 export { AdmissionError, ToolError } from './errors';
 export type { ToolErrorCode } from './errors';
 export { readMcpConfig, defaultMcpConfig } from './config';
-export type { McpConfig } from './config';
+export type { McpConfig, HttpConfig } from './config';
 export { createMetrics, nullMetrics } from './metrics';
 export type { Metrics } from './metrics';
 export { fixtureEngine, loadFixtures, fixtureKey, citationKey } from './fixture-engine';
