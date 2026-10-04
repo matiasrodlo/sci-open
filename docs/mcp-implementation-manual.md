@@ -3132,8 +3132,12 @@ export const verifyReferences = defineTool({
     results: z.array(resultSchema)
   }),
   async run(args, deps) {
+    // Every cited DOI from OpenAlex first, fifty to a request and no
+    // admission: a DOI it holds needs no search of every source.
+    const dois = [...new Set(args.references.flatMap(r => citedDoi(r) ?? []))];
+    const openalex = dois.length ? (await deps.engine.resolveDois(dois)).found : new Map<string, Paper>();
     const limit = pLimit(3); // be polite: three references in flight at once
-    const results = await Promise.all(args.references.map(r => limit(() => checkOne(r, deps))));
+    const results = await Promise.all(args.references.map(r => limit(() => checkOne(r, deps, openalex))));
     const summary = { verified: 0, likely: 0, ambiguous: 0, mismatch: 0, not_found: 0, not_checked: 0 };
     for (const r of results) summary[r.verdict]++;
     const rows = results.map((r, i) => `${i + 1}. **${r.verdict}**${r.matched ? ` — ${r.matched.title} (${r.matched.year ?? 'n.d.'})${r.matched.doi ? ` doi:${r.matched.doi}` : ''}` : ''}${r.issues.length ? ` — ${r.issues.join('; ')}` : ''}`);
@@ -3150,9 +3154,9 @@ export const verifyReferences = defineTool({
 
 /** One reference. A refused admission or a failed lookup is this reference's
  * outcome, not the batch's: the verdicts already reached are kept. */
-async function checkOne(raw: string, deps: ToolDeps): Promise<Result> {
+async function checkOne(raw: string, deps: ToolDeps, openalex: ReadonlyMap<string, Paper>): Promise<Result> {
   try {
-    return await verifyOne(parseReference(raw), deps);
+    return await verifyOne(parseReference(raw), deps, openalex);
   } catch (caught) {
     const error = reportToolError(caught, 'verify_references', deps.logger);
     return {
@@ -3164,7 +3168,7 @@ async function checkOne(raw: string, deps: ToolDeps): Promise<Result> {
   }
 }
 
-async function verifyOne(ref: ParsedReference, deps: ToolDeps): Promise<Result> {
+async function verifyOne(ref: ParsedReference, deps: ToolDeps, openalex: ReadonlyMap<string, Paper>): Promise<Result> {
   const input = sanitizeText(ref.raw);
   const done = (
     matched_on: 'doi' | 'arxiv' | 'pmid' | 'title',
@@ -3190,7 +3194,8 @@ async function verifyOne(ref: ParsedReference, deps: ToolDeps): Promise<Result> 
   });
 
   if (ref.doi) {
-    const paper = await deps.engine.lookupDoi(ref.doi, { admit: deps.admit });
+    // OpenAlex's record when it has one; every source, a search, when not.
+    const paper = openalex.get(ref.doi.toLowerCase()) ?? (await deps.engine.lookupDoi(ref.doi, { admit: deps.admit }));
     if (paper) {
       const j = judge(ref, paper);
       const wrong = ref.title !== undefined && titleOverlap(ref.title, paper.title).precision < 0.5;

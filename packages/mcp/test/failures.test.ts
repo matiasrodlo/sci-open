@@ -77,7 +77,8 @@ describe('a failed tool call', () => {
   });
 
   it('logs a failure that only cost one reference, or one paper of an export, though the call succeeds', async () => {
-    const verifying = fakeEngine([STUDY]);
+    // OpenAlex lacks the DOI, so it is looked up in every source, which fails.
+    const verifying = fakeEngine([STUDY], { openalex: async () => ({ found: new Map(), unasked: [] }) });
     vi.spyOn(verifying.engine, 'lookupDoi').mockRejectedValue(new TypeError('boom in a normalizer'));
     const verified = capture();
     const { structured } = await verifyReferences.run({ references: ['10.1234/s.1'] }, { ...verifying.deps, logger: verified.logger });

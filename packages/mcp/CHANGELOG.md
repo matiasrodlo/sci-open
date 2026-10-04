@@ -34,6 +34,12 @@ in `test/__toolsnaps__/` are the record of every schema change.
   It judges the top five of the merged answer, which rank fusion builds from
   the top of each source; the rest cost OpenAlex, DOAJ and OpenAIRE extra
   pages that nobody judged.
+- verify_references asks OpenAlex for every cited DOI at once, fifty to a
+  request, and looks a DOI up in every source — a search, spending an
+  admission — only when OpenAlex lacks it. A batch of 25 references with
+  DOIs used to be 25 searches of ten sources and most of a minute's
+  admissions. Verdicts are unchanged; such a match is corroborated by
+  OpenAlex alone, and whether it is retracted is OpenAlex's word.
 - A paper looked up by id is held half an hour, so read_paper and
   get_citations, given an id, stop asking its source again before every
   outline, section and page. Two lookups of one id at once ask once.

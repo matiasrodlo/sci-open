@@ -47,6 +47,34 @@ describe('verify_references', () => {
     expect(summary).toMatchObject({ verified: 2, not_found: 0 });
   });
 
+  it('judges cited DOIs on OpenAlex’s records, asked once for the batch, with no search and no admission', async () => {
+    const fake = fakeEngine(WORLD);
+    const resolveDois = vi.spyOn(fake.engine, 'resolveDois');
+    const lookupDoi = vi.spyOn(fake.engine, 'lookupDoi');
+    const { structured } = await verifyReferences.run({
+      references: [
+        'Doudna JA, Charpentier E. The new frontier of genome engineering with CRISPR-Cas9. Science. 2014. doi:10.1126/science.1258096',
+        'Watson JD, Crick FHC. Molecular structure of nucleic acids. Nature. 1953. https://doi.org/10.1038/171737a0',
+        'Doudna JA. The new frontier of genome engineering with CRISPR-Cas9. 2014. doi:10.1126/science.1258096'
+      ]
+    }, fake.deps);
+
+    expect(structured.results.map(r => r.verdict)).toEqual(['verified', 'likely', 'verified']);
+    expect(resolveDois).toHaveBeenCalledTimes(1);
+    expect(resolveDois.mock.calls[0]![0]).toEqual(['10.1126/science.1258096', '10.1038/171737a0']);
+    expect(lookupDoi).not.toHaveBeenCalled();
+    expect(fake.admitted()).toBe(0);
+  });
+
+  it('still asks every source about a DOI OpenAlex lacks or could not be asked about', async () => {
+    const { results, fake } = await verify(
+      ['Doudna JA, Charpentier E. The new frontier of genome engineering with CRISPR-Cas9. Science. 2014. doi:10.1126/science.1258096'],
+      { openalex: async dois => ({ found: new Map(), unasked: [...dois] }) }
+    );
+    expect(results[0]).toMatchObject({ verdict: 'verified', evidence: { matched_on: 'doi' } });
+    expect(fake.admitted()).toBe(1); // the lookup in every source is a search
+  });
+
   it('finds no paper behind a fabricated title', async () => {
     const { results } = await verify(['Okafor L, Brandt P. Quantum annealing of protein folding landscapes. Nature. 2021;590:112-118.']);
     expect(results[0]).toMatchObject({ verdict: 'not_found', issues: ['no_similar_title_in_any_source'] });

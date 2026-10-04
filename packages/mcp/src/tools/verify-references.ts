@@ -49,8 +49,18 @@ export const verifyReferences = defineTool({
     results: z.array(resultSchema)
   }),
   async run(args, deps) {
+    // Every cited DOI from OpenAlex first, fifty to a request and no admission:
+    // a DOI it holds is judged on its record, without a search of every
+    // source. A batch failure costs only that shortcut.
+    const dois = [...new Set(args.references.flatMap(r => citedDoi(r) ?? []))];
+    const openalex = dois.length
+      ? await deps.engine.resolveDois(dois).then(r => r.found, (error: unknown) => {
+          reportToolError(error, 'verify_references', deps.logger);
+          return new Map<string, Paper>();
+        })
+      : new Map<string, Paper>();
     const limit = pLimit(3); // be polite: three references in flight at once
-    const results = await Promise.all(args.references.map(r => limit(() => checkOne(r, deps))));
+    const results = await Promise.all(args.references.map(r => limit(() => checkOne(r, deps, openalex))));
     const summary = { verified: 0, likely: 0, ambiguous: 0, mismatch: 0, not_found: 0, not_checked: 0, retracted: 0 };
     for (const r of results) summary[r.verdict]++;
     summary.retracted = results.filter(r => r.matched?.retracted).length;
@@ -71,11 +81,21 @@ export const verifyReferences = defineTool({
   }
 });
 
+/** The DOI a reference cites, for the batch lookup. One the parser cannot
+ * read is left to `checkOne`, which reports it as that reference's failure. */
+function citedDoi(raw: string): string | undefined {
+  try {
+    return parseReference(raw).doi;
+  } catch {
+    return undefined;
+  }
+}
+
 /** One reference. A refused admission or a failed lookup is this reference's
  * outcome, not the batch's: the verdicts already reached are kept. */
-async function checkOne(raw: string, deps: ToolDeps): Promise<Result> {
+async function checkOne(raw: string, deps: ToolDeps, openalex: ReadonlyMap<string, Paper>): Promise<Result> {
   try {
-    return await verifyOne(parseReference(raw), deps);
+    return await verifyOne(parseReference(raw), deps, openalex);
   } catch (caught) {
     const error = reportToolError(caught, 'verify_references', deps.logger);
     return {
@@ -93,8 +113,14 @@ async function checkOne(raw: string, deps: ToolDeps): Promise<Result> {
  * fabricated citation, so a DOI that resolves is still checked against the
  * cited title. A DOI no source holds is asked of the DOI system itself before
  * it is called invented: the registry answers for every agency.
+ *
+ * A DOI is judged on OpenAlex's record (`openalex`, asked for the whole batch)
+ * when it has one, and looked up in every source only when it has not. The
+ * verdict is the same either way — corroboration moves the judge's score,
+ * never its verdict — but `corroborated_by` then names OpenAlex alone, and
+ * whether the paper is retracted is OpenAlex's word alone.
  */
-async function verifyOne(ref: ParsedReference, deps: ToolDeps): Promise<Result> {
+async function verifyOne(ref: ParsedReference, deps: ToolDeps, openalex: ReadonlyMap<string, Paper>): Promise<Result> {
   const input = sanitizeText(ref.raw);
   const done = (
     matched_on: 'doi' | 'arxiv' | 'pmid' | 'title',
@@ -121,7 +147,7 @@ async function verifyOne(ref: ParsedReference, deps: ToolDeps): Promise<Result> 
   });
 
   if (ref.doi) {
-    const paper = await deps.engine.lookupDoi(ref.doi, { admit: deps.admit });
+    const paper = openalex.get(ref.doi.toLowerCase()) ?? (await deps.engine.lookupDoi(ref.doi, { admit: deps.admit }));
     if (paper) {
       const j = judge(ref, paper);
       // A DOI that resolves names a real paper, so a title that does not match
