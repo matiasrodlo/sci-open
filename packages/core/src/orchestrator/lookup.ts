@@ -5,11 +5,11 @@ import { PROVIDERS, type ProviderEntry } from './registry';
 /**
  * One record, by the id the search results carry.
  *
- * The paper endpoint's whole job, and until this phase it was a hundred lines
- * of `if (source === …)` in the route, each branch reaching into a different
- * connector. What it actually needs is one question per provider — "give me
- * this record" — so that is what it asks, through the registry that already
- * knows how to drive each one.
+ * What `get_paper`, `read_paper` and `get_citations` ask first. In the API's
+ * paper route this was a hundred lines of `if (source === …)`, each branch
+ * reaching into a different connector. What it actually needs is one question
+ * per provider — "give me this record" — so that is what it asks, through the
+ * registry that already knows how to drive each one.
  *
  * Two ways to ask, and which one applies is a fact about the provider's API
  * rather than a preference:

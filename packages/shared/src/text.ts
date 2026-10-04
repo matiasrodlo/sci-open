@@ -1,11 +1,12 @@
 /**
  * Provider markup, taken off a string before it becomes a `Paper` field.
  *
- * Nothing in the pipeline renders HTML — the frontend prints `title` and
- * `abstract` as text — so a tag that survives normalisation is shown to the
- * reader as a tag. Measured: `/api/paper/plos:10.1371%2Fjournal.pone.0265114`
- * answered with `"Optimization of CRISPR/LbCas12a-mediated gene editing in
- * <i>Arabidopsis</i>"`, and that is what the card displayed.
+ * Nothing downstream renders HTML — the MCP server hands `title` and
+ * `abstract` to a model as text — so a tag that survives normalisation reaches
+ * it as a tag. Measured, back when a web page printed them:
+ * `plos:10.1371/journal.pone.0265114` came back as `"Optimization of
+ * CRISPR/LbCas12a-mediated gene editing in <i>Arabidopsis</i>"`, and that is
+ * what the page displayed.
  *
  * It lives here, next to `httpUrl`, and for the same reason: this is one rule
  * about what a provider string may contain, and it was being restated once per

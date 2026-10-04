@@ -1,4 +1,4 @@
-import type { OASource } from './types';
+import type { SourceId } from './types';
 import type { AuthorityId } from './authority';
 
 /**
@@ -14,11 +14,11 @@ import type { AuthorityId } from './authority';
  * A source that returns *records* — the ten the fan-out asks, and the only ones
  * that can appear in `SourceRef`.
  *
- * Narrower than `OASource` on purpose. That union holds fourteen names, and
- * three of them — Crossref, Unpaywall, OpenCitations — are authorities: they
- * answer per-DOI questions about a paper somebody else returned, and never
- * return one themselves. (OpenAlex is both, and is the reason the two sets
- * overlap rather than partition.)
+ * Narrower than `SourceId` on purpose. That union holds fifteen names, and
+ * four of them — Crossref, Unpaywall, OpenCitations, the preprint servers — are
+ * authorities: they answer per-DOI questions about a paper somebody else
+ * returned, and never return one themselves. (OpenAlex is both, and is the
+ * reason the two sets overlap rather than partition.)
  *
  * Aliasing the two made the distinction unstateable, and it showed up as three
  * rows in `merge.ts`'s `PROVIDER_PRIORITY` that could never be consulted:
@@ -28,7 +28,7 @@ import type { AuthorityId } from './authority';
  * They existed because `Record<ProviderId, number>` demanded every key of a
  * union that had three names too many in it.
  */
-export type ProviderId = Exclude<OASource, 'crossref' | 'unpaywall' | 'opencitations' | 'preprints'>;
+export type ProviderId = Exclude<SourceId, 'crossref' | 'unpaywall' | 'opencitations' | 'preprints'>;
 
 /**
  * One provider's sighting of this paper.

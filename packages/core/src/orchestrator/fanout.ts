@@ -238,8 +238,8 @@ function statusOf(error: unknown): number | undefined {
 /**
  * True when every planned provider answered.
  *
- * When it is false the reported total is a lower bound, and the UI should say
- * so rather than presenting a partial result as complete.
+ * When it is false the reported total is a lower bound, and a caller should
+ * say so rather than present a partial result as complete.
  */
 export function isComplete(reports: readonly ProviderReport[]): boolean {
   return reports.every(r => r.status === 'ok' || r.status === 'skipped');

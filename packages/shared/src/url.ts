@@ -15,10 +15,9 @@
  * the input is not hypothetically attacker-controlled: CORE and OpenAIRE index
  * repository deposits, and repository metadata is written by whoever deposits.
  *
- * Which is also why this lives in `shared` rather than in the API. The API is
- * where a bad URL should be stopped, and the browser is where the damage would
- * happen; both sides get to state the same rule rather than each keeping their
- * own idea of what a usable URL is.
+ * It lives in `shared`, beside the `Paper` fields it guards, so that every
+ * normaliser states the same rule rather than keeping its own idea of what a
+ * usable URL is.
  *
  * The rule is deliberately about the scheme alone. Whether a URL *resolves*,
  * whether it points somewhere private, and whether the file behind it is really

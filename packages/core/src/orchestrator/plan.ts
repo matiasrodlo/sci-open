@@ -38,10 +38,10 @@ export type Plan = {
 };
 
 /**
- * Why a provider holds nothing of the stages asked for, as the panel prints it.
+ * Why a provider holds nothing of the stages asked for, as its report says it.
  *
  * Written from what was asked rather than from what the provider holds,
- * because that is the reader's side of it: they ticked "Pre-print", and DOAJ
+ * because that is the caller's side of it: they asked for preprints, and DOAJ
  * is not searched because it holds no preprints.
  */
 function holdsNone(stages: readonly PaperStage[]): string {

@@ -92,8 +92,8 @@ function yearsWithin(query: Query, years: readonly number[]): number[] {
 
 /**
  * The stages worth a count. `unknown` is never one: it is what a provider says
- * of a record it cannot place, not something a query can select, and the panel
- * has no bucket for it.
+ * of a record it cannot place, not something a query can select, and the
+ * facet has no bucket for it.
  */
 function countableStages(holds: readonly PaperStage[]): PaperStage[] {
   return holds.filter(stage => stage !== 'unknown');

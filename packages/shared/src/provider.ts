@@ -6,7 +6,7 @@ import type { PaperStage, ProviderId } from './paper';
  */
 
 /**
- * `ProviderTotal` records a count; this records an outcome as well.
+ * An outcome, not only a count of what came back.
  *
  * The distinction is not academic. Measured during phase 01: Europe PMC
  * returned `retrieved: 0` on one run and 600 on the next, and nothing in the

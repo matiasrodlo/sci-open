@@ -55,7 +55,7 @@ describe('defineProvider', () => {
   it('sends a keyed provider its key on every kind of call, read when the call is made', async () => {
     const module = fakeModule();
     const entry = defineProvider('openalex', module, { key: 'openalex' });
-    // Configured after the entry was built, as `useConfig` is at startup.
+    // Configured after the entry was built, as `useApiKeys` is at startup.
     useApiKeys({ openalex: 'secret' });
 
     await entry.search({ query, depth: 10, offset: 0, timeoutMs: 1000, openAccessOnly: true });

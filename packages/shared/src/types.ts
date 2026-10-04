@@ -1,9 +1,9 @@
-// Every source a record can originate from. The first group are the source
-// connectors; the second are the metadata/OA clients the pipeline resolves
-// records from directly.
-export type OASource =
-  | "arxiv" | "core" | "europepmc" | "ncbi" | "openaire" | "biorxiv" | "medrxiv" | "doaj" | "plos" | "opencitations" | "datacite"
-  | "openalex" | "crossref" | "unpaywall" | "preprints";
+// Every source the engine asks: the providers a search fans out to, then the
+// authorities asked about a paper by DOI. `ProviderId` and `AuthorityId` are
+// its two halves, and OpenAlex is in both.
+export type SourceId =
+  | "arxiv" | "core" | "europepmc" | "ncbi" | "openaire" | "biorxiv" | "medrxiv" | "doaj" | "plos" | "datacite" | "openalex"
+  | "crossref" | "unpaywall" | "opencitations" | "preprints";
 
 export type SearchFilters = {
   source?: string[];

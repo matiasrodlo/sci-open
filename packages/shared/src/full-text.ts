@@ -37,9 +37,8 @@ import { httpUrl } from './url';
  * would be a guess. `verified` is where that question gets settled, when
  * something finally sets it.
  *
- * Lives in `shared`, beside `httpUrl`, for the reason given there: the API is
- * where a bad URL should be stopped and the browser is where it would be
- * clicked, and the two should not keep separate ideas of what a copy is.
+ * Lives in `shared`, beside `httpUrl`, for the reason given there: every
+ * normaliser should keep the same idea of what a copy is.
  */
 
 /** Hosts whose entire job is to redirect to a record's home. */

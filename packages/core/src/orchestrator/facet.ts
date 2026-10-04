@@ -7,24 +7,20 @@ export { facetKey };
 /**
  * Facets over the set that produced the hits.
  *
- * The invariant the whole panel rests on: a bucket's count states exactly how
- * far selecting it narrows the result set. Counting over a different set than
- * the one returned is what made the frontend grow heuristics that "corrected"
- * counts it judged implausible, inventing numbers to replace real ones.
+ * The invariant every count rests on: a bucket's count states exactly how far
+ * selecting it narrows the result set. Counting over a different set than the
+ * one returned is what once made a web front end grow heuristics that
+ * "corrected" counts it judged implausible, inventing numbers to replace real
+ * ones.
  *
- * **A facet is not counted over its own selection.** Every facet used to be
- * counted over the fully filtered set, its own ticked values included — so the
- * moment a reader ticked Year 2022, the year facet held exactly one bucket and
- * 2021 and 2023 vanished from the panel. `FacetGroup` renders what it is given,
- * so there was no way to add a second year, and no way to see that a second one
- * existed. The filters are OR-semantics on this side and the URL carries
- * repeated parameters perfectly well: multi-select was built, and unreachable.
- *
- * The rule that fixes it is the standard one — count each facet over the set
- * every *other* filter admits — and it keeps the invariant rather than trading
- * it away. With OR semantics, ticking a second value widens the set, and what
- * the reader needs beside an unticked bucket is how many results it would bring
- * in given everything else they have chosen. That is what this now counts.
+ * **A facet is not counted over its own selection.** Counted over the fully
+ * filtered set, a search for preprints would show one stage bucket, and
+ * nothing of how many published papers there are. The rule is the standard
+ * one — count each facet over the set every *other* filter admits — and it
+ * keeps the invariant rather than trading it away. The filters are OR within a facet, so
+ * selecting a second value widens the set, and what belongs beside an
+ * unselected bucket is how many results it would bring in given every other
+ * filter. That is what this counts.
  */
 
 /** One value and its count, as the search response returns them. */

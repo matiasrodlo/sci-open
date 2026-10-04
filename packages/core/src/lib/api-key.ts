@@ -28,7 +28,7 @@ export type KeyedProvider = 'core' | 'ncbi' | 'doaj' | 'datacite' | 'openalex';
 export type ApiKeys = Partial<Record<KeyedProvider, string>>;
 
 /**
- * The keys `config.ts` parsed, set once at startup by `useConfig`. The
+ * The keys `config.ts` parsed, set once at startup by `useApiKeys`. The
  * registries used to read `process.env` on every call, which is why a key
  * could only be found by grepping for it.
  */

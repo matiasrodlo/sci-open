@@ -1,5 +1,5 @@
 import type { Paper, PaperStage, ProvenancedField } from './paper';
-import type { OASource } from './types';
+import type { SourceId } from './types';
 
 /**
  * The second provider role: `lookup(doi) -> facts about a work we already have`.
@@ -47,11 +47,11 @@ export type AuthorityCapabilities = {
  * A source that answers per-DOI questions about a record somebody else
  * returned.
  *
- * Extracted from `OASource` rather than from `ProviderId`, which is the half of
+ * Extracted from `SourceId` rather than from `ProviderId`, which is the half of
  * the split that is easy to get wrong: `ProviderId` no longer contains
  * Crossref, Unpaywall or OpenCitations, so narrowing *it* would silently leave
  * this as `'openalex'` alone and every other authority would stop type-checking
- * where it is named. The two sets are both subsets of `OASource`, and they
+ * where it is named. The two sets are both subsets of `SourceId`, and they
  * overlap — OpenAlex is a provider and an authority both.
  */
-export type AuthorityId = Extract<OASource, 'crossref' | 'unpaywall' | 'openalex' | 'opencitations' | 'preprints'>;
+export type AuthorityId = Extract<SourceId, 'crossref' | 'unpaywall' | 'openalex' | 'opencitations' | 'preprints'>;

@@ -17,13 +17,11 @@ import type { ProviderFacetOutcome, ProviderSearchOutcome } from './registry';
  * without discarding the ones that succeeded.
  *
  * The key deliberately excludes page, sort and user filters — including them
- * would recreate exactly the miss this exists to remove. It includes the
- * normaliser version, so a change to how a payload is read does not serve
- * records shaped by the previous one.
+ * would recreate exactly the miss this exists to remove.
  *
- * It is bounded in bytes rather than in entries, for the reason `MemoryCache`
- * is: what it holds are pages of search results, and nothing about how many
- * there are says how large they are. See `DEFAULT_MAX_BYTES`.
+ * It is bounded in bytes rather than in entries: what it holds are pages of
+ * search results, and nothing about how many there are says how large they
+ * are. See `DEFAULT_MAX_BYTES`.
  */
 
 export type ProviderCacheKeyParts = {
@@ -43,7 +41,7 @@ export function providerCacheKey(parts: ProviderCacheKeyParts): string {
   ].join('|');
 
   // Hashed for a bounded key length. The provider stays in the clear so
-  // entries remain greppable.
+  // an entry can be told apart in a debugger.
   return `provider:${parts.provider}:${createHash('sha256').update(canonical).digest('hex').slice(0, 32)}`;
 }
 
@@ -102,10 +100,7 @@ const DEFAULT_TTL_MS = 10 * 60 * 1000;
  *
  * It used to be bounded at 500 *entries*, under a comment saying a page of
  * Papers has no fixed size — which is the reason a count cannot bound it, not a
- * reason to use one. `MemoryCache` had already been through this: its header
- * spends a paragraph on why 10,000 entries of search results is 1.6 GB rather
- * than a limit, and it caps in bytes for exactly that reason. This is the same
- * fix on its sibling.
+ * reason to use one.
  *
  * The arithmetic the old bound allowed: an entry holds up to `depth` papers and
  * `DEFAULT_DEPTH` is 600, so 500 entries is 300,000 records. Measured against a
@@ -125,10 +120,9 @@ export const DEFAULT_MAX_BYTES = 128 * 1024 * 1024;
 /**
  * A flat charge per record, on top of the text it carries.
  *
- * Serialising to measure would be exact and is what `MemoryCache` gets for
- * free, because it stores the JSON it is accounting for. This one stores live
- * objects, so measuring that way means a full `JSON.stringify` of up to 600
- * records on every provider response, and then throwing the string away.
+ * Serialising to measure would be exact, but this stores live objects, so
+ * measuring that way means a full `JSON.stringify` of up to 600 records on
+ * every provider response, and then throwing the string away.
  *
  * Reading the lengths of the fields that actually vary — title, abstract,
  * authors, topics — costs a walk with no allocation, and this constant covers
@@ -248,8 +242,8 @@ export class ProviderCache {
 
   private write(provider: ProviderId, key: string, value: Cached, bytes: number): void {
     // One entry larger than the whole budget is not cached at all, rather than
-    // admitted and immediately evicting everything else. Same rule as
-    // `MemoryCache`, and it is reachable here: at maximum depth a single
+    // admitted and immediately evicting everything else. It is reachable: at
+    // maximum depth a single
     // provider's answer is around a megabyte, so a small configured budget is
     // a budget one entry can exceed.
     if (bytes > this.maxBytes) return;
@@ -276,8 +270,7 @@ export class ProviderCache {
    *
    * The second half matters more once the bound is bytes: an expired megabyte
    * sitting in front of a warm entry would otherwise cost that entry its place
-   * for no memory that could not have been reclaimed anyway. `MemoryCache`
-   * sweeps in the same order for the same reason.
+   * for no memory that could not have been reclaimed anyway.
    */
   private evictIfNeeded(): void {
     if (this.held <= this.maxBytes) return;

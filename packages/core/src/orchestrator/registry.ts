@@ -123,7 +123,7 @@ export type ProviderCallOptions = {
 };
 
 export type ProviderSpec = {
-  /** The key this provider is sent, when one is configured. See `useConfig`. */
+  /** The key this provider is sent, when one is configured. See `useApiKeys`. */
   key?: KeyedProvider;
   /** See `ProviderEntry.facetsAggregate`. */
   facetsAggregate?: boolean;
@@ -132,7 +132,7 @@ export type ProviderSpec = {
 /** A provider module as the orchestrator drives it. */
 export function defineProvider(id: ProviderId, module: ProviderModule, spec: ProviderSpec = {}): ProviderEntry {
   // Read per call, so a key configured after this module loaded — which is
-  // every key, since `useConfig` runs at startup — still reaches the provider.
+  // every key, since `useApiKeys` runs at startup — still reaches the provider.
   const key = (): { apiKey?: string } => (spec.key ? apiKeyFor(spec.key) : {});
   const carried = ({ signal, userAgent, now }: Pick<ProviderCallOptions, 'signal' | 'userAgent' | 'now'>) => ({
     ...(signal ? { signal } : {}),

@@ -98,8 +98,8 @@ export type SearchOptions = {
   /**
    * Asked once before this search resolves a set of its own — not when the set
    * is held, or is being resolved by another search — and may throw to refuse
-   * it. How the route charges a caller for the searches that cost the sources
-   * something. See `ResultSetCache.resolve`.
+   * it. How the MCP server charges a caller for the searches that cost the
+   * sources something. See `ResultSetCache.resolve`.
    */
   admit?: () => Promise<void>;
   /**
@@ -164,10 +164,9 @@ export type OrchestratorResult = {
  * 600 is the measured default, and the number the comments throughout this
  * package are written against. It is configurable — `SEARCH_DEPTH`, read by
  * the MCP server's `config.ts` — because it is the one setting
- * that decides how much of a corpus a search actually sees. The header reading
- * "2,754 retrieved of 977,761+ matching" is reporting this bound and nothing
- * else: the first figure is `depth x providers that answered`, less duplicates
- * and less what the gates dropped.
+ * that decides how much of a corpus a search actually sees. A search's `total`
+ * reports this bound and nothing else: it is `depth x providers that
+ * answered`, less duplicates and less what the gates dropped.
  *
  * The ceiling is why the number is clamped here rather than taken on trust.
  * Depth is not one cost, it is a cost per provider per page:
@@ -216,8 +215,8 @@ function settle(query: Query, options: SearchOptions): Settled {
     },
     openAccessOnly: options.openAccessOnly ?? true,
     // Bounded here rather than where the setting is read, so that every caller
-    // is bounded by it — the route, the offline scripts and the comparison
-    // harness alike. See `MAX_DEPTH`. Deliberately independent of `page`:
+    // is bounded by it — the MCP server, the fixture recorders and the tests
+    // alike. See `MAX_DEPTH`. Deliberately independent of `page`:
     // letting depth grow with the page would change the reported total as the
     // user walks through the results, so every page answers from the same
     // window.
@@ -415,12 +414,10 @@ async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache
   // it would have described a set the caller never sees, which is the same
   // mistake as faceting before filtering.
   //
-  // With one exception, and it is what makes the panel usable: a facet is not
-  // counted over its own selection. Ticking one year used to leave the year
-  // facet holding only that year, so a second one could be neither seen nor
-  // added, and the OR semantics these filters already have were unreachable
-  // from the UI. `facetBaseSets` rebuilds, per ticked facet, the set the other
-  // filters admit. It costs nothing when nothing is ticked. See `facet.ts`.
+  // With one exception: a facet is not counted over its own selection, so a
+  // search for preprints still shows the other stages. `facetBaseSets`
+  // rebuilds, per filtered facet, the set the other filters admit. It costs
+  // nothing when nothing is filtered. See `facet.ts`.
   //
   // Counted in ranked order, not in whatever order a page is sorted by: the
   // counts are the same either way, but a bucket is labelled with the spelling

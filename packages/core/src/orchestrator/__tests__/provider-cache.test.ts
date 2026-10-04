@@ -135,9 +135,7 @@ describe('ProviderCache', () => {
  * fixed size — which is the reason a count cannot bound it, not a reason to use
  * one. An entry holds up to `depth` papers and the default depth is 600, so
  * 500 entries is 300,000 records: about 518 MB serialised at the measured 1,809
- * bytes each, and one to one and a half gigabytes of live heap. `MemoryCache`
- * had already been through this and caps in bytes; this is the same fix on its
- * sibling.
+ * bytes each, and one to one and a half gigabytes of live heap.
  */
 describe('ProviderCache byte budget', () => {
   const big = (n: number) => ({
