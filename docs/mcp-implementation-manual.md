@@ -30,7 +30,12 @@ last pass took out the data nothing read: each source's latency and each
 record's `retrievedAt` (the source's own stays), the providers' declared
 `fields`, the facet bucket's `from`, `Engine.userAgent`, and the authority
 reports themselves — the rescue now reads one flag, `cutShort`, where it read
-their `timeout` status.
+their `timeout` status. Then the names the API and the web app left behind:
+`lib/pdf-proxy.ts` is `lib/pdf-fetch.ts`, and its error no longer carries the
+HTTP status the PDF route answered with; `SearchResponseV2` is
+`SearchResponse`; the configurable `HttpClientFactory` is a
+`createPooledClient` function; `SearchSettings`, down to one field, is the
+engine's `depth` option; and `OASource` is `SourceId`.
 
 Steps that changed the removed apps are kept, condensed, as the record of how
 the current layout came to be; their full text is in git history at
