@@ -176,6 +176,17 @@ describe('what a call costs the sources', () => {
     expect(openalex.calls).toHaveLength(1);
   });
 
+  it('reads each source as deep as a call asks, and holds that set apart', async () => {
+    const arxiv = stub('arxiv');
+    const engine = createEngine({ userAgent: 'engine-test', providers: [arxiv.entry], authorities: [], search: { depth: 300 } });
+
+    await engine.search({ q: 'crispr' }, { depth: 25 });
+    await engine.search({ q: 'crispr' });
+    expect((await engine.search({ q: 'crispr' }, { depth: 25 })).fromCache).toBe(true);
+
+    expect(arxiv.calls.map(c => c.depth)).toEqual([25, 300]);
+  });
+
   describe('a paper looked up by id', () => {
     function byId(clock = { now: 0 }) {
       const arxiv = stub('arxiv');

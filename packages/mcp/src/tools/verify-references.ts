@@ -162,6 +162,19 @@ type Found = { p: Paper; j: Judgement };
 
 const STRONG = new Set(['verified', 'likely']);
 
+/** The candidates a title search hands the judge: the top of the merged answer. */
+const JUDGED = 5;
+
+/**
+ * Records read per source for a title search, against the server's 300. The
+ * merged ranking fuses each source's own positions (`rank.ts`), so the five
+ * judged are made of the top of each source; a record below 25 in every
+ * source that holds it never reaches them. Read to 300, the same search costs
+ * OpenAlex two requests and DOAJ and OpenAIRE three each, for records that
+ * are only discarded — and a batch of 25 references can make 75 of them.
+ */
+const TITLE_DEPTH = 25;
+
 /**
  * The title's words in the title within a year of the one cited, then in the
  * title at any date, then anywhere in the record — each only when the one
@@ -197,8 +210,8 @@ async function findByTitle(ref: ParsedReference, deps: ToolDeps): Promise<Found 
       continue;
     }
     const { response } = await deps.engine.search(
-      { q, filters: { openAccessOnly: false }, page: 1, pageSize: 5 },
-      { admit: deps.admit }
+      { q, filters: { openAccessOnly: false }, page: 1, pageSize: JUDGED },
+      { admit: deps.admit, depth: TITLE_DEPTH }
     );
     if (response.papers.length === 0) continue;
     const found = response.papers

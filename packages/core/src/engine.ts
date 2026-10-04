@@ -80,6 +80,10 @@ export type SearchCallOptions = {
    * not only across the read. Dozens of requests a search (`RunOptions.facets`),
    * so off unless asked; a set counted is held apart from one that was not. */
   facets?: boolean;
+  /** Search only: records read per source, in place of the engine's depth,
+   * for a call that judges only the top of an answer. A set read to another
+   * depth is held apart. */
+  depth?: number;
 };
 
 export type Engine = {
@@ -218,9 +222,9 @@ export function createEngine(options: EngineOptions): Engine {
   const search: Engine['search'] = async (params, extra = {}) => {
     const unavailable = quota.unavailable();
     const { response, fromCache } = await runSearch(params, {
-      settings,
-      // Safe to share the caches here too: the facet queries are part of the
-      // result-set key, so a set counted is never answered by one that was not.
+      // Safe to share the caches here too: depth and the facet queries are
+      // both part of the result-set key.
+      settings: extra.depth !== undefined ? { ...settings, depth: extra.depth } : settings,
       ...(extra.facets ? { facets: true } : {}),
       cache: providerCache,
       resultSets,

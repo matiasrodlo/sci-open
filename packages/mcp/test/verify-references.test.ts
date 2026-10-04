@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { paper, ref } from '@sci-open/core/testing';
 import { verifyReferences } from '../src/tools/verify-references';
 import { fakeEngine, type FakeOptions } from './fake-engine';
@@ -92,6 +92,14 @@ describe('verify_references', () => {
     // Cited with a colon; the record, as Europe PMC titles it, has a semicolon.
     const { results } = await verify(['Watson JD, Crick FHC. Molecular structure of nucleic acids; a structure for deoxyribose nucleic acid. Nature. 1953.']);
     expect(results[0]).toMatchObject({ verdict: 'verified', matched: { doi: '10.1038/171737a0' } });
+  });
+
+  it('reads only the top of each source for a title, which is all it judges', async () => {
+    const fake = fakeEngine(WORLD);
+    const search = vi.spyOn(fake.engine, 'search');
+    await verifyReferences.run({ references: ['Vaswani A, et al. Attention is all you need. NeurIPS. 2017.'] }, fake.deps);
+    expect(search).toHaveBeenCalled();
+    expect(search.mock.calls.every(([, options]) => options?.depth === 25)).toBe(true);
   });
 
   it('spends two searches on a wrong year, not three', async () => {

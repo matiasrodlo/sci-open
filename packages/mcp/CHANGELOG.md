@@ -30,6 +30,10 @@ in `test/__toolsnaps__/` are the record of every schema change.
   reports only a total — for numbers the default output never showed, and a
   count a rate limit cut short held the set a minute instead of half an hour.
   The handle records the choice, so a search's pages come from its own set.
+- verify_references reads 25 records a source for a title search, not 300.
+  It judges the top five of the merged answer, which rank fusion builds from
+  the top of each source; the rest cost OpenAlex, DOAJ and OpenAIRE extra
+  pages that nobody judged.
 - A paper looked up by id is held half an hour, so read_paper and
   get_citations, given an id, stop asking its source again before every
   outline, section and page. Two lookups of one id at once ask once.

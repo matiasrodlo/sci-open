@@ -794,7 +794,7 @@ export type Engine = {
   /** A federated search across the sources. `admit` is asked only when a
    * new result set must be resolved, never for a page of a held one.
    * `sources` narrows the fan-out to those providers. */
-  search(params: SearchParams, options?: { admit?: Admit; sources?: readonly string[]; facets?: boolean }): Promise<SearchOutcome>;
+  search(params: SearchParams, options?: { admit?: Admit; sources?: readonly string[]; facets?: boolean; depth?: number }): Promise<SearchOutcome>;
   /** A paper by sci-open id (`provider:nativeId`), enriched by the authorities.
    * Asks only the provider the id names, and holds its answer half an hour. */
   lookup(id: string): Promise<Paper | null>;
@@ -3231,7 +3231,9 @@ async function findByTitle(ref: ParsedReference, deps: ToolDeps): Promise<{ p: P
   for (const q of attempts) {
     const { response } = await deps.engine.search(
       { q, filters: { openAccessOnly: false }, page: 1, pageSize: 5 },
-      { admit: deps.admit }
+      // Five are judged, and rank fusion builds them from the top of each
+      // source: read to 300, a title search buys pages nobody judges.
+      { admit: deps.admit, depth: 25 }
     );
     if (response.papers.length === 0) continue;
     const best = response.papers
