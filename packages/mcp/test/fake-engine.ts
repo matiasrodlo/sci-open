@@ -1,4 +1,4 @@
-import type { Paper, SearchParams, SearchResponseV2 } from '@sci-open/shared';
+import type { Paper, SearchParams, SearchResponse } from '@sci-open/shared';
 import { parseQuery, type CitationLink, type DoiResolution, type Engine, type EngineLogger, type FullTextDocument } from '@sci-open/core';
 import { defaultMcpConfig } from '../src/config';
 import { nullMetrics } from '../src/metrics';
@@ -116,7 +116,7 @@ export function fakeEngine(papers: readonly Paper[], options: FakeOptions = {}):
   return { engine, deps, searches, admitted: () => admitted };
 }
 
-function response(papers: Paper[], total: number, page: number, pageSize: number): SearchResponseV2 {
+function response(papers: Paper[], total: number, page: number, pageSize: number): SearchResponse {
   return {
     papers, total, page, pageSize, facets: {}, complete: true, bounded: false, countsFromSources: false,
     providers: [{ provider: 'openalex', status: 'ok', retrieved: total, totalHits: total, latency: 1 }]

@@ -1,5 +1,5 @@
 import * as z from 'zod';
-import type { SearchResponseV2 } from '@sci-open/shared';
+import type { SearchResponse } from '@sci-open/shared';
 import { encodeSearchHandle, type SearchSpec } from '../handles';
 import { shapePaper, paperSchema, listedTitle, retractionWarning, type ShapedPaper } from '../shape/paper';
 import { fitWholeItems } from '../shape/budget';
@@ -58,7 +58,7 @@ function fullEntry(p: ShapedPaper, n: number): string {
 
 /** One page of a search, as both search tools return it. */
 export function presentPage(
-  r: SearchResponseV2,
+  r: SearchResponse,
   spec: SearchSpec,
   opts: { detail: 'concise' | 'full'; includeFacets: boolean; structuredBudget: number; rerun?: boolean }
 ): ToolOutcome<PageOutput> {

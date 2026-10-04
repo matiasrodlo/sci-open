@@ -1,4 +1,4 @@
-import type { PaperStage, ProviderId, Query, SearchFilters, SearchParams, SearchResponseV2 } from '@sci-open/shared';
+import type { PaperStage, ProviderId, Query, SearchFilters, SearchParams, SearchResponse } from '@sci-open/shared';
 import { isStructured } from '@sci-open/shared';
 import type { FacetQueries } from './source-facets';
 import { search as orchestratorSearch } from './index';
@@ -10,14 +10,12 @@ import type { AuthorityFactsCache } from './authority-cache';
 import type { SearchProgress } from './progress';
 import type { ProviderEntry } from './registry';
 import type { AuthorityEntry } from '../authorities';
-import { toSearchResponseV2 } from './to-search-response';
 import { log } from '../lib/logger';
 
 /**
- * `SearchParams` -> the orchestrator, and its result -> `SearchResponseV2`.
- *
- * The mirror of `to-search-response`. The orchestrator itself speaks `Query`
- * and `Paper` and learns nothing about `SearchParams`.
+ * `SearchParams` -> the orchestrator, and its result -> `SearchResponse`. The
+ * orchestrator itself speaks `Query` and `Paper` and learns nothing about
+ * `SearchParams`.
  */
 
 /**
@@ -154,7 +152,7 @@ export function queryOf(params: SearchParams) {
 export async function runSearch(
   params: SearchParams,
   options: RunOptions = {}
-): Promise<{ response: SearchResponseV2; fromCache: boolean }> {
+): Promise<{ response: SearchResponse; fromCache: boolean }> {
   const { filters, query, withoutStages, userFilters, openAccessOnly } = queryOf(params);
   // `filtersSent` holds whether or not the facets are counted: it says what
   // the sources were sent, which is what makes their totals this search's.
@@ -197,5 +195,16 @@ export async function runSearch(
     log.debug('Rescue pass', { query: params.q, ...result.rescue });
   }
 
-  return { response: toSearchResponseV2(result), fromCache: result.fromCache };
+  const response: SearchResponse = {
+    papers: result.papers,
+    total: result.total,
+    page: result.page,
+    pageSize: result.pageSize,
+    facets: result.facets,
+    complete: result.complete,
+    bounded: result.rescue.bounded,
+    countsFromSources: result.countsFromSources,
+    providers: result.reports
+  };
+  return { response, fromCache: result.fromCache };
 }

@@ -1,5 +1,5 @@
 import * as z from 'zod';
-import type { SearchResponseV2 } from '@sci-open/shared';
+import type { SearchResponse } from '@sci-open/shared';
 
 export const coverageSchema = z.object({
   complete: z.boolean(),
@@ -13,7 +13,7 @@ export type Coverage = z.infer<typeof coverageSchema>;
 
 /** What a search's sources did: which answered, failed or were skipped, and why. A
  * search response, or a count's reports, which have no rescue to bound. */
-export function coverageOf(r: Pick<SearchResponseV2, 'complete' | 'bounded' | 'providers'>): Coverage {
+export function coverageOf(r: Pick<SearchResponse, 'complete' | 'bounded' | 'providers'>): Coverage {
   return {
     complete: r.complete,
     bounded: r.bounded,

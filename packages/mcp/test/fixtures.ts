@@ -1,4 +1,4 @@
-import type { Paper, ProviderReport, SearchResponseV2 } from '@sci-open/shared';
+import type { Paper, ProviderReport, SearchResponse } from '@sci-open/shared';
 import { paper, ref } from '@sci-open/core/testing';
 import { citationKey, fixtureKey, type Fixtures } from '../src/fixture-engine';
 
@@ -28,7 +28,7 @@ const reports: ProviderReport[] = [
   { provider: 'biorxiv', status: 'skipped', retrieved: 0, latency: 0, skipReason: 'no keyword index' }
 ];
 
-const page = (n: number): SearchResponseV2 => ({
+const page = (n: number): SearchResponse => ({
   papers: [crispr(2 * n - 1), crispr(2 * n)],
   total: 5,
   page: n,

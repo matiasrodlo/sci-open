@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs';
-import type { Paper, SearchParams, SearchResponseV2 } from '@sci-open/shared';
+import type { Paper, SearchParams, SearchResponse } from '@sci-open/shared';
 import type { CitationLink, Engine, FullTextDocument } from '@sci-open/core';
 
 /**
@@ -11,7 +11,7 @@ import type { CitationLink, Engine, FullTextDocument } from '@sci-open/core';
  * grows, this file stops compiling until the fixture grows with it.
  */
 export type Fixtures = {
-  searches: Record<string, SearchResponseV2>;
+  searches: Record<string, SearchResponse>;
   papers: Record<string, Paper>;
   /** DOIs the DOI system holds though no paper here carries them. */
   registeredDois?: string[];
@@ -93,7 +93,7 @@ export function fixtureEngine(fixtures: Fixtures, options: { strict?: boolean } 
   };
 }
 
-function emptyResponse(params: SearchParams): SearchResponseV2 {
+function emptyResponse(params: SearchParams): SearchResponse {
   return {
     papers: [], total: 0, page: params.page ?? 1, pageSize: params.pageSize ?? 10,
     facets: {}, complete: true, bounded: false, countsFromSources: false, providers: []

@@ -1,4 +1,4 @@
-import type { Paper, ProviderId, SearchParams, SearchResponseV2 } from '@sci-open/shared';
+import type { Paper, ProviderId, SearchParams, SearchResponse } from '@sci-open/shared';
 import { runSearch } from './orchestrator/from-search-params';
 import { ProviderCache } from './orchestrator/provider-cache';
 import { ResultSetCache } from './orchestrator/result-set';
@@ -60,7 +60,7 @@ export type EngineOptions = {
   openCitationsPerMinute?: number;
 };
 
-export type SearchOutcome = { response: SearchResponseV2; fromCache: boolean };
+export type SearchOutcome = { response: SearchResponse; fromCache: boolean };
 
 /** What `resolveDois` found, by lower-cased DOI, and the DOIs it could not ask
  * about: OpenAlex failed or was cooling down, or the DOI cannot be listed in

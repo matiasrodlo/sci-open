@@ -19,7 +19,7 @@ export type SearchFacets = Record<string, FacetBucket[]>;
  * report whole, so a caller can say "found in three sources", "gold open
  * access" or "copy confirmed".
  */
-export type SearchResponseV2 = {
+export type SearchResponse = {
   papers: Paper[];
   /** The size of the set the page is cut from — every page of a search reports the same one. */
   total: number;

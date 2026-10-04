@@ -8,5 +8,5 @@ export * from './authority';
 export * from './url';
 export * from './full-text';
 export * from './text';
-export * from './search-v2';
+export * from './search-response';
 export * from './citations';

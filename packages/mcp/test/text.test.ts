@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Paper, SearchResponseV2 } from '@sci-open/shared';
+import type { Paper, SearchResponse } from '@sci-open/shared';
 import { paper, ref } from '@sci-open/core/testing';
 import { presentPage } from '../src/tools/present-page';
 import { getPaper } from '../src/tools/get-paper';
@@ -23,7 +23,7 @@ const study = (n: number, over: Partial<Paper> = {}): Paper => paper({
 
 const SPEC: SearchSpec = { q: 'crispr', filters: { openAccessOnly: true }, sort: 'relevance', pageSize: 2 };
 
-const response = (over: Partial<SearchResponseV2> = {}): SearchResponseV2 => ({
+const response = (over: Partial<SearchResponse> = {}): SearchResponse => ({
   papers: [study(1), study(2)], total: 2, page: 1, pageSize: 2, complete: true, bounded: false, countsFromSources: true,
   providers: [{ provider: 'openalex', status: 'ok', retrieved: 2, totalHits: 2, latency: 1 }],
   facets: {

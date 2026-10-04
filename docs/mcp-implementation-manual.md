@@ -760,7 +760,7 @@ exposes exactly the operations the tools need. Tools depend on the `Engine`
 ### Step 3.1 — `packages/core/src/engine.ts`
 
 ```ts
-import type { Paper, SearchParams, SearchResponseV2 } from '@sci-open/shared';
+import type { Paper, SearchParams, SearchResponse } from '@sci-open/shared';
 import { runSearch } from './orchestrator/from-search-params';
 import { ProviderCache } from './orchestrator/provider-cache';
 import { ResultSetCache } from './orchestrator/result-set';
@@ -786,7 +786,7 @@ export type EngineOptions = {
   openCitationsToken?: string;
 };
 
-export type SearchOutcome = { response: SearchResponseV2; fromCache: boolean };
+export type SearchOutcome = { response: SearchResponse; fromCache: boolean };
 
 type Admit = () => Promise<void>;
 
@@ -857,7 +857,7 @@ cooling down is not held without what it adds. A miss is not held.
 
 Check the constructor options of `ProviderCache` and `ResultSetCache` against
 their files while writing this. `runSearch` returns the search response the
-tools present (`SearchResponseV2` in shared) and whether its set was held.
+tools present (`SearchResponse` in shared) and whether its set was held.
 
 The engine owns its caches: one engine per process, made once by the binary.
 Until the API was removed, `EngineOptions` also took a host's caches, an HTTP
@@ -1841,7 +1841,7 @@ response says so and says how to continue — it never silently drops data.
 
 ```ts
 import * as z from 'zod';
-import type { SearchResponseV2 } from '@sci-open/shared';
+import type { SearchResponse } from '@sci-open/shared';
 
 export const coverageSchema = z.object({
   complete: z.boolean(),
@@ -1854,7 +1854,7 @@ export const coverageSchema = z.object({
 export type Coverage = z.infer<typeof coverageSchema>;
 
 /** A search response, or a count's reports (Step 6.2), which have no rescue to bound. */
-export function coverageOf(r: Pick<SearchResponseV2, 'complete' | 'bounded' | 'providers'>): Coverage {
+export function coverageOf(r: Pick<SearchResponse, 'complete' | 'bounded' | 'providers'>): Coverage {
   return {
     complete: r.complete,
     bounded: r.bounded,
@@ -2446,7 +2446,7 @@ Both search tools return the same shape, so they share one function.
 
 ```ts
 import * as z from 'zod';
-import type { SearchResponseV2 } from '@sci-open/shared';
+import type { SearchResponse } from '@sci-open/shared';
 import { encodeSearchHandle, type SearchSpec } from '../handles';
 import { shapePaper, paperSchema } from '../shape/paper';
 import { fitWholeItems } from '../shape/budget';
@@ -2473,7 +2473,7 @@ export const pageSchema = z.object({
 export type PageOutput = z.infer<typeof pageSchema>;
 
 export function presentPage(
-  r: SearchResponseV2,
+  r: SearchResponse,
   spec: SearchSpec,
   opts: { detail: 'concise' | 'full'; includeFacets: boolean; structuredBudget: number; rerun?: boolean }
 ): ToolOutcome<PageOutput> {
@@ -5132,10 +5132,10 @@ tool-selection evals and demos run `--engine fixture` (Step 10.2), and only
 
 ```ts
 import { readFileSync } from 'fs';
-import type { Paper, SearchParams, SearchResponseV2 } from '@sci-open/shared';
+import type { Paper, SearchParams, SearchResponse } from '@sci-open/shared';
 import type { Engine } from '@sci-open/core';
 
-export type Fixtures = { searches: Record<string, SearchResponseV2>; papers: Record<string, Paper> };
+export type Fixtures = { searches: Record<string, SearchResponse>; papers: Record<string, Paper> };
 
 /** The key a search is recorded and found under. Filters, sort and page size
  * are left out on purpose: the set stays small, and what the evals score is
@@ -5185,7 +5185,7 @@ export function fixtureEngine(fixtures: Fixtures, options: { strict?: boolean } 
   };
 }
 
-function emptyResponse(params: SearchParams): SearchResponseV2 {
+function emptyResponse(params: SearchParams): SearchResponse {
   return {
     papers: [], total: 0, page: params.page ?? 1, pageSize: params.pageSize ?? 10,
     facets: {}, complete: true, bounded: false, countsFromSources: false, providers: []
