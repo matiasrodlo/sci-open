@@ -79,7 +79,7 @@
       },
       "detail": {
         "default": "concise",
-        "description": "concise: compact records. full: every field with per-field sources.",
+        "description": "concise: a compact table. full: every field, each abstract whole in the text, and which source supplied each field — for screening.",
         "type": "string",
         "enum": [
           "concise",

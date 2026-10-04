@@ -28,7 +28,7 @@ export const searchPapers = defineTool({
     open_access_only: z.boolean().default(true).describe('Keep only papers with a legal open copy. Set false to include closed papers (metadata only).'),
     sort: z.enum(SORTS).default('relevance'),
     page_size: z.number().int().min(1).max(25).default(10),
-    detail: z.enum(['concise', 'full']).default('concise').describe('concise: compact records. full: every field with per-field sources.'),
+    detail: z.enum(['concise', 'full']).default('concise').describe('concise: a compact table. full: every field, each abstract whole in the text, and which source supplied each field — for screening.'),
     include_facets: z.boolean().default(false).describe('Add the top values per facet (year, venue, publisher, topics, source, access), counted across everything each source holds. It costs the sources dozens of extra requests: set it only when the distribution itself is wanted.'),
     count_only: z.boolean().default(false).describe('Return only each source\'s own count of matches, reading no results: one request per source, no handle. Use it to compare query variants; then search without it.')
   }),

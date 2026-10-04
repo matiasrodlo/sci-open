@@ -21,7 +21,7 @@ export const getSearchPage = defineTool({
   input: z.object({
     handle: z.string().max(4000),
     page: z.number().int().min(1).max(100),
-    detail: z.enum(['concise', 'full']).default('concise')
+    detail: z.enum(['concise', 'full']).default('concise').describe('concise: a compact table. full: every field, each abstract whole in the text, and which source supplied each field — for screening.')
   }),
   output: pageSchema,
   async run(args, deps) {

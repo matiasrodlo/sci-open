@@ -2530,6 +2530,14 @@ export function presentPage(
 }
 ```
 
+The text is what most clients show the model (D5), so it carries what the
+workflows read, not only the structured output: the facets a search asked
+for, fenced since venues and topics are the sources' text; with `detail:
+"full"`, each result as an entry with its abstract whole, DOI, venue and
+citation count, where `concise` is the table above; and in get_paper, the
+citation count, publisher, topics, landing page and full-text link, the links
+fenced like the rest of the record.
+
 ### Step 6.2 — `search_papers` (`src/tools/search-papers.ts`)
 
 ```ts

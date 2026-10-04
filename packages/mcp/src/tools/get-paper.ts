@@ -32,16 +32,22 @@ export const getPaper = defineTool({
     }
     const shaped = shapePaper(paper, 'full');
     // Title, authors and venue are third-party text as much as the abstract is.
+    // So are the links: a landing page or a copy's URL is whatever a source
+    // said it was.
     const record = [
       `# ${shaped.title}`,
-      [`${shaped.authors.slice(0, 10).join(', ')}${shaped.authors.length > 10 ? ', …' : ''}`, shaped.year ?? 'n.d.', shaped.venue]
+      [`${shaped.authors.slice(0, 10).join(', ')}${shaped.authors.length > 10 ? ', …' : ''}`, shaped.year ?? 'n.d.', shaped.venue, shaped.publisher]
         .filter(Boolean).join(' · '),
+      shaped.landing_page ? `Landing page: ${shaped.landing_page}` : '',
+      shaped.full_text?.url ? `Full text (${shaped.full_text.kind}, ${shaped.full_text.verified ? 'verified' : 'unverified'}): ${shaped.full_text.url}` : '',
+      shaped.topics?.length ? `Topics: ${shaped.topics.slice(0, 10).join('; ')}` : '',
       shaped.abstract ? `\n${shaped.abstract}` : ''
     ].filter(Boolean).join('\n');
     const text = [
       retractionWarning(shaped.retracted ? ['This paper'] : []),
       shaped.doi ? `DOI: ${shaped.doi}` : '',
       `Access: ${shaped.access}${shaped.full_text ? ` · full text: ${shaped.full_text.kind}${shaped.full_text.verified ? ' (verified)' : ' (unverified)'}` : ''}`,
+      shaped.citations !== undefined ? `Cited ${shaped.citations.toLocaleString('en')} times` : '',
       `Found in: ${shaped.found_in.join(', ')}${'id' in ref ? ' (looked up by id, which asks only that source; pass doi to see every source that holds it)' : ''}`,
       fenceUntrusted('paper record', record)
     ].filter(Boolean).join('\n');

@@ -1,10 +1,11 @@
 import * as z from 'zod';
 import type { SearchResponseV2 } from '@sci-open/shared';
 import { encodeSearchHandle, type SearchSpec } from '../handles';
-import { shapePaper, paperSchema, listedTitle, retractionWarning } from '../shape/paper';
+import { shapePaper, paperSchema, listedTitle, retractionWarning, type ShapedPaper } from '../shape/paper';
 import { fitWholeItems } from '../shape/budget';
 import { coverageOf, coverageSchema, coverageSentence } from '../shape/coverage';
 import { fenceUntrusted } from '../safety/untrusted';
+import { sanitizeText } from '../safety/sanitize';
 import type { ToolOutcome } from '../framework/define-tool';
 
 export const pageSchema = z.object({
@@ -25,6 +26,36 @@ export const pageSchema = z.object({
 });
 export type PageOutput = z.infer<typeof pageSchema>;
 
+/** The facets as the output gives them: the top values of each. */
+const TOP_FACET_VALUES = 8;
+
+/** Authors a full entry lists before it counts the rest. */
+const LISTED_AUTHORS = 10;
+
+const oneLine = (text: string) => text.replace(/\s*\n\s*/g, ' ');
+
+/**
+ * A result as `detail: "full"` shows it in the text: what screening reads —
+ * the abstract whole, the venue, the DOI, the citation count — so a model
+ * whose client shows it only the text need not call get_paper for each.
+ */
+function fullEntry(p: ShapedPaper, n: number): string {
+  const authors = `${p.authors.slice(0, LISTED_AUTHORS).join(', ')}${p.authors.length > LISTED_AUTHORS ? ', …' : ''}`;
+  const facts = [
+    `\`${p.id}\``,
+    p.doi ? `doi:${p.doi}` : '',
+    `access ${p.access}${p.full_text?.verified ? ' (full text verified)' : ''}`,
+    p.citations !== undefined ? `cited ${p.citations.toLocaleString('en')} times` : '',
+    `found in ${p.found_in.length} source${p.found_in.length === 1 ? '' : 's'}`
+  ].filter(Boolean).join(' · ');
+  return [
+    `### ${n}. ${oneLine(listedTitle(p))} (${p.year ?? 'n.d.'})`,
+    [authors, p.venue ? oneLine(p.venue) : ''].filter(Boolean).join(' · '),
+    facts,
+    ...(p.abstract ? ['', p.abstract] : [])
+  ].join('\n');
+}
+
 /** One page of a search, as both search tools return it. */
 export function presentPage(
   r: SearchResponseV2,
@@ -37,6 +68,9 @@ export function presentPage(
   const coverage = coverageOf(r);
   // A source that failed and a rescue cut short both leave the total short.
   const lowerBound = !r.complete || r.bounded;
+  const facets = opts.includeFacets
+    ? Object.fromEntries(Object.entries(r.facets).map(([k, v]) => [k, v.slice(0, TOP_FACET_VALUES).map(b => ({ value: b.value, count: b.count }))]))
+    : undefined;
 
   const structured: PageOutput = {
     handle,
@@ -48,9 +82,7 @@ export function presentPage(
     has_more: more,
     next: more ? { tool: 'get_search_page', handle, page: r.page + 1 } : null,
     coverage,
-    ...(opts.includeFacets
-      ? { facets: Object.fromEntries(Object.entries(r.facets).map(([k, v]) => [k, v.slice(0, 8).map(b => ({ value: b.value, count: b.count }))])) }
-      : {}),
+    ...(facets ? { facets } : {}),
     results: kept,
     ...(omitted ? { omitted_for_size: omitted } : {}),
     ...(opts.rerun ? { rerun: true } : {})
@@ -61,6 +93,9 @@ export function presentPage(
     `| ${(r.page - 1) * r.pageSize + i + 1} | ${cell(listedTitle(p))} | ${cell(p.authors[0] ?? '—')} | ${p.year ?? '—'} | ${p.access}${p.full_text?.verified ? ' ✓' : ''} | ${p.found_in.length} | \`${p.id}\` |`
   );
   const retracted = kept.flatMap((p, i) => (p.retracted ? [`#${(r.page - 1) * r.pageSize + i + 1}`] : []));
+  // Venues, publishers and topics are the sources' text as much as titles are.
+  const facetLines = Object.entries(facets ?? {}).filter(([, values]) => values.length).map(([name, values]) =>
+    `${name}: ${values.map(b => `${typeof b.value === 'string' ? oneLine(sanitizeText(b.value)) : b.value} (${b.count.toLocaleString('en')})`).join(', ')}`);
   const text = [
     retractionWarning(retracted.length === 1 ? [`Result ${retracted[0]}`] : retracted.length ? [`Results ${retracted.join(', ')}`] : []),
     `# ${r.total.toLocaleString('en')}${lowerBound ? '+' : ''} results${spec.q ? ` for \`${spec.q}\`` : spec.doi ? ` for DOI ${spec.doi}` : ''} — page ${r.page}`,
@@ -69,14 +104,17 @@ export function presentPage(
     more ? `**Next:** get_search_page(handle="${handle}", page=${r.page + 1})` : '**End of results.**',
     omitted ? `**Note:** the last ${omitted} result(s) of this page were omitted to fit the response limit; run search_papers again with a smaller page_size.` : '',
     opts.rerun ? '**Note:** the search was run again for this page (the held set had expired or was incomplete), so it may overlap or skip results from earlier pages.' : '',
+    ...(facetLines.length ? ['', '**Facets**, the top values of each:', fenceUntrusted('facet values', facetLines.join('\n'))] : []),
     '',
-    kept.length
-      ? fenceUntrusted('search results table', [
-          '| # | Title | First author | Year | Access | Sources | ID |',
-          '|---|---|---|---|---|---|---|',
-          ...lines
-        ].join('\n'))
-      : 'No results on this page.'
+    !kept.length
+      ? 'No results on this page.'
+      : opts.detail === 'full'
+        ? fenceUntrusted('search results', kept.map((p, i) => fullEntry(p, (r.page - 1) * r.pageSize + i + 1)).join('\n\n'))
+        : fenceUntrusted('search results table', [
+            '| # | Title | First author | Year | Access | Sources | ID |',
+            '|---|---|---|---|---|---|---|',
+            ...lines
+          ].join('\n'))
   ].filter(l => l !== '').join('\n');
 
   return {

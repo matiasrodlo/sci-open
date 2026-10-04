@@ -39,6 +39,12 @@ in `test/__toolsnaps__/` are the record of every schema change.
   and export_citations offer no `save_to` or `overwrite`, and are annotated
   read-only; a `save_to` sent anyway is answered `writes_disabled`. On a local
   connection with writes allowed they are unchanged.
+- The text the model reads carries what the workflows need: search_papers
+  shows the facets it was asked for, not only in structured content;
+  `detail: "full"` shows each result's abstract, DOI, venue and citation count,
+  for screening without a get_paper each, while `concise` stays a table; and
+  get_paper adds the citation count, publisher, topics, landing page and
+  full-text link. The systematic-search skill screens with `detail: "full"`.
 - search_papers counts facets across the sources only with
   `include_facets`. Every plain search used to count them — five OpenAlex
   `group_by` requests, and a request a year for ten years to each source that

@@ -34,7 +34,8 @@ Recipes:
   returns each source's own match count from one request per source and
   reads no results. Then run search_papers without it at the page_size you want, and
   page with get_search_page and the returned handle. A handle keeps the page
-  size it was made with.
+  size it was made with. detail="full" shows each result's abstract, to
+  screen without a get_paper for each.
 - Verify a bibliography: verify_references in batches of up to 25.
   Report every verdict other than "verified" to the user with its issues.
   Send references marked not_checked again after the wait they give.

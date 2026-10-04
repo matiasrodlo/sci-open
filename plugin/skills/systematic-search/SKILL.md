@@ -21,7 +21,8 @@ bound, the coverage sentence, the handle (searches only) and the result hash
    Counts are each source's own, so compare variants with them; never report
    one as the number of papers found.
 4. With the final query, run `search_papers` without `count_only` at
-   `page_size=25`, and page with `get_search_page` until `next` is null or the
+   `page_size=10` and `detail="full"`, which shows each abstract, and page
+   with `get_search_page` (`detail="full"` again) until `next` is null or the
    user's cap.
 5. Screen titles and abstracts against the user's criteria. For an uncertain
    paper, `read_paper` with `view="outline"`, then its methods section. Exclude
