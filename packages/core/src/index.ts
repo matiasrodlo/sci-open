@@ -11,7 +11,7 @@ export type { UpstreamUsage, SourceUsage } from './lib/upstream-usage';
 export type { EngineLogger } from './lib/logger';
 export { usableApiKey } from './lib/api-key';
 export type { ApiKeys } from './lib/api-key';
-export { PdfProxyError } from './lib/pdf-proxy';
+export { PdfFetchError } from './lib/pdf-fetch';
 export { SourceBusyError } from './lib/host-pacer';
 export type { FullTextDocument } from './fulltext/types';
 export { OpenCitationsUnavailableError, OPENCITATIONS_HOST } from './graph/opencitations';

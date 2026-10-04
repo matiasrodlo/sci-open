@@ -1,5 +1,5 @@
 import { extractText } from 'unpdf';
-import { assertPublicHttpUrl, fetchPdfStream, MAX_PDF_BYTES } from '../lib/pdf-proxy';
+import { assertPublicHttpUrl, fetchPdfStream } from '../lib/pdf-fetch';
 import type { Section } from './types';
 
 /**
@@ -9,17 +9,9 @@ import type { Section } from './types';
  */
 export async function pdfToSections(rawUrl: string, userAgent: string): Promise<Section[]> {
   const url = await assertPublicHttpUrl(rawUrl);
-  const stream = await fetchPdfStream(url, userAgent);
+  // The stream fails past the size cap, so reading it whole is bounded.
   const chunks: Buffer[] = [];
-  let size = 0;
-  for await (const chunk of stream) {
-    size += (chunk as Buffer).length;
-    if (size > MAX_PDF_BYTES) {
-      stream.destroy();
-      throw new Error('PDF exceeds the size limit');
-    }
-    chunks.push(chunk as Buffer);
-  }
+  for await (const chunk of await fetchPdfStream(url, userAgent)) chunks.push(chunk as Buffer);
   return pagesToSections(Buffer.concat(chunks));
 }
 

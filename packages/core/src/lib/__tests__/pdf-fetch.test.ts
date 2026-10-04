@@ -3,7 +3,7 @@ import axios from 'axios';
 import { PassThrough, Readable } from 'stream';
 import { gzipSync } from 'zlib';
 
-// pdf-proxy binds `promisify(dns.lookup)` at import time, so the resolver has
+// pdf-fetch binds `promisify(dns.lookup)` at import time, so the resolver has
 // to be replaced at module level rather than spied on afterwards. The same stub
 // serves `guardedLookup`, which resolves through `dns.lookup` directly.
 const resolver = vi.hoisted(() => ({
@@ -25,17 +25,16 @@ import {
   ssrfRefusalIn,
   fetchPdfStream,
   servesPdf,
-  statusForUpstream,
-  PdfProxyError,
+  PdfFetchError,
   SSRF_REFUSED
-} from '../pdf-proxy';
+} from '../pdf-fetch';
 
 /**
- * The PDF proxy takes its URL from the browser, so without these checks the
- * endpoint is an open proxy into whatever the API server can reach — including
- * cloud instance metadata at 169.254.169.254 and anything on the private
- * network. This is the highest-value suite in the repo: every case below is a
- * request an attacker would actually send.
+ * A PDF's URL comes from a source's record, so without these checks a fetch
+ * could reach whatever this process can — including cloud instance metadata at
+ * 169.254.169.254 and anything on the private network. This is the
+ * highest-value suite in the repo: every case below is a request an attacker
+ * would actually send.
  */
 
 const blocked = (host: string) => () => assertRoutableHostSync(host);
@@ -57,7 +56,7 @@ describe('assertRoutableHostSync — IPv4', () => {
     ['224.0.0.1', 'multicast'],
     ['255.255.255.255', 'broadcast']
   ])('blocks %s (%s)', ip => {
-    expect(blocked(ip)).toThrow(PdfProxyError);
+    expect(blocked(ip)).toThrow(PdfFetchError);
   });
 
   it.each([
@@ -99,7 +98,7 @@ describe('assertRoutableHostSync — IPv6', () => {
     ['2001:db8::1', 'documentation'],
     ['2002:7f00:1::1', '6to4']
   ])('blocks %s (%s)', ip => {
-    expect(blocked(ip)).toThrow(PdfProxyError);
+    expect(blocked(ip)).toThrow(PdfFetchError);
   });
 
   it('allows a public IPv6 address', () => {
@@ -115,14 +114,14 @@ describe('assertRoutableHostSync — IPv6', () => {
   });
 
   it('unwraps bracketed IPv6 literals before checking them', () => {
-    expect(blocked('[::1]')).toThrow(PdfProxyError);
+    expect(blocked('[::1]')).toThrow(PdfFetchError);
   });
 });
 
 describe('assertRoutableHostSync — hostnames', () => {
   it.each(['localhost', 'foo.localhost', 'db.internal', 'printer.local', 'host.localdomain', 'router.home.arpa'])(
     'blocks %s',
-    host => expect(blocked(host)).toThrow(PdfProxyError)
+    host => expect(blocked(host)).toThrow(PdfFetchError)
   );
 
   it.each(['example.com', 'arxiv.org', 'localhost.example.com'])('allows %s', host =>
@@ -139,21 +138,21 @@ describe('assertPublicHttpUrl', () => {
   it.each(['file:///etc/passwd', 'ftp://example.com/x', 'gopher://example.com'])(
     'rejects the %s scheme',
     async url => {
-      await expect(assertPublicHttpUrl(url)).rejects.toThrow(PdfProxyError);
+      await expect(assertPublicHttpUrl(url)).rejects.toThrow(PdfFetchError);
     }
   );
 
   it('rejects a malformed URL', async () => {
-    await expect(assertPublicHttpUrl('not a url')).rejects.toThrow(PdfProxyError);
+    await expect(assertPublicHttpUrl('not a url')).rejects.toThrow(PdfFetchError);
   });
 
   it('rejects a loopback URL without needing DNS', async () => {
-    await expect(assertPublicHttpUrl('http://127.0.0.1/secret')).rejects.toThrow(PdfProxyError);
+    await expect(assertPublicHttpUrl('http://127.0.0.1/secret')).rejects.toThrow(PdfFetchError);
   });
 
   it('rejects the cloud metadata endpoint', async () => {
     await expect(assertPublicHttpUrl('http://169.254.169.254/latest/meta-data/')).rejects.toThrow(
-      PdfProxyError
+      PdfFetchError
     );
   });
 
@@ -161,7 +160,7 @@ describe('assertPublicHttpUrl', () => {
    * Through the URL parser, which is where the hole was. `new URL` rewrites
    * `[::ffff:127.0.0.1]` as `[::ffff:7f00:1]`, and a literal never reaches
    * DNS — so a check that knew only the dotted spelling let every one of these
-   * through, and the proxy streamed back what a loopback-only server said.
+   * through, and the fetch read back what a loopback-only server said.
    */
   it.each([
     'http://[::ffff:127.0.0.1]:4000/x?x=.pdf',
@@ -171,7 +170,7 @@ describe('assertPublicHttpUrl', () => {
     'http://[64:ff9b::7f00:1]/x.pdf',
     'http://[0:0:0:0:0:ffff:a00:1]/x.pdf'
   ])('rejects the IPv6 literal %s', async url => {
-    await expect(assertPublicHttpUrl(url)).rejects.toMatchObject({ statusCode: 403, code: SSRF_REFUSED });
+    await expect(assertPublicHttpUrl(url)).rejects.toMatchObject({ code: SSRF_REFUSED });
   });
 
   it('accepts a public IP literal without touching DNS', async () => {
@@ -187,22 +186,22 @@ describe('assertPublicHttpUrl', () => {
   it('rejects a hostname that resolves to a private address', async () => {
     // DNS rebinding: the name is public, the address it resolves to is not
     resolver.addresses = [{ address: '10.0.0.5' }];
-    await expect(assertPublicHttpUrl('https://evil.example.com/x.pdf')).rejects.toThrow(PdfProxyError);
+    await expect(assertPublicHttpUrl('https://evil.example.com/x.pdf')).rejects.toThrow(PdfFetchError);
   });
 
   it('rejects when any resolved address is private, not just the first', async () => {
     resolver.addresses = [{ address: '93.184.216.34' }, { address: '127.0.0.1' }];
-    await expect(assertPublicHttpUrl('https://split.example.com/x.pdf')).rejects.toThrow(PdfProxyError);
+    await expect(assertPublicHttpUrl('https://split.example.com/x.pdf')).rejects.toThrow(PdfFetchError);
   });
 
   it('rejects a host that resolves to nothing at all', async () => {
     resolver.addresses = [];
-    await expect(assertPublicHttpUrl('https://empty.example.com/x.pdf')).rejects.toThrow(PdfProxyError);
+    await expect(assertPublicHttpUrl('https://empty.example.com/x.pdf')).rejects.toThrow(PdfFetchError);
   });
 
   it('rejects a host whose lookup fails', async () => {
     resolver.error = new Error('ENOTFOUND');
-    await expect(assertPublicHttpUrl('https://missing.example.com/x.pdf')).rejects.toThrow(PdfProxyError);
+    await expect(assertPublicHttpUrl('https://missing.example.com/x.pdf')).rejects.toThrow(PdfFetchError);
   });
 });
 
@@ -237,30 +236,30 @@ describe('guardedLookup', () => {
     resolver.addresses = [{ address: '10.0.0.5' }];
     const { err } = await lookup();
 
-    expect(err).toBeInstanceOf(PdfProxyError);
-    expect(err.statusCode).toBe(403);
+    expect(err).toBeInstanceOf(PdfFetchError);
+    expect(err.code).toBe(SSRF_REFUSED);
   });
 
   it('refuses the cloud metadata address', async () => {
     resolver.addresses = [{ address: '169.254.169.254' }];
-    expect((await lookup()).err).toBeInstanceOf(PdfProxyError);
+    expect((await lookup()).err).toBeInstanceOf(PdfFetchError);
   });
 
   it('refuses when any address in the answer is private, not just the first', async () => {
     // Connecting to whichever address happened to be public would be the whole
     // hole again, one DNS answer later.
     resolver.addresses = [{ address: '93.184.216.34' }, { address: '127.0.0.1' }];
-    expect((await lookup()).err).toBeInstanceOf(PdfProxyError);
+    expect((await lookup()).err).toBeInstanceOf(PdfFetchError);
   });
 
   it('refuses an answer that spells a private address as IPv4-mapped hex', async () => {
     resolver.addresses = [{ address: '::ffff:a00:5' }];
-    expect((await lookup()).err).toBeInstanceOf(PdfProxyError);
+    expect((await lookup()).err).toBeInstanceOf(PdfFetchError);
   });
 
   it('refuses a name that resolves to nothing', async () => {
     resolver.addresses = [];
-    expect((await lookup()).err).toBeInstanceOf(PdfProxyError);
+    expect((await lookup()).err).toBeInstanceOf(PdfFetchError);
   });
 
   it('passes a public answer through', async () => {
@@ -294,8 +293,8 @@ describe('ssrfRefusalIn', () => {
   // A refusal raised inside the socket guard reaches the caller through
   // follow-redirects, which restates it, and then axios, which rebuilds it as
   // an AxiosError. Neither keeps the instance. Without this the caller is told
-  // "502, could not reach the PDF", which reads like an upstream outage rather
-  // than a request we declined to make.
+  // "could not reach the PDF", which reads like an upstream outage rather than
+  // a request we declined to make.
   it('finds a refusal wrapped two layers deep', () => {
     const wrapped = Object.assign(new Error('Request failed'), {
       cause: Object.assign(new Error('Redirected request failed: refused'), {
@@ -306,8 +305,8 @@ describe('ssrfRefusalIn', () => {
     });
 
     const found = ssrfRefusalIn(wrapped);
-    expect(found).toBeInstanceOf(PdfProxyError);
-    expect(found!.statusCode).toBe(403);
+    expect(found).toBeInstanceOf(PdfFetchError);
+    expect(found).toMatchObject({ code: SSRF_REFUSED });
     expect(found!.message).toBe('Refusing to download from a non-public address');
   });
 
@@ -315,12 +314,12 @@ describe('ssrfRefusalIn', () => {
     const bare = Object.assign(new Error('Refusing to download from a non-public address'), {
       code: SSRF_REFUSED
     });
-    expect(ssrfRefusalIn(bare)).toBeInstanceOf(PdfProxyError);
+    expect(ssrfRefusalIn(bare)).toBeInstanceOf(PdfFetchError);
   });
 
   it('leaves an ordinary transport failure alone', () => {
-    // A real upstream outage has to stay a 502, or the endpoint reports every
-    // failure as a refusal.
+    // A real upstream outage has to stay one, or every failure reads as a
+    // refusal.
     expect(ssrfRefusalIn(Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' })))
       .toBeUndefined();
   });
@@ -334,71 +333,29 @@ describe('ssrfRefusalIn', () => {
   });
 });
 
-/**
- * What the caller is told when the publisher said no.
- *
- * Every 4xx collapsed to 404 here, and the failure that reaches a reader most
- * often is a 403 — measured 2026-09-04, `jbc.org`, `tandfonline.com` and a
- * `doi.org` link into a publisher all answer 403 to this proxy, and all three
- * surfaced in the browser as "PDF download failed with status 404". The two
- * are opposite diagnoses: 404 sends someone to the provider metadata, 403 says
- * the metadata was right and the fetch was refused.
- */
-describe('statusForUpstream', () => {
-  it.each([
-    [404, 404, 'not there'],
-    [410, 404, 'gone is not found, one tense later']
-  ])('reports %i as %i (%s)', (upstream, expected) => {
-    expect(statusForUpstream(upstream)).toBe(expected);
-  });
-
-  it.each([
-    [401, 'no credentials exist for this proxy to offer'],
-    [403, 'bot protection — the file is there, we are refused']
-  ])('reports %i as 403 (%s)', upstream => {
-    expect(statusForUpstream(upstream)).toBe(403);
-  });
-
-  it('does not pass an upstream 429 through', () => {
-    // The route answers 429 from its own rate limit. Reusing the code for the
-    // publisher's would tell a caller to wait for a limit it is not near.
-    expect(statusForUpstream(429)).toBe(502);
-  });
-
-  it.each([[400], [418], [500], [503]])('reports %i as a gateway failure', upstream => {
-    expect(statusForUpstream(upstream)).toBe(502);
-  });
-});
-
 describe('fetchPdfStream — upstream failures', () => {
   afterEach(() => vi.restoreAllMocks());
 
   const fetchAfter = async (error: unknown) => {
     vi.spyOn(axios, 'get').mockRejectedValue(error);
     return fetchPdfStream(new URL('https://publisher.example.com/paper.pdf'), 'ua')
-      .catch((e: PdfProxyError) => e);
+      .catch((e: PdfFetchError) => e);
   };
 
-  it('carries a publisher 403 through as a 403', async () => {
-    const error = await fetchAfter({ response: { status: 403 }, message: 'Request failed' });
+  // A 403 is bot protection — the file is there and we are refused — and a 404
+  // is a stale record; the message names which, for whoever reads the log.
+  it.each([403, 404])('names the publisher\'s %i', async status => {
+    const error = await fetchAfter({ response: { status }, message: 'Request failed' });
 
-    expect(error).toBeInstanceOf(PdfProxyError);
-    expect((error as PdfProxyError).statusCode).toBe(403);
-    // The message named the real status even while the code did not; it is the
-    // status the client reads, so both have to agree.
-    expect((error as PdfProxyError).message).toBe('Upstream returned 403 for the PDF');
+    expect(error).toBeInstanceOf(PdfFetchError);
+    expect((error as PdfFetchError).message).toBe(`Upstream returned ${status} for the PDF`);
   });
 
-  it('keeps a genuine 404 a 404', async () => {
-    const error = await fetchAfter({ response: { status: 404 }, message: 'Request failed' });
-    expect((error as PdfProxyError).statusCode).toBe(404);
-  });
-
-  it('still reports a transport failure as a gateway failure', async () => {
+  it('reports a transport failure as one', async () => {
     const error = await fetchAfter(Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' }));
 
-    expect((error as PdfProxyError).statusCode).toBe(502);
-    expect((error as PdfProxyError).message).toBe('Could not reach the PDF: socket hang up');
+    expect(error).toBeInstanceOf(PdfFetchError);
+    expect((error as PdfFetchError).message).toBe('Could not reach the PDF: socket hang up');
   });
 });
 
@@ -436,9 +393,9 @@ describe('fetchPdfStream wiring', () => {
     const config = await configOf();
 
     expect(() => config.beforeRedirect({ protocol: 'http:', hostname: '169.254.169.254' }))
-      .toThrow(PdfProxyError);
+      .toThrow(PdfFetchError);
     expect(() => config.beforeRedirect({ protocol: 'file:', hostname: 'example.com' }))
-      .toThrow(PdfProxyError);
+      .toThrow(PdfFetchError);
   });
 });
 
@@ -495,7 +452,7 @@ describe('fetchPdfStream — the body', () => {
   it('refuses an encoding it cannot read rather than send it as a PDF', async () => {
     const data = Readable.from([Buffer.from('x')]);
     serve({ 'content-type': 'application/pdf', 'content-encoding': 'compress' }, data);
-    await expect(fetch()).rejects.toMatchObject({ statusCode: 502 });
+    await expect(fetch()).rejects.toThrow(/in an encoding this cannot read \(compress\)/);
     expect(data.destroyed).toBe(true);
   });
 });

@@ -1,5 +1,5 @@
 import { QueryParseError } from '@sci-open/shared';
-import { OPENCITATIONS_HOST, OpenCitationsUnavailableError, PdfProxyError, SourceBusyError, type EngineLogger } from '@sci-open/core';
+import { OPENCITATIONS_HOST, OpenCitationsUnavailableError, PdfFetchError, SourceBusyError, type EngineLogger } from '@sci-open/core';
 
 /**
  * Every failure a tool can return: a stable code, a plain message, and a hint
@@ -68,7 +68,7 @@ export function toToolError(error: unknown): ToolError {
       ? new ToolError('rate_limited', 'OpenCitations asks for fewer requests a minute.', 'Retry in a minute. Pages of a list already read do not ask it again.', 60)
       : new ToolError('upstream_unavailable', 'OpenCitations did not answer.', 'Retry in a minute; the other tools do not depend on it.');
   }
-  if (error instanceof PdfProxyError) {
+  if (error instanceof PdfFetchError) {
     return new ToolError('no_full_text', 'The full-text copy could not be fetched.', 'Try view="outline" again later, or use get_paper for the landing page.');
   }
   if (isTimeout(error)) {

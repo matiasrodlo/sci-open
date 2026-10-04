@@ -254,7 +254,7 @@ packages/
       authorities/   Crossref, OpenAlex, Unpaywall, OpenCitations, preprints
       __fixtures__/  one recorded response per provider
       lib/           http-client-factory, api-key, logger, contact-email,
-                     pdf-url, pdf-proxy, single-flight (moved in Phase 1);
+                     pdf-url, pdf-fetch, single-flight (moved in Phase 1);
                      doi-registry.ts (Phase 7), host-pacer.ts and
                      request-budget.ts (Phases 8, 9)
       engine.ts      createEngine()
@@ -486,7 +486,7 @@ Done at the start of the work, with `git mv` so `git log --follow` traces every
 file back into `apps/api/src`: the orchestrator, the providers, the
 authorities, the recorded fixtures and the eight `lib` modules they import —
 `http-client-factory`, `http-pool-config`, `api-key`, `logger`,
-`contact-email`, `pdf-url`, `pdf-proxy` and `single-flight`. None of the eight
+`contact-email`, `pdf-url`, `pdf-proxy` (now `pdf-fetch`) and `single-flight`. None of the eight
 imports anything outside the set, and the fixture paths in provider tests
 (`../../../__fixtures__/arxiv.xml`) kept working because the directory depth
 was preserved.
@@ -591,7 +591,7 @@ export { useLogger } from './lib/logger';
 export type { EngineLogger } from './lib/logger';
 export { usableApiKey } from './lib/api-key';
 export type { ApiKeys } from './lib/api-key';
-export { PdfProxyError } from './lib/pdf-proxy';
+export { PdfFetchError } from './lib/pdf-fetch';
 export { SourceBusyError } from './lib/host-pacer';
 export type { FullTextDocument } from './fulltext/types';
 export { OpenCitationsUnavailableError, OPENCITATIONS_HOST } from './graph/opencitations';
@@ -1330,7 +1330,7 @@ improvements", not tracebacks).
 
 ```ts
 import { QueryParseError } from '@sci-open/shared';
-import { PdfProxyError } from '@sci-open/core';
+import { PdfFetchError } from '@sci-open/core';
 
 export type ToolErrorCode =
   | 'invalid_input' | 'invalid_handle' | 'not_found' | 'no_full_text'
@@ -1369,7 +1369,7 @@ export function toToolError(error: unknown): ToolError {
       'Quote words that look like operators ("or"), balance brackets, and use the tags in the server instructions. NEAR and SAME are not supported.'
     );
   }
-  if (error instanceof PdfProxyError) {
+  if (error instanceof PdfFetchError) {
     return new ToolError('no_full_text', 'The full-text copy could not be fetched.', 'Try view="outline" again later, or use get_paper for the landing page.');
   }
   if (isTimeout(error)) {
@@ -3726,19 +3726,13 @@ section ids, titles and character counts, plus a hand-written page with a
 
 ```ts
 import { extractText } from 'unpdf';
-import { assertPublicHttpUrl, fetchPdfStream, MAX_PDF_BYTES } from '../lib/pdf-proxy';
+import { assertPublicHttpUrl, fetchPdfStream } from '../lib/pdf-fetch';
 import type { Section } from './types';
 
 export async function pdfToSections(rawUrl: string, userAgent: string): Promise<Section[]> {
   const url = await assertPublicHttpUrl(rawUrl);         // the SSRF guard, before any request
-  const stream = await fetchPdfStream(url, userAgent);   // capped at MAX_PDF_BYTES, decoded
-  const chunks: Buffer[] = [];
-  let size = 0;
-  for await (const chunk of stream) {
-    size += (chunk as Buffer).length;
-    if (size > MAX_PDF_BYTES) { stream.destroy(); throw new Error('PDF exceeds the size limit'); }
-    chunks.push(chunk as Buffer);
-  }
+  const chunks: Buffer[] = [];                           // the stream fails past 50 MB, decoded
+  for await (const chunk of await fetchPdfStream(url, userAgent)) chunks.push(chunk as Buffer);
   const { text } = await extractText(new Uint8Array(Buffer.concat(chunks)), { mergePages: false });
   return text.map((page, i) => ({ id: `p${i + 1}`, title: `Page ${i + 1}`, text: page.trim() })).filter(s => s.text);
 }

@@ -12,8 +12,8 @@ import { recordUpstream } from './upstream-usage';
 const dnsLookup = promisify(dns.lookup);
 
 // Publishers occasionally serve very large scans; anything past this is
-// almost certainly not a paper we should be proxying.
-export const MAX_PDF_BYTES = 50 * 1024 * 1024;
+// almost certainly not a paper worth reading.
+const MAX_PDF_BYTES = 50 * 1024 * 1024;
 
 const DOWNLOAD_TIMEOUT_MS = 30000;
 
@@ -26,18 +26,19 @@ const DOWNLOAD_TIMEOUT_MS = 30000;
  */
 const MAX_REDIRECTS = 10;
 
-export class PdfProxyError extends Error {
-  constructor(message: string, public readonly statusCode: number) {
+/** A PDF that could not be fetched, or that this refused to fetch. */
+export class PdfFetchError extends Error {
+  constructor(message: string) {
     super(message);
-    this.name = 'PdfProxyError';
+    this.name = 'PdfFetchError';
   }
 }
 
-
 /**
- * The pdfUrl arrives from the browser, so this endpoint would otherwise be an
- * open proxy into whatever the API server can reach. Everything below exists to
- * keep it pointed at the public internet only.
+ * A PDF's address comes from a source's record, which this process does not
+ * control, so a fetch could otherwise be pointed at whatever this process can
+ * reach. Everything below exists to keep it pointed at the public internet
+ * only.
  */
 function isBlockedIpv4(ip: string): boolean {
   const parts = ip.split('.').map(Number);
@@ -156,8 +157,8 @@ function isBlockedHostname(hostname: string): boolean {
  */
 export const SSRF_REFUSED = 'ESSRFREFUSED';
 
-function refusal(message: string): PdfProxyError {
-  return Object.assign(new PdfProxyError(message, 403), { code: SSRF_REFUSED });
+function refusal(message: string): PdfFetchError {
+  return Object.assign(new PdfFetchError(message), { code: SSRF_REFUSED });
 }
 
 /**
@@ -167,11 +168,10 @@ function refusal(message: string): PdfProxyError {
  * pre-flight check below resolves the hostname the caller sent; every
  * **redirect** hop got `assertRoutableHostSync` instead, which — as its own
  * name says — cannot await DNS, so it could only inspect hostname suffixes and
- * literal IPs. A name that resolved inward was invisible to it. An attacker
- * posted a URL on a host they controlled, that host answered 302 pointing at any
- * name resolving to an internal address, and the proxy fetched it and streamed
- * the body back. Reproduced against a local server through a `.nip.io`-style
- * name: the response body came back to the caller intact.
+ * literal IPs. A name that resolved inward was invisible to it. A URL on a
+ * host someone controlled could answer 302 pointing at any name resolving to
+ * an internal address, and the fetch followed it. Reproduced against a local
+ * server through a `.nip.io`-style name: the response body came back intact.
  *
  * The same hole, in slower motion, existed without any redirect at all. The
  * pre-flight resolved the name and then axios resolved it *again* to connect —
@@ -229,13 +229,13 @@ const guardedHttpsAgent = new https.Agent({ keepAlive: true, lookup: guardedLook
  * "Redirected request failed: ...", and then axios, which rebuilds it as an
  * AxiosError. Neither keeps the instance, so the chain is walked for the marker
  * rather than the class. Without this an SSRF refusal reaches the caller as a
- * generic 502, which reads like the upstream being down.
+ * failure to reach the PDF, which reads like the upstream being down.
  */
-export function ssrfRefusalIn(error: unknown): PdfProxyError | undefined {
+export function ssrfRefusalIn(error: unknown): PdfFetchError | undefined {
   for (let current = error, depth = 0; current && depth < 5; depth++) {
     const candidate = current as { code?: string; message?: string; cause?: unknown };
     if (candidate.code === SSRF_REFUSED) {
-      return new PdfProxyError(candidate.message ?? 'Refusing to download from a non-public address', 403);
+      return refusal(candidate.message ?? 'Refusing to download from a non-public address');
     }
     current = candidate.cause;
   }
@@ -263,9 +263,8 @@ export function assertRoutableHostSync(hostname: string): void {
  * Validates scheme and resolves the hostname, rejecting anything that lands on
  * a loopback, private, or link-local address.
  *
- * A pre-flight, not the guarantee. It answers a plainly bad URL with a clean
- * 400 or 403 before any connection is opened, and it is the only place the
- * scheme is checked. What it cannot do is speak for the address finally
+ * A pre-flight, not the guarantee. It refuses a plainly bad URL before any
+ * connection is opened, and it is the only place the scheme is checked. What it cannot do is speak for the address finally
  * connected to — it resolves the name, and the connection resolves it again —
  * so `guardedLookup` on the agents is what the safety actually rests on.
  */
@@ -276,11 +275,11 @@ export async function assertPublicHttpUrl(rawUrl: string): Promise<URL> {
     // resolved and checked exactly as the one the caller sent would have been.
     url = new URL(preferredPdfUrl(rawUrl));
   } catch {
-    throw new PdfProxyError('pdfUrl is not a valid URL', 400);
+    throw new PdfFetchError('The PDF address is not a valid URL');
   }
 
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    throw new PdfProxyError('Only http and https URLs can be downloaded', 400);
+    throw new PdfFetchError('Only http and https URLs can be downloaded');
   }
 
   assertRoutableHostSync(url.hostname);
@@ -291,7 +290,7 @@ export async function assertPublicHttpUrl(rawUrl: string): Promise<URL> {
     try {
       addresses = (await dnsLookup(host, { all: true })) as { address: string }[];
     } catch {
-      throw new PdfProxyError('Could not resolve the PDF host', 400);
+      throw new PdfFetchError('Could not resolve the PDF host');
     }
 
     if (!addresses.length || addresses.some(record => isBlockedIp(record.address))) {
@@ -311,45 +310,6 @@ function looksLikePdfResponse(url: URL, contentType: string): boolean {
   return !contentType || href.includes('.pdf') || href.includes('pdf=render') || href.includes('type=printable');
 }
 
-/**
- * The upstream's status, translated rather than collapsed.
- *
- * Every 4xx used to become a 404, which made the one failure a reader actually
- * meets unreadable. Measured 2026-09-04 against the `bestPdfUrl` of a live
- * search: `jbc.org`, `tandfonline.com` and a `doi.org` link that redirects to a
- * publisher all answer **403** — bot protection, the same refusal
- * `pdf-url.ts` documents for `academic.oup.com` and Wiley — and all three
- * reached the browser as `PDF download failed with status 404`. The body said
- * "Upstream returned 403 for the PDF" the whole time; only the status lied, and
- * the status is the part the client reads.
- *
- * That is worth more than tidiness. "Not found" says the file is gone and the
- * record is stale, which points at the provider metadata. "Forbidden" says the
- * file is there and we are the ones not allowed to fetch it, which is why the
- * caller's fallback — open the link in the reader's own tab, with the reader's
- * own session — is the right next move rather than a consolation.
- *
- * Only the two that a caller can act on differently are kept. Anything else
- * from a publisher is a gateway failure from here: the request left, something
- * came back, and it was not the file.
- */
-export function statusForUpstream(status: number): number {
-  // Gone is not found, one tense later.
-  if (status === 404 || status === 410) return 404;
-  // Both mean "the publisher will not serve this to us". 401 is not an
-  // invitation to authenticate: there are no credentials for this proxy to
-  // hold, and a reader's own browser may well be carrying some.
-  if (status === 401 || status === 403) return 403;
-  /**
-   * Everything else, 429 included. Passing an upstream 429 through would be
-   * the same mistake in a new place — this endpoint has its own rate limit
-   * answering with that code, so a client cannot tell "you asked us too often"
-   * from "we asked the publisher too often", and only the first is fixed by
-   * the client waiting.
-   */
-  return 502;
-}
-
 type GuardedGetOptions = {
   timeoutMs: number;
   signal?: AbortSignal;
@@ -360,9 +320,9 @@ type GuardedGetOptions = {
 };
 
 /**
- * A streamed GET under the SSRF rules, shared by the proxy and `servesPdf` so
- * that checking a copy and serving it cannot drift apart in what they will
- * follow.
+ * A streamed GET under the SSRF rules, shared by `fetchPdfStream` and
+ * `servesPdf` so that checking a copy and reading it cannot drift apart in
+ * what they will follow.
  */
 function guardedGet(url: URL, userAgent: string, options: GuardedGetOptions) {
   // Counted with every other request (`upstream-usage.ts`); a copy that
@@ -464,27 +424,26 @@ export async function fetchPdfStream(url: URL, userAgent: string): Promise<Reada
     decompress: false,
     validateStatus: (status: number) => status >= 200 && status < 400
   }).catch((error: any) => {
-    if (error instanceof PdfProxyError) {
+    if (error instanceof PdfFetchError) {
       throw error;
     }
-    // Before the generic mapping below, because a refusal reaching the caller
-    // as "502, could not reach the PDF" reads like an upstream outage rather
-    // than a request we declined to make.
+    // Before the generic message below, because a refusal reaching the caller
+    // as "could not reach the PDF" reads like an upstream outage rather than a
+    // request we declined to make.
     const refused = ssrfRefusalIn(error);
     if (refused) {
       throw refused;
     }
     const status = error.response?.status;
-    throw new PdfProxyError(
-      status ? `Upstream returned ${status} for the PDF` : `Could not reach the PDF: ${error.message}`,
-      status ? statusForUpstream(status) : 502
+    throw new PdfFetchError(
+      status ? `Upstream returned ${status} for the PDF` : `Could not reach the PDF: ${error.message}`
     );
   });
 
   const contentType = String(response.headers['content-type'] || '').toLowerCase();
   if (!looksLikePdfResponse(url, contentType)) {
     response.data.destroy();
-    throw new PdfProxyError(`Upstream served ${contentType || 'an unknown type'}, not a PDF`, 415);
+    throw new PdfFetchError(`Upstream served ${contentType || 'an unknown type'}, not a PDF`);
   }
 
   // A compressed body over the limit is a larger file still, so this holds
@@ -492,14 +451,14 @@ export async function fetchPdfStream(url: URL, userAgent: string): Promise<Reada
   const declaredLength = Number(response.headers['content-length']);
   if (Number.isFinite(declaredLength) && declaredLength > MAX_PDF_BYTES) {
     response.data.destroy();
-    throw new PdfProxyError('PDF is larger than the download limit', 413);
+    throw new PdfFetchError('PDF is larger than the download limit');
   }
 
   const encoding = String(response.headers['content-encoding'] || '').trim().toLowerCase();
   const decoder = decoderFor(encoding);
   if (decoder === null) {
     response.data.destroy();
-    throw new PdfProxyError(`Upstream sent the PDF in an encoding this proxy cannot read (${encoding})`, 502);
+    throw new PdfFetchError(`Upstream sent the PDF in an encoding this cannot read (${encoding})`);
   }
 
   // Enforce the cap on the wire too, since content-length is often absent —
@@ -509,7 +468,7 @@ export async function fetchPdfStream(url: URL, userAgent: string): Promise<Reada
     transform(chunk: Buffer, _encoding, done) {
       received += chunk.length;
       if (received > MAX_PDF_BYTES) {
-        done(new PdfProxyError('PDF is larger than the download limit', 413));
+        done(new PdfFetchError('PDF is larger than the download limit'));
         return;
       }
       done(null, chunk);

@@ -4,7 +4,7 @@ import type { AddressInfo } from 'net';
 
 // Every name resolves to loopback here, which the guard refuses — so a
 // download that reaches the guard is refused, and one that does not comes back.
-// The resolver is replaced at module level, as `pdf-proxy.test.ts` explains.
+// The resolver is replaced at module level, as `pdf-fetch.test.ts` explains.
 vi.mock('dns', () => ({
   default: {
     lookup: (_host: string, _opts: unknown, cb: (e: Error | null, a?: unknown) => void) =>
@@ -12,7 +12,7 @@ vi.mock('dns', () => ({
   }
 }));
 
-import { fetchPdfStream, PdfProxyError } from '../pdf-proxy';
+import { fetchPdfStream, PdfFetchError, SSRF_REFUSED } from '../pdf-fetch';
 
 /**
  * An outbound proxy named in the environment, which axios uses unless told not
@@ -58,8 +58,8 @@ describe('an outbound proxy in the environment', () => {
     );
 
     // Refused at the socket, for the address the name resolves to …
-    expect(outcome).toBeInstanceOf(PdfProxyError);
-    expect((outcome as PdfProxyError).statusCode).toBe(403);
+    expect(outcome).toBeInstanceOf(PdfFetchError);
+    expect(outcome).toMatchObject({ code: SSRF_REFUSED });
     // … and the proxy never asked.
     expect(asked).toEqual([]);
   });

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const pdf = vi.hoisted(() => ({ servesPdf: vi.fn() }));
-vi.mock('../../../lib/pdf-proxy', () => pdf);
+vi.mock('../../../lib/pdf-fetch', () => pdf);
 
 import { locate, lookup } from '..';
 import { AUTHORITIES } from '../../registry';

@@ -1,5 +1,5 @@
 import type { AuthorityFacts } from '@sci-open/shared';
-import { servesPdf } from '../../lib/pdf-proxy';
+import { servesPdf } from '../../lib/pdf-fetch';
 import { capabilities } from './capabilities';
 import { locate } from './locate';
 
