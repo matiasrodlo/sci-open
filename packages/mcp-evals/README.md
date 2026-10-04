@@ -56,7 +56,9 @@ Claude check each list with its tools and end with one `Verdict <n>:` line a
 reference; `--via-model` does the same for any server, sci-open included,
 which is the like-for-like comparison. A reference the model gave no verdict
 for is scored wrong. Model runs cost API credit, and report tool calls and
-tokens per list.
+tokens per list. Against sci-open, every suite also reports the requests its
+calls sent the sources and OpenAlex's price for them, read from each result's
+`_meta` — the number the OpenAlex budget is spent against.
 
 The selection suite is sci-open's alone: it scores sci-open's tool names.
 

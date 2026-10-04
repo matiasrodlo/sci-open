@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'fs';
 import path from 'path';
 import { parseArgs } from 'util';
-import { connect, runCase, type RunResult } from './run';
+import { addUpstream, connect, runCase, type RunResult, type Upstream } from './run';
 import { serverNamed } from './servers';
 import {
   parseVerdicts, scoreReading, scoreReferences, scoreSelection, VERDICT_MEANINGS,
@@ -45,7 +45,8 @@ const record = (id: string, score: { pass: boolean; why?: string }, run: RunResu
   ms,
   stopReason: run.stopReason,
   models: run.models,
-  fallbackTurns: run.usage.fallbackTurns
+  fallbackTurns: run.usage.fallbackTurns,
+  ...(run.upstream ? { upstreamRequests: run.upstream.requests, openalexCostUsd: run.upstream.openalexCostUsd } : {})
 });
 
 /** A run a fallback model answered, or that was refused, measures no server. */
@@ -123,6 +124,7 @@ async function main(): Promise<void> {
     const items: ReferenceItem[] = [];
     const verdicts: string[] = [];
     const runs: RunResult[] = [];
+    let upstream: Upstream | undefined;
 
     if (viaModel) {
       for (const list of referenceLists(split)) {
@@ -130,6 +132,7 @@ async function main(): Promise<void> {
         // Thirty turns: a lookup or two a reference, several at a time, and the answer.
         const run = await runCase(referencePrompt(list.items.map(i => i.text)), server, 30);
         runs.push(run);
+        upstream = addUpstream(upstream, run.upstream);
         items.push(...list.items);
         verdicts.push(...(scorable(run) ? parseVerdicts(run.answer, list.items.length) : list.items.map(() => 'not_checked')));
         console.log(`${list.file}: ${Date.now() - started} ms, ${run.calls.length} tool calls`);
@@ -140,7 +143,9 @@ async function main(): Promise<void> {
         for (const list of referenceLists(split)) {
           const started = Date.now();
           items.push(...list.items);
-          verdicts.push(...await server.verify!(client, list.items.map(i => i.text)));
+          const checked = await server.verify!(client, list.items.map(i => i.text));
+          verdicts.push(...checked.verdicts);
+          upstream = addUpstream(upstream, checked.upstream);
           console.log(`${list.file}: ${Date.now() - started} ms`);
         }
       } finally {
@@ -161,7 +166,13 @@ async function main(): Promise<void> {
     const label = [baseline, viaModel ? 'model' : undefined].filter(Boolean).join('-');
     console.log(writeReport('references', split, [], {
       server: server.name, mode: viaModel ? `model (${runs[0]?.models.join(', ') ?? 'none'})` : 'direct',
-      references: items.length, ...cost, ...score
+      references: items.length, ...cost,
+      // What the run asked of the sources, when the server says: the number
+      // the OpenAlex budget is spent against.
+      ...(upstream
+        ? { upstreamRequests: upstream.requests, upstreamRequestsPerReference: upstream.requests / items.length, openalexCostUsd: upstream.openalexCostUsd }
+        : {}),
+      ...score
     }, label));
     if (score.notChecked > 0) {
       console.error(`${score.notChecked} references were not checked: a search budget ran out, a call failed, or a fallback model answered. Re-run rather than publish this.`);

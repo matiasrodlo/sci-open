@@ -9,7 +9,8 @@ found.
 Every answer says which sources answered, which failed or were skipped and
 why, and whether a total is exact or a lower bound. Third-party text is
 sanitized and fenced as untrusted data. Each result carries a provenance
-block with a hash of the query and of the result.
+block with a hash of the query and of the result, and says in its `_meta`
+how many requests it sent the sources and what OpenAlex priced them at.
 
 ## Install
 
@@ -209,7 +210,9 @@ proxy, name it in `SCI_OPEN_TRUST_PROXY` so the budgets follow the visitor
 rather than the proxy. A browser may call it only from a hostname in
 `SCI_OPEN_ALLOWED_ORIGINS`, `save_to` is always refused, `GET /health`
 answers the version, and `GET /metrics` opens to a bearer token set in
-`SCI_OPEN_ADMIN_KEY`.
+`SCI_OPEN_ADMIN_KEY`: calls, errors and time per tool, and the requests each
+tool sent the sources, with those of the window by source — failed,
+rate-limited, and OpenAlex's cost.
 
 ## Compared with other servers
 

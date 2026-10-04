@@ -1,8 +1,9 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosError, AxiosInstance, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 import axiosRetry from 'axios-retry';
 import http from 'http';
 import https from 'https';
 import { log } from './logger';
+import { costOf, recordUpstream } from './upstream-usage';
 
 /**
  * The most of one upstream answer any pooled client will read.
@@ -80,6 +81,10 @@ export class HttpClientFactory {
     // Configure connection pooling
     this.configureConnectionPooling(client, config);
 
+    // Before the retry logic: response interceptors run in the order they
+    // were added, so this sees every attempt, a retried one included.
+    this.configureUsageCounting(client);
+
     // Add retry logic
     this.configureRetryLogic(client, config);
 
@@ -106,6 +111,29 @@ export class HttpClientFactory {
     // Configure the axios instance to use our agents
     client.defaults.httpAgent = httpAgent;
     client.defaults.httpsAgent = httpsAgent;
+  }
+
+  /** Counts every answer, and every request that failed on its way, in
+   * `upstream-usage.ts`. A request never sent — refused by its config, or
+   * cancelled before it left — is not one. */
+  private configureUsageCounting(client: AxiosInstance): void {
+    const urlOf = (config: InternalAxiosRequestConfig | undefined) => {
+      try {
+        return config ? new URL(config.url ?? '', config.baseURL).href : undefined;
+      } catch {
+        return config?.baseURL;
+      }
+    };
+    client.interceptors.response.use(
+      (response: AxiosResponse) => {
+        recordUpstream(urlOf(response.config), { status: response.status, costUsd: costOf(response.data) });
+        return response;
+      },
+      (error: AxiosError) => {
+        if (error.response || error.request) recordUpstream(urlOf(error.config), { ...(error.response ? { status: error.response.status } : {}) });
+        return Promise.reject(error);
+      }
+    );
   }
 
   /**

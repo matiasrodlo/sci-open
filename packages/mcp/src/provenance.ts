@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import type { ProviderReport } from '@sci-open/shared';
+import type { UpstreamUsage } from '@sci-open/core';
 
 /**
  * A provenance block on every result, so a reviewer — or a reviewer agent —
@@ -18,6 +19,23 @@ export function canonicalJson(value: unknown): string {
     .filter(([, v]) => v !== undefined)
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
   return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonicalJson(v)}`).join(',')}}`;
+}
+
+/**
+ * What a call asked of the sources, beside the provenance in every result's
+ * `_meta`, failed ones included: how many requests, to which sources, and what
+ * OpenAlex priced them at. The evals sum it per case; a client may log it.
+ */
+export const USAGE_KEY = 'io.github.matiasrodlo/usage';
+
+export function usageMeta(usage: UpstreamUsage): Record<string, unknown> {
+  return {
+    [USAGE_KEY]: {
+      upstream_requests: usage.requests,
+      openalex_cost_usd: usage.costUsd,
+      by_source: Object.fromEntries(Object.entries(usage.sources).map(([source, u]) => [source, u.requests]))
+    }
+  };
 }
 
 export const sha256 = (text: string): string => `sha256:${createHash('sha256').update(text).digest('hex')}`;

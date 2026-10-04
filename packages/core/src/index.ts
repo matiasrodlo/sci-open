@@ -6,6 +6,8 @@ export { MAX_DEPTH } from './orchestrator';
 export type { CountOutcome } from './orchestrator/count';
 export type { SearchProgress } from './orchestrator/progress';
 export { useLogger } from './lib/logger';
+export { measureUpstream, upstreamUsage, usageSince } from './lib/upstream-usage';
+export type { UpstreamUsage, SourceUsage } from './lib/upstream-usage';
 export type { EngineLogger } from './lib/logger';
 export { usableApiKey } from './lib/api-key';
 export type { ApiKeys } from './lib/api-key';

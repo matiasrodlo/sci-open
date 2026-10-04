@@ -7,6 +7,7 @@ import { pipeline, Readable, Transform } from 'stream';
 import { promisify } from 'util';
 import zlib from 'zlib';
 import { preferredPdfUrl } from './pdf-url';
+import { recordUpstream } from './upstream-usage';
 
 const dnsLookup = promisify(dns.lookup);
 
@@ -364,7 +365,9 @@ type GuardedGetOptions = {
  * follow.
  */
 function guardedGet(url: URL, userAgent: string, options: GuardedGetOptions) {
-  return axios.get<Readable>(url.href, {
+  // Counted with every other request (`upstream-usage.ts`); a copy that
+  // redirected is one request to the host it was asked of.
+  return countedGet(url, axios.get<Readable>(url.href, {
     responseType: 'stream',
     timeout: options.timeoutMs,
     maxRedirects: MAX_REDIRECTS,
@@ -401,7 +404,22 @@ function guardedGet(url: URL, userAgent: string, options: GuardedGetOptions) {
     validateStatus: options.validateStatus,
     ...(options.decompress === false ? { decompress: false } : {}),
     ...(options.signal ? { signal: options.signal } : {})
-  });
+  }));
+}
+
+/** `request`, with its answer — or its failure on the way — counted. */
+function countedGet<T extends { status: number }>(url: URL, request: Promise<T>): Promise<T> {
+  return request.then(
+    response => {
+      recordUpstream(url.href, { status: response.status });
+      return response;
+    },
+    (error: unknown) => {
+      const sent = axios.isAxiosError(error) && (error.response || error.request);
+      if (sent) recordUpstream(url.href, { ...(error.response ? { status: error.response.status } : {}) });
+      throw error;
+    }
+  );
 }
 
 /**

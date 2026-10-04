@@ -13,6 +13,12 @@ in `test/__toolsnaps__/` are the record of every schema change.
   per-client request and new-search budgets, an Origin allowlist, a loopback
   Host check, `GET /health` and an admin-keyed `GET /metrics`. Settings are
   `SCI_OPEN_` variables; see the README.
+- Every request sent to a source is counted where it leaves, by source, with
+  failures, 429s and OpenAlex's own price for it (`meta.cost_usd`). Each
+  result's `_meta` says what its call asked (`io.github.matiasrodlo/usage`),
+  the metrics add it per tool, and `GET /metrics` and the log summary break
+  the window down by source. The evals report requests and OpenAlex cost per
+  case.
 - A call the client cancels stops what it asked of the sources: the fan-out,
   the facet counts, the access check and the page's details, and
   verify_references starts no further reference. A search another call is

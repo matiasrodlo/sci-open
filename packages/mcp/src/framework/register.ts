@@ -1,6 +1,7 @@
 import type { McpServer, ServerContext } from '@modelcontextprotocol/server';
 import type { ToolDefinition, ToolDeps } from './define-tool';
-import { buildProvenance, PROVENANCE_KEY, type ServerIdentity } from '../provenance';
+import { measureUpstream } from '@sci-open/core';
+import { buildProvenance, PROVENANCE_KEY, usageMeta, type ServerIdentity } from '../provenance';
 import { clampText } from '../shape/budget';
 import { renderError, reportToolError } from '../errors';
 
@@ -61,30 +62,35 @@ export function registerTools(
               .catch(() => { /* a lost notification is not a failed call */ });
           }
         };
+        // Every request the call sends the sources is charged to it (`_meta`, metrics).
+        const measured = measureUpstream(() => def.run(args as never, callDeps));
         try {
-          const outcome = await def.run(args as never, callDeps);
+          const outcome = await measured.done;
+          const upstream = measured.usage();
           const provenance = buildProvenance(identity, def.name, args, outcome.structured, outcome.provenance);
           // Clients do not all show `_meta` to the model; one line of text
           // makes the hash something a skill can log.
           const { result_hash } = provenance[PROVENANCE_KEY] as { result_hash: string };
           const text = `${clampText(outcome.text, deps.config.textBudgetChars, outcome.continuation ?? 'Ask for less (a smaller page_size).')}\n\nResult hash: ${result_hash}`;
-          deps.metrics.record({ tool: def.name, ok: true, ms: Date.now() - started, textChars: text.length, newSearches });
+          deps.metrics.record({ tool: def.name, ok: true, ms: Date.now() - started, textChars: text.length, newSearches, upstream });
           return {
             content: [{ type: 'text' as const, text }, ...(outcome.resources ?? [])],
             structuredContent: outcome.structured,
-            _meta: provenance
+            _meta: { ...provenance, ...usageMeta(upstream) }
           };
         } catch (raw) {
+          // A failure can have cost the sources as much as an answer.
+          const upstream = measured.usage();
           // The client cancelled: nothing failed, and nobody reads the answer.
           if (ctx.mcpReq.signal.aborted) {
             deps.logger.debug({ tool: def.name }, 'tool call cancelled');
-            deps.metrics.record({ tool: def.name, ok: false, code: 'cancelled', ms: Date.now() - started, newSearches });
-            return { isError: true, content: [{ type: 'text' as const, text: 'Error (cancelled): The call was cancelled.' }] };
+            deps.metrics.record({ tool: def.name, ok: false, code: 'cancelled', ms: Date.now() - started, newSearches, upstream });
+            return { isError: true, content: [{ type: 'text' as const, text: 'Error (cancelled): The call was cancelled.' }], _meta: usageMeta(upstream) };
           }
           const error = reportToolError(raw, def.name, deps.logger);
-          deps.metrics.record({ tool: def.name, ok: false, code: error.code, ms: Date.now() - started, newSearches });
+          deps.metrics.record({ tool: def.name, ok: false, code: error.code, ms: Date.now() - started, newSearches, upstream });
           // No structuredContent: an error result is not the declared output.
-          return { isError: true, content: [{ type: 'text' as const, text: renderError(error) }] };
+          return { isError: true, content: [{ type: 'text' as const, text: renderError(error) }], _meta: usageMeta(upstream) };
         }
       }
     );

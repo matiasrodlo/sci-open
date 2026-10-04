@@ -2,6 +2,7 @@ import { mkdtempSync } from 'fs';
 import os from 'os';
 import path from 'path';
 import type { Client } from '@modelcontextprotocol/client';
+import { upstreamOf, type Upstream } from './run';
 
 /**
  * The servers a suite can run against: sci-open, and the baselines Step 12.4
@@ -23,7 +24,7 @@ export type Server = {
    * for is `not_checked`. Absent, the references suite has Claude check them
    * with the server's tools instead.
    */
-  verify?: (client: Client, references: readonly string[]) => Promise<string[]>;
+  verify?: (client: Client, references: readonly string[]) => Promise<{ verdicts: string[]; upstream?: Upstream }>;
 };
 
 /** The workspace's built binary, found through the dependency rather than a
@@ -38,7 +39,8 @@ export function sciOpen(args: readonly string[] = [], env: Record<string, string
     async verify(client, references) {
       const result = await client.callTool({ name: 'verify_references', arguments: { references } }, { timeout: 600_000 });
       const structured = result.structuredContent as { results?: Array<{ verdict: string }> } | undefined;
-      return references.map((_, i) => structured?.results?.[i]?.verdict ?? 'not_checked');
+      const upstream = upstreamOf(result as { _meta?: Record<string, unknown> });
+      return { verdicts: references.map((_, i) => structured?.results?.[i]?.verdict ?? 'not_checked'), ...(upstream ? { upstream } : {}) };
     }
   };
 }
@@ -106,7 +108,7 @@ const BASELINES: Record<string, () => Server> = {
           const result = await client.callTool({ name: 'resolve_references', arguments: { references: batch } }, { timeout: 600_000 });
           verdicts.push(...openAlexVerdicts(result.content, Boolean(result.isError), batch));
         }
-        return verdicts;
+        return { verdicts };
       }
     };
   },

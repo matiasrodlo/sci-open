@@ -6650,6 +6650,20 @@ record query text or reference text** above `debug` — the official OpenAlex
 server records per-call metrics without query text, and so should this one;
 `stderrLogger` drops those fields above `debug`, and metrics never see them.
 
+What each call asked of the sources is counted too, because the OpenAlex
+budget ran out after "a few runs" with nothing to say what had spent it.
+`packages/core/src/lib/upstream-usage.ts` counts every request where it
+leaves — the pooled clients' response interceptor, ahead of the retries, and
+the full-text proxy's guarded GET — by source, with failures, 429s and
+OpenAlex's own price for each answer (`meta.cost_usd`). `registerTools` runs
+each call under `measureUpstream`, which charges the call every request made
+in its async context; work shared through a `SingleFlight` is charged to the
+call that started it. A call's usage goes into its metrics (`upstreamRequests`,
+`openalexCostUsd`), into the result's `_meta` under
+`io.github.matiasrodlo/usage` (failed calls included), and the snapshot adds
+the window's requests by source. The evals sum the `_meta` per case
+(Step 12.4).
+
 ### Step 14.2 — Upstream etiquette
 
 - Every request carries the contact `User-Agent`.

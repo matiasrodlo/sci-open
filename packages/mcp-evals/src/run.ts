@@ -38,10 +38,32 @@ export async function connect(server: Server): Promise<Client> {
 
 export type Call = { name: string; input: unknown; isError: boolean };
 
+/** What a server's calls asked of its sources. */
+export type Upstream = { requests: number; openalexCostUsd: number };
+
+/** The `_meta` key sci-open reports a call's requests under
+ * (packages/mcp/src/provenance.ts, `USAGE_KEY`). The baselines send none. */
+const USAGE_KEY = 'io.github.matiasrodlo/usage';
+
+/** A call's upstream usage, when its server reports one. */
+export function upstreamOf(result: { _meta?: Record<string, unknown> }): Upstream | undefined {
+  const usage = result._meta?.[USAGE_KEY] as { upstream_requests?: unknown; openalex_cost_usd?: unknown } | undefined;
+  if (typeof usage?.upstream_requests !== 'number') return undefined;
+  return { requests: usage.upstream_requests, openalexCostUsd: typeof usage.openalex_cost_usd === 'number' ? usage.openalex_cost_usd : 0 };
+}
+
+/** Two usages summed; `undefined` stays so until a call reports one. */
+export function addUpstream(a: Upstream | undefined, b: Upstream | undefined): Upstream | undefined {
+  if (!a || !b) return a ?? b;
+  return { requests: a.requests + b.requests, openalexCostUsd: Math.round((a.openalexCostUsd + b.openalexCostUsd) * 1e6) / 1e6 };
+}
+
 export type RunResult = {
   answer: string;
   calls: Call[];
   usage: { input: number; output: number; cacheRead: number; fallbackTurns: number };
+  /** What the calls asked of the sources; absent for a server that does not say. */
+  upstream?: Upstream;
   models: string[];
   stopReason: string;
 };
@@ -68,7 +90,10 @@ export async function runCase(prompt: string, server: Server, maxTurns = 8): Pro
     const messages: Anthropic.Beta.BetaMessageParam[] = [{ role: 'user', content: prompt }];
     const calls: Call[] = [];
     const usage = { input: 0, output: 0, cacheRead: 0, fallbackTurns: 0 };
+    let upstream: Upstream | undefined;
     const models = new Set<string>();
+    const done = (answer: string, stopReason: string): RunResult =>
+      ({ answer, calls, usage, ...(upstream ? { upstream } : {}), models: [...models], stopReason });
 
     for (let turn = 0; turn < maxTurns; turn++) {
       const response = await anthropic().beta.messages.create({
@@ -99,7 +124,7 @@ export async function runCase(prompt: string, server: Server, maxTurns = 8): Pro
           .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === 'text')
           .map(b => b.text)
           .join('\n');
-        return { answer, calls, usage, models: [...models], stopReason: response.stop_reason ?? 'unknown' };
+        return done(answer, response.stop_reason ?? 'unknown');
       }
 
       const results: Anthropic.Beta.BetaToolResultBlockParam[] = [];
@@ -111,6 +136,7 @@ export async function runCase(prompt: string, server: Server, maxTurns = 8): Pro
           ? await mcp.callTool({ name: block.name, arguments: block.input as Record<string, unknown> })
           : { isError: true, content: [{ type: 'text', text: `No tool named ${block.name}.` }] };
         calls.push({ name: block.name, input: block.input, isError: Boolean(result.isError) });
+        upstream = addUpstream(upstream, upstreamOf(result as { _meta?: Record<string, unknown> }));
         results.push({
           type: 'tool_result',
           tool_use_id: block.id,
@@ -122,7 +148,7 @@ export async function runCase(prompt: string, server: Server, maxTurns = 8): Pro
       }
       messages.push({ role: 'user', content: results }); // all results in one message
     }
-    return { answer: '', calls, usage, models: [...models], stopReason: 'max_turns' };
+    return done('', 'max_turns');
   } finally {
     await mcp.close();
   }
