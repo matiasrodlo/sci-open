@@ -106,4 +106,58 @@ describe('SingleFlight', () => {
     await expect(sf.run('k', () => { throw new Error('sync'); })).rejects.toThrow('sync');
     expect(sf.pending).toBe(0);
   });
+
+  describe('a caller that cancels', () => {
+    it('stops waiting at once, while the others still get the value and the work is not stopped', async () => {
+      const sf = new SingleFlight();
+      const gate = deferred<string>();
+      let seen: AbortSignal | undefined;
+      const work = (signal: AbortSignal) => { seen = signal; return gate.promise; };
+      const leaving = new AbortController();
+
+      const first = sf.run('k', work, leaving.signal);
+      const second = sf.run('k', work);
+      leaving.abort(new Error('cancelled'));
+
+      await expect(first).rejects.toThrow('cancelled');
+      expect(seen?.aborted).toBe(false);
+      gate.resolve('result');
+      expect((await second).value).toBe('result');
+    });
+
+    it('stops the work when every caller has cancelled, and lets the next caller start afresh', async () => {
+      const sf = new SingleFlight();
+      const signals: AbortSignal[] = [];
+      const work = vi.fn((signal: AbortSignal) => {
+        signals.push(signal);
+        return new Promise<string>((resolve, reject) => {
+          signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+          if (signals.length > 1) resolve('fresh');
+        });
+      });
+      const a = new AbortController();
+      const b = new AbortController();
+
+      const runs = [sf.run('k', work, a.signal), sf.run('k', work, b.signal)];
+      a.abort(new Error('a left'));
+      expect(signals[0]!.aborted).toBe(false);
+      b.abort(new Error('b left'));
+      await Promise.allSettled(runs);
+
+      expect(signals[0]!.aborted).toBe(true);
+      expect(sf.pending).toBe(0);
+      expect((await sf.run('k', work)).value).toBe('fresh');
+      expect(work).toHaveBeenCalledTimes(2);
+    });
+
+    it('refuses at once when it has already been cancelled, starting nothing', async () => {
+      const sf = new SingleFlight();
+      const work = vi.fn(async () => 'x');
+      const done = new AbortController();
+      done.abort(new Error('already'));
+
+      await expect(sf.run('k', work, done.signal)).rejects.toThrow('already');
+      expect(work).not.toHaveBeenCalled();
+    });
+  });
 });

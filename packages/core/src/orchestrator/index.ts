@@ -109,6 +109,12 @@ export type SearchOptions = {
    */
   onProgress?: (event: SearchProgress) => void;
   /**
+   * The caller's. Aborted, the search stops asking the sources and rejects
+   * with its reason, and holds nothing. A set another search is waiting on
+   * goes on being resolved until that search leaves too (`SingleFlight`).
+   */
+  signal?: AbortSignal;
+  /**
    * Providers not to ask, and why: the engine's quota state (`quota.ts`). Each
    * is reported failed and `cooling-down`, and is not asked for its facet
    * counts either. A set missing one is incomplete, so it is not held.
@@ -280,7 +286,7 @@ function emptySet(settled: Settled): ResultSet {
  * plan -> fan out -> merge/dedupe -> match -> rank -> filter -> rescue -> facet:
  * the set, before any page is cut from it.
  */
-async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache): Promise<ResultSet> {
+async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache, signal?: AbortSignal): Promise<ResultSet> {
   const {
     query, filters, policy, openAccessOnly, depth, timeoutMs, facetQueries, facetBudgetMs, filtersSent,
     providers, authorities, cache, userAgent, now, progress, unavailable
@@ -314,7 +320,8 @@ async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache
         budgetMs: facetBudgetMs,
         ...(cache ? { cache } : {}),
         ...(userAgent ? { userAgent } : {}),
-        ...(now ? { now } : {})
+        ...(now ? { now } : {}),
+        ...(signal ? { signal } : {})
       })
     : Promise.resolve([]);
 
@@ -328,8 +335,15 @@ async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache
     ...(unavailable ? { unavailable } : {}),
     ...(cache ? { cache } : {}),
     ...(userAgent ? { userAgent } : {}),
-    ...(now ? { now } : {})
+    ...(now ? { now } : {}),
+    ...(signal ? { signal } : {})
   });
+  // A fan-out the caller abandoned reports its sources failed; nothing of it
+  // is worth merging, checking or holding. The counts were told to stop too.
+  if (signal?.aborted) {
+    void counting.catch(() => {});
+    signal.throwIfAborted();
+  }
 
   const merged = mergePapers(fetched);
 
@@ -377,8 +391,13 @@ async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache
     ...(userAgent ? { userAgent } : {}),
     cache: authorityCache,
     filters,
-    policy
+    policy,
+    ...(signal ? { signal } : {})
   });
+  if (signal?.aborted) {
+    void counting.catch(() => {});
+    signal.throwIfAborted();
+  }
 
   // Back into rank order. A rescued paper takes the position it always had —
   // it was ranked with everything else and only ever excluded by the gate — so
@@ -412,6 +431,7 @@ async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache
   // The whole-index counts, raised into the read's facets for every facet
   // that could be counted across the sources. See `withSourceCounts`.
   const sourceCounts = await counting;
+  signal?.throwIfAborted();
   const facets = facetQueries
     ? withSourceCounts(readFacets, sourceCounts, Object.keys(facetQueries) as Array<keyof FacetQueries>, now?.())
     : readFacets;
@@ -453,12 +473,14 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
   // requests, so a page shown again is not asked about again.
   const authorityCache = new AuthorityCache(options.authorityFacts);
 
-  const resolve = () => resolveResultSet(settled, authorityCache);
+  // Resolved under the flight's signal, which aborts only once every search
+  // waiting on the set has left; this search leaves on its own signal.
+  const resolve = (shared?: AbortSignal) => resolveResultSet(settled, authorityCache, shared);
   const { set, cached } = resultSets
-    ? await resultSets.resolve(keyOf(settled), resolve, options.admit)
+    ? await resultSets.resolve(keyOf(settled), resolve, options.admit, options.signal)
     : await (async () => {
         await options.admit?.();
-        return { set: await resolve(), cached: false };
+        return { set: await resolve(options.signal), cached: false };
       })();
 
   // After filtering so it only orders what will be returned, and before
@@ -476,8 +498,10 @@ export async function search(query: Query, options: SearchOptions = {}): Promise
     ...(authorities ? { authorities } : {}),
     ...(enrichBudgetMs !== undefined ? { budgetMs: enrichBudgetMs } : {}),
     ...(userAgent ? { userAgent } : {}),
-    cache: authorityCache
+    cache: authorityCache,
+    ...(options.signal ? { signal: options.signal } : {})
   });
+  options.signal?.throwIfAborted();
 
   /**
    * Order the page again, because enrichment just rewrote the keys it was

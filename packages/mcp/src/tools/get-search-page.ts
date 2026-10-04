@@ -30,7 +30,7 @@ export const getSearchPage = defineTool({
     const { response, fromCache } = await deps.engine.search(
       { ...params, page: args.page },
       // Progress matters here only when the set is no longer held and runs again.
-      { admit: deps.admit, onProgress: searchProgress(deps), ...options }
+      { admit: deps.admit, onProgress: searchProgress(deps), signal: deps.signal, ...options }
     );
     if (response.papers.length === 0 && args.page > 1) {
       throw new ToolError('not_found', `Page ${args.page} is past the end (${response.total} results).`, 'Use a smaller page number.');

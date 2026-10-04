@@ -95,8 +95,12 @@ function citedDoi(raw: string): string | undefined {
  * outcome, not the batch's: the verdicts already reached are kept. */
 async function checkOne(raw: string, deps: ToolDeps, openalex: ReadonlyMap<string, Paper>): Promise<Result> {
   try {
+    // A reference still queued when the call is cancelled is never started.
+    deps.signal.throwIfAborted();
     return await verifyOne(parseReference(raw), deps, openalex);
   } catch (caught) {
+    // Cancelled, the call fails as a whole; no verdict is wanted any more.
+    if (deps.signal.aborted) throw caught;
     const error = reportToolError(caught, 'verify_references', deps.logger);
     return {
       input: sanitizeText(raw),
@@ -147,7 +151,7 @@ async function verifyOne(ref: ParsedReference, deps: ToolDeps, openalex: Readonl
   });
 
   if (ref.doi) {
-    const paper = openalex.get(ref.doi.toLowerCase()) ?? (await deps.engine.lookupDoi(ref.doi, { admit: deps.admit }));
+    const paper = openalex.get(ref.doi.toLowerCase()) ?? (await deps.engine.lookupDoi(ref.doi, { admit: deps.admit, signal: deps.signal }));
     if (paper) {
       const j = judge(ref, paper);
       // A DOI that resolves names a real paper, so a title that does not match
@@ -237,7 +241,7 @@ async function findByTitle(ref: ParsedReference, deps: ToolDeps): Promise<Found 
     }
     const { response } = await deps.engine.search(
       { q, filters: { openAccessOnly: false }, page: 1, pageSize: JUDGED },
-      { admit: deps.admit, depth: TITLE_DEPTH }
+      { admit: deps.admit, depth: TITLE_DEPTH, signal: deps.signal }
     );
     if (response.papers.length === 0) continue;
     const found = response.papers

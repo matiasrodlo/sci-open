@@ -179,13 +179,16 @@ export class ProviderCache {
 
   /**
    * Returns the cached outcome, or runs `work` once for this key however many
-   * callers arrive while it is running.
+   * callers arrive while it is running. `signal` lets this caller stop
+   * waiting; `work` is given the flight's, which aborts only once every caller
+   * has (see `SingleFlight`).
    */
   async fetch(
     parts: ProviderCacheKeyParts,
-    work: () => Promise<ProviderSearchOutcome>
+    work: (signal: AbortSignal) => Promise<ProviderSearchOutcome>,
+    signal?: AbortSignal
   ): Promise<{ outcome: ProviderSearchOutcome; hit: boolean }> {
-    return this.through(parts.provider, providerCacheKey(parts), work, sizeOf);
+    return this.through(parts.provider, providerCacheKey(parts), work, sizeOf, signal);
   }
 
   /**
@@ -198,34 +201,35 @@ export class ProviderCache {
    */
   async fetchFacets(
     parts: FacetCacheKeyParts,
-    work: () => Promise<ProviderFacetOutcome>
+    work: (signal: AbortSignal) => Promise<ProviderFacetOutcome>,
+    signal?: AbortSignal
   ): Promise<{ outcome: ProviderFacetOutcome; hit: boolean }> {
-    return this.through(parts.provider, facetCacheKey(parts), work, outcome =>
-      outcome.failures.length === 0 ? sizeOfFacets(outcome) : undefined
-    );
+    const size = (outcome: ProviderFacetOutcome) => (outcome.failures.length === 0 ? sizeOfFacets(outcome) : undefined);
+    return this.through(parts.provider, facetCacheKey(parts), work, size, signal);
   }
 
   /** `size` says what to charge for a result, or `undefined` to not keep it. */
   private async through<T extends Cached>(
     provider: ProviderId,
     key: string,
-    work: () => Promise<T>,
-    size: (value: T) => number | undefined
+    work: (signal: AbortSignal) => Promise<T>,
+    size: (value: T) => number | undefined,
+    signal?: AbortSignal
   ): Promise<{ outcome: T; hit: boolean }> {
     const cached = this.read(key) as T | undefined;
     if (cached) return { outcome: cached, hit: true };
 
-    const { value } = await this.flights.run(key, async () => {
+    const { value } = await this.flights.run(key, async shared => {
       // Re-read inside the flight: a leader may have populated the entry
       // between this caller missing and joining.
       const raced = this.read(key) as T | undefined;
       if (raced) return raced;
 
-      const outcome = await work();
+      const outcome = await work(shared);
       const bytes = size(outcome);
       if (bytes !== undefined) this.write(provider, key, outcome, bytes);
       return outcome;
-    });
+    }, signal);
 
     // `hit` reports whether the cache served it, not whether this caller did
     // the work — a coalesced caller still caused no upstream request.

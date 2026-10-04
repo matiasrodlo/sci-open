@@ -187,6 +187,68 @@ describe('what a call costs the sources', () => {
     expect(arxiv.calls.map(c => c.depth)).toEqual([25, 300]);
   });
 
+  describe('a search the caller cancels', () => {
+    /** A source that answers only when told to, and says whether it was told to stop. */
+    function hanging(id: ProviderId) {
+      const source = stub(id);
+      const signals: AbortSignal[] = [];
+      let answer!: () => void;
+      const answered = new Promise<void>(resolve => { answer = resolve; });
+      const search = source.entry.search;
+      source.entry.search = async args => {
+        signals.push(args.signal!);
+        await Promise.race([answered, new Promise((_, reject) => args.signal!.addEventListener('abort', () => reject(args.signal!.reason), { once: true }))]);
+        return search(args);
+      };
+      return { ...source, signals, answer };
+    }
+
+    it('stops asking the sources, rejects, and holds nothing', async () => {
+      const arxiv = hanging('arxiv');
+      const engine = engineWith(arxiv.entry);
+      const caller = new AbortController();
+
+      const searching = engine.search({ q: 'crispr' }, { signal: caller.signal });
+      await vi.waitFor(() => expect(arxiv.signals).toHaveLength(1));
+      caller.abort();
+
+      await expect(searching).rejects.toMatchObject({ name: 'AbortError' });
+      expect(arxiv.signals[0]!.aborted).toBe(true);
+      arxiv.answer();
+      expect((await engine.search({ q: 'crispr' })).fromCache).toBe(false);
+    });
+
+    it('goes on for another caller waiting on the same search', async () => {
+      const arxiv = hanging('arxiv');
+      const engine = engineWith(arxiv.entry);
+      const leaving = new AbortController();
+
+      const left = engine.search({ q: 'crispr' }, { signal: leaving.signal });
+      const staying = engine.search({ q: 'crispr' });
+      await vi.waitFor(() => expect(arxiv.signals).toHaveLength(1));
+      leaving.abort();
+      await expect(left).rejects.toMatchObject({ name: 'AbortError' });
+
+      arxiv.answer();
+      expect((await staying).response.papers).toHaveLength(3);
+      expect(arxiv.signals).toHaveLength(1);
+      expect(arxiv.signals[0]!.aborted).toBe(false);
+    });
+
+    it('cancels a count the same way', async () => {
+      const arxiv = hanging('arxiv');
+      const engine = engineWith(arxiv.entry);
+      const caller = new AbortController();
+
+      const counting = engine.count({ q: 'crispr' }, { signal: caller.signal });
+      await vi.waitFor(() => expect(arxiv.signals).toHaveLength(1));
+      caller.abort();
+
+      await expect(counting).rejects.toMatchObject({ name: 'AbortError' });
+      expect(arxiv.signals[0]!.aborted).toBe(true);
+    });
+  });
+
   describe('a paper looked up by id', () => {
     function byId(clock = { now: 0 }) {
       const arxiv = stub('arxiv');

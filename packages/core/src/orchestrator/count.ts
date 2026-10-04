@@ -21,6 +21,8 @@ export type CountOptions = {
   onProgress?: (event: SearchProgress) => void;
   /** Providers not to ask, as for a search. See `SearchOptions.unavailable`. */
   unavailable?: ReadonlyMap<ProviderId, string>;
+  /** The caller's: aborted, the sources are told to stop and the count rejects. */
+  signal?: AbortSignal;
 };
 
 export type CountOutcome = {
@@ -78,7 +80,9 @@ export async function countSearch(params: SearchParams, options: CountOptions): 
     onSettled: ({ report }) => progress({ stage: 'sources', settled: ++settled, planned: planned.planned.length, report }),
     ...(options.unavailable?.size ? { unavailable: options.unavailable } : {}),
     ...(options.cache ? { cache: options.cache } : {}),
-    ...(options.userAgent ? { userAgent: options.userAgent } : {})
+    ...(options.userAgent ? { userAgent: options.userAgent } : {}),
+    ...(options.signal ? { signal: options.signal } : {})
   });
+  options.signal?.throwIfAborted();
   return { reports: [...reports, ...silent], complete: isComplete(reports) };
 }

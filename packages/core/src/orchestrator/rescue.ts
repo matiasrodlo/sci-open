@@ -73,6 +73,8 @@ export type RescueOptions = {
   concurrency?: number;
   userAgent?: string;
   cache?: AuthorityCache;
+  /** The caller's; see `EnrichOptions.signal`. */
+  signal?: AbortSignal;
   /** Re-tested against these, because a rescued value can fail them too. */
   filters?: UserFilters;
   policy?: PolicyOptions;
@@ -140,6 +142,7 @@ export async function rescueCandidates(
     concurrency = DEFAULT_CONCURRENCY,
     userAgent,
     cache,
+    signal,
     filters = {},
     policy = {}
   } = options;
@@ -172,7 +175,8 @@ export async function rescueCandidates(
     budgetMs,
     concurrency,
     ...(userAgent ? { userAgent } : {}),
-    ...(cache ? { cache } : {})
+    ...(cache ? { cache } : {}),
+    ...(signal ? { signal } : {})
   });
 
   // Re-tested in full, not just against the gate that dropped them. An

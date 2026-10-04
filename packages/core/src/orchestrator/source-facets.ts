@@ -74,6 +74,8 @@ export type SourceFacetsOptions = {
   cache?: ProviderCache;
   userAgent?: string;
   now?: () => Date;
+  /** The caller's; see `FanOutOptions.signal`. */
+  signal?: AbortSignal;
 };
 
 export type SourceFacetsResult = SourceCounts & {
@@ -127,7 +129,7 @@ export async function countSourceFacets(
   providers: readonly ProviderEntry[],
   options: SourceFacetsOptions
 ): Promise<SourceFacetsResult[]> {
-  const { queries, searched, settled, openAccessOnly, budgetMs, cache, userAgent, now = () => new Date() } = options;
+  const { queries, searched, settled, openAccessOnly, budgetMs, cache, userAgent, now = () => new Date(), signal } = options;
   const deadline = Date.now() + budgetMs;
   const years = yearWindow(queries.year, now());
   const asked = Object.keys(queries) as CountedFacet[];
@@ -179,15 +181,16 @@ export async function countSourceFacets(
     const budget = deadline - Date.now();
     if (budget <= 0) return { provider: provider.id, facets: derived, error: NO_TIME };
 
-    const work = () => withBudget(budget, signal => provider.facets!({
+    // Shared through the cache like a search's request (`FanOutOptions.signal`).
+    const work = (shared?: AbortSignal) => withBudget(budget, stop => provider.facets!({
       requests: remaining,
       years,
       openAccessOnly,
       timeoutMs: budget,
-      signal,
+      signal: stop,
       known,
       ...(userAgent ? { userAgent } : {})
-    }));
+    }), shared);
 
     try {
       const outcome: ProviderFacetOutcome = cache
@@ -195,8 +198,8 @@ export async function countSourceFacets(
             provider: provider.id,
             requests: remaining.map(({ facet, query }) => ({ facet, nativeQuery: native(query) })),
             years
-          }, work)).outcome
-        : await work();
+          }, work, signal)).outcome
+        : await work(signal);
 
       const failed = outcome.failures.length;
       return {

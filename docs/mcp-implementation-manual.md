@@ -1987,6 +1987,8 @@ export type ToolDeps = {
   logger: EngineLogger;
   admit: () => Promise<void>;
   transport: 'stdio' | 'http';
+  /** The call's: aborts when the client cancels it (Phase 15, item 6). */
+  signal: AbortSignal;
   /** One progress notification, when the client asked for them; a no-op
    * otherwise. Built per call by `registerTools` (Step 5.2). */
   progress: (message: string, total?: number) => void;
@@ -6720,10 +6722,14 @@ In rough order of value:
    client, through the first official MCP extension.
 5. **Remote deployment** with its public URL (`https://<host>/mcp`,
    Step 10.6) in `server.json`'s `remotes`. (Part of M3, §7.)
-6. **Cancellation.** A client that cancels a call (`ctx.mcpReq.signal`) gets
-   no result, but the server still waits out the fan-out: `fanOut` makes its
-   own abort signal per provider and is given none from outside. Passing the
-   call's signal down would free the requests too.
+6. **Cancellation** — built. `registerTools` hands each tool the call's
+   `ctx.mcpReq.signal` (`ToolDeps.signal`), and every engine call that asks the
+   sources takes it (`SearchCallOptions.signal`): the fan-out, the facet
+   counts, the access check and the page's details stop, and nothing is held.
+   Work is shared through `SingleFlight`s — a result set, a provider's request
+   — so a caller that cancels stops waiting at once, but the shared work is
+   stopped only when every caller waiting on it has. Not yet: a full text
+   being fetched, or a citation list.
 
 ---
 

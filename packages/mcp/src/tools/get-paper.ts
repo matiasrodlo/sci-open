@@ -25,7 +25,7 @@ export const getPaper = defineTool({
     // other tools print it, is looked up as one too.
     const ref = doi ? { doi: doiIn(doi) ?? doi } : paperRefKind(id!);
     const paper = 'doi' in ref
-      ? await deps.engine.lookupDoi(ref.doi, { admit: deps.admit })
+      ? await deps.engine.lookupDoi(ref.doi, { admit: deps.admit, signal: deps.signal })
       : await deps.engine.lookup(ref.id);
     if (!paper) {
       throw new ToolError('not_found', 'No source holds this paper.', 'Ids look like openalex:W2741809807 or arxiv:2101.00001. Try search_papers, or pass doi.');

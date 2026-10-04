@@ -108,6 +108,7 @@ export function fakeEngine(papers: readonly Paper[], options: FakeOptions = {}):
     config: defaultMcpConfig('test'),
     metrics: nullMetrics,
     logger: quietLogger,
+    signal: new AbortController().signal,
     admit,
     transport: 'stdio',
     progress: () => {}

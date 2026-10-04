@@ -80,6 +80,10 @@ export type SearchCallOptions = {
    * not only across the read. Dozens of requests a search (`RunOptions.facets`),
    * so off unless asked; a set counted is held apart from one that was not. */
   facets?: boolean;
+  /** Stops the call: the sources still running are told to stop, and the call
+   * rejects with the signal's reason, holding nothing. A search another call
+   * is waiting on goes on for that call. */
+  signal?: AbortSignal;
   /** Search only: records read per source, in place of the engine's depth,
    * for a call that judges only the top of an answer. A set read to another
    * depth is held apart. */
@@ -100,7 +104,7 @@ export type Engine = {
   /** A paper by DOI, whether or not it is open access, merged across every
    * source that holds it. A DOI lookup is a search, and spends an admission
    * like one. */
-  lookupDoi(doi: string, options?: { admit?: Admit }): Promise<Paper | null>;
+  lookupDoi(doi: string, options?: { admit?: Admit; signal?: AbortSignal }): Promise<Paper | null>;
   /** Whether the DOI system holds this DOI at all — whoever registered it.
    * `undefined` when the registry could not say. One request, no admission. */
   doiRegistered(doi: string): Promise<boolean | undefined>;
@@ -234,6 +238,7 @@ export function createEngine(options: EngineOptions): Engine {
       ...(unavailable.size ? { unavailable } : {}),
       ...(extra.admit ? { admit: extra.admit } : {}),
       ...(extra.onProgress ? { onProgress: extra.onProgress } : {}),
+      ...(extra.signal ? { signal: extra.signal } : {}),
       // Safe to share the caches: the result-set key includes the provider
       // list, so a narrowed set never answers a full search, or the reverse.
       providers: narrowed(extra.sources)
@@ -257,7 +262,8 @@ export function createEngine(options: EngineOptions): Engine {
         userAgent,
         ...(unavailable.size ? { unavailable } : {}),
         ...(extra.admit ? { admit: extra.admit } : {}),
-        ...(extra.onProgress ? { onProgress: extra.onProgress } : {})
+        ...(extra.onProgress ? { onProgress: extra.onProgress } : {}),
+        ...(extra.signal ? { signal: extra.signal } : {})
       });
       quota.note(outcome.reports);
       return outcome;

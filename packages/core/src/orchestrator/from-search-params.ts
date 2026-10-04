@@ -106,6 +106,8 @@ export type RunOptions = {
    * The read's own facets are counted either way, at no cost.
    */
   facets?: boolean;
+  /** See `SearchOptions.signal`. */
+  signal?: AbortSignal;
   userAgent?: string;
   /** Defaults to the whole registry. A subset is how this is driven offline. */
   providers?: readonly ProviderEntry[];
@@ -188,6 +190,7 @@ export async function runSearch(
     ...(options.authorityFacts ? { authorityFacts: options.authorityFacts } : {}),
     ...(options.admit ? { admit: options.admit } : {}),
     ...(options.onProgress ? { onProgress: options.onProgress } : {}),
+    ...(options.signal ? { signal: options.signal } : {}),
     ...(options.unavailable ? { unavailable: options.unavailable } : {}),
     ...(options.userAgent ? { userAgent: options.userAgent } : {}),
     ...(options.providers ? { providers: options.providers } : {}),

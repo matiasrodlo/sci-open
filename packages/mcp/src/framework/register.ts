@@ -12,7 +12,7 @@ import { renderError, reportToolError } from '../errors';
 export function registerTools(
   server: McpServer,
   tools: readonly ToolDefinition<any, any>[],
-  deps: Omit<ToolDeps, 'progress'>,
+  deps: Omit<ToolDeps, 'progress' | 'signal'>,
   identity: ServerIdentity
 ): void {
   for (const def of tools) {
@@ -43,6 +43,7 @@ export function registerTools(
         let step = 0;
         const callDeps: ToolDeps = {
           ...deps,
+          signal: ctx.mcpReq.signal,
           admit: async () => {
             await deps.admit();
             newSearches++;
@@ -74,6 +75,12 @@ export function registerTools(
             _meta: provenance
           };
         } catch (raw) {
+          // The client cancelled: nothing failed, and nobody reads the answer.
+          if (ctx.mcpReq.signal.aborted) {
+            deps.logger.debug({ tool: def.name }, 'tool call cancelled');
+            deps.metrics.record({ tool: def.name, ok: false, code: 'cancelled', ms: Date.now() - started, newSearches });
+            return { isError: true, content: [{ type: 'text' as const, text: 'Error (cancelled): The call was cancelled.' }] };
+          }
           const error = reportToolError(raw, def.name, deps.logger);
           deps.metrics.record({ tool: def.name, ok: false, code: error.code, ms: Date.now() - started, newSearches });
           // No structuredContent: an error result is not the declared output.

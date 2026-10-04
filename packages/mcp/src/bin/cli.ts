@@ -84,6 +84,7 @@ async function main(): Promise<void> {
     metrics: nullMetrics,
     logger,
     transport: 'stdio',
+    signal: new AbortController().signal, // a CLI run ends with its process
     admit: tokenBucket(config.maxNewSearchesPerMinute),
     progress: () => {}
   };

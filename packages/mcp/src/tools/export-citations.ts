@@ -69,10 +69,11 @@ export const exportCitations = defineTool({
     const resolved = await Promise.all(kinds.map(k => limit(async (): Promise<Paper | { reason: string }> => {
       try {
         const paper = 'doi' in k
-          ? found.get(k.doi.toLowerCase()) ?? (await deps.engine.lookupDoi(k.doi, { admit: deps.admit }))
+          ? found.get(k.doi.toLowerCase()) ?? (await deps.engine.lookupDoi(k.doi, { admit: deps.admit, signal: deps.signal }))
           : await deps.engine.lookup(k.id);
         return paper ?? { reason: 'not_found' };
       } catch (error) {
+        if (deps.signal.aborted) throw error; // cancelled: the export as a whole
         // One failure is that paper's, not the export's.
         return { reason: reportToolError(error, 'export_citations', deps.logger).code };
       }

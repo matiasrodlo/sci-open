@@ -72,7 +72,7 @@ export const searchPapers = defineTool({
     };
 
     const { params, options } = engineCall(spec);
-    const engineOptions = { admit: deps.admit, onProgress: searchProgress(deps), ...options };
+    const engineOptions = { admit: deps.admit, onProgress: searchProgress(deps), signal: deps.signal, ...options };
 
     if (args.count_only) {
       if (doi) throw new ToolError('invalid_input', 'count_only counts the matches of a query; a DOI names one paper.', 'Drop count_only to look the DOI up.');

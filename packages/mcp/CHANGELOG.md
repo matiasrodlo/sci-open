@@ -13,6 +13,11 @@ in `test/__toolsnaps__/` are the record of every schema change.
   per-client request and new-search budgets, an Origin allowlist, a loopback
   Host check, `GET /health` and an admin-keyed `GET /metrics`. Settings are
   `SCI_OPEN_` variables; see the README.
+- A call the client cancels stops what it asked of the sources: the fan-out,
+  the facet counts, the access check and the page's details, and
+  verify_references starts no further reference. A search another call is
+  waiting on goes on for that call. A full text or citation list being
+  fetched still runs to the end.
 - A failed tool call is logged on stderr with its cause, which the model is
   still never shown: an `error`, with the stack, for a fault in the server, a
   warning for a source failing, `info` for a wait on a paced source and

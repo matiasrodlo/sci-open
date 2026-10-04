@@ -36,6 +36,13 @@ export type FanOutOptions = {
    * which says the provider cannot express the query and lets the set be held.
    */
   unavailable?: ReadonlyMap<ProviderId, string>;
+  /**
+   * The caller's: when it aborts, every provider still running is told to
+   * stop, and reported failed. A caller that must not go on with what is left
+   * checks it afterwards. A request shared through `cache` with another
+   * caller goes on until every caller sharing it has left.
+   */
+  signal?: AbortSignal;
 };
 
 export type ProviderSettled = { report: ProviderReport; papers: readonly Paper[] };
@@ -57,28 +64,39 @@ class TimeoutError extends Error {
  *
  * The abort is what stops a timed-out provider from continuing to decode a
  * multi-megabyte payload on the same thread as everyone else — the reason a
- * slow provider used to make its neighbours look slow too.
+ * slow provider used to make its neighbours look slow too. `signal`, the
+ * caller's, stops it the same way, and rejects with its reason.
  */
-export async function withBudget<T>(ms: number, work: (signal: AbortSignal) => Promise<T>): Promise<T> {
+export async function withBudget<T>(ms: number, work: (signal: AbortSignal) => Promise<T>, signal?: AbortSignal): Promise<T> {
+  signal?.throwIfAborted();
   const controller = new AbortController();
   let timer: NodeJS.Timeout | undefined;
+  let onAbort: (() => void) | undefined;
 
   const budget = new Promise<never>((_resolve, reject) => {
     timer = setTimeout(() => {
       controller.abort();
       reject(new TimeoutError(ms));
     }, ms);
+    if (signal) {
+      onAbort = () => {
+        controller.abort(signal.reason);
+        reject(signal.reason);
+      };
+      signal.addEventListener('abort', onAbort, { once: true });
+    }
   });
 
   try {
     return await Promise.race([work(controller.signal), budget]);
   } finally {
     if (timer) clearTimeout(timer);
+    if (onAbort) signal!.removeEventListener('abort', onAbort);
   }
 }
 
 export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOutResult> {
-  const { query, depth, offset, timeoutMs, openAccessOnly, cache, userAgent, now, onSettled, unavailable } = options;
+  const { query, depth, offset, timeoutMs, openAccessOnly, cache, userAgent, now, onSettled, unavailable, signal } = options;
 
   const skippedReports: ProviderReport[] = plan.skipped.map(s => ({
     provider: s.provider,
@@ -140,8 +158,10 @@ export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOut
           ...(now ? { now } : {})
         });
 
-      if (!cache) return withBudget(timeoutMs, work);
+      if (!cache) return withBudget(timeoutMs, work, signal);
 
+      // The request is the flight's, stopped only once every caller sharing
+      // it has left; this caller stops waiting on its own signal.
       const { outcome } = await cache.fetch(
         {
           provider: provider.id,
@@ -149,7 +169,8 @@ export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOut
           depth,
           offset
         },
-        () => withBudget(timeoutMs, work)
+        shared => withBudget(timeoutMs, work, shared),
+        signal
       );
       return outcome;
     };

@@ -16,6 +16,9 @@ export type ToolDeps = {
   /** Spend one new-search admission; throws `AdmissionError` when refused. */
   admit: () => Promise<void>;
   transport: 'stdio' | 'http';
+  /** The call's: aborts when the client cancels it. Handed to every engine call
+   * that asks the sources, which then stop. Built per call by `registerTools`. */
+  signal: AbortSignal;
   /** One progress notification, when the client asked for them; a no-op
    * otherwise. Built per call by `registerTools`. */
   progress: (message: string, total?: number) => void;

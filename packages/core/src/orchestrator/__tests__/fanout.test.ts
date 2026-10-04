@@ -132,6 +132,21 @@ describe('fanOut', () => {
     expect(seen?.aborted).toBe(true);
   });
 
+  it('signals cancellation to every provider when the caller cancels', async () => {
+    let seen: AbortSignal | undefined;
+    const slow = stubProvider('ncbi', ({ signal }) => {
+      seen = signal;
+      return new Promise<never>(() => {});
+    });
+    const caller = new AbortController();
+    const fanned = fanOut(plan(QUERY, [slow]), { ...base, timeoutMs: 60_000, signal: caller.signal });
+    caller.abort();
+    const { reports } = await fanned;
+
+    expect(seen?.aborted).toBe(true);
+    expect(reports[0]).toMatchObject({ status: 'error' });
+  });
+
   it('is complete when every provider was ok or deliberately skipped', async () => {
     const providers = [ok('europepmc', 1), stubProvider('biorxiv', async () => ({ papers: [], skipped: [] }), { keywordSearch: false })];
     const { reports } = await fanOut(plan(QUERY, providers), base);

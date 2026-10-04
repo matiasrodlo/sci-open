@@ -45,6 +45,8 @@ export type EnrichOptions = {
    * earlier — see `rescue.ts`.
    */
   cache?: AuthorityCache;
+  /** The caller's: aborting it ends the step as the budget does. */
+  signal?: AbortSignal;
 };
 
 export type EnrichResult = {
@@ -242,7 +244,8 @@ export async function enrichPage(
     budgetMs = DEFAULT_BUDGET_MS,
     concurrency = DEFAULT_CONCURRENCY,
     userAgent,
-    cache
+    cache,
+    signal
   } = options;
 
   // Copied rather than mutated in place: the caller's array may be the same
@@ -267,6 +270,9 @@ export async function enrichPage(
 
   const controller = new AbortController();
   const expiry = setTimeout(() => controller.abort(), budgetMs);
+  const cancel = () => controller.abort();
+  if (signal?.aborted) controller.abort();
+  else signal?.addEventListener('abort', cancel, { once: true });
 
   /**
    * Lookups put for each paper, and how many of them came back, by id. A paper
@@ -349,6 +355,7 @@ export async function enrichPage(
     }
   } finally {
     clearTimeout(expiry);
+    signal?.removeEventListener('abort', cancel);
   }
 
   // A null is an answer: an authority that knows nothing about most of a page

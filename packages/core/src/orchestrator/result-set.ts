@@ -187,8 +187,9 @@ export class ResultSetCache {
    */
   async resolve(
     key: string,
-    work: () => Promise<ResultSet>,
-    admit?: () => Promise<void>
+    work: (signal: AbortSignal) => Promise<ResultSet>,
+    admit?: () => Promise<void>,
+    signal?: AbortSignal
   ): Promise<{ set: ResultSet; cached: boolean }> {
     for (;;) {
       const held = this.read(key);
@@ -196,13 +197,15 @@ export class ResultSetCache {
 
       let started = false;
       try {
-        const { value, coalesced } = await this.flights.run(key, async () => {
+        // `work` is given the flight's signal, which aborts only once every
+        // caller waiting on the set has left; this caller leaves on `signal`.
+        const { value, coalesced } = await this.flights.run(key, async shared => {
           started = true;
           if (admit) await admit().catch(reason => { throw new Refused(reason); });
-          const set = await work();
+          const set = await work(shared);
           if (set.complete || onlyRefused(set.reports)) this.write(key, set);
           return set;
-        });
+        }, signal);
         return { set: value, cached: coalesced };
       } catch (error) {
         if (!(error instanceof Refused)) throw error;
