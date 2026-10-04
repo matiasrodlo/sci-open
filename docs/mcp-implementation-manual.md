@@ -761,7 +761,7 @@ exposes exactly the operations the tools need. Tools depend on the `Engine`
 
 ```ts
 import type { Paper, SearchParams, SearchResponseV2 } from '@sci-open/shared';
-import { runSearch, DEFAULT_SEARCH_SETTINGS, type SearchSettings } from './orchestrator/from-search-params';
+import { runSearch } from './orchestrator/from-search-params';
 import { ProviderCache } from './orchestrator/provider-cache';
 import { ResultSetCache } from './orchestrator/result-set';
 import { AuthorityCache, AuthorityFactsCache } from './orchestrator/authority-cache';
@@ -776,9 +776,9 @@ export type EngineOptions = {
   userAgent: string;
   /** Installed process-wide. */
   apiKeys?: ApiKeys;
-  /** Only `depth` is a setting now (D11): the facet-count switch and the
-   * rescue's limits were the API's environment variables. */
-  search?: Partial<SearchSettings>;
+  /** Records read per source, the one search setting (D11): the facet-count
+   * switch and the rescue's limits were the API's environment variables. */
+  depth?: number;
   /** Subsets of the registries: how the engine is driven offline in tests. */
   providers?: readonly ProviderEntry[];
   authorities?: readonly AuthorityEntry[];
@@ -807,7 +807,6 @@ export type Engine = {
 export function createEngine(options: EngineOptions): Engine {
   if (options.apiKeys) useApiKeys(options.apiKeys);
 
-  const settings: SearchSettings = { ...DEFAULT_SEARCH_SETTINGS, ...options.search };
   // Default byte budgets: the per-cache knobs were the API's settings.
   const providerCache = new ProviderCache();
   const resultSets = new ResultSetCache();
@@ -939,7 +938,6 @@ export function queryOf(params: SearchParams) {
 
 // runSearch now opens with:
 const { filters, query, withoutStages, userFilters, openAccessOnly } = queryOf(params);
-const settings = options.settings ?? DEFAULT_SEARCH_SETTINGS;
 const { facetQueries, filtersSent } = sourceCounting(filters, query, withoutStages);
 ```
 
@@ -4830,7 +4828,7 @@ function engineFor(config: McpConfig): Engine {
   return createEngine({
     userAgent: config.userAgent,
     apiKeys: config.apiKeys,
-    search: { depth: config.searchDepth },
+    depth: config.searchDepth,
     ...(config.openCitationsToken ? { openCitationsToken: config.openCitationsToken } : {})
   });
 }

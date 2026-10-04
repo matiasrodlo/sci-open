@@ -77,7 +77,7 @@ async function main(): Promise<void> {
     engine: createEngine({
       userAgent: config.userAgent,
       apiKeys: config.apiKeys,
-      search: { depth: config.searchDepth },
+      depth: config.searchDepth,
       ...(config.openCitationsToken ? { openCitationsToken: config.openCitationsToken } : {})
     }),
     config,

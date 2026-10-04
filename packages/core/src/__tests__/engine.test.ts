@@ -178,7 +178,7 @@ describe('what a call costs the sources', () => {
 
   it('reads each source as deep as a call asks, and holds that set apart', async () => {
     const arxiv = stub('arxiv');
-    const engine = createEngine({ userAgent: 'engine-test', providers: [arxiv.entry], authorities: [], search: { depth: 300 } });
+    const engine = createEngine({ userAgent: 'engine-test', providers: [arxiv.entry], authorities: [], depth: 300 });
 
     await engine.search({ q: 'crispr' }, { depth: 25 });
     await engine.search({ q: 'crispr' });

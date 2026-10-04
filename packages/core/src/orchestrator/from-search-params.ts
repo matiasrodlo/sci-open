@@ -1,7 +1,7 @@
 import type { PaperStage, ProviderId, Query, SearchFilters, SearchParams, SearchResponseV2 } from '@sci-open/shared';
 import { isStructured } from '@sci-open/shared';
 import type { FacetQueries } from './source-facets';
-import { search as orchestratorSearch, DEFAULT_DEPTH } from './index';
+import { search as orchestratorSearch } from './index';
 import { parseQuery } from './parse-query';
 import type { UserFilters } from './policy';
 import type { ProviderCache } from './provider-cache';
@@ -42,14 +42,6 @@ export function toUserFilters(filters: SearchFilters): UserFilters {
   };
 }
 
-/** The settings that decide how much work a search does. */
-export type SearchSettings = {
-  /** How deep each provider is read. The orchestrator clamps it to `MAX_DEPTH`. */
-  depth: number;
-};
-
-export const DEFAULT_SEARCH_SETTINGS: SearchSettings = { depth: DEFAULT_DEPTH };
-
 /**
  * Which facets to count across everything the sources match, and whether the
  * sources' own counts describe this search — both decided by one question: was
@@ -83,8 +75,8 @@ function sourceCounting(
 }
 
 export type RunOptions = {
-  /** Defaults to `DEFAULT_SEARCH_SETTINGS`. */
-  settings?: SearchSettings;
+  /** How deep each provider is read: `DEFAULT_DEPTH` by default, clamped to `MAX_DEPTH`. */
+  depth?: number;
   /** Shared across requests, which is the only way caching a fan-out pays. */
   cache?: ProviderCache;
   /** Likewise for resolved sets, which is what keeps a search's pages slices of one set. */
@@ -164,7 +156,6 @@ export async function runSearch(
   options: RunOptions = {}
 ): Promise<{ response: SearchResponseV2; fromCache: boolean }> {
   const { filters, query, withoutStages, userFilters, openAccessOnly } = queryOf(params);
-  const settings = options.settings ?? DEFAULT_SEARCH_SETTINGS;
   // `filtersSent` holds whether or not the facets are counted: it says what
   // the sources were sent, which is what makes their totals this search's.
   const counting = sourceCounting(filters, query, withoutStages);
@@ -174,7 +165,7 @@ export async function runSearch(
   const result = await orchestratorSearch(query, {
     page: params.page ?? 1,
     pageSize: params.pageSize ?? 20,
-    depth: settings.depth,
+    ...(options.depth !== undefined ? { depth: options.depth } : {}),
     filters: userFilters,
     sort: params.sort ?? 'relevance',
     openAccessOnly,

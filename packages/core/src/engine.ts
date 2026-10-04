@@ -1,5 +1,5 @@
 import type { Paper, ProviderId, SearchParams, SearchResponseV2 } from '@sci-open/shared';
-import { runSearch, DEFAULT_SEARCH_SETTINGS, type SearchSettings } from './orchestrator/from-search-params';
+import { runSearch } from './orchestrator/from-search-params';
 import { ProviderCache } from './orchestrator/provider-cache';
 import { ResultSetCache } from './orchestrator/result-set';
 import { AuthorityCache, AuthorityFactsCache } from './orchestrator/authority-cache';
@@ -43,7 +43,8 @@ export type EngineOptions = {
   userAgent: string;
   /** Installed process-wide. */
   apiKeys?: ApiKeys;
-  search?: Partial<SearchSettings>;
+  /** Records read per source: `DEFAULT_DEPTH` by default, at most `MAX_DEPTH`. */
+  depth?: number;
   /** Subsets of the registries: how the engine is driven offline in tests. */
   providers?: readonly ProviderEntry[];
   authorities?: readonly AuthorityEntry[];
@@ -127,7 +128,6 @@ export type Engine = {
 export function createEngine(options: EngineOptions): Engine {
   if (options.apiKeys) useApiKeys(options.apiKeys);
 
-  const settings: SearchSettings = { ...DEFAULT_SEARCH_SETTINGS, ...options.search };
   const providerCache = new ProviderCache();
   const resultSets = new ResultSetCache();
   const authorityFacts = new AuthorityFactsCache();
@@ -225,10 +225,11 @@ export function createEngine(options: EngineOptions): Engine {
 
   const search: Engine['search'] = async (params, extra = {}) => {
     const unavailable = quota.unavailable();
+    const depth = extra.depth ?? options.depth;
     const { response, fromCache } = await runSearch(params, {
       // Safe to share the caches here too: depth and the facet queries are
       // both part of the result-set key.
-      settings: extra.depth !== undefined ? { ...settings, depth: extra.depth } : settings,
+      ...(depth !== undefined ? { depth } : {}),
       ...(extra.facets ? { facets: true } : {}),
       cache: providerCache,
       resultSets,

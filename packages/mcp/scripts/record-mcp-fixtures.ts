@@ -55,7 +55,7 @@ async function main(): Promise<void> {
     userAgent: `sci-open-mcp fixtures (+https://github.com/matiasrodlo/sci-open${email ? `; mailto:${email}` : ''})`,
     ...(openalex ? { apiKeys: { openalex } } : {}),
     // The depth the MCP server reads at (D11), so the recordings are its answers.
-    search: { depth: 300 }
+    depth: 300
   });
 
   const out = path.join(__dirname, '..', 'fixtures', 'engine.json');
