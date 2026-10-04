@@ -7,6 +7,7 @@ import { defineTool } from '../framework/define-tool';
 import { ToolError, reportToolError } from '../errors';
 import { paperRefKind } from './resolve-paper';
 import { writeUserFile } from '../safety/paths';
+import { writesAllowed } from '../config';
 import { stripInvisible } from '../safety/sanitize';
 import { retractionWarning } from '../shape/paper';
 
@@ -28,7 +29,7 @@ export const exportCitations = defineTool({
   name: 'export_citations',
   title: 'Export citations',
   toolset: 'export',
-  writes: true,
+  writes: ['save_to', 'overwrite'],
   description:
     'BibTeX or RIS for up to 200 papers (DOIs or sci-open ids), generated from the records: never retype a citation yourself. ' +
     'With save_to (local connections only) the file is written to disk; otherwise it is attached as a resource to save as is. ' +
@@ -55,7 +56,7 @@ export const exportCitations = defineTool({
   async run(args, deps) {
     // Before anything is resolved: a refusal certain from the start must not
     // spend a lookup, or a search per DOI, first.
-    const writable = deps.transport === 'stdio' && deps.config.allowWrites;
+    const writable = writesAllowed(deps);
     if (args.save_to !== undefined && !writable) {
       throw new ToolError('writes_disabled', 'This server is not allowed to write files.', 'Omit save_to to receive the file as a resource.');
     }

@@ -6,6 +6,7 @@ import { resolvePaperRef } from './resolve-paper';
 import { fenceUntrusted } from '../safety/untrusted';
 import { sanitizeText, stripInvisible } from '../safety/sanitize';
 import { writeUserFile } from '../safety/paths';
+import { writesAllowed } from '../config';
 import { retractionWarning } from '../shape/paper';
 import { documentToMarkdown } from '../shape/markdown';
 
@@ -21,7 +22,7 @@ export const readPaper = defineTool({
   name: 'read_paper',
   title: 'Read paper',
   toolset: 'read',
-  writes: true,
+  writes: ['save_to', 'overwrite'],
   description:
     'Read the legal open-access full text of a paper. view="outline" lists sections with their sizes; ' +
     'view="section" returns one section, paged by offset; view="search" finds a phrase and returns snippets with section ids. ' +
@@ -56,7 +57,7 @@ export const readPaper = defineTool({
     // caller's machine, and this process is not. Checked before anything is
     // fetched, like the arguments below: a refusal certain from the start
     // must not spend a lookup, a download or a paced host's slot first.
-    const writable = deps.transport === 'stdio' && deps.config.allowWrites;
+    const writable = writesAllowed(deps);
     if (args.save_to !== undefined && !writable) {
       throw new ToolError('writes_disabled', 'This server is not allowed to write files.', 'Omit save_to to receive the content inline.');
     }

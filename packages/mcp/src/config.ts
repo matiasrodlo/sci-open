@@ -69,6 +69,12 @@ enables GET /metrics, and save_to is always refused.
 Set UNPAYWALL_EMAIL to a real address. Every setting is listed in Appendix A of
 docs/mcp-implementation-manual.md.`;
 
+/** Whether a tool may write a file here: only on a local connection, where
+ * the path a caller names is on this machine, and only when allowed. */
+export function writesAllowed(deps: { transport: 'stdio' | 'http'; config: Pick<McpConfig, 'allowWrites'> }): boolean {
+  return deps.transport === 'stdio' && deps.config.allowWrites;
+}
+
 /** Every default, nothing read. A host serving HTTP starts from this. */
 export function defaultMcpConfig(userAgent: string): McpConfig {
   return {

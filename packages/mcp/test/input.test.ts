@@ -71,3 +71,31 @@ describe('a tool’s input', () => {
     await close();
   });
 });
+
+describe('a tool that can write a file', () => {
+  const WRITERS = ['read_paper', 'export_citations'];
+
+  it('offers save_to, and says it can write, where writes are allowed', async () => {
+    const { client, close } = await serve();
+    for (const tool of (await client.listTools()).tools.filter(t => WRITERS.includes(t.name))) {
+      expect(Object.keys(tool.inputSchema.properties ?? {})).toEqual(expect.arrayContaining(['save_to', 'overwrite']));
+      expect(tool.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true });
+    }
+    await close();
+  });
+
+  it.each([
+    ['over HTTP', { transport: 'http' as const }],
+    ['with writes turned off', { allowWrites: false }]
+  ])('%s, offers no save_to and is read-only, and answers a save_to with why', async (_case, options) => {
+    const { client, close } = await serve(options);
+    for (const tool of (await client.listTools()).tools.filter(t => WRITERS.includes(t.name))) {
+      expect(Object.keys(tool.inputSchema.properties ?? {}), tool.name).not.toContain('save_to');
+      expect(Object.keys(tool.inputSchema.properties ?? {}), tool.name).not.toContain('overwrite');
+      expect(tool.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false, idempotentHint: true });
+    }
+    const refused = await client.callTool({ name: 'read_paper', arguments: { paper: 'openalex:W1', save_to: '/tmp/sci-open-x' } });
+    expect(text(refused)).toMatch(/^Error \(writes_disabled\)/);
+    await close();
+  });
+});

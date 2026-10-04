@@ -18,7 +18,9 @@ import { quietLogger } from './fake-engine';
 
 const DEPS: ServerDeps = {
   engine: fixtureEngine(FIXTURES),
-  config: defaultMcpConfig('test'),
+  // As sci-open-mcp serves a local client by default: writes allowed, so the
+  // toolsnaps record every parameter (input.test.ts covers the rest).
+  config: { ...defaultMcpConfig('test'), allowWrites: true },
   metrics: nullMetrics,
   logger: quietLogger,
   transport: 'stdio'

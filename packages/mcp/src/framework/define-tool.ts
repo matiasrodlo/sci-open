@@ -46,8 +46,10 @@ export type ToolDefinition<I extends z.ZodObject, O extends z.ZodObject> = {
   description: string;
   input: I;
   output: O;
-  /** True when the tool can write a file (only with save_to). */
-  writes?: boolean;
+  /** The parameters that write a file (`save_to`, `overwrite`). Where writes
+   * are not allowed they are left out of the schema, and the tool is
+   * read-only (`inputOf`). */
+  writes?: readonly string[];
   /** Computes the answer. Validation, budgets, provenance, errors and metrics
    * are `registerTools`' job, never a tool's. */
   run(args: z.infer<I>, deps: ToolDeps): Promise<ToolOutcome<z.infer<O>>>;
@@ -56,10 +58,16 @@ export type ToolDefinition<I extends z.ZodObject, O extends z.ZodObject> = {
 export const defineTool = <I extends z.ZodObject, O extends z.ZodObject>(def: ToolDefinition<I, O>) => def;
 
 /**
- * The input a tool takes: its schema, strict — a parameter it does not take is
- * refused, not dropped, so `pagesize: 5` is a typo the caller hears about
- * rather than a page of the default size.
+ * The input a tool takes where it is served: its schema, strict — a parameter
+ * it does not take is refused, not dropped, so `pagesize: 5` is a typo the
+ * caller hears about rather than a page of the default size — and without the
+ * parameters that write a file where writes are not allowed.
  */
-export function inputOf(def: ToolDefinition<any, any>): z.ZodObject {
-  return (def.input as z.ZodObject).strict();
+export function inputOf(def: ToolDefinition<any, any>, writable: boolean): z.ZodObject {
+  const input: z.ZodObject = def.input;
+  const served = def.writes?.length && !writable
+    // A mask built at run time, which zod types key by key.
+    ? input.omit(Object.fromEntries(def.writes.map(name => [name, true])) as never)
+    : input;
+  return served.strict();
 }

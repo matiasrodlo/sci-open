@@ -2016,8 +2016,10 @@ export type ToolDefinition<I extends z.ZodObject, O extends z.ZodObject> = {
   description: string;
   input: I;
   output: O;
-  /** True when the tool can write a file (only with save_to). */
-  writes?: boolean;
+  /** The parameters that write a file (`save_to`, `overwrite`). Where writes
+   * are not allowed they are left out of the schema (`inputOf`), and the tool
+   * is read-only. */
+  writes?: readonly string[];
   run(args: z.infer<I>, deps: ToolDeps): Promise<ToolOutcome<z.infer<O>>>;
 };
 
@@ -2056,13 +2058,14 @@ export function registerTools(
       {
         title: def.title,
         description: def.description,
-        inputSchema: def.input,
+        inputSchema: advertised(inputOf(def, writable)), // checked by parseArgs
         outputSchema: def.output,
         annotations: {
           title: def.title,
-          readOnlyHint: !def.writes,
-          destructiveHint: Boolean(def.writes), // overwrite: true replaces a file
-          idempotentHint: !def.writes,
+          // writable = writesAllowed(deps): a local connection, writes allowed.
+          readOnlyHint: !(def.writes && writable),
+          destructiveHint: Boolean(def.writes && writable), // overwrite: true replaces a file
+          idempotentHint: !(def.writes && writable),
           openWorldHint: true
         }
       },
@@ -2126,6 +2129,11 @@ itself (`parseArgs`): a failure is `invalid_input`, with zod's own account of
 what is wrong, mapped, logged and counted like any other. The schema is
 strict (`inputOf`): a parameter a tool does not take is refused by name rather
 than dropped, which is how `pagesize: 5` used to run a page of ten.
+
+Annotations describe a tool as it is served. Where writes are not allowed —
+over HTTP, or with `--no-writes` — a tool's write parameters are left out of
+its schema, and it is read-only; a `save_to` sent anyway is answered
+`writes_disabled`, which says why, rather than as an unknown parameter.
 
 Error results carry no `structuredContent`. The protocol test in Phase 11
 asserts that the SDK accepts an error result for a tool that declares an

@@ -90,7 +90,7 @@ async function main(): Promise<void> {
   };
 
   const run = async (def: ToolDefinition<any, any>, args: unknown): Promise<void> => {
-    const parsed = inputOf(def).safeParse(args); // the server's own limits and defaults
+    const parsed = inputOf(def, true).safeParse(args); // the server's own limits and defaults
     if (!parsed.success) throw new ToolError('invalid_input', z.prettifyError(parsed.error));
     // Logged as the server logs it, so a fault's cause reaches stderr too.
     const outcome = await def.run(parsed.data, deps).catch((error: unknown) => {

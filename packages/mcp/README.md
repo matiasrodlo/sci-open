@@ -154,7 +154,7 @@ request its description. Over HTTP, `?toolsets=all` does the same.
 | `OPENCITATIONS_TOKEN` | | unset | Optional OpenCitations token, for `get_citations`; 180 requests a minute without one |
 | `SCI_OPEN_TOOLSETS` | `--toolsets` | `core,read` | Toolsets to serve |
 | `SCI_OPEN_TOOLS` | `--tools` | unset | Extra tools by name |
-| `SCI_OPEN_ALLOW_WRITES` | `--no-writes` | `1` | Whether `save_to` may write a file (never over HTTP) |
+| `SCI_OPEN_ALLOW_WRITES` | `--no-writes` | `1` | Whether `save_to` may write a file (never over HTTP). Off, `save_to` leaves the schema and the tools that had it are read-only |
 | `SCI_OPEN_TRUSTED_FULLTEXT_ONLY` | `--trusted-fulltext-only` | `0` | Full text from Europe PMC and arXiv only |
 | `SCI_OPEN_TEXT_BUDGET_CHARS` | | `40000` | Largest text answer |
 | `SCI_OPEN_STRUCTURED_BUDGET_CHARS` | | `80000` | Largest structured answer |

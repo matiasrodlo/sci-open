@@ -35,6 +35,10 @@ in `test/__toolsnaps__/` are the record of every schema change.
 
 ### Changed
 
+- Where writes are not allowed — over HTTP, or with `--no-writes` — read_paper
+  and export_citations offer no `save_to` or `overwrite`, and are annotated
+  read-only; a `save_to` sent anyway is answered `writes_disabled`. On a local
+  connection with writes allowed they are unchanged.
 - search_papers counts facets across the sources only with
   `include_facets`. Every plain search used to count them — five OpenAlex
   `group_by` requests, and a request a year for ten years to each source that

@@ -1,6 +1,7 @@
 import type { McpServer, ServerContext, StandardSchemaWithJSON } from '@modelcontextprotocol/server';
 import * as z from 'zod';
 import { inputOf, type ToolDefinition, type ToolDeps } from './define-tool';
+import { writesAllowed } from '../config';
 import { measureUpstream } from '@sci-open/core';
 import { buildProvenance, PROVENANCE_KEY, usageMeta, type ServerIdentity } from '../provenance';
 import { clampText } from '../shape/budget';
@@ -23,8 +24,14 @@ function advertised(schema: z.ZodObject): StandardSchemaWithJSON {
   } as StandardSchemaWithJSON;
 }
 
-/** A call's arguments, checked against the input the tool takes. */
-function parseArgs(input: z.ZodObject, raw: unknown): Record<string, unknown> {
+/** A call's arguments, checked against the input the tool is served with. */
+function parseArgs(def: ToolDefinition<any, any>, input: z.ZodObject, writable: boolean, raw: unknown): Record<string, unknown> {
+  // A write this server does not allow: say so, rather than that the
+  // parameter is unknown, which is all the schema here can say.
+  const given = raw && typeof raw === 'object' ? Object.keys(raw) : [];
+  if (!writable && def.writes?.some(name => given.includes(name))) {
+    throw new ToolError('writes_disabled', 'This server is not allowed to write files.', 'Omit save_to to receive the content inline.');
+  }
   const parsed = input.safeParse(raw ?? {});
   if (!parsed.success) {
     throw new ToolError(
@@ -47,8 +54,13 @@ export function registerTools(
   deps: Omit<ToolDeps, 'progress' | 'signal'>,
   identity: ServerIdentity
 ): void {
+  const writable = writesAllowed(deps);
   for (const def of tools) {
-    const input = inputOf(def);
+    const input = inputOf(def, writable);
+    // Annotations describe a tool, not a call: one that can write a file when
+    // asked is not read-only, and `overwrite: true` replaces one. Where writes
+    // are not allowed it cannot, and its schema has no way to ask.
+    const canWrite = Boolean(def.writes?.length) && writable;
     server.registerTool(
       def.name,
       {
@@ -58,11 +70,9 @@ export function registerTools(
         outputSchema: def.output,
         annotations: {
           title: def.title,
-          // Annotations describe a tool, not a call: one that can write a file
-          // when asked is not read-only, and `overwrite: true` replaces one.
-          readOnlyHint: !def.writes,
-          destructiveHint: Boolean(def.writes),
-          idempotentHint: !def.writes,
+          readOnlyHint: !canWrite,
+          destructiveHint: canWrite,
+          idempotentHint: !canWrite,
           openWorldHint: true
         }
       },
@@ -99,7 +109,7 @@ export function registerTools(
         let args: Record<string, unknown> = {};
         // Every request the call sends the sources is charged to it (`_meta`, metrics).
         const measured = measureUpstream(async () => {
-          args = parseArgs(input, raw);
+          args = parseArgs(def, input, writable, raw);
           return def.run(args as never, callDeps);
         });
         try {
