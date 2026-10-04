@@ -2117,6 +2117,16 @@ export function registerTools(
 }
 ```
 
+The SDK would check a call's arguments against `inputSchema` before the
+callback, and answer a bad one in words of its own — `Input validation error:
+…` — outside the error codes, the hint and the metrics. So a tool is
+registered with a schema that tools/list shows as the zod schema says but that
+lets every input through (`advertised`), and the callback checks the arguments
+itself (`parseArgs`): a failure is `invalid_input`, with zod's own account of
+what is wrong, mapped, logged and counted like any other. The schema is
+strict (`inputOf`): a parameter a tool does not take is refused by name rather
+than dropped, which is how `pagesize: 5` used to run a page of ten.
+
 Error results carry no `structuredContent`. The protocol test in Phase 11
 asserts that the SDK accepts an error result for a tool that declares an
 `outputSchema`; keep that test, because this is exactly the kind of behaviour

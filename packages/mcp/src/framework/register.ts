@@ -1,9 +1,40 @@
-import type { McpServer, ServerContext } from '@modelcontextprotocol/server';
-import type { ToolDefinition, ToolDeps } from './define-tool';
+import type { McpServer, ServerContext, StandardSchemaWithJSON } from '@modelcontextprotocol/server';
+import * as z from 'zod';
+import { inputOf, type ToolDefinition, type ToolDeps } from './define-tool';
 import { measureUpstream } from '@sci-open/core';
 import { buildProvenance, PROVENANCE_KEY, usageMeta, type ServerIdentity } from '../provenance';
 import { clampText } from '../shape/budget';
-import { renderError, reportToolError } from '../errors';
+import { renderError, reportToolError, ToolError } from '../errors';
+
+/**
+ * A schema as tools/list shows it, that lets every input through. The SDK
+ * would otherwise check it first and answer a bad argument in words of its
+ * own — outside the error contract, the hint and the metrics — so
+ * `registerTools` checks it instead (`parseArgs`).
+ */
+function advertised(schema: z.ZodObject): StandardSchemaWithJSON {
+  return {
+    '~standard': {
+      version: 1,
+      vendor: 'sci-open',
+      validate: (value: unknown) => ({ value }),
+      jsonSchema: schema['~standard'].jsonSchema
+    }
+  } as StandardSchemaWithJSON;
+}
+
+/** A call's arguments, checked against the input the tool takes. */
+function parseArgs(input: z.ZodObject, raw: unknown): Record<string, unknown> {
+  const parsed = input.safeParse(raw ?? {});
+  if (!parsed.success) {
+    throw new ToolError(
+      'invalid_input',
+      `The arguments do not fit the tool's input schema:\n${z.prettifyError(parsed.error)}`,
+      'Fix the arguments named above, as the input schema describes them, and call again.'
+    );
+  }
+  return parsed.data as Record<string, unknown>;
+}
 
 /**
  * The single place every cross-cutting rule is applied: annotations, progress,
@@ -17,12 +48,13 @@ export function registerTools(
   identity: ServerIdentity
 ): void {
   for (const def of tools) {
+    const input = inputOf(def);
     server.registerTool(
       def.name,
       {
         title: def.title,
         description: def.description,
-        inputSchema: def.input,
+        inputSchema: advertised(input),
         outputSchema: def.output,
         annotations: {
           title: def.title,
@@ -34,7 +66,7 @@ export function registerTools(
           openWorldHint: true
         }
       },
-      async (args: unknown, ctx: ServerContext) => {
+      async (raw: unknown, ctx: ServerContext) => {
         const started = Date.now();
         // Counted per call, so metrics can say how many calls cost a fan-out.
         let newSearches = 0;
@@ -62,8 +94,14 @@ export function registerTools(
               .catch(() => { /* a lost notification is not a failed call */ });
           }
         };
+        // The arguments as checked, defaults filled in: what the tool runs on,
+        // and what the provenance hashes.
+        let args: Record<string, unknown> = {};
         // Every request the call sends the sources is charged to it (`_meta`, metrics).
-        const measured = measureUpstream(() => def.run(args as never, callDeps));
+        const measured = measureUpstream(async () => {
+          args = parseArgs(input, raw);
+          return def.run(args as never, callDeps);
+        });
         try {
           const outcome = await measured.done;
           const upstream = measured.usage();

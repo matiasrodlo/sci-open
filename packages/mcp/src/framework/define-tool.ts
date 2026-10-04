@@ -54,3 +54,12 @@ export type ToolDefinition<I extends z.ZodObject, O extends z.ZodObject> = {
 };
 
 export const defineTool = <I extends z.ZodObject, O extends z.ZodObject>(def: ToolDefinition<I, O>) => def;
+
+/**
+ * The input a tool takes: its schema, strict — a parameter it does not take is
+ * refused, not dropped, so `pagesize: 5` is a typo the caller hears about
+ * rather than a page of the default size.
+ */
+export function inputOf(def: ToolDefinition<any, any>): z.ZodObject {
+  return (def.input as z.ZodObject).strict();
+}

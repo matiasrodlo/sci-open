@@ -57,6 +57,11 @@ in `test/__toolsnaps__/` are the record of every schema change.
 
 ### Fixed
 
+- A bad argument is answered in the server's own form, `Error (invalid_input)`
+  with what is wrong and a hint, and counted in the metrics; the SDK used to
+  answer it in words of its own, uncounted. A parameter a tool does not take
+  is refused, naming it, rather than dropped (`pagesize: 5` ran a page of
+  ten), and every tool's schema says so (`additionalProperties: false`).
 - A DOI written `doi:10.…` — as get_citations and verify_references print
   one, and as citations write it — was taken for a sci-open id, and
   get_paper, read_paper, get_citations and export_citations answered a real

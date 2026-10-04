@@ -8,7 +8,7 @@ import { stderrLogger } from '../log';
 import { nullMetrics } from '../metrics';
 import { tokenBucket } from '../admission';
 import { ToolError, renderError, reportToolError, toToolError } from '../errors';
-import type { ToolDefinition, ToolDeps } from '../framework/define-tool';
+import { inputOf, type ToolDefinition, type ToolDeps } from '../framework/define-tool';
 import { paperRefKind } from '../tools/resolve-paper';
 import { searchPapers } from '../tools/search-papers';
 import { getPaper } from '../tools/get-paper';
@@ -90,7 +90,7 @@ async function main(): Promise<void> {
   };
 
   const run = async (def: ToolDefinition<any, any>, args: unknown): Promise<void> => {
-    const parsed = def.input.safeParse(args); // the server's own limits and defaults
+    const parsed = inputOf(def).safeParse(args); // the server's own limits and defaults
     if (!parsed.success) throw new ToolError('invalid_input', z.prettifyError(parsed.error));
     // Logged as the server logs it, so a fault's cause reaches stderr too.
     const outcome = await def.run(parsed.data, deps).catch((error: unknown) => {
