@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import http from 'http';
 import type { AddressInfo } from 'net';
-import { HttpClientFactory } from '../http-client-factory';
+import { createPooledClient } from '../http-client-factory';
 import { measureUpstream, sourceOf, upstreamUsage, usageSince, recordUpstream } from '../upstream-usage';
 
 /** A local server: `/priced` answers as OpenAlex does, with its price in
@@ -26,7 +26,7 @@ afterEach(async () => {
 });
 
 function client(base: string) {
-  const c = new HttpClientFactory({ retryDelay: 1 }).getClient(base);
+  const c = createPooledClient(base, { retryDelayMs: 1 });
   cleanup.push(() => { c.defaults.httpAgent?.destroy(); c.defaults.httpsAgent?.destroy(); });
   return c;
 }

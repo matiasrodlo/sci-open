@@ -1,23 +1,19 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import http from 'http';
 import type { AddressInfo } from 'net';
-import { HttpClientFactory, MAX_RESPONSE_BYTES } from '../http-client-factory';
+import type { AxiosInstance } from 'axios';
+import { createPooledClient, getPooledClient, MAX_RESPONSE_BYTES, type PooledClientOptions } from '../http-client-factory';
 
 // A base URL with a path: several services live under one — NCBI's
-// `/entrez/eutils`, OpenAIRE's `/search`, CORE's `/v3`.
+// `/entrez/eutils`, OpenAIRE's `/graph/v1`, CORE's `/v3`.
 const WITH_PATH = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
 
-let built: Array<ReturnType<HttpClientFactory['getClient']>> = [];
+let built: AxiosInstance[] = [];
 
-const build = () => {
-  const factory = new HttpClientFactory();
-  const getClient = factory.getClient.bind(factory);
-  factory.getClient = (...args) => {
-    const client = getClient(...args);
-    built.push(client);
-    return client;
-  };
-  return factory;
+const build = (baseUrl: string, options?: PooledClientOptions) => {
+  const client = createPooledClient(baseUrl, options);
+  built.push(client);
+  return client;
 };
 
 afterEach(() => {
@@ -31,13 +27,15 @@ afterEach(() => {
 
 describe('client keying', () => {
   it('reuses one client per full base URL', () => {
-    const f = build();
-    expect(f.getClient(WITH_PATH)).toBe(f.getClient(WITH_PATH));
+    const client = getPooledClient(WITH_PATH);
+    built.push(client);
+    expect(getPooledClient(WITH_PATH)).toBe(client);
+    expect(getPooledClient(`${WITH_PATH}/esearch.fcgi`)).not.toBe(client);
+    built.push(getPooledClient(`${WITH_PATH}/esearch.fcgi`));
   });
 
   it('keeps the path on the client, which is what axios resolves against', () => {
-    const f = build();
-    expect(f.getClient(WITH_PATH).defaults.baseURL).toBe(WITH_PATH);
+    expect(build(WITH_PATH).defaults.baseURL).toBe(WITH_PATH);
   });
 });
 
@@ -52,7 +50,7 @@ describe('client keying', () => {
  */
 describe('response size', () => {
   it('caps what a pooled client will read', () => {
-    const client = build().getClient('https://api.example.org', { retryAttempts: 0 });
+    const client = build('https://api.example.org', { retries: 0 });
     expect(client.defaults.maxContentLength).toBe(MAX_RESPONSE_BYTES);
     expect(MAX_RESPONSE_BYTES).toBeGreaterThan(5 * 9_305_138);
   });
@@ -75,7 +73,7 @@ describe('response size', () => {
     const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 
     try {
-      const error = await build().getClient(base, { retryAttempts: 0, timeout: 20000 }).get('/big').catch(e => e);
+      const error = await build(base, { retries: 0, timeoutMs: 20000 }).get('/big').catch(e => e);
       expect(String(error?.message)).toMatch(/maxContentLength/);
     } finally {
       server.closeAllConnections();
