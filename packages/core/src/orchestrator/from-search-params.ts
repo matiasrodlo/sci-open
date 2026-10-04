@@ -97,6 +97,15 @@ export type RunOptions = {
   onProgress?: (event: SearchProgress) => void;
   /** See `SearchOptions.unavailable`. */
   unavailable?: ReadonlyMap<ProviderId, string>;
+  /**
+   * Count the facets across everything each source matches (`source-facets.ts`),
+   * where `sourceCounting` says they can be. Off unless asked: it is a request
+   * a facet to OpenAlex and a request a year to every source that reports only
+   * a total — dozens a search — and a count a rate limit cut short holds the
+   * set for a minute rather than half an hour (`DEFAULT_PARTIAL_COUNTS_TTL_MS`).
+   * The read's own facets are counted either way, at no cost.
+   */
+  facets?: boolean;
   userAgent?: string;
   /** Defaults to the whole registry. A subset is how this is driven offline. */
   providers?: readonly ProviderEntry[];
@@ -154,7 +163,11 @@ export async function runSearch(
 ): Promise<{ response: SearchResponseV2; fromCache: boolean }> {
   const { filters, query, withoutStages, userFilters, openAccessOnly } = queryOf(params);
   const settings = options.settings ?? DEFAULT_SEARCH_SETTINGS;
-  const { facetQueries, filtersSent } = sourceCounting(filters, query, withoutStages);
+  // `filtersSent` holds whether or not the facets are counted: it says what
+  // the sources were sent, which is what makes their totals this search's.
+  const counting = sourceCounting(filters, query, withoutStages);
+  const facetQueries = options.facets ? counting.facetQueries : undefined;
+  const { filtersSent } = counting;
 
   const result = await orchestratorSearch(query, {
     page: params.page ?? 1,

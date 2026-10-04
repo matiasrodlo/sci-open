@@ -48,6 +48,13 @@ describe('search handles', () => {
     expect(encodeSearchHandle({ ...spec, filters: { ...spec.filters, source: ['arxiv', 'openalex'] } })).toBe(handle);
   });
 
+  it('carry whether the search counted its facets, so its pages ask for the same set', () => {
+    const counted = encodeSearchHandle({ ...spec, facets: true });
+    expect(counted).not.toBe(encodeSearchHandle(spec));
+    expect(decodeSearchHandle(counted).facets).toBe(true);
+    expect(decodeSearchHandle(encodeSearchHandle(spec))).not.toHaveProperty('facets');
+  });
+
   it('refuse a handle changed by one character', () => {
     const handle = encodeSearchHandle(spec);
     const i = handle.indexOf('.') + 5;

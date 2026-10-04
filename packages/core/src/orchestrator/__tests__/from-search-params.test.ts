@@ -46,8 +46,8 @@ const pageOf = (n: number) =>
     }));
 
 // Offline: the authorities are real I/O and nothing here is about them.
-const run = async (params: SearchParams, providers: ProviderEntry[]) =>
-  (await runSearch(params, { providers, authorities: [] })).response;
+const run = async (params: SearchParams, providers: ProviderEntry[], extra: { facets?: boolean } = {}) =>
+  (await runSearch(params, { providers, authorities: [], ...extra })).response;
 
 describe('toUserFilters', () => {
   it('carries every filter the orchestrator can act on', () => {
@@ -238,9 +238,19 @@ describe('facets sent to the sources, and counted by them', () => {
     expect(searched[0]!.stages).toEqual(['preprint']);
   });
 
+  it('counts nothing across the sources unless asked, though they were sent everything', async () => {
+    // Dozens of requests a search, for facets only some callers show.
+    const { entry, counted } = counter();
+    const response = await run({ q: 'crispr', filters: IN_2024 }, [entry]);
+
+    expect(counted).toEqual([]);
+    expect(response.countsFromSources).toBe(true);
+    expect(response.facets.year).not.toContainEqual({ value: 2021, count: 999 });
+  });
+
   it('counts the stage facet with its own selection lifted', async () => {
     const { entry, counted } = counter();
-    await run({ q: 'crispr', filters: { ...IN_2024, publicationType: ['preprint'] } }, [entry]);
+    await run({ q: 'crispr', filters: { ...IN_2024, publicationType: ['preprint'] } }, [entry], { facets: true });
 
     // The type facet: every type, still only 2024.
     expect(queryFor(counted, 'stage')!.years).toEqual({ from: 2024, to: 2024 });
@@ -254,7 +264,7 @@ describe('facets sent to the sources, and counted by them', () => {
 
   it('raises the facets to the sources’ counts and says the counts describe this search', async () => {
     const { entry } = counter();
-    const response = await run({ q: 'crispr', filters: IN_2024 }, [entry]);
+    const response = await run({ q: 'crispr', filters: IN_2024 }, [entry], { facets: true });
 
     expect(response.countsFromSources).toBe(true);
     expect(response.facets.year).toContainEqual({ value: 2021, count: 999 });
@@ -264,7 +274,7 @@ describe('facets sent to the sources, and counted by them', () => {
     // A source filter is this service's own label: no source can be sent it,
     // so no source's count describes the search.
     const { entry, counted } = counter();
-    const response = await run({ q: 'crispr', filters: { source: ['openalex'] } }, [entry]);
+    const response = await run({ q: 'crispr', filters: { source: ['openalex'] } }, [entry], { facets: true });
 
     expect(counted).toEqual([]);
     expect(response.countsFromSources).toBe(false);
@@ -272,7 +282,7 @@ describe('facets sent to the sources, and counted by them', () => {
 
   it('counts nothing across the sources for a structured query', async () => {
     const { entry, counted } = counter();
-    const response = await run({ q: 'AU=Doudna AND crispr' }, [entry]);
+    const response = await run({ q: 'AU=Doudna AND crispr' }, [entry], { facets: true });
 
     expect(counted).toEqual([]);
     expect(response.countsFromSources).toBe(false);

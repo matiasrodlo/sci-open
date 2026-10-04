@@ -76,6 +76,10 @@ export type SearchCallOptions = {
   sources?: readonly string[];
   /** Each source as it settles, then the access check and the page's details. */
   onProgress?: (event: SearchProgress) => void;
+  /** Search only: count the facets across everything each source matches,
+   * not only across the read. Dozens of requests a search (`RunOptions.facets`),
+   * so off unless asked; a set counted is held apart from one that was not. */
+  facets?: boolean;
 };
 
 export type Engine = {
@@ -215,6 +219,9 @@ export function createEngine(options: EngineOptions): Engine {
     const unavailable = quota.unavailable();
     const { response, fromCache } = await runSearch(params, {
       settings,
+      // Safe to share the caches here too: the facet queries are part of the
+      // result-set key, so a set counted is never answered by one that was not.
+      ...(extra.facets ? { facets: true } : {}),
       cache: providerCache,
       resultSets,
       authorityFacts,

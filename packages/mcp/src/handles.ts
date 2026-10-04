@@ -22,15 +22,34 @@ const specSchema = z.object({
   }).strict(),
   sort: z.enum(SORTS),
   // Part of the handle, so page N names the same results on every call.
-  pageSize: z.number().int().min(1).max(25)
+  pageSize: z.number().int().min(1).max(25),
+  // The search counted its facets across the sources (`include_facets`). A
+  // set counted is held apart from one that was not, so its pages must ask
+  // for the counts too, or resolve the whole search again.
+  facets: z.literal(true).optional()
 }).strict();
 
 /**
- * A search, as a handle encodes it: the query, filters, sort and page size —
- * everything but the page. It is also a valid `SearchParams` minus the page,
- * which is how both search tools hand it to the engine.
+ * A search, as a handle encodes it: the query, filters, sort, page size and
+ * whether it counted facets — everything but the page. Without `facets` it is
+ * a valid `SearchParams` minus the page (`engineCall`).
  */
 export type SearchSpec = z.infer<typeof specSchema>;
+
+/** What both search tools send the engine for a spec: the search, and the
+ * options that decide which held set answers it. */
+export function engineCall(spec: SearchSpec): {
+  params: Omit<SearchSpec, 'facets'>;
+  options: { sources?: string[]; facets?: true };
+} {
+  const { facets, ...params } = spec;
+  return {
+    params,
+    // `sources` narrows the fan-out itself, so it saves upstream requests as
+    // well as results; it stays in the spec too, because the handle records it.
+    options: { ...(spec.filters.source ? { sources: spec.filters.source } : {}), ...(facets ? { facets } : {}) }
+  };
+}
 
 const PREFIX = 's1';
 

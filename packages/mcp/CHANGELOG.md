@@ -24,6 +24,12 @@ in `test/__toolsnaps__/` are the record of every schema change.
 
 ### Changed
 
+- search_papers counts facets across the sources only with
+  `include_facets`. Every plain search used to count them — five OpenAlex
+  `group_by` requests, and a request a year for ten years to each source that
+  reports only a total — for numbers the default output never showed, and a
+  count a rate limit cut short held the set a minute instead of half an hour.
+  The handle records the choice, so a search's pages come from its own set.
 - A paper looked up by id is held half an hour, so read_paper and
   get_citations, given an id, stop asking its source again before every
   outline, section and page. Two lookups of one id at once ask once.

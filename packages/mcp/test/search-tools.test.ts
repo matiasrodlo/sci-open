@@ -42,6 +42,27 @@ describe('search_papers and get_search_page', () => {
     expect(search.mock.calls[0]![1]).toMatchObject({ sources: ['arxiv', 'openalex'] });
   });
 
+  it('counts facets across the sources only when asked, and pages that search as the same set', async () => {
+    const { deps, engine } = fakeEngine(WORLD);
+    const search = vi.spyOn(engine, 'search');
+
+    const plain = await searchPapers.run(searchArgs({ query: 'crispr' }), deps);
+    expect(search.mock.calls[0]![1]?.facets).toBeUndefined();
+
+    const faceted = await searchPapers.run(searchArgs({ query: 'crispr', include_facets: true }), deps);
+    expect(search.mock.calls[1]![1]).toMatchObject({ facets: true });
+    expect(faceted.structured.handle).not.toBe(plain.structured.handle);
+
+    // A page of it asks for the set its first page came from; asked without
+    // the counts, it would be another set, resolved again.
+    await getSearchPage.run(pageArgs({ handle: faceted.structured.handle!, page: 2 }), deps);
+    expect(search.mock.calls[2]![1]).toMatchObject({ facets: true });
+    await getSearchPage.run(pageArgs({ handle: plain.structured.handle!, page: 2 }), deps);
+    expect(search.mock.calls[3]![1]?.facets).toBeUndefined();
+    // The engine is sent a search, not the handle's own field.
+    expect(search.mock.calls.every(([params]) => !('facets' in params))).toBe(true);
+  });
+
   it('refuses a page past the end', async () => {
     const { deps } = fakeEngine(WORLD);
     const first = await searchPapers.run(searchArgs({ query: 'crispr', page_size: 25 }), deps);

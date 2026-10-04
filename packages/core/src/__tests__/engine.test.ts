@@ -144,6 +144,38 @@ describe('createEngine', () => {
 });
 
 describe('what a call costs the sources', () => {
+  /** A source that counts facets across its index, and says how often it was asked to. */
+  function faceted() {
+    const source = stub('openalex');
+    let counted = 0;
+    source.entry.capabilities = { ...source.entry.capabilities, facets: ['year'] };
+    source.entry.facets = async () => { counted++; return { facets: { year: [{ value: 2021, count: 999 }] }, failures: [] }; };
+    source.entry.facetsAggregate = true;
+    return { ...source, counted: () => counted };
+  }
+
+  it('counts facets across the sources only when a search asks, and holds the two sets apart', async () => {
+    const openalex = faceted();
+    const engine = engineWith(openalex.entry);
+
+    const plain = await engine.search({ q: 'crispr' });
+    expect(openalex.counted()).toBe(0);
+    expect(plain.response.facets.year).not.toContainEqual({ value: 2021, count: 999 });
+
+    // Not answered by the set that has no counts in it...
+    const counted = await engine.search({ q: 'crispr' }, { facets: true });
+    expect(counted.fromCache).toBe(false);
+    expect(openalex.counted()).toBe(1);
+    expect(counted.response.facets.year).toContainEqual({ value: 2021, count: 999 });
+
+    // ...and each held under its own key, so the pages of either cost nothing.
+    expect((await engine.search({ q: 'crispr', page: 2 }, { facets: true })).fromCache).toBe(true);
+    expect((await engine.search({ q: 'crispr', page: 2 })).fromCache).toBe(true);
+    // The read is shared through the provider cache: asking for the counts
+    // later costs the counts, not the search again.
+    expect(openalex.calls).toHaveLength(1);
+  });
+
   describe('a paper looked up by id', () => {
     function byId(clock = { now: 0 }) {
       const arxiv = stub('arxiv');
@@ -273,13 +305,13 @@ describe('a spent quota', () => {
     });
 
     // Before the 429 is known, both are asked: what the test then shows missing was there to miss.
-    await engine.search({ q: 'crispr' });
+    await engine.search({ q: 'crispr' }, { facets: true });
     expect(facetCalls).toBeGreaterThan(0);
     expect(authorityCalls).toBeGreaterThan(0);
     facetCalls = 0;
     authorityCalls = 0;
 
-    await engine.search({ q: 'microbiome' });
+    await engine.search({ q: 'microbiome' }, { facets: true });
     await engine.lookupDoi('10.1234/arxiv-1');
 
     expect(openalex.calls).toHaveLength(1);

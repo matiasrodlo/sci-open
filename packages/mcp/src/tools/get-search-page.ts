@@ -1,6 +1,6 @@
 import * as z from 'zod';
 import { defineTool } from '../framework/define-tool';
-import { decodeSearchHandle } from '../handles';
+import { decodeSearchHandle, engineCall } from '../handles';
 import { pageSchema, presentPage } from './present-page';
 import { searchProgress } from '../shape/progress';
 import { ToolError } from '../errors';
@@ -26,10 +26,11 @@ export const getSearchPage = defineTool({
   output: pageSchema,
   async run(args, deps) {
     const spec = decodeSearchHandle(args.handle);
+    const { params, options } = engineCall(spec);
     const { response, fromCache } = await deps.engine.search(
-      { ...spec, page: args.page },
+      { ...params, page: args.page },
       // Progress matters here only when the set is no longer held and runs again.
-      { admit: deps.admit, onProgress: searchProgress(deps), ...(spec.filters.source ? { sources: spec.filters.source } : {}) }
+      { admit: deps.admit, onProgress: searchProgress(deps), ...options }
     );
     if (response.papers.length === 0 && args.page > 1) {
       throw new ToolError('not_found', `Page ${args.page} is past the end (${response.total} results).`, 'Use a smaller page number.');

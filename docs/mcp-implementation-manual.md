@@ -794,7 +794,7 @@ export type Engine = {
   /** A federated search across the sources. `admit` is asked only when a
    * new result set must be resolved, never for a page of a held one.
    * `sources` narrows the fan-out to those providers. */
-  search(params: SearchParams, options?: { admit?: Admit; sources?: readonly string[] }): Promise<SearchOutcome>;
+  search(params: SearchParams, options?: { admit?: Admit; sources?: readonly string[]; facets?: boolean }): Promise<SearchOutcome>;
   /** A paper by sci-open id (`provider:nativeId`), enriched by the authorities.
    * Asks only the provider the id names, and holds its answer half an hour. */
   lookup(id: string): Promise<Paper | null>;
@@ -1527,10 +1527,27 @@ const specSchema = z.object({
   }).strict(),
   sort: z.enum(SORTS),
   // Part of the handle, so page N names the same results on every call.
-  pageSize: z.number().int().min(1).max(25)
+  pageSize: z.number().int().min(1).max(25),
+  // The search counted its facets across the sources (`include_facets`). A
+  // set counted is held apart from one that was not, so its pages must ask
+  // for the counts too, or resolve the whole search again.
+  facets: z.literal(true).optional()
 }).strict();
 
 export type SearchSpec = z.infer<typeof specSchema>;
+
+/** What both search tools send the engine for a spec: the search, and the
+ * options that decide which held set answers it. */
+export function engineCall(spec: SearchSpec): {
+  params: Omit<SearchSpec, 'facets'>;
+  options: { sources?: string[]; facets?: true };
+} {
+  const { facets, ...params } = spec;
+  return {
+    params,
+    options: { ...(spec.filters.source ? { sources: spec.filters.source } : {}), ...(facets ? { facets } : {}) }
+  };
+}
 
 const PREFIX = 's1';
 
@@ -2562,21 +2579,21 @@ export const searchPapers = defineTool({
         ...(args.publication_type?.length ? { publicationType: args.publication_type } : {})
       },
       sort: args.sort,
-      pageSize: args.page_size
+      pageSize: args.page_size,
+      // Counted across the sources only when they are to be shown: dozens of
+      // requests a search, for numbers most calls never read.
+      ...(args.include_facets ? { facets: true as const } : {})
     };
 
-    const engineOptions = {
-      admit: deps.admit,
-      onProgress: searchProgress(deps),
-      ...(spec.filters.source ? { sources: spec.filters.source } : {})
-    };
+    const { params, options } = engineCall(spec);
+    const engineOptions = { admit: deps.admit, onProgress: searchProgress(deps), ...options };
 
     if (args.count_only) {
       if (doi) throw new ToolError('invalid_input', 'count_only counts the matches of a query; a DOI names one paper.', 'Drop count_only to look the DOI up.');
-      return presentCounts(await deps.engine.count({ ...spec, page: 1 }, engineOptions), query!);
+      return presentCounts(await deps.engine.count({ ...params, page: 1 }, engineOptions), query!);
     }
 
-    const { response } = await deps.engine.search({ ...spec, page: 1 }, engineOptions);
+    const { response } = await deps.engine.search({ ...params, page: 1 }, engineOptions);
     return presentPage(response, spec, {
       detail: args.detail,
       includeFacets: args.include_facets,
@@ -2681,10 +2698,11 @@ export const getSearchPage = defineTool({
   output: pageSchema,
   async run(args, deps) {
     const spec = decodeSearchHandle(args.handle);
+    const { params, options } = engineCall(spec);
     const { response, fromCache } = await deps.engine.search(
-      { ...spec, page: args.page },
+      { ...params, page: args.page },
       // Progress matters here only when the set is no longer held and runs again.
-      { admit: deps.admit, onProgress: searchProgress(deps), ...(spec.filters.source ? { sources: spec.filters.source } : {}) }
+      { admit: deps.admit, onProgress: searchProgress(deps), ...options }
     );
     if (response.papers.length === 0 && args.page > 1) {
       throw new ToolError('not_found', `Page ${args.page} is past the end (${response.total} results).`, 'Use a smaller page number.');

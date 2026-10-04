@@ -88,7 +88,7 @@
       },
       "include_facets": {
         "default": false,
-        "description": "Add the top values per facet (year, venue, publisher, topics, source, access).",
+        "description": "Add the top values per facet (year, venue, publisher, topics, source, access), counted across everything each source holds. It costs the sources dozens of extra requests: set it only when the distribution itself is wanted.",
         "type": "boolean"
       },
       "count_only": {

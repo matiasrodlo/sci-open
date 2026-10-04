@@ -6,7 +6,7 @@ import { presentCounts, searchOutputSchema } from './present-counts';
 import { searchProgress } from '../shape/progress';
 import { ToolError } from '../errors';
 import { hasVisibleText } from '../safety/sanitize';
-import { PUBLICATION_TYPES, SORTS, SOURCES, type SearchSpec } from '../handles';
+import { PUBLICATION_TYPES, SORTS, SOURCES, engineCall, type SearchSpec } from '../handles';
 import { doiIn } from './resolve-paper';
 
 export const searchPapers = defineTool({
@@ -29,7 +29,7 @@ export const searchPapers = defineTool({
     sort: z.enum(SORTS).default('relevance'),
     page_size: z.number().int().min(1).max(25).default(10),
     detail: z.enum(['concise', 'full']).default('concise').describe('concise: compact records. full: every field with per-field sources.'),
-    include_facets: z.boolean().default(false).describe('Add the top values per facet (year, venue, publisher, topics, source, access).'),
+    include_facets: z.boolean().default(false).describe('Add the top values per facet (year, venue, publisher, topics, source, access), counted across everything each source holds. It costs the sources dozens of extra requests: set it only when the distribution itself is wanted.'),
     count_only: z.boolean().default(false).describe('Return only each source\'s own count of matches, reading no results: one request per source, no handle. Use it to compare query variants; then search without it.')
   }),
   output: searchOutputSchema,
@@ -65,23 +65,21 @@ export const searchPapers = defineTool({
         ...(args.publication_type?.length ? { publicationType: args.publication_type } : {})
       },
       sort: args.sort,
-      pageSize: args.page_size
+      pageSize: args.page_size,
+      // Counted across the sources only when they are to be shown: dozens of
+      // requests a search, for numbers most calls never read.
+      ...(args.include_facets ? { facets: true as const } : {})
     };
 
-    // `sources` narrows the fan-out itself, so it saves upstream requests as
-    // well as results. It stays in the spec too, because the handle records it.
-    const engineOptions = {
-      admit: deps.admit,
-      onProgress: searchProgress(deps),
-      ...(spec.filters.source ? { sources: spec.filters.source } : {})
-    };
+    const { params, options } = engineCall(spec);
+    const engineOptions = { admit: deps.admit, onProgress: searchProgress(deps), ...options };
 
     if (args.count_only) {
       if (doi) throw new ToolError('invalid_input', 'count_only counts the matches of a query; a DOI names one paper.', 'Drop count_only to look the DOI up.');
-      return presentCounts(await deps.engine.count({ ...spec, page: 1 }, engineOptions), query!);
+      return presentCounts(await deps.engine.count({ ...params, page: 1 }, engineOptions), query!);
     }
 
-    const { response } = await deps.engine.search({ ...spec, page: 1 }, engineOptions);
+    const { response } = await deps.engine.search({ ...params, page: 1 }, engineOptions);
     return presentPage(response, spec, {
       detail: args.detail,
       includeFacets: args.include_facets,
