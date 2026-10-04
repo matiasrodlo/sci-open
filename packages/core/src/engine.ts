@@ -87,7 +87,7 @@ export type Engine = {
    * `countSearch`). Spends an admission: it is still a request to every source. */
   count(params: SearchParams, options?: SearchCallOptions): Promise<CountOutcome>;
   /** A paper by sci-open id (`provider:nativeId`), enriched by the authorities.
-   * Asks only the provider the id names. */
+   * Asks only the provider the id names, and holds its answer half an hour. */
   lookup(id: string): Promise<Paper | null>;
   /** A paper by DOI, whether or not it is open access, merged across every
    * source that holds it. A DOI lookup is a search, and spends an admission
@@ -161,6 +161,38 @@ export function createEngine(options: EngineOptions): Engine {
   /** Two reads of one paper at once fetch it once. */
   const fullTextFlights = new SingleFlight();
 
+  /**
+   * Records looked up by id, as their provider returned them, half an hour
+   * each, the most recently read last. `read_paper` looks its paper up before
+   * every outline, section and search, and `get_citations` before every page.
+   * Only the provider's answer is held: enrichment runs on every lookup, from
+   * `authorityFacts`, so a record enriched while an authority was cooling down
+   * is not held without what that authority adds. A miss is not held, so a
+   * paper indexed meanwhile is found.
+   */
+  const lookups = new Map<string, { paper: Paper; expires: number }>();
+  const lookupFlights = new SingleFlight();
+  const LOOKUP_HOLD_MS = 30 * 60_000;
+  const LOOKUPS_HELD = 1_000;
+  const providerRecord = async (id: string): Promise<Paper | null> => {
+    const held = lookups.get(id);
+    lookups.delete(id);
+    if (held && held.expires > now()) {
+      lookups.set(id, held);
+      return held.paper;
+    }
+    // Two lookups of one id at once ask the provider once.
+    const { value } = await lookupFlights.run(id, async () => {
+      const paper = await lookupPaper(id, { userAgent, providers });
+      if (paper) {
+        lookups.set(id, { paper, expires: now() + LOOKUP_HOLD_MS });
+        if (lookups.size > LOOKUPS_HELD) lookups.delete(lookups.keys().next().value!);
+      }
+      return paper;
+    });
+    return value;
+  };
+
   /** OpenAlex the authority is billed against the same budget as OpenAlex the
    * source, so a cooled-down OpenAlex is left out of enrichment too. */
   const authoritiesNow = (unavailable: ReadonlyMap<ProviderId, string>) => {
@@ -223,7 +255,7 @@ export function createEngine(options: EngineOptions): Engine {
       // Not gated: a lookup asks one provider through its entity endpoint,
       // which OpenAlex does not bill against the search budget. Its enrichment
       // is, so it leaves out a cooled-down OpenAlex like a search's.
-      const found = await lookupPaper(id, { userAgent, providers });
+      const found = await providerRecord(id);
       if (!found) return null;
       const { papers } = await enrichPage([found], {
         userAgent, cache: new AuthorityCache(authorityFacts), ...authoritiesNow(quota.unavailable())

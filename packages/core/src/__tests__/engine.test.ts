@@ -143,6 +143,53 @@ describe('createEngine', () => {
   });
 });
 
+describe('what a call costs the sources', () => {
+  describe('a paper looked up by id', () => {
+    function byId(clock = { now: 0 }) {
+      const arxiv = stub('arxiv');
+      const asked: string[] = [];
+      arxiv.entry.lookup = async ({ nativeId }) => {
+        asked.push(nativeId);
+        return nativeId === 'missing' ? null : paper({ id: `arxiv:${nativeId}`, sources: [ref('arxiv', { nativeId })] });
+      };
+      const engine = createEngine({ userAgent: 'engine-test', providers: [arxiv.entry], authorities: [], now: () => clock.now });
+      return { engine, asked, clock };
+    }
+
+    it('is asked of its source once, however many times its sections are read', async () => {
+      const { engine, asked } = byId();
+      await engine.lookup('arxiv:2101.00001');
+      const again = await engine.lookup('arxiv:2101.00001');
+
+      expect(again?.id).toBe('arxiv:2101.00001');
+      expect(asked).toEqual(['2101.00001']);
+    });
+
+    it('is asked once for lookups that arrive together', async () => {
+      const { engine, asked } = byId();
+      await Promise.all([engine.lookup('arxiv:2101.00001'), engine.lookup('arxiv:2101.00001')]);
+      expect(asked).toEqual(['2101.00001']);
+    });
+
+    it('is asked again once the record has been held half an hour', async () => {
+      const { engine, asked, clock } = byId();
+      await engine.lookup('arxiv:2101.00001');
+      clock.now = 30 * 60_000 - 1;
+      await engine.lookup('arxiv:2101.00001');
+      clock.now = 30 * 60_000;
+      await engine.lookup('arxiv:2101.00001');
+      expect(asked).toEqual(['2101.00001', '2101.00001']);
+    });
+
+    it('is not held when no source had it, so a paper indexed later is found', async () => {
+      const { engine, asked } = byId();
+      expect(await engine.lookup('arxiv:missing')).toBeNull();
+      expect(await engine.lookup('arxiv:missing')).toBeNull();
+      expect(asked).toEqual(['missing', 'missing']);
+    });
+  });
+});
+
 describe('a spent quota', () => {
   /** A source whose answers are scripted call by call: `429` refuses, a number answers with that many papers. */
   function scripted(id: ProviderId, script: Array<number | 429>, over: Partial<ProviderEntry> = {}) {

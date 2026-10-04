@@ -22,6 +22,12 @@ in `test/__toolsnaps__/` are the record of every schema change.
 - `server.json` and the plugin declare `OPENALEX_API_KEY` and `NCBI_API_KEY`,
   so an installer driven by the registry asks for them.
 
+### Changed
+
+- A paper looked up by id is held half an hour, so read_paper and
+  get_citations, given an id, stop asking its source again before every
+  outline, section and page. Two lookups of one id at once ask once.
+
 ### Fixed
 
 - A DOI written `doi:10.…` — as get_citations and verify_references print

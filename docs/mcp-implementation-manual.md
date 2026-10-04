@@ -796,7 +796,7 @@ export type Engine = {
    * `sources` narrows the fan-out to those providers. */
   search(params: SearchParams, options?: { admit?: Admit; sources?: readonly string[] }): Promise<SearchOutcome>;
   /** A paper by sci-open id (`provider:nativeId`), enriched by the authorities.
-   * Asks only the provider the id names. */
+   * Asks only the provider the id names, and holds its answer half an hour. */
   lookup(id: string): Promise<Paper | null>;
   /** A paper by DOI, whether or not it is open access, merged across every
    * source that holds it. A DOI lookup is a search, and spends an admission
@@ -835,7 +835,7 @@ export function createEngine(options: EngineOptions): Engine {
   return {
     search,
     async lookup(id) {
-      const found = await lookupPaper(id, { userAgent, providers });
+      const found = await providerRecord(id); // held half an hour; see below
       if (!found) return null;
       const { papers } = await enrichPage([found], { userAgent, cache: new AuthorityCache(authorityFacts), ...authorities });
       return papers[0] ?? found;
@@ -847,6 +847,14 @@ export function createEngine(options: EngineOptions): Engine {
   };
 }
 ```
+
+`providerRecord` holds what a provider answered for an id half an hour, the
+1,000 most recently read, and asks once for two lookups that arrive together.
+`read_paper` looks its paper up before every outline, section and search, and
+`get_citations` before every page, so a paper read by id cost its source a
+request each time. Only the provider's answer is held: enrichment runs on every
+lookup, from `authorityFacts`, so a record enriched while an authority was
+cooling down is not held without what it adds. A miss is not held.
 
 Check the constructor options of `ProviderCache` and `ResultSetCache` against
 their files while writing this. `runSearch` returns the search response the
