@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Query } from '@sci-open/shared';
-import { rank, fusionScore, overlapScore } from '../rank';
+import { rank, fusionScore, overlapScore, exactTitle, isNoticeTitle } from '../rank';
 import { paper, ref } from './helpers';
 
 const query = (over: Partial<Query> = {}): Query => ({ terms: [], phrases: [], join: 'AND', ...over });
@@ -131,6 +131,25 @@ describe('rank', () => {
     }
   });
 
+  it('finds a paper first by its own title, above papers several sources hold that quote it', () => {
+    // The recorded TI="attention is all you need": arXiv alone returned the
+    // paper, first; a 2026 correction notice and a drug-discovery review
+    // borrowing the title came from three sources each, and ranked above it.
+    const q = query({ phrases: ['attention is all you need'] });
+    const canonical = paper({ id: 'arxiv:1706.03762v7', title: 'Attention Is All You Need', sources: [ref('arxiv', { rank: 0 })] });
+    const correction = paper({
+      id: 'openalex:W7158626848', title: 'Correction to: Attention is all you need: utilizing attention in AI-enabled drug discovery',
+      sources: [ref('openalex', { rank: 28 }), ref('europepmc', { rank: 0 }), ref('openaire', { rank: 4 })]
+    });
+    const borrowed = paper({
+      id: 'openalex:W4390678101', title: 'Attention is all you need: utilizing attention in AI-enabled drug discovery',
+      sources: [ref('openalex', { rank: 2 }), ref('europepmc', { rank: 1 }), ref('openaire', { rank: 43 })]
+    });
+
+    expect(rank([correction, borrowed, canonical], { query: q }).map(s => s.paper.id))
+      .toEqual(['arxiv:1706.03762v7', 'openalex:W4390678101', 'openalex:W7158626848']);
+  });
+
   it('breaks a tie on quality, not arbitrarily', () => {
     const rich = paper({
       id: 'rich', title: 'T', abstract: 'x'.repeat(300), venue: 'Nature',
@@ -155,4 +174,27 @@ describe('rank', () => {
     const papers = [paper({ id: 'a' }), paper({ id: 'b' }), paper({ id: 'c' })];
     expect(rank(papers, { query: query({ terms: ['x'] }) })).toHaveLength(3);
   });
+});
+
+describe('exactTitle', () => {
+  it('is a quoted phrase or every word searched, whatever the case and punctuation', () => {
+    const p = paper({ title: 'Attention Is All You Need.' });
+    expect(exactTitle(p, query({ phrases: ['attention is all you need'] }))).toBe(true);
+    expect(exactTitle(p, query({ terms: ['attention', 'is', 'all', 'you', 'need'] }))).toBe(true);
+    expect(exactTitle(p, query({ terms: ['attention'] }))).toBe(false);
+    expect(exactTitle(paper({ title: 'Attention is all you need: a review' }), query({ phrases: ['attention is all you need'] }))).toBe(false);
+  });
+});
+
+describe('isNoticeTitle', () => {
+  it.each([
+    'Correction to: Attention is all you need', 'Author Correction: A paper', 'Publisher Correction: A paper',
+    'Corrigendum to "A paper"', 'Erratum: A paper', 'Retraction: A paper', 'Retraction Note: A paper',
+    'Notice of Retraction: A paper', 'Expression of Concern: A paper', 'Reply to Smith et al.', 'Comment on "A paper"'
+  ])('reads %s as a notice', title => expect(isNoticeTitle(title)).toBe(true));
+
+  it.each([
+    'Correctional facilities and health', 'Error correction in quantum codes', 'Retractions in the scientific literature',
+    'RETRACTED: A paper the journal retracted', 'Commentary on method choice', 'Responses to drought in maize'
+  ])('reads %s as a paper', title => expect(isNoticeTitle(title)).toBe(false));
 });

@@ -18,7 +18,9 @@ Honesty rules:
   minutes, not for good), or coverage.truncated lists sources that match more
   than a search reads, so only the top of their answers was read. A search
   that ends with such sources has not found everything that matches.
-- found_in lists every source that returned a paper; more sources means more corroboration.
+- found_in lists the sources that returned a paper: which indexes hold it,
+  not how good it is. A journal article in biomedicine is held by more of
+  them than a preprint or a computer science paper.
 - full_text.verified=false means a copy was claimed but not checked.
 - retracted: true means a source records the paper as retracted. Say so
   whenever you mention it, and never cite it as support.

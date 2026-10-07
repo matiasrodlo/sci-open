@@ -58,9 +58,9 @@ const ALWAYS = ['id', 'title', 'authors', 'access', 'stage', 'found_in'];
  * characters, no per-field attribution. `full` is every field, with which
  * source supplied each.
  *
- * `found_in` lists every source that returned the paper — the cheapest
- * credibility signal there is — for a search or a DOI lookup, which ask every
- * source and merge. A lookup by id asks one. `full_text.verified` is always
+ * `found_in` lists every source that returned the paper — which indexes
+ * hold it, not a mark of quality — for a search or a DOI lookup, which ask
+ * every source and merge. A lookup by id asks one. `full_text.verified` is always
  * shown: false means a source claimed a copy and nobody checked, not that
  * there is none.
  */

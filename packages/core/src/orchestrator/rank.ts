@@ -19,11 +19,16 @@ import { facetKey } from './facet-key';
  *    "several providers put this near the top" is comparable and is exactly
  *    what fusion captures.
  * 2. Term overlap between the query and the title and abstract, title weighted
- *    higher. This is the only signal that reads the query text.
+ *    higher, and a title that *is* the query. The signals that read the query
+ *    text.
  * 3. Record quality, as a tiebreak. This is the salvaged
  *    `calculateRelevanceScore`, and it never looks at the query — it scores
  *    completeness. Useful for separating two otherwise equal records, wrong as
  *    a relevance signal.
+ *
+ * A notice — a correction, an erratum, a retraction notice, a reply — is
+ * moved down: it names the paper it is about, so it matches that paper's
+ * query as well as the paper does, and is not what the search was for.
  */
 
 /** Standard RRF damping. Keeps a single first place from dominating agreement across providers. */
@@ -33,6 +38,22 @@ const TITLE_WEIGHT = 1.0;
 const ABSTRACT_WEIGHT = 0.35;
 /** How far term overlap can move a result against provider agreement. */
 const OVERLAP_WEIGHT = 1.25;
+/**
+ * A title that is the query, word for word: what a search for a paper by its
+ * title is looking for. Enough to put it above a paper three sources share
+ * whose title merely contains the query.
+ */
+const EXACT_TITLE = 1.0;
+/** How far a notice is moved down. */
+const NOTICE_PENALTY = 1.0;
+
+/** Titles of corrections, errata, retraction notices and replies, as journals write them. */
+const NOTICE_TITLE = /^\s*(?:(?:author|publisher)(?:'s)?\s+)?(?:correction|corrigendum|erratum|addendum)\b|^\s*correction\s+to\b|^\s*(?:notice\s+of\s+)?retraction(?:\s+(?:note|notice))?\s*(?::|of\b|to\b|for\b)|^\s*expression\s+of\s+concern\b|^\s*(?:reply|response)\s+to\b|^\s*comment\s+on\b/i;
+
+/** Whether a record is a notice about another paper rather than a paper. */
+export function isNoticeTitle(title: string): boolean {
+  return NOTICE_TITLE.test(title);
+}
 
 export type ScoredPaper = {
   paper: Paper;
@@ -43,14 +64,34 @@ export type ScoredPaper = {
 };
 
 /**
- * Sum of 1/(k + rank) across the providers that returned this paper, scaled so
- * a single first-place sighting is worth about 1.
+ * 1/(k + rank) for each provider that returned this paper, scaled so a single
+ * first-place sighting is worth about 1 — the best of them in full, and each
+ * further one at half the weight of the one before.
  *
- * Two providers agreeing on a mid-ranked paper outscores one provider's top
- * hit, which is the property worth having in a fan-out.
+ * Two providers agreeing on a mid-ranked paper still outscores one
+ * provider's top hit, which is the property worth having in a fan-out. A plain
+ * sum went further than that: it gave a paper a point for every index that
+ * holds it, and a biomedical journal article is held by six of these sources
+ * where an arXiv preprint is held by two. "Attention is all you need", cited
+ * 150,000 times and returned first by arXiv alone, ranked third for its own
+ * title, behind a correction notice three sources held.
  */
 export function fusionScore(paper: Paper): number {
-  return paper.sources.reduce((total, ref) => total + RRF_K / (RRF_K + ref.rank + 1), 0);
+  return paper.sources
+    .map(ref => RRF_K / (RRF_K + ref.rank + 1))
+    .sort((a, b) => b - a)
+    .reduce((total, score, i) => total + score / 2 ** i, 0);
+}
+
+/**
+ * Whether the title is the query: a quoted phrase, or every word searched for,
+ * folded alike. A search for a paper by its title should find that paper
+ * first, not the papers that quote it in theirs.
+ */
+export function exactTitle(paper: Paper, query: Query): boolean {
+  const title = facetKey(paper.title);
+  if (!title) return false;
+  return [...query.phrases, query.terms.join(' ')].some(text => text.trim() !== '' && facetKey(text) === title);
 }
 
 /**
@@ -119,7 +160,10 @@ export function rank(papers: readonly Paper[], options: RankOptions): ScoredPape
     const fusion = fusionScore(paper);
     const overlap = overlapScore(paper, query);
     const quality = qualityScore(paper, now);
-    return { paper, fusion, overlap, quality, score: fusion + overlap * OVERLAP_WEIGHT };
+    const score = fusion + overlap * OVERLAP_WEIGHT
+      + (exactTitle(paper, query) ? EXACT_TITLE : 0)
+      - (isNoticeTitle(paper.title) ? NOTICE_PENALTY : 0);
+    return { paper, fusion, overlap, quality, score };
   });
 
   return scored.sort((a, b) => {
