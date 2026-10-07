@@ -80,10 +80,25 @@ describe('verify_references', () => {
     expect(results[0]).toMatchObject({ verdict: 'not_found', issues: ['no_similar_title_in_any_source'] });
   });
 
-  it('calls a real DOI on another paper a mismatch, and shows the paper it is on', async () => {
-    const { results } = await verify(['Doudna JA, Charpentier E. The new frontier of genome engineering with CRISPR-Cas9. Science. 2014. doi:10.1038/171737a0']);
-    expect(results[0]).toMatchObject({ verdict: 'mismatch', issues: expect.arrayContaining(['doi_points_to_different_work']) });
-    expect(results[0]!.matched?.doi).toBe('10.1038/171737a0');
+  it('calls a real DOI on another paper a mismatch, with the paper cited to correct it from and the paper the DOI is on', async () => {
+    const { results, text } = await verify(['Doudna JA, Charpentier E. The new frontier of genome engineering with CRISPR-Cas9. Science. 2014. doi:10.1038/171737a0']);
+    expect(results[0]).toMatchObject({ verdict: 'mismatch', issues: ['doi_points_to_different_work'], evidence: { matched_on: 'title' } });
+    // `matched` is the paper the citation names, whose DOI is the correction;
+    // it used to be the DOI's own paper, so "give the matched record's DOI"
+    // gave back the wrong one.
+    expect(results[0]!.matched?.doi).toBe('10.1126/science.1258096');
+    expect(results[0]!.doi_target?.doi).toBe('10.1038/171737a0');
+    expect(text).toContain('the cited DOI is that of Molecular structure of nucleic acids');
+  });
+
+  it('calls a real DOI on a title no source holds a mismatch, with only the paper the DOI is on', async () => {
+    const { results } = await verify(['Okafor L. Quantum annealing of protein folding landscapes. Nature. 2021. doi:10.1038/171737a0']);
+    expect(results[0]).toMatchObject({
+      verdict: 'mismatch',
+      issues: ['doi_points_to_different_work', 'cited_title_not_found'],
+      doi_target: { doi: '10.1038/171737a0' }
+    });
+    expect(results[0]!.matched).toBeUndefined();
   });
 
   it('calls a DOI on a related paper a mismatch, not a reference that does not exist', async () => {

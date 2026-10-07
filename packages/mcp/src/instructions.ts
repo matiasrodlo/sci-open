@@ -44,7 +44,9 @@ Recipes:
   read in full; then search each part.
 - Verify a bibliography: verify_references in batches of up to 25.
   Report every verdict other than "verified" to the user with its issues.
-  Send references marked not_checked again after the wait they give.
+  For a mismatch, the matched record is the paper the citation names, and
+  doi_target the paper its DOI belongs to. Send references marked
+  not_checked again after the wait they give.
 - One paper's record: get_paper with its id or DOI. A DOI is looked up in
   every source, closed papers included.
 - Read a paper: read_paper view="outline", then view="section" for the sections

@@ -17,6 +17,12 @@ export type ParsedReference = {
   year?: number;
   surnames: string[];
   title?: string;
+  /**
+   * What the citation says besides its authors, title and identifiers: the
+   * venue, volume, pages and year, as written. Where the venue is read from.
+   * Absent when nothing is left.
+   */
+  remainder?: string;
 };
 
 const DOI = /\b(10\.\d{4,9}\/[^\s"<>{}]+?)(?=[.,;)\]}]*(?:\s|$))/i;
@@ -81,6 +87,10 @@ export function parseReference(raw: string): ParsedReference {
   const yearText = (title ? yearIn(rest.replace(title, ' ')) : undefined) ?? yearIn(rest);
   const year = yearText ? Number(yearText) : undefined;
   const surnames = split ? surnamesIn(split.authors) : quoted ? surnamesIn(rest.slice(0, rest.search(QUOTED))) : [];
+  // The author list, then the title, out of the text they were read from.
+  const afterAuthors = split ? split.after : quoted ? rest.slice(rest.search(QUOTED)) : rest;
+  const remainder = clean((title ? afterAuthors.replace(quoted ? rest.match(QUOTED)![0] : title, ' ') : afterAuthors)
+    .replace(/^[\s.,;:]+/, '').replace(/\s+/g, ' '));
 
   return {
     raw,
@@ -89,7 +99,8 @@ export function parseReference(raw: string): ParsedReference {
     ...(pmid ? { pmid } : {}),
     ...(year ? { year } : {}),
     surnames,
-    ...(title ? { title } : {})
+    ...(title ? { title } : {}),
+    ...(remainder ? { remainder } : {})
   };
 }
 
@@ -176,6 +187,7 @@ function parseBibtex(raw: string, text: string): ParsedReference {
   const arxiv = field('eprint')?.match(/^(\d{4}\.\d{4,5}(?:v\d+)?)$/)?.[1];
   const yearText = field('year')?.match(/\d{4}/)?.[0];
   const title = clean(field('title'));
+  const remainder = clean([field('journal'), field('booktitle'), field('volume'), field('pages')].filter(Boolean).join(', '));
   const surnames = (field('author') ?? '')
     .split(/\s+and\s+/i)
     .map(name => (name.includes(',') ? name.split(',')[0]! : name.split(' ').pop() ?? ''))
@@ -188,7 +200,8 @@ function parseBibtex(raw: string, text: string): ParsedReference {
     ...(arxiv ? { arxiv } : {}),
     ...(yearText ? { year: Number(yearText) } : {}),
     surnames,
-    ...(title ? { title } : {})
+    ...(title ? { title } : {}),
+    ...(remainder ? { remainder } : {})
   };
 }
 

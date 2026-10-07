@@ -1,7 +1,7 @@
 {
   "name": "verify_references",
   "title": "Verify references",
-  "description": "Check up to 25 references (free-text citations, DOIs, arXiv ids or PMIDs) and grade each: verified, likely, ambiguous, mismatch (the DOI is wrong: it belongs to a different paper, or does not exist while the rest names a real one), not_found, or not_checked (the search budget ran out or a lookup failed; send those again later). Use it to catch fabricated or garbled citations and to fill in missing DOIs. Closed papers count as existing.",
+  "description": "Check up to 25 references (free-text citations, DOIs, arXiv ids or PMIDs) and grade each: verified (title, year, an author and the journal where one is cited agree with the record), likely (the paper exists; a detail differs, named in issues), ambiguous, mismatch (the DOI is wrong: it belongs to a different paper, given as doi_target, or does not exist; matched is then the paper the rest of the citation names, when one is found), not_found, or not_checked (the search budget ran out or a lookup failed; send those again later). Use it to catch fabricated or garbled citations and to fill in missing DOIs. Closed papers count as existing.",
   "inputSchema": {
     "type": "object",
     "properties": {
@@ -246,6 +246,158 @@
               ],
               "additionalProperties": false
             },
+            "doi_target": {
+              "type": "object",
+              "properties": {
+                "retracted": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "id": {
+                  "type": "string"
+                },
+                "doi": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "authors": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "year": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "venue": {
+                  "type": "string"
+                },
+                "access": {
+                  "type": "string",
+                  "enum": [
+                    "gold",
+                    "green",
+                    "hybrid",
+                    "bronze",
+                    "closed",
+                    "unknown"
+                  ]
+                },
+                "stage": {
+                  "type": "string",
+                  "enum": [
+                    "preprint",
+                    "accepted",
+                    "published",
+                    "unknown"
+                  ]
+                },
+                "full_text": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "pdf",
+                        "html",
+                        "xml"
+                      ]
+                    },
+                    "verified": {
+                      "type": "boolean"
+                    },
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "verified"
+                  ],
+                  "additionalProperties": false
+                },
+                "citations": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "found_in": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "abstract": {
+                  "type": "string"
+                },
+                "publisher": {
+                  "type": "string"
+                },
+                "topics": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "language": {
+                  "type": "string"
+                },
+                "landing_page": {
+                  "type": "string"
+                },
+                "sources": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "source": {
+                        "type": "string"
+                      },
+                      "native_id": {
+                        "type": "string"
+                      },
+                      "rank": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "retrieved_at": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "source",
+                      "native_id",
+                      "rank",
+                      "retrieved_at"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "field_sources": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "authors",
+                "access",
+                "stage",
+                "found_in"
+              ],
+              "additionalProperties": false
+            },
             "evidence": {
               "type": "object",
               "properties": {
@@ -266,6 +418,9 @@
                   "type": "boolean"
                 },
                 "author_consistent": {
+                  "type": "boolean"
+                },
+                "venue_consistent": {
                   "type": "boolean"
                 },
                 "corroborated_by": {

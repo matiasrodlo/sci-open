@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import path from 'path';
 import { parseReference } from '../src/references/parse';
-import { judge, titleOverlap } from '../src/references/match';
+import { judge, surnameIn, titleOverlap, venueConsistent } from '../src/references/match';
 import { paper, ref } from '@sci-open/core/testing';
 
 type Case = {
@@ -92,5 +92,81 @@ describe('judge', () => {
 
   it('verifies a reference that is an identifier alone', () => {
     expect(judge(parseReference('arXiv:1706.03762'), record).verdict).toBe('verified');
+  });
+
+  it('does not take a short surname inside a longer name for an author', () => {
+    // "li" is inside "Illia Polosukhin" and "ma" inside "Niki Parmar": a real
+    // title cited under someone else's name was verified as theirs.
+    const full = paper({ ...record, authors: ['Ashish Vaswani', 'Niki Parmar', 'Llion Jones', 'Illia Polosukhin'] });
+    for (const text of ['Li, X. (2017). Attention is all you need.', 'Ma, Y., & Lee, K. (2017). Attention is all you need.']) {
+      const j = judge(parseReference(text), full);
+      expect(j.author_consistent, text).toBe(false);
+      expect(j.verdict, text).toBe('ambiguous');
+    }
+  });
+
+  it('calls a real paper cited in the wrong journal likely, and says which journal it is in', () => {
+    const published = paper({ ...record, venue: 'Neural Information Processing Systems' });
+    const j = judge(parseReference('Vaswani, A., Shazeer, N. (2017). Attention is all you need. Nature, 550(7676), 354-359.'), published);
+    expect(j.verdict).toBe('likely');
+    expect(j.venue_consistent).toBe(false);
+    expect(j.issues).toEqual(['venue_mismatch: the citation does not name the record\'s venue, Neural Information Processing Systems']);
+    // Named right, it is verified.
+    expect(judge(parseReference('Vaswani A, Shazeer N. Attention is all you need. Adv Neural Inf Process Syst. 2017;30.'), published).verdict).toBe('verified');
+  });
+
+  it('says what a partial title match leaves out', () => {
+    const j = judge(parseReference('Vaswani A, Shazeer N. Attention is all you need for translation. 2017.'), record);
+    expect(j.issues).toContain('title_partial_match: the cited title and the record\'s share 83% of the cited words');
+  });
+});
+
+describe('surnameIn', () => {
+  it('matches whole names, hyphenated parts and accents, and nothing inside a word', () => {
+    expect(surnameIn('perdomo', ['Alejandro Perdomo-Ortiz'])).toBe(true);
+    expect(surnameIn('Perdomo-Ortiz', ['Alejandro Perdomo Ortiz'])).toBe(true);
+    expect(surnameIn("o'brien", ['Kevin OBrien'])).toBe(true);
+    expect(surnameIn('lukasz', ['Łukasz Kaiser'])).toBe(true);
+    expect(surnameIn('li', ['Illia Polosukhin', 'Llion Jones'])).toBe(false);
+    expect(surnameIn('li', ['Fei-Fei Li'])).toBe(true);
+    expect(surnameIn('smith', ['Jane Smithson'])).toBe(false);
+  });
+});
+
+describe('venueConsistent', () => {
+  const withVenue = (venue: string) => paper({ title: 'A title', venue });
+  const cited = (journal: string) => parseReference(`Doe J, Roe R. A title. ${journal}. 2020;12(3):45-67.`);
+
+  it.each([
+    ['N Engl J Med', 'New England Journal of Medicine'],
+    ['Proc Natl Acad Sci U S A', 'Proceedings of the National Academy of Sciences'],
+    ['J R Stat Soc Series B', 'Journal of the Royal Statistical Society Series B (Statistical Methodology)'],
+    ['Phys. Rev. B', 'Physical review. B, Condensed matter'],
+    ['J. Am. Chem. Soc.', 'Journal of the American Chemical Society'],
+    ['Nat Methods', 'Nature Methods'],
+    ['Rev. Mod. Phys.', 'Reviews of Modern Physics'],
+    ['Lancet Glob Health', 'The Lancet Global Health'],
+    ['Commun. ACM', 'Communications of the ACM'],
+    ['IEEE Trans. Pattern Anal. Mach. Intell.', 'IEEE Transactions on Pattern Analysis and Machine Intelligence'],
+    ['JAMA', 'Journal of the American Medical Association'],
+    ['CVPR', '2017 IEEE Conference on Computer Vision and Pattern Recognition (CVPR)'],
+    ['Astron. J.', 'The Astronomical Journal']
+  ])('reads %s as %s', (journal, venue) => {
+    expect(venueConsistent(cited(journal), withVenue(venue))).toBe(true);
+  });
+
+  it.each([
+    ['Nature', 'Nature Communications'],
+    ['Nature', 'Neural Information Processing Systems'],
+    ['Lancet', 'The Lancet Global Health'],
+    ['Science', 'Science Advances'],
+    ['Cell', 'Molecular Cell']
+  ])('does not read %s as %s', (journal, venue) => {
+    expect(venueConsistent(cited(journal), withVenue(venue))).toBe(false);
+  });
+
+  it('judges nothing when the citation names no venue, or the record names a host', () => {
+    expect(venueConsistent(parseReference('Doe J, Roe R. A title. 2020.'), withVenue('Nature'))).toBeUndefined();
+    expect(venueConsistent(cited('NeurIPS'), withVenue('arXiv (Cornell University)'))).toBeUndefined();
   });
 });

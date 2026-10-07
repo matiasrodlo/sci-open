@@ -15,12 +15,16 @@ const VERDICTS = ['verified', 'likely', 'ambiguous', 'mismatch', 'not_found', 'n
 const resultSchema = z.object({
   input: z.string(),
   verdict: z.enum(VERDICTS),
+  /** The paper the citation describes, when one was found. */
   matched: paperSchema.optional(),
+  /** For a cited DOI that names another paper: that paper. */
+  doi_target: paperSchema.optional(),
   evidence: z.object({
     matched_on: z.enum(['doi', 'arxiv', 'pmid', 'title', 'none']),
     title_precision: z.number().optional(),
     year_consistent: z.boolean().optional(),
     author_consistent: z.boolean().optional(),
+    venue_consistent: z.boolean().optional(),
     corroborated_by: z.array(z.string())
   }),
   issues: z.array(z.string())
@@ -32,8 +36,10 @@ export const verifyReferences = defineTool({
   title: 'Verify references',
   toolset: 'core',
   description:
-    'Check up to 25 references (free-text citations, DOIs, arXiv ids or PMIDs) and grade each: verified, likely, ambiguous, ' +
-    'mismatch (the DOI is wrong: it belongs to a different paper, or does not exist while the rest names a real one), not_found, ' +
+    'Check up to 25 references (free-text citations, DOIs, arXiv ids or PMIDs) and grade each: verified (title, year, an author ' +
+    'and the journal where one is cited agree with the record), likely (the paper exists; a detail differs, named in issues), ambiguous, ' +
+    'mismatch (the DOI is wrong: it belongs to a different paper, given as doi_target, or does not exist; matched is then the paper ' +
+    'the rest of the citation names, when one is found), not_found, ' +
     'or not_checked (the search budget ran out or a lookup failed; send those again later). ' +
     'Use it to catch fabricated or garbled citations and to fill in missing DOIs. Closed papers count as existing.',
   input: z.object({
@@ -66,7 +72,8 @@ export const verifyReferences = defineTool({
     summary.retracted = results.filter(r => r.matched?.retracted).length;
     const rows = results.map((r, i) =>
       `${i + 1}. **${r.verdict}**${r.matched ? ` — ${listedTitle(r.matched)} (${r.matched.year ?? 'n.d.'})${r.matched.doi ? ` doi:${r.matched.doi}` : ''}` : ''}` +
-      `${r.issues.length ? ` — ${r.issues.join('; ')}` : ''}`);
+      `${r.issues.length ? ` — ${r.issues.join('; ')}` : ''}` +
+      `${r.doi_target ? ` — the cited DOI is that of ${listedTitle(r.doi_target)} (${r.doi_target.year ?? 'n.d.'})` : ''}`);
     const retractedRefs = results.flatMap((r, i) => (r.matched?.retracted ? [`#${i + 1}`] : []));
     const text = [
       ...(retractedRefs.length ? [retractionWarning(retractedRefs.length === 1 ? [`Reference ${retractedRefs[0]}`] : [`References ${retractedRefs.join(', ')}`])] : []),
@@ -131,16 +138,19 @@ async function verifyOne(ref: ParsedReference, deps: ToolDeps, openalex: Readonl
     paper: Paper,
     j: Judgement,
     extra: string[] = [],
-    verdict: Result['verdict'] = j.verdict
+    verdict: Result['verdict'] = j.verdict,
+    doiTarget?: Paper
   ): Result => ({
     input,
     verdict,
     matched: shapePaper(paper, 'concise'),
+    ...(doiTarget ? { doi_target: shapePaper(doiTarget, 'concise') } : {}),
     evidence: {
       matched_on,
       ...(j.title_precision !== undefined ? { title_precision: j.title_precision } : {}),
       ...(j.year_consistent !== undefined ? { year_consistent: j.year_consistent } : {}),
       ...(j.author_consistent !== undefined ? { author_consistent: j.author_consistent } : {}),
+      ...(j.venue_consistent !== undefined ? { venue_consistent: j.venue_consistent } : {}),
       corroborated_by: j.corroborated_by
     },
     // The paper exists, so the verdict stands; it is just not evidence.
@@ -158,7 +168,18 @@ async function verifyOne(ref: ParsedReference, deps: ToolDeps, openalex: Readonl
       // it is a wrong DOI, never "not found" — however much the two titles
       // share (PRISMA 2009 cited with the PRISMA 2020 statement's DOI).
       const wrong = ref.title !== undefined && (titleOverlap(ref.title, paper.title).precision < 0.5 || j.verdict === 'not_found');
-      return wrong ? done('doi', paper, j, ['doi_points_to_different_work'], 'mismatch') : done('doi', paper, j);
+      if (!wrong) return done('doi', paper, j);
+      // The DOI's paper is not the one cited. The rest of the citation may
+      // still name a real paper, whose DOI is the correction: find it, and
+      // give the DOI's own paper beside it.
+      const intended = await findByTitle(ref, deps);
+      if (intended && STRONG.has(intended.j.verdict) && normalizedDoi(intended.p.doi) !== normalizedDoi(ref.doi)) {
+        return done('title', intended.p, intended.j, ['doi_points_to_different_work'], 'mismatch', paper);
+      }
+      return {
+        ...unmatched('mismatch', 'doi', ['doi_points_to_different_work', 'cited_title_not_found']),
+        doi_target: shapePaper(paper, 'concise')
+      };
     }
     const registered = await deps.engine.doiRegistered(ref.doi);
     if (registered === true) return unmatched('ambiguous', 'doi', ['doi_registered_but_not_indexed']);
@@ -184,6 +205,8 @@ async function verifyOne(ref: ParsedReference, deps: ToolDeps, openalex: Readonl
   const found = await findByTitle(ref, deps);
   return found ? done('title', found.p, found.j) : unmatched('not_found', 'title', ['no_similar_title_in_any_source']);
 }
+
+const normalizedDoi = (doi: string | undefined) => doi?.trim().toLowerCase();
 
 /** Words the grammar reads as operators in any case; as bare terms they are a syntax error. */
 const OPERATOR_WORDS = new Set(['and', 'or', 'not', 'near', 'same']);

@@ -18,9 +18,17 @@ description: Check every reference in a bibliography, manuscript or reference li
    retracted, and cannot support a claim), then every reference that is not
    `verified`: its verdict, its issues in plain words, and the matched
    record's title, year and DOI when there is one.
-   - `mismatch`: the DOI is wrong. Give the DOI the matched record carries.
-   - `likely`: the paper exists but a detail differs. Say which.
-   - `ambiguous`: more than one paper fits. List them and ask which was meant.
+   - `mismatch`: the DOI is wrong. `doi_target` is the paper the cited DOI
+     actually belongs to. The correction is the DOI of the matched record,
+     the paper the rest of the citation names; with no matched record
+     (`cited_title_not_found`), say the DOI belongs to another paper and no
+     paper with the cited title was found.
+   - `likely`: the paper exists, but the citation differs from the record in
+     a detail its issues name (the journal, part of the title). Give the
+     record's version.
+   - `ambiguous`: the closest record contradicts the citation in its year or
+     its authors, or shares only part of its title. Give that record and its
+     issues, and ask whether it was the paper meant.
    - `not_found`: no source holds it. Say that, not "fabricated": very new
      and some closed papers can be missing too.
 5. Offer `export_citations` for the verified and corrected entries, with
