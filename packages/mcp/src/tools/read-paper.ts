@@ -81,7 +81,16 @@ export const readPaper = defineTool({
     // Every view leads with it: a passage from a retracted paper is still read.
     const lead = paper.retracted ? [retractionWarning(['This paper'])] : [];
     const provenance = doc.license ? { license: doc.license } : {};
-    const source = `Source: ${doc.tier} · ${doc.url}${base.license ? ` · license: ${base.license}` : ''}`;
+    // The copy read is not always the version the record describes: a
+    // published paper is read from its arXiv preprint when that is the open
+    // copy, and a repository PDF is often the accepted manuscript. A quote
+    // is then the copy's, and is cited as that copy.
+    const version = doc.tier === 'arxiv-html' && paper.stage !== 'preprint'
+      ? 'This is the arXiv preprint of a paper published since; its text may differ from the published version. Cite a quotation from it as the preprint.'
+      : doc.tier === 'pdf' && paper.oaStatus === 'green'
+        ? 'This copy is from a repository, often the accepted manuscript rather than the published version; its pages may not be the journal\'s.'
+        : '';
+    const source = `Source: ${doc.tier} · ${doc.url}${base.license ? ` · license: ${base.license}` : ''}${version ? `\n${version}` : ''}`;
 
     if (args.save_to !== undefined) {
       const markdown = documentToMarkdown(doc);
