@@ -115,6 +115,41 @@
       "style": "Chicago, initials after the first name",
       "raw": "Billingham, R. E., L. Brent, and P. B. Medawar. 1953. “Actively acquired tolerance of foreign cells.” Nature 172 (4379): 603–606.",
       "expect": { "year": 1953, "title": "Actively acquired tolerance of foreign cells", "surnames": ["billingham", "brent", "medawar"] }
+    },
+    {
+      "style": "IEEE, pages that look like years",
+      "raw": "R. Halloran and J. Sundqvist, “Folding kinetics of a synthetic test peptide,” J. Synth. Test., vol. 98, no. 7, pp. 1993–1999, 2005.",
+      "expect": { "year": 2005, "title": "Folding kinetics of a synthetic test peptide", "surnames": ["halloran", "sundqvist"] }
+    },
+    {
+      "style": "IEEE, pages that look like years, without pp.",
+      "raw": "R. Halloran and J. Sundqvist, “Folding kinetics of a synthetic test peptide,” J. Synth. Test., vol. 40, no. 11, 2004–2021, 2001.",
+      "expect": { "year": 2001, "title": "Folding kinetics of a synthetic test peptide", "surnames": ["halloran", "sundqvist"] }
+    },
+    {
+      "style": "IEEE, a Lecture Notes volume that looks like a year",
+      "raw": "A. Kowalczyk and T. Adeyemi, “A synthetic protocol in a proceedings volume,” in Proc. Int. Conf. Synth. Test., ser. Lect. Notes Comput. Sci., vol. 2045, Berlin, Germany: Springer, 2001, pp. 1–20.",
+      "expect": { "year": 2001, "title": "A synthetic protocol in a proceedings volume", "surnames": ["kowalczyk", "adeyemi"] }
+    },
+    {
+      "style": "IEEE, an access date after the year",
+      "raw": "M. Ferrante, “A synthetic technical report with an access date,” Synth. Test Lab., Tech. Rep. 12, 2019. [Online]. Available: https://example.org/report.pdf. Accessed: Mar. 3, 2024.",
+      "expect": { "year": 2019, "title": "A synthetic technical report with an access date", "surnames": ["ferrante"] }
+    },
+    {
+      "style": "Vancouver, an Epub date after the year",
+      "raw": "Oyelaran T, Brennholt K. A synthetic trial reported ahead of print. J Synth Test. 2020;38(1):1-10. Epub 2019 Nov 5.",
+      "expect": { "year": 2020, "title": "A synthetic trial reported ahead of print", "surnames": ["oyelaran", "brennholt"] }
+    },
+    {
+      "style": "Chicago, a chapter whose pages look like years",
+      "raw": "Valdés, Inés. “A Synthetic Chapter on Page Ranges.” In A Synthetic Handbook, edited by Mira Ishikawa, 1993–2011. Chicago: University of Chicago Press, 2015.",
+      "expect": { "year": 2015, "title": "A Synthetic Chapter on Page Ranges", "surnames": ["valdés"] }
+    },
+    {
+      "style": "Nature, pages that look like years",
+      "raw": "Hersbach, H. et al. The ERA5 global reanalysis. Q. J. R. Meteorol. Soc. 146, 1999–2049 (2020).",
+      "expect": { "year": 2020, "title": "The ERA5 global reanalysis", "surnames": ["hersbach"] }
     }
   ]
 }

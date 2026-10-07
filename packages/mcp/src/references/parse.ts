@@ -32,6 +32,22 @@ const PMID = /\bPMID[:\s]*(\d{5,9})\b/i;
 const URL = /\bhttps?:\/\/\S+/gi;
 const YEAR = /\b(1[89]\d{2}|20\d{2})[a-z]?\b/;
 const PAREN_YEAR = /\((1[89]\d{2}|20\d{2})[a-z]?\)\.?/;
+/**
+ * Numbers that can look like a year without being one. Measured 2026-10-07:
+ * `pp. 2004–2021, 2001` was read as cited in 2004, which would flag a correct
+ * citation with a wrong year.
+ * - Pages: `pp. 2004–2021`, `p. 1993`, and the page after a volume and issue
+ *   (`40(11):2004`). Any range counts as pages, wherever it stands, because a
+ *   cited year stands alone (`98, 1993–1999`, `edited by A. Name, 1993–2011`).
+ *   An ISO date (`2009-11-05`) is not a range.
+ * - A volume or an issue (`vol. 2045`): a Lecture Notes volume can look like a year.
+ */
+const NOT_A_YEAR = new RegExp([
+  String.raw`\b(?:pp?|pages?)\.?\s*[A-Za-z]?\d+(?:\s*[–—-]{1,2}\s*[A-Za-z]?\d+)?`,
+  String.raw`(?<=[\d)]\s*:\s*)\d+(?:\s*[–—-]{1,2}\s*\d+)?`,
+  String.raw`(?<!\d[–—-])\b\d+\s*[–—-]{1,2}\s*\d+\b(?![–—-]\d)`,
+  String.raw`\b(?:[Vv]ol(?:ume)?|[Nn]o|[Ii]ssue)\.?\s*\d+`
+].join('|'), 'g');
 const QUOTED = /["“”«»]([^"“”«»]{10,})["“”«»]/;
 const BIBTEX = /@\w+\s*\{|\b(?:title|author)\s*=\s*[{"]/i;
 
@@ -52,9 +68,15 @@ const INVERTED_AUTHORS = new RegExp(
   'u'
 );
 
-/** A year in brackets, as APA and Nature give it; otherwise the first year standing alone. */
+/**
+ * A year in brackets, as APA and Nature give it; otherwise the first year
+ * standing alone that is not a page, a volume or an issue. The first, not the
+ * last: IEEE and Vancouver can follow the cited year with another one
+ * (`Accessed: Mar. 3, 2024`, `Epub 2019 Nov 5`). IEEE puts the year after the
+ * pages, which is why the pages are taken out first.
+ */
 function yearIn(text: string): string | undefined {
-  return text.match(PAREN_YEAR)?.[1] ?? text.match(YEAR)?.[1];
+  return text.match(PAREN_YEAR)?.[1] ?? text.replace(NOT_A_YEAR, ' ').match(YEAR)?.[1];
 }
 
 export function parseReference(raw: string): ParsedReference {

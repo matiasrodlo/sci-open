@@ -216,4 +216,14 @@ describe('judge — volume and pages', () => {
     expect(j.verdict).toBe('likely');
     expect(j.issues).toEqual(['volume_mismatch: cited 550, record 521', 'pages_mismatch: cited from 354, record from 436']);
   });
+
+  it('verifies a citation whose pages look like years, and flags no year', () => {
+    // Measured live: `pp. 2004–2021, 2001` was read as cited in 2004.
+    const record = paper({
+      title: 'Folding kinetics of a synthetic test peptide', authors: ['Rhea Halloran', 'Jonas Sundqvist'], year: 2005,
+      biblio: { volume: '98', issue: '7', firstPage: '1993', lastPage: '1999' }
+    });
+    const j = judge(parseReference('R. Halloran and J. Sundqvist, “Folding kinetics of a synthetic test peptide,” J. Synth. Test., vol. 98, no. 7, pp. 1993–1999, 2005.'), record);
+    expect(j).toMatchObject({ verdict: 'verified', issues: [] });
+  });
 });
