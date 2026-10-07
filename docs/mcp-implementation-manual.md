@@ -672,7 +672,7 @@ the secret scan and the dependency audit run as before.
   "name": "sci-open-mcp",
   "version": "0.4.0",
   "private": true,
-  "description": "MCP server for open-access scientific literature: search ten sources, verify references, read full text, follow and export citations — and see what was not found.",
+  "description": "MCP server for open-access scientific literature: search seven sources, verify references, read full text, follow and export citations — and see what was not found.",
   "license": "MIT",
   "mcpName": "io.github.matiasrodlo/sci-open",
   "bin": {
@@ -2230,9 +2230,10 @@ Keep it under ~3,000 characters; recipes belong here, not in tool
 descriptions.
 
 ```ts
-export const INSTRUCTIONS = `sci-open searches open-access scientific literature across ten sources
-(arXiv, CORE, DataCite, DOAJ, Europe PMC, NCBI/PubMed, OpenAIRE, OpenAlex, PLOS,
-bioRxiv/medRxiv), merges duplicates, and reports which sources answered.
+export const INSTRUCTIONS = `sci-open searches open-access scientific literature across seven sources
+(arXiv, DOAJ, Europe PMC, NCBI/PubMed, OpenAIRE, OpenAlex, PLOS), looks a DOI up
+in those and three more (bioRxiv/medRxiv, CORE, DataCite), merges duplicates,
+and reports which sources answered.
 
 Honesty rules:
 - When coverage.complete is false, totals are lower bounds. Say so, and name
@@ -2561,7 +2562,7 @@ export const searchPapers = defineTool({
   title: 'Search papers',
   toolset: 'core',
   description:
-    'Search open-access scientific literature across ten sources at once, or look up one DOI. ' +
+    'Search open-access scientific literature across seven sources at once, or look up one DOI in ten. ' +
     'Use the Web of Science query grammar described in the server instructions. ' +
     'Returns the first page, a handle for get_search_page, and coverage: which sources answered, failed or were skipped. ' +
     'Set count_only=true to tune a query: each source\'s own match count, with no results read. Use get_paper for a full record.',
@@ -6197,8 +6198,8 @@ and a test in `test/modules.test.ts` keeps the two lists equal.
 The registry's schema caps the top-level `description` at **100 characters**,
 and `mcp-publisher publish` refuses a longer one — after npm has already
 published the version (Step 13.9). So the server's description is shorter
-than the npm package's: "Search ten open-access sources, verify references,
-read and cite papers, and see what was not found." is exactly 100. A test in
+than the npm package's: "Search seven open-access sources, verify references,
+read and cite papers, and see what was missed." is 99. A test in
 `test/modules.test.ts` holds it to the limit, beside the one that keeps its
 `version` equal to `package.json`'s.
 

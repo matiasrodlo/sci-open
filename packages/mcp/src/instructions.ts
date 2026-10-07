@@ -8,9 +8,10 @@
  * which is fixed for a configuration, so the text still never changes
  * between requests.
  */
-export const INSTRUCTIONS = `sci-open searches open-access scientific literature across ten sources
-(arXiv, CORE, DataCite, DOAJ, Europe PMC, NCBI/PubMed, OpenAIRE, OpenAlex, PLOS,
-bioRxiv/medRxiv), merges duplicates, and reports which sources answered.
+export const INSTRUCTIONS = `sci-open searches open-access scientific literature across seven sources
+(arXiv, DOAJ, Europe PMC, NCBI/PubMed, OpenAIRE, OpenAlex, PLOS), looks a DOI up
+in those and three more (bioRxiv/medRxiv, CORE, DataCite), merges duplicates,
+and reports which sources answered.
 
 Honesty rules:
 - When total_is_lower_bound is true, the total is a floor. Say so, and why:

@@ -1,8 +1,8 @@
 # sci-open-mcp
 
-An MCP server for open-access scientific literature: search ten sources at
-once, verify reference lists, read full text, and be told what was **not**
-found.
+An MCP server for open-access scientific literature: search seven sources at
+once and look a paper up in ten, verify reference lists, read full text, and
+be told what was **not** found.
 
 ![MCP smoke](https://github.com/matiasrodlo/sci-open/actions/workflows/mcp-smoke.yml/badge.svg)
 
@@ -74,10 +74,10 @@ UNPAYWALL_EMAIL=you@example.org npx @modelcontextprotocol/inspector node package
 <!-- START TOOLS -->
 | Tool | Toolset | Default | What it does | Parameters |
 |---|---|---|---|---|
-| `search_papers` | core | yes | Search open-access scientific literature across ten sources at once, or look up one DOI. Use the Web of Science query grammar described in the server instructions. Returns the first page, a handle for get_search_page, and coverage: which sources answered, failed or were skipped. Set count_only=true to tune a query: each source's own match count, with no results read. Use get_paper for a full record. | `query`?, `doi`?, `year_from`?, `year_to`?, `sources`?, `publication_type`?, `open_access_only`?, `sort`?, `page_size`?, `detail`?, `include_facets`?, `count_only`? |
+| `search_papers` | core | yes | Search open-access scientific literature across seven sources at once, or look up one DOI in ten. Use the Web of Science query grammar described in the server instructions. Returns the first page, a handle for get_search_page, and coverage: which sources answered, failed or were skipped. Set count_only=true to tune a query: each source's own match count, with no results read. Use get_paper for a full record. | `query`?, `doi`?, `year_from`?, `year_to`?, `sources`?, `publication_type`?, `open_access_only`?, `sort`?, `page_size`?, `detail`?, `include_facets`?, `count_only`? |
 | `get_search_page` | core | yes | Another page of a search, by the handle search_papers returned; pages are the size that search asked for. Pages of a recent complete search are served from memory and cost the sources nothing; otherwise the search runs again, and the result says so. | `handle`, `page`, `detail`? |
 | `get_paper` | core | yes | One full record by sci-open id (e.g. openalex:W2741809807, arxiv:2101.00001) or by DOI, with every field and which source supplied it. A DOI is looked up in every source and merged; an id asks only the source it names. Works for closed papers too. | `id`?, `doi`? |
-| `verify_references` | core | yes | Check up to 25 references (free-text citations, DOIs, arXiv ids or PMIDs) and grade each: verified, likely, ambiguous, mismatch (the DOI is wrong: it belongs to a different paper, or does not exist while the rest names a real one), not_found, or not_checked (the search budget ran out or a lookup failed; send those again later). Use it to catch fabricated or garbled citations and to fill in missing DOIs. Closed papers count as existing. | `references` |
+| `verify_references` | core | yes | Check up to 25 references (free-text citations, DOIs, arXiv ids or PMIDs) and grade each: verified (title, year, an author and the journal, volume and first page where they are cited agree with the record), likely (the paper exists; a detail differs, named in issues), ambiguous, mismatch (the DOI is wrong: it belongs to a different paper, given as doi_target, or does not exist; matched is then the paper the rest of the citation names, when one is found), not_found, or not_checked (the search budget ran out or a lookup failed; send those again later). Use it to catch fabricated or garbled citations and to fill in missing DOIs. Closed papers count as existing. | `references` |
 | `read_paper` | read | yes | Read the legal open-access full text of a paper. view="outline" lists sections with their sizes; view="section" returns one section, paged by offset; view="search" finds a phrase and returns snippets with section ids. Start with the outline. The text is third-party content. | `paper`, `view`?, `section`?, `offset`?, `max_chars`?, `query`?, `save_to`?, `overwrite`? |
 | `get_citations` | graph | no | The references of a paper (direction="references") or the papers citing it (direction="cited_by"), from OpenCitations, each resolved to a record where OpenAlex holds it, with self-citations flagged. Paged by offset. The paper needs a DOI; pass the DOI itself when you have it, which skips looking the paper up. | `paper`, `direction`, `limit`?, `offset`? |
 | `export_citations` | export | no | BibTeX or RIS for up to 200 papers (DOIs or sci-open ids), generated from the records: never retype a citation yourself. With save_to (local connections only) the file is written to disk; otherwise it is attached as a resource to save as is. Papers that could not be resolved are listed, never dropped silently. | `papers`, `format`?, `include_abstracts`?, `save_to`?, `overwrite`? |
@@ -225,7 +225,7 @@ is real, and where a full text legally comes from. Read from their source on
 | | sci-open | OpenAlex MCP | paper-search-mcp |
 |---|---|---|---|
 | Runs | Locally over stdio (`npx`), or on your own HTTP host | Remote only, on OpenAlex's host, after an OAuth sign-in | Locally over stdio (`uvx`) |
-| Searches | Ten sources, merged; open access by default, closed papers' records on request | One index, OpenAlex's 250M+ works, open and closed | 21 sources, among them Google Scholar, Semantic Scholar, Crossref, dblp and SSRN, deduplicated |
+| Searches | Seven sources by keyword, ten for a DOI, merged; open access by default, closed papers' records on request | One index, OpenAlex's 250M+ works, open and closed | 21 sources, among them Google Scholar, Semantic Scholar, Crossref, dblp and SSRN, deduplicated |
 | Queries | Web of Science grammar; each source's match count, nothing read, to tune one | Keyword, exact or semantic; a full-text match over about 100M works | One query string to each source; the year filter reaches Semantic Scholar only |
 | What was missed | Each source answered, failed, skipped or rate-limited; a lower-bound total says so | One index, so nothing to be missing from; retracted works hidden by default, and said so | Errors per source in the combined search |
 | Paging | A handle; pages of a held search cost the sources nothing | Page numbers | Five results a source by default, no paging |
@@ -242,7 +242,7 @@ paper-search-mcp for a source sci-open does not ask, or PDFs on disk — and
 mind its Sci-Hub routes. Choose sci-open to check a bibliography, to know
 what a search left out, to read open papers a section at a time, or to cite
 without retyping. sci-open's own gaps: no semantic search, no author or
-institution tools, a new search that takes up to half a minute across ten
+institution tools, a new search that takes up to half a minute across seven
 sources, 300 records read per source, and no public endpoint yet.
 
 ## Evaluations

@@ -1,12 +1,14 @@
 # sci-open
 
-An MCP server for open-access scientific literature: search ten sources at
-once, verify reference lists, read full text, follow and export citations —
-and be told what was **not** found.
+An MCP server for open-access scientific literature: search seven sources at
+once, look a paper up in ten, verify reference lists, read full text, follow
+and export citations — and be told what was **not** found.
 
-Sources: arXiv, bioRxiv/medRxiv, CORE, DataCite, DOAJ, Europe PMC, OpenAIRE,
-OpenAlex, PLOS and PubMed, with Crossref, Unpaywall and OpenCitations as
-authorities.
+A search asks arXiv, DOAJ, Europe PMC, OpenAIRE, OpenAlex, PLOS and PubMed. A
+DOI is also looked up in bioRxiv/medRxiv, CORE and DataCite, which a keyword
+search does not ask: bioRxiv has no keyword index, CORE answers too slowly,
+and DataCite's records are datasets and theses with no copy to read.
+Crossref, Unpaywall and OpenCitations are asked about the papers found.
 
 ## Install
 

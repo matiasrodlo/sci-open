@@ -2,7 +2,7 @@
   "name": "sci-open-mcp",
   "version": "0.4.0",
   "private": true,
-  "description": "MCP server for open-access scientific literature: search ten sources, verify references, read full text, follow and export citations — and see what was not found.",
+  "description": "MCP server for open-access scientific literature: search seven sources, verify references, read full text, follow and export citations — and see what was not found.",
   "license": "MIT",
   "mcpName": "io.github.matiasrodlo/sci-open",
   "bin": {

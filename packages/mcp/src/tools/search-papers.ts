@@ -14,7 +14,7 @@ export const searchPapers = defineTool({
   title: 'Search papers',
   toolset: 'core',
   description:
-    'Search open-access scientific literature across ten sources at once, or look up one DOI. ' +
+    'Search open-access scientific literature across seven sources at once, or look up one DOI in ten. ' +
     'Use the Web of Science query grammar described in the server instructions. ' +
     'Returns the first page, a handle for get_search_page, and coverage: which sources answered, failed or were skipped. ' +
     'Set count_only=true to tune a query: each source\'s own match count, with no results read. Use get_paper for a full record.',
