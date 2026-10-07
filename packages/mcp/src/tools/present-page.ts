@@ -1,7 +1,7 @@
 import * as z from 'zod';
 import type { SearchResponse } from '@sci-open/shared';
 import { encodeSearchHandle, type SearchSpec } from '../handles';
-import { shapePaper, paperSchema, listedTitle, retractionWarning, type ShapedPaper } from '../shape/paper';
+import { shapePaper, paperSchema, listedTitle, placeIn, retractionWarning, type ShapedPaper } from '../shape/paper';
 import { fitWholeItems } from '../shape/budget';
 import { coverageOf, coverageSchema, coverageSentence, totalIsLowerBound } from '../shape/coverage';
 import { fenceUntrusted } from '../safety/untrusted';
@@ -50,7 +50,7 @@ function fullEntry(p: ShapedPaper, n: number): string {
   ].filter(Boolean).join(' · ');
   return [
     `### ${n}. ${oneLine(listedTitle(p))} (${p.year ?? 'n.d.'})`,
-    [authors, p.venue ? oneLine(p.venue) : ''].filter(Boolean).join(' · '),
+    [authors, [p.venue ? oneLine(p.venue) : '', placeIn(p)].filter(Boolean).join(' ')].filter(Boolean).join(' · '),
     facts,
     ...(p.abstract ? ['', p.abstract] : [])
   ].join('\n');

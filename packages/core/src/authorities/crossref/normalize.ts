@@ -1,5 +1,5 @@
 import type { AuthorityFacts, FullText, PaperStage } from '@sci-open/shared';
-import { fullTextAt, stripMarkup } from '@sci-open/shared';
+import { biblioOf, fullTextAt, splitPages, stripMarkup, withBiblio } from '@sci-open/shared';
 import type { CrossrefPayload } from './fetch';
 
 /** Crossref payload -> AuthorityFacts. Pure. */
@@ -105,6 +105,11 @@ export function normalize(payload: CrossrefPayload | null): AuthorityFacts | nul
     ...(authors.length > 0 ? { authors } : {}),
     ...(year !== undefined ? { year } : {}),
     ...(venue ? { venue } : {}),
+    ...withBiblio(biblioOf({
+      volume: work.volume, issue: work.issue,
+      // An article number stands in for pages where there are none.
+      ...(work.page ? splitPages(work.page) : { firstPage: work['article-number'] })
+    })),
     ...(first(work.publisher) ? { publisher: first(work.publisher)! } : {}),
     ...(topics.length > 0 ? { topics } : {}),
     ...(first(work.language) ? { language: first(work.language)! } : {}),

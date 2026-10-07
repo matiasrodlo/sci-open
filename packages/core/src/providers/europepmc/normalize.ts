@@ -1,5 +1,5 @@
 import type { Paper, PaperStage, FullText, SourceRef } from '@sci-open/shared';
-import { fullTextAt, httpUrl, stripMarkup } from '@sci-open/shared';
+import { biblioOf, fullTextAt, httpUrl, splitPages, stripMarkup, withBiblio } from '@sci-open/shared';
 import type { EuropePmcPayload } from './fetch';
 import { isNotice } from '../publication-types';
 
@@ -96,7 +96,9 @@ function pickAuthors(raw: any): string[] {
   // `authorString` is a comma-separated fallback, present even when the
   // structured list is not.
   const fallback = typeof raw?.authorString === 'string' ? raw.authorString : '';
-  return fallback.split(',').map((s: string) => s.trim()).filter(Boolean);
+  // "Doudna JA" as "Doudna, JA": surname first, as the comma says to every
+  // citation format, where without it "JA" was read as the surname.
+  return fallback.split(',').map((s: string) => s.trim().replace(/^(.+?)\s+(\p{Lu}{1,4})\.?$/u, '$1, $2')).filter(Boolean);
 }
 
 /**
@@ -150,6 +152,7 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
     // The journal is under `journalInfo.journal.title`, so venue was empty on
     // every record from the highest-yield provider in the fan-out.
     ...(raw.journalInfo?.journal?.title ? { venue: String(raw.journalInfo.journal.title) } : {}),
+    ...withBiblio(biblioOf({ volume: raw.journalInfo?.volume, issue: raw.journalInfo?.issue, ...splitPages(raw.pageInfo) })),
     ...(abstract ? { abstract } : {}),
     topics: asArray<string>(raw.keywordList?.keyword).filter(Boolean).map(String),
     ...(raw.language ? { language: String(raw.language) } : {}),

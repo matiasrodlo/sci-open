@@ -1,5 +1,6 @@
 import type { SourceId } from './types';
 import type { AuthorityId } from './authority';
+import type { Biblio } from './biblio';
 
 /**
  * A work, as the orchestrator holds it after merging what every provider said
@@ -93,7 +94,7 @@ export type FullText = {
 /** The fields a merge picks between, and therefore the ones worth attributing. */
 export type ProvenancedField =
   | 'title' | 'abstract' | 'authors' | 'year' | 'venue' | 'publisher'
-  | 'topics' | 'language' | 'citationCount' | 'oaStatus' | 'fullText' | 'landingPage' | 'retracted';
+  | 'topics' | 'language' | 'citationCount' | 'oaStatus' | 'fullText' | 'landingPage' | 'retracted' | 'biblio';
 
 /**
  * Which provider supplied each field of the merged record.
@@ -136,6 +137,8 @@ export type Paper = {
   authors: string[];
   year?: number;
   venue?: string;
+  /** Volume, issue and pages in the venue, where a source gives them. */
+  biblio?: Biblio;
   publisher?: string;
   abstract?: string;
   topics: string[];

@@ -1,4 +1,5 @@
 import type { Paper } from './paper';
+import type { Biblio } from './biblio';
 
 /**
  * Two export formats, both correct.
@@ -46,6 +47,7 @@ type CitationData = {
   authors: string[];
   year?: number;
   venue?: string;
+  biblio?: Biblio;
   publisher?: string;
   abstract?: string;
   /** Bare, always: `10.1234/example`, never a URL. */
@@ -75,10 +77,11 @@ function toCitationData(paper: Paper): CitationData {
   const doi = paper.doi ? bareDoi(paper.doi) : undefined;
 
   return {
-    title: (paper.title || '').trim(),
+    title: citedTitle(paper.title || ''),
     authors: (paper.authors || []).filter(a => a && a.trim()).map(a => a.trim()),
     ...(paper.year !== undefined ? { year: paper.year } : {}),
     ...(paper.venue ? { venue: paper.venue } : {}),
+    ...(paper.biblio ? { biblio: paper.biblio } : {}),
     ...(paper.publisher ? { publisher: paper.publisher } : {}),
     ...(paper.abstract ? { abstract: paper.abstract } : {}),
     ...(doi ? { doi } : {}),
@@ -90,6 +93,33 @@ function toCitationData(paper: Paper): CitationData {
     // Which version this is, not how it is open: `stage`, not `oaStatus`.
     isPreprint: paper.stage === 'preprint'
   };
+}
+
+/**
+ * A title as a citation carries it: without the full stop PubMed ends every
+ * title with, which a style adds again after its own punctuation.
+ */
+function citedTitle(title: string): string {
+  const trimmed = title.trim();
+  return /[^.]\.$/.test(trimmed) ? trimmed.slice(0, -1) : trimmed;
+}
+
+/**
+ * A name that is a group, not a person — "WHO Collaborative Group", "The 1000
+ * Genomes Project Consortium". BibTeX reads a name's last word as the
+ * surname, so a group's must be braced to stay whole.
+ */
+const GROUP_NAME = /\b(?:group|consortium|collaboration|collaborative|committee|initiative|network|organi[sz]ation|society|association|investigators|team|study|project|council|alliance|institute|working party)\b/i;
+
+/**
+ * Words whose capitals a style must not lower: `CRISPR`, `mRNA`, `COVID-19`,
+ * `Cas9`. A sentence-case style lower-cases a BibTeX title, so each is braced,
+ * which is what reference managers do. A word capitalised only at its start is
+ * left to the style.
+ */
+function protectCase(escaped: string): string {
+  return escaped.replace(/[^\s]+/g, word =>
+    !word.includes('\\text') && /\p{Lu}/u.test(word.replace(/^[^\p{L}\p{N}]+/u, '').slice(1)) ? `{${word}}` : word);
 }
 
 /** Authors, capped, with the convention each format uses for the remainder. */
@@ -208,13 +238,19 @@ function generateBibTeXEntry(data: CitationData, options: Required<CitationOptio
 
   const { shown, truncated } = cappedAuthors(data.authors, options.maxAuthors);
   if (shown.length > 0) {
-    // ` and ` is the separator; `others` is BibTeX's own "et al.".
-    add('author', [...shown, ...(truncated ? ['others'] : [])].join(' and '));
+    // ` and ` is the separator; `others` is BibTeX's own "et al.". A group's
+    // name is braced, or its last word would be read as a surname.
+    const names = shown.map(name => (GROUP_NAME.test(name) ? `{${escapeBibTeX(name)}}` : escapeBibTeX(name)));
+    fields.push(['author', [...names, ...(truncated ? ['others'] : [])].join(' and ')]);
   }
 
-  add('title', data.title);
+  if (data.title.trim()) fields.push(['title', protectCase(escapeBibTeX(data.title.trim()))]);
   if (data.year !== undefined) fields.push(['year', String(data.year)]);
   add(data.venue && !data.isPreprint ? 'journal' : 'howpublished', data.venue);
+  add('volume', data.biblio?.volume);
+  add('number', data.biblio?.issue);
+  // `--` is BibTeX's en dash between pages.
+  add('pages', data.biblio?.firstPage ? [data.biblio.firstPage, data.biblio.lastPage].filter(Boolean).join('--') : undefined);
   add('publisher', data.publisher);
   add('language', data.language);
   if (options.includeDOI) addVerbatim('doi', data.doi);
@@ -262,6 +298,10 @@ function generateRISEntry(data: CitationData, options: Required<CitationOptions>
     lines.push(risLine('DA', `${data.year}///`));
   }
   if (data.venue) lines.push(risLine('T2', data.venue));
+  if (data.biblio?.volume) lines.push(risLine('VL', data.biblio.volume));
+  if (data.biblio?.issue) lines.push(risLine('IS', data.biblio.issue));
+  if (data.biblio?.firstPage) lines.push(risLine('SP', data.biblio.firstPage));
+  if (data.biblio?.lastPage) lines.push(risLine('EP', data.biblio.lastPage));
   if (data.publisher) lines.push(risLine('PB', data.publisher));
   if (data.language) lines.push(risLine('LA', data.language));
   if (options.includeDOI && data.doi) lines.push(risLine('DO', data.doi));

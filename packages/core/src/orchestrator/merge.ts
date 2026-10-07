@@ -88,7 +88,7 @@ export function normalizeDoi(doi: string): string {
 
 /** Fields chosen between during a merge, in the order they are considered. */
 const MERGEABLE: ProvenancedField[] = [
-  'title', 'abstract', 'authors', 'year', 'venue', 'publisher',
+  'title', 'abstract', 'authors', 'year', 'venue', 'biblio', 'publisher',
   'topics', 'language', 'citationCount', 'oaStatus', 'fullText', 'landingPage',
   // Only ever true, so "fill what the base lacks" is "any source says so".
   'retracted'

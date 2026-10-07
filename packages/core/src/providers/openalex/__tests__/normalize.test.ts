@@ -165,3 +165,15 @@ describe('normalize — markup', () => {
     expect(find('W6').abstract).toBe('Yields were > 40%.');
   });
 });
+
+describe('normalize — volume, issue and pages', () => {
+  it('reads biblio, and leaves it out when OpenAlex has none', () => {
+    const work = (biblio: unknown) => normalize({ results: [{
+      id: 'https://openalex.org/W9', title: 'A title', display_name: 'A title', type: 'article', publication_year: 2015,
+      authorships: [], open_access: { oa_status: 'gold' }, biblio
+    }] } as any, { retrievedAt: AT }).papers[0]!.biblio;
+    expect(work({ volume: '521', issue: '7553', first_page: '436', last_page: '444' }))
+      .toEqual({ volume: '521', issue: '7553', firstPage: '436', lastPage: '444' });
+    expect(work({ volume: null, issue: null, first_page: null, last_page: null })).toBeUndefined();
+  });
+});

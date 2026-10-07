@@ -148,8 +148,9 @@ describe('normalize — shapes the recorded fixture does not contain', () => {
     expect(find('PPR12345')?.stage).toBe('preprint');
   });
 
-  it('falls back to authorString when there is no structured author list', () => {
-    expect(find('PPR12345')?.authors).toEqual(['Lovelace A', 'Babbage C']);
+  it('falls back to authorString when there is no structured author list, surname first with a comma', () => {
+    // "Lovelace A" without the comma reads to BibTeX and RIS as surname "A".
+    expect(find('PPR12345')?.authors).toEqual(['Lovelace, A', 'Babbage, C']);
   });
 
   it('falls back to a doi.org landing page when no html url is offered', () => {
@@ -169,5 +170,11 @@ describe('normalize — shapes the recorded fixture does not contain', () => {
   it('returns nothing, and no errors, for an empty payload', () => {
     expect(run({})).toEqual({ papers: [], skipped: [] });
     expect(run({ resultList: { result: [] } })).toEqual({ papers: [], skipped: [] });
+  });
+});
+
+describe('normalize — volume, issue and pages', () => {
+  it('reads them from journalInfo and pageInfo', () => {
+    expect(run(RECORDED).papers[0]!.biblio).toEqual({ volume: '12', issue: '1', firstPage: '32' });
   });
 });

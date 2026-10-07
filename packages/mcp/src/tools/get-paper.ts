@@ -1,7 +1,7 @@
 import * as z from 'zod';
 import { defineTool } from '../framework/define-tool';
 import { ToolError } from '../errors';
-import { shapePaper, paperSchema, retractionWarning } from '../shape/paper';
+import { shapePaper, paperSchema, placeIn, retractionWarning } from '../shape/paper';
 import { fenceUntrusted } from '../safety/untrusted';
 import { doiIn, paperRefKind } from './resolve-paper';
 
@@ -36,7 +36,7 @@ export const getPaper = defineTool({
     // said it was.
     const record = [
       `# ${shaped.title}`,
-      [`${shaped.authors.slice(0, 10).join(', ')}${shaped.authors.length > 10 ? ', …' : ''}`, shaped.year ?? 'n.d.', shaped.venue, shaped.publisher]
+      [`${shaped.authors.slice(0, 10).join(', ')}${shaped.authors.length > 10 ? ', …' : ''}`, shaped.year ?? 'n.d.', [shaped.venue, placeIn(shaped)].filter(Boolean).join(' '), shaped.publisher]
         .filter(Boolean).join(' · '),
       shaped.landing_page ? `Landing page: ${shaped.landing_page}` : '',
       shaped.full_text?.url ? `Full text (${shaped.full_text.kind}, ${shaped.full_text.verified ? 'verified' : 'unverified'}): ${shaped.full_text.url}` : '',

@@ -32,6 +32,7 @@ export function normalize(payload: OpenAlexPayload | null): AuthorityFacts | nul
     ...(paper.authors.length > 0 ? { authors: paper.authors } : {}),
     ...(paper.year !== undefined ? { year: paper.year } : {}),
     ...(paper.venue !== undefined ? { venue: paper.venue } : {}),
+    ...(paper.biblio !== undefined ? { biblio: paper.biblio } : {}),
     ...(paper.publisher !== undefined ? { publisher: paper.publisher } : {}),
     ...(paper.topics.length > 0 ? { topics: paper.topics } : {}),
     ...(paper.language !== undefined ? { language: paper.language } : {}),

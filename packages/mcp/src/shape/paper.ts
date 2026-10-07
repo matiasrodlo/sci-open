@@ -1,5 +1,6 @@
 import * as z from 'zod';
 import type { Paper } from '@sci-open/shared';
+import { pagesOf } from '@sci-open/shared';
 import { sanitizeText } from '../safety/sanitize';
 
 /** Drops undefined, null, empty strings and empty arrays, so the model never
@@ -40,6 +41,10 @@ export const paperSchema = z.object({
   found_in: z.array(z.string()),
   abstract: z.string().optional(),
   // full view only
+  volume: z.string().optional(),
+  issue: z.string().optional(),
+  /** First–last page, or the article number that stands in for pages. */
+  pages: z.string().optional(),
   publisher: z.string().optional(),
   topics: z.array(z.string()).optional(),
   language: z.string().optional(),
@@ -84,6 +89,9 @@ export function shapePaper(p: Paper, detail: 'concise' | 'full'): ShapedPaper {
     abstract: p.abstract ? (full ? sanitizeText(p.abstract) : truncateAtWord(sanitizeText(p.abstract), 280)) : undefined,
     ...(full
       ? {
+          volume: p.biblio?.volume ? sanitizeText(p.biblio.volume) : undefined,
+          issue: p.biblio?.issue ? sanitizeText(p.biblio.issue) : undefined,
+          pages: pagesOf(p.biblio) ? sanitizeText(pagesOf(p.biblio)!) : undefined,
           publisher: p.publisher ? sanitizeText(p.publisher) : undefined,
           topics: p.topics.map(t => sanitizeText(t)),
           language: p.language,
@@ -93,6 +101,14 @@ export function shapePaper(p: Paper, detail: 'concise' | 'full'): ShapedPaper {
         }
       : {})
   }, ALWAYS) as ShapedPaper;
+}
+
+/**
+ * Where in its venue a record is, as a citation gives it: `346(6213):1258096`,
+ * or nothing when no source said.
+ */
+export function placeIn(p: Pick<ShapedPaper, 'volume' | 'issue' | 'pages'>): string {
+  return `${p.volume ?? ''}${p.issue ? `(${p.issue})` : ''}${p.pages ? `${p.volume || p.issue ? ':' : 'pp. '}${p.pages}` : ''}`;
 }
 
 /**

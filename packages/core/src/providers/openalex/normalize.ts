@@ -1,5 +1,5 @@
 import type { Paper, PaperStage, FullText, OaRoute, SourceRef } from '@sci-open/shared';
-import { fullTextAt, httpUrl, stripMarkup } from '@sci-open/shared';
+import { biblioOf, fullTextAt, httpUrl, stripMarkup, withBiblio } from '@sci-open/shared';
 import type { OpenAlexPayload } from './fetch';
 
 /** OpenAlex payload -> Paper[]. Pure, and isolated per record. */
@@ -150,6 +150,10 @@ function normalizeOne(work: any, ref: SourceRef): Paper {
       .filter((n: unknown): n is string => typeof n === 'string' && n.trim().length > 0),
     ...(Number.isFinite(year) ? { year } : {}),
     ...(source.display_name ? { venue: String(source.display_name) } : {}),
+    ...withBiblio(biblioOf({
+      volume: work?.biblio?.volume, issue: work?.biblio?.issue,
+      firstPage: work?.biblio?.first_page, lastPage: work?.biblio?.last_page
+    })),
     // `host_organization_name`, and there is no alternative. The old path read
     // `host_venue.publisher`; `host_venue` is not a valid select field at all,
     // so OpenAlex answers `select=host_venue` with HTTP 400. The obvious

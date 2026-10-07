@@ -35,7 +35,9 @@ const SELECT = [
   'cited_by_count',
   'type',
   'language',
-  'is_retracted'
+  'is_retracted',
+  // Volume, issue and pages, which a citation needs and nothing else supplied.
+  'biblio'
 ].join(',');
 
 /**

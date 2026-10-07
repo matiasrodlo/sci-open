@@ -1,5 +1,5 @@
 import type { Paper, FullText, SourceRef } from '@sci-open/shared';
-import { fullTextAt, httpUrl, stripMarkup } from '@sci-open/shared';
+import { biblioOf, fullTextAt, httpUrl, stripMarkup, withBiblio } from '@sci-open/shared';
 import type { DoajPayload } from './fetch';
 
 /**
@@ -112,6 +112,10 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
     // No default. The old connector fell back to the literal string
     // 'DOAJ Journal', which is a fabricated venue on any record missing one.
     ...(bibjson.journal?.title ? { venue: String(bibjson.journal.title) } : {}),
+    ...withBiblio(biblioOf({
+      volume: bibjson.journal?.volume, issue: bibjson.journal?.number,
+      firstPage: bibjson.start_page, lastPage: bibjson.end_page
+    })),
     ...(bibjson.journal?.publisher ? { publisher: String(bibjson.journal.publisher) } : {}),
     ...(abstract ? { abstract } : {}),
     topics: pickTopics(bibjson),

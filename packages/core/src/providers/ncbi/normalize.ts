@@ -1,5 +1,5 @@
-import type { Paper, PaperStage, FullText, SourceRef } from '@sci-open/shared';
-import { fullTextAt } from '@sci-open/shared';
+import type { Biblio, Paper, PaperStage, FullText, SourceRef } from '@sci-open/shared';
+import { biblioOf, fullTextAt, splitPages, withBiblio } from '@sci-open/shared';
 import { isNotice } from '../publication-types';
 
 /**
@@ -147,7 +147,9 @@ function pickAuthors(article: any): string[] {
       if (collective) return collective;
       const last = text(author, 'LastName') ?? '';
       const fore = text(author, 'ForeName') ?? text(author, 'Initials') ?? '';
-      return `${last} ${fore}`.trim();
+      // "Doudna, Jennifer A", with the comma: written "Doudna Jennifer A",
+      // BibTeX and every RIS reader took "A" for the surname.
+      return last && fore ? `${last}, ${fore}` : (last || fore);
     })
     .filter(Boolean);
 }
@@ -216,6 +218,18 @@ function pickStage(article: any): PaperStage {
   return isNotice(types) ? 'unknown' : 'published';
 }
 
+/**
+ * Volume, issue and pages, from `JournalIssue` and `Pagination`. `MedlinePgn`
+ * abbreviates the last page (`436-44`), which `splitPages` writes out.
+ */
+function pickBiblio(article: any): Biblio | undefined {
+  const journalIssue = one(one(article, 'Journal'), 'JournalIssue');
+  const pagination = one(article, 'Pagination');
+  const start = text(pagination, 'StartPage');
+  const pages = start ? { firstPage: start, lastPage: text(pagination, 'EndPage') } : splitPages(text(pagination, 'MedlinePgn'));
+  return biblioOf({ volume: text(journalIssue, 'Volume'), issue: text(journalIssue, 'Issue'), ...pages });
+}
+
 function normalizeOne(raw: any, ref: SourceRef): Paper {
   const medlineCitation = one(raw, 'MedlineCitation');
   const article = one(medlineCitation, 'Article');
@@ -241,6 +255,7 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
     authors: pickAuthors(article),
     ...(year !== undefined ? { year } : {}),
     ...(venue ? { venue } : {}),
+    ...withBiblio(pickBiblio(article)),
     ...(abstract ? { abstract } : {}),
     topics: pickTopics(medlineCitation),
     language: text(article, 'Language') ?? 'en',

@@ -18,6 +18,7 @@ export const capabilities: AuthorityCapabilities = {
     'authors',
     'year',
     'venue',
+    'biblio',
     'publisher',
     'topics',
     'language',

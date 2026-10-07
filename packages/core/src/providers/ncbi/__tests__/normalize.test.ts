@@ -124,6 +124,20 @@ describe('normalize — record shapes', () => {
     expect(await typed('Retracted Publication')).toBe('published');
   });
 
+  it('writes a person surname first, with a comma', () => {
+    // "Doudna Jennifer A" read to BibTeX and every RIS reader as surname "A".
+    // The one name without: a collective author, kept as written.
+    expect(run(recorded).papers.flatMap(p => p.authors).filter(a => !a.includes(','))).toEqual(['Frontiers Production Office']);
+  });
+
+  it('reads the volume, issue and pages, writing out an abbreviated last page', async () => {
+    const xml = '<PubmedArticleSet><PubmedArticle><MedlineCitation><PMID>9</PMID><Article><Journal><JournalIssue>' +
+      '<Volume>521</Volume><Issue>7553</Issue></JournalIssue><Title>Nature</Title></Journal><ArticleTitle>Deep learning.</ArticleTitle>' +
+      '<Pagination><MedlinePgn>436-44</MedlinePgn></Pagination></Article></MedlineCitation></PubmedArticle></PubmedArticleSet>';
+    const [article] = run((await parseStringPromise(xml)).PubmedArticleSet.PubmedArticle).papers;
+    expect(article!.biblio).toEqual({ volume: '521', issue: '7553', firstPage: '436', lastPage: '444' });
+  });
+
   it('keeps a collective author as written', () => {
     expect(run(edge).papers.find(p => p.id === 'ncbi:11111111')!.authors)
       .toEqual(['A Working Group']);

@@ -259,3 +259,39 @@ describe('getFileExtension', () => {
     expect(getFileExtension(format as any)).toBe(ext);
   });
 });
+
+describe('what a citation needs besides the venue', () => {
+  const article = record({
+    title: 'The new frontier of genome engineering with CRISPR-Cas9.',
+    authors: ['Doudna, Jennifer A', 'Charpentier, Emmanuelle', 'WHO Collaborative Group'],
+    year: 2014,
+    venue: 'Science',
+    biblio: { volume: '346', issue: '6213', firstPage: '1258096' },
+    stage: 'published'
+  });
+
+  it('writes the volume, the issue and the pages into BibTeX', () => {
+    const entry = generateCitation({ ...article, biblio: { volume: '521', issue: '7553', firstPage: '436', lastPage: '444' } }, { format: 'bibtex' });
+    expect(entry).toContain('  volume = {521}');
+    expect(entry).toContain('  number = {7553}');
+    expect(entry).toContain('  pages = {436--444}');
+  });
+
+  it('writes them into RIS', () => {
+    const entry = generateCitation({ ...article, biblio: { volume: '521', issue: '7553', firstPage: '436', lastPage: '444' } }, { format: 'ris' });
+    expect(entry).toContain('VL  - 521');
+    expect(entry).toContain('IS  - 7553');
+    expect(entry).toContain('SP  - 436');
+    expect(entry).toContain('EP  - 444');
+  });
+
+  it('braces the words a sentence-case style must not lower, and drops PubMed\'s closing full stop', () => {
+    expect(generateCitation(article, { format: 'bibtex' })).toContain('  title = {The new frontier of genome engineering with {CRISPR-Cas9}}');
+  });
+
+  it('keeps a group\'s name whole, and reads "Surname, Forename" as BibTeX does', () => {
+    const entry = generateCitation(article, { format: 'bibtex' });
+    expect(entry).toContain('  author = {Doudna, Jennifer A and Charpentier, Emmanuelle and {WHO Collaborative Group}}');
+    expect(entry).toMatch(/^@article\{doudna2014frontier,/);
+  });
+});

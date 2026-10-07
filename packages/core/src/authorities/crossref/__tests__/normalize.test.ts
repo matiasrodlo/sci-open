@@ -33,6 +33,12 @@ describe('crossref normalize', () => {
     expect(normalize({ message: { ...(open as any).message, type: 'posted-content' } } as any)!.stage).toBe('preprint');
   });
 
+  it('reads the volume and issue, and an article number where there are no pages', () => {
+    expect(facts.biblio).toEqual({ volume: '5', issue: '1', firstPage: '9811' });
+    const paged = normalize({ message: { ...(open as any).message, page: '436-444' } } as any)!;
+    expect(paged.biblio).toEqual({ volume: '5', issue: '1', firstPage: '436', lastPage: '444' });
+  });
+
   it('prefers the print year over the online one', () => {
     // The closed work was online in April 2020 and in print that September.
     expect(normalize(closed as any)!.year).toBe(2020);

@@ -123,3 +123,9 @@ describe('normalize — markup', () => {
       .toBe('Thresholds fell > 20 dB. Recovery was partial.');
   });
 });
+
+describe('normalize — volume, issue and pages', () => {
+  it('reads them from the journal and the start page', () => {
+    expect(run(RECORDED).papers[0]!.biblio).toEqual({ volume: '14', issue: '9', firstPage: '2045' });
+  });
+});

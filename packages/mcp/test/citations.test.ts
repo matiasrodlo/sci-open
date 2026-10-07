@@ -181,6 +181,16 @@ describe('export_citations', () => {
     expect(text).toMatch(/^3 BibTeX entries attached as a resource \(sci-open:\/\/export\/[0-9a-f]{12}\.bib\); save it as is/);
   });
 
+  it('carries the volume, issue and pages a record has, which a reference list needs', async () => {
+    const paged = work('10.1038/nature14539', { title: 'Deep learning', venue: 'Nature', biblio: { volume: '521', issue: '7553', firstPage: '436', lastPage: '444' } });
+    const fake = fakeEngine([paged]);
+    const { resources } = await exportCitations.run(exportCitations.input.parse({ papers: ['10.1038/nature14539'] }), fake.deps);
+    const file = resources![0]!.resource.text;
+    expect(file).toContain('  volume = {521}');
+    expect(file).toContain('  number = {7553}');
+    expect(file).toContain('  pages = {436--444}');
+  });
+
   it('attaches the file as a resource whose hash is the structured one', async () => {
     const fake = fakeEngine([ARTICLE]);
     const { structured, resources } = await exportCitations.run(exportCitations.input.parse({ papers: ['10.7717/peerj-cs.163'], format: 'ris' }), fake.deps);
