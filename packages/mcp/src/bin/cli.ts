@@ -2,7 +2,8 @@
 import { readFileSync } from 'fs';
 import { parseArgs } from 'util';
 import * as z from 'zod';
-import { createEngine, useLogger } from '@sci-open/core';
+import { useLogger } from '@sci-open/core';
+import { engineFor } from '../engine-for';
 import { readMcpConfig } from '../config';
 import { stderrLogger } from '../log';
 import { nullMetrics } from '../metrics';
@@ -74,12 +75,9 @@ async function main(): Promise<void> {
   for (const warning of warnings) logger.warn({}, warning);
 
   const deps: ToolDeps = {
-    engine: createEngine({
-      userAgent: config.userAgent,
-      apiKeys: config.apiKeys,
-      depth: config.searchDepth,
-      ...(config.openCitationsToken ? { openCitationsToken: config.openCitationsToken } : {})
-    }),
+    // The server's own choice, so SCI_OPEN_ENGINE=fixture keeps a CLI run
+    // offline as it keeps the server offline.
+    engine: engineFor(config),
     config,
     metrics: nullMetrics,
     logger,

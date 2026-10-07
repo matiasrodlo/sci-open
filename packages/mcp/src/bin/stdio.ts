@@ -1,31 +1,15 @@
 #!/usr/bin/env node
 import './stdout-guard';
-import path from 'path';
 import { serveStdio } from '@modelcontextprotocol/server/stdio';
-import { createEngine, useLogger, type Engine } from '@sci-open/core';
+import { useLogger } from '@sci-open/core';
 import { createServerFactory } from '../server';
 import { selectTools } from '../toolsets';
 import { readMcpConfig, type McpConfig } from '../config';
 import { stderrLogger } from '../log';
 import { createMetrics } from '../metrics';
-import { fixtureEngine, loadFixtures } from '../fixture-engine';
+import { engineFor } from '../engine-for';
 import { startHttpServer } from '../http-server';
 import { BUILD } from '../build-info';
-
-function engineFor(config: McpConfig): Engine {
-  if (config.engine === 'fixture') {
-    // Recorded answers: deterministic and offline. Lenient, so a search nobody
-    // recorded answers empty instead of failing the eval that asked it.
-    const file = config.fixturesPath ?? path.join(__dirname, '..', '..', 'fixtures', 'engine.json');
-    return fixtureEngine(loadFixtures(file), { strict: false });
-  }
-  return createEngine({
-    userAgent: config.userAgent,
-    apiKeys: config.apiKeys,
-    depth: config.searchDepth,
-    ...(config.openCitationsToken ? { openCitationsToken: config.openCitationsToken } : {})
-  });
-}
 
 async function serveHttp(config: McpConfig, http: NonNullable<McpConfig['http']>, logger: ReturnType<typeof stderrLogger>): Promise<void> {
   // D11: unkeyed, OpenAlex gives this process a tenth of a key's daily budget,
