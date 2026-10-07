@@ -19,7 +19,7 @@ export const searchPapers = defineTool({
     'Returns the first page, a handle for get_search_page, and coverage: which sources answered, failed or were skipped. ' +
     'Set count_only=true to tune a query: each source\'s own match count, with no results read. Use get_paper for a full record.',
   input: z.object({
-    query: z.string().max(2000).optional().describe('Query in the Web of Science grammar, e.g. TS=(crispr OR cas9) AND PY=2020-2024. Untagged words search title, abstract and keywords.'),
+    query: z.string().max(2000).optional().describe('Query in the Web of Science grammar, e.g. TS=(crispr OR cas9) AND PY=2020-2024. Untagged words search title, abstract and keywords. Operators in capitals only.'),
     doi: z.string().max(300).optional().describe('Look up one DOI instead of searching. Bare (10.1234/x) or as a https://doi.org/ URL.'),
     year_from: z.number().int().min(1600).max(2100).optional(),
     year_to: z.number().int().min(1600).max(2100).optional(),

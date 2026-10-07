@@ -31,6 +31,8 @@ Query grammar (search_papers.query), Web of Science style:
   TS= topic (default)  TI= title  AB= abstract  AU= author  SO= venue
   PU= publisher  PY= year (2020, 2020-2024, 2020-, -2024)  DO= DOI  ALL= every field
   AND OR NOT, brackets, "exact phrase", * (rest of word), ? (one character).
+  Operators in capitals only: lower-case and, or, not are left out of the
+  search, and near, same are searched as words; quote a phrase to keep them.
   Precedence: OR < AND < NOT < brackets. NEAR and SAME are rejected.
   Example: TS=(crispr OR cas9) AND PY=2020-2024 NOT AU=Doudna
 

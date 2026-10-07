@@ -1,5 +1,5 @@
 import * as z from 'zod';
-import type { SearchResponse } from '@sci-open/shared';
+import { operatorLookalikes, type SearchResponse } from '@sci-open/shared';
 import { encodeSearchHandle, type SearchSpec } from '../handles';
 import { shapePaper, paperSchema, listedTitle, placeIn, retractionWarning, type ShapedPaper } from '../shape/paper';
 import { fitWholeItems } from '../shape/budget';
@@ -8,9 +8,13 @@ import { fenceUntrusted } from '../safety/untrusted';
 import { sanitizeText } from '../safety/sanitize';
 import type { ToolOutcome } from '../framework/define-tool';
 
+/** The query's operator look-alikes: `left_out` of the search (`and`, `or`,
+ * `not` not in capitals) and `searched` as words (`near`, `same`). */
+export const readAsWordsSchema = z.object({ left_out: z.array(z.string()), searched: z.array(z.string()) });
+
 export const pageSchema = z.object({
   handle: z.string(),
-  query: z.object({ q: z.string().optional(), doi: z.string().optional(), sort: z.string().optional() }),
+  query: z.object({ q: z.string().optional(), doi: z.string().optional(), sort: z.string().optional(), read_as_words: readAsWordsSchema.optional() }),
   total: z.number().int(),
   total_is_lower_bound: z.boolean(),
   page: z.number().int(),
@@ -45,6 +49,30 @@ export function filtersLine(spec: SearchSpec): string {
     spec.sort !== 'relevance' ? `sorted ${ORDERS[spec.sort] ?? spec.sort}` : ''
   ].filter(Boolean);
   return `**Filters:** ${parts.join(' · ')}`;
+}
+
+/** `read_as_words` for a query, or nothing when it has no look-alikes. */
+export function readAsWords(q: string | undefined): z.infer<typeof readAsWordsSchema> | undefined {
+  const { ignored, searched } = q ? operatorLookalikes(q) : { ignored: [], searched: [] };
+  return ignored.length || searched.length ? { left_out: ignored, searched } : undefined;
+}
+
+/**
+ * How the query's operator look-alikes were read, in one line, or '' when it
+ * has none. A model writing English has `not` and `or` left out rather than
+ * obeyed, and is told so; so is one that meant them as operators.
+ */
+export function wordsLine(q: string | undefined): string {
+  const read = readAsWords(q);
+  if (!read) return '';
+  const named = (words: string[]) => words.map(w => `\`${w}\``).join(', ');
+  const parts = [
+    read.left_out.length ? `${named(read.left_out)} left out of the search` : '',
+    read.searched.length ? `${named(read.searched)} searched as ${read.searched.length === 1 ? 'a word' : 'words'}` : ''
+  ].filter(Boolean);
+  // Quoting is the way to search a word left out, inside its phrase.
+  const advice = read.left_out.length ? '; to search one of these words, quote the phrase it is in' : '';
+  return `**Read as words:** ${parts.join('; ')}. Operators are AND, OR and NOT in capitals${advice}.`;
 }
 
 /** The facets as the output gives them: the top values of each. */
@@ -94,9 +122,10 @@ export function presentPage(
     ? Object.fromEntries(Object.entries(r.facets).map(([k, v]) => [k, v.slice(0, TOP_FACET_VALUES).map(b => ({ value: b.value, count: b.count }))]))
     : undefined;
 
+  const read = readAsWords(spec.q);
   const structured: PageOutput = {
     handle,
-    query: { ...(spec.q ? { q: spec.q } : {}), ...(spec.doi ? { doi: spec.doi } : {}), sort: spec.sort },
+    query: { ...(spec.q ? { q: spec.q } : {}), ...(spec.doi ? { doi: spec.doi } : {}), sort: spec.sort, ...(read ? { read_as_words: read } : {}) },
     total: r.total,
     total_is_lower_bound: lowerBound,
     page: r.page,
@@ -122,6 +151,7 @@ export function presentPage(
     retractionWarning(retracted.length === 1 ? [`Result ${retracted[0]}`] : retracted.length ? [`Results ${retracted.join(', ')}`] : []),
     `# ${r.total.toLocaleString('en')}${lowerBound ? '+' : ''} results${spec.q ? ` for \`${spec.q}\`` : spec.doi ? ` for DOI ${spec.doi}` : ''} — page ${r.page}`,
     filtersLine(spec),
+    wordsLine(spec.q),
     `**Coverage:** ${coverageSentence(coverage)}`,
     more
       ? `**Next:** get_search_page(handle="${handle}", page=${r.page + 1})`

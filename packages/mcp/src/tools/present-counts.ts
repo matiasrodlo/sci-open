@@ -1,13 +1,14 @@
 import * as z from 'zod';
 import type { ProviderReport } from '@sci-open/shared';
 import type { CountOutcome } from '@sci-open/core';
-import { pageSchema, filtersLine } from './present-page';
+import { pageSchema, filtersLine, readAsWords, readAsWordsSchema, wordsLine } from './present-page';
 import type { SearchSpec } from '../handles';
 import { coverageOf, coverageSchema, coverageSentence } from '../shape/coverage';
 import type { ToolOutcome } from '../framework/define-tool';
 
 export const countsSchema = z.object({
   query: z.string(),
+  read_as_words: readAsWordsSchema.optional(),
   per_source: z.array(z.object({
     source: z.string(), status: z.string(), count: z.number().int().optional(),
     /** Whether a search would read all of this source's matches, or only its top `reads_per_source`. */
@@ -35,8 +36,10 @@ export function presentCounts(outcome: CountOutcome, spec: SearchSpec, depth: nu
     .sort((a, b) => b.totalHits - a.totalHits);
   const top = counted[0];
   const coverage = coverageOf({ complete: outcome.complete, bounded: false, providers: outcome.reports });
+  const read = readAsWords(q);
   const counts = {
     query: q,
+    ...(read ? { read_as_words: read } : {}),
     per_source: outcome.reports.map(r => ({
       source: r.provider,
       status: r.status,
@@ -52,6 +55,7 @@ export function presentCounts(outcome: CountOutcome, spec: SearchSpec, depth: nu
   const text = [
     `# Match counts for \`${q}\` — no results read`,
     filtersLine(spec),
+    ...(read ? [wordsLine(q)] : []),
     `**Coverage:** ${coverageSentence(coverage)}`,
     '',
     ...(counted.length

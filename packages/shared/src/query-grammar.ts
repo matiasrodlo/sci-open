@@ -14,8 +14,8 @@ import type { Query, QueryField, QueryJoin, QueryNode, QueryValue, YearRange } f
  *
  * - Field tags, case-insensitive, with `=` or `:` — `TS=`, `TI=`, `AB=`, `AU=`,
  *   `SO=`, `PU=`, `PY=`, `DO=`, `ALL=`.
- * - `AND`, `OR`, `NOT`, parenthesised groups, and a tagged group whose members
- *   inherit the tag: `AU=(Doudna OR Charpentier)`.
+ * - `AND`, `OR`, `NOT` in capitals, parenthesised groups, and a tagged group
+ *   whose members inherit the tag: `AU=(Doudna OR Charpentier)`.
  * - Quoted phrases, and the wildcards `*` and `?` inside a bare term.
  * - Year ranges on `PY`: `2020`, `2020-2024`, `2020-`, `-2024`.
  * - Adjacent clauses with no operator between them, which mean `AND` — so
@@ -30,9 +30,21 @@ import type { Query, QueryField, QueryJoin, QueryNode, QueryValue, YearRange } f
  * turn `gene NEAR/3 editing` into a search for the word "near" — which is the
  * class of quiet wrongness this grammar exists to end.
  *
+ * **Operators are capitals only**, where Web of Science takes any case. Read
+ * in any case, the English in a query a model writes was read as logic:
+ * `do not resuscitate orders` went to Europe PMC and PubMed as
+ * `do AND NOT resuscitate AND orders`, the opposite of what was asked, and
+ * `near infrared spectroscopy` was refused as a proximity search. So `and`,
+ * `or` and `not` in any other case are words, too common to search for, and
+ * are left out; `near` and `same` are searched as words. Every source here
+ * reads only capitals as operators too (OpenAIRE measured: `cancer or
+ * zebrafish` is neither the union nor the overlap). `operatorLookalikes`
+ * names those words, for a caller to say how they were read. `NEAR/3` stays
+ * refused in any case: the distance says what was meant.
+ *
  * **Precedence**, loosest to tightest: `OR`, then `AND`, then `NOT`, then
  * parentheses. Web of Science's own order, so a query copied from it means here
- * what it meant there.
+ * what it meant there, its operators written in capitals.
  */
 
 /** Tags, as Web of Science writes them. */
@@ -54,6 +66,9 @@ const FIELD_TAGS: Record<string, QueryField> = {
  * come back as a query asking for the word "near".
  */
 const UNSUPPORTED_OPERATORS = new Set(['NEAR', 'SAME']);
+
+/** `and`, `or` and `not` in anything but capitals: left out of the search (see the header). */
+const SPOKEN_OPERATORS = new Set(['and', 'or', 'not']);
 
 /**
  * The default field for a word with no tag.
@@ -192,11 +207,22 @@ function group(kind: 'and' | 'or', nodes: QueryNode[]): QueryNode {
   return nodes.length === 1 ? nodes[0]! : { kind, nodes };
 }
 
+/** Capitals only: `or` is a word (see the header). */
 function operatorOf(token: Token): 'AND' | 'OR' | 'NOT' | undefined {
   if (token.kind !== 'word') return undefined;
-  const upper = token.text.toUpperCase();
-  if (upper === 'AND' || upper === 'OR' || upper === 'NOT') return upper;
-  return undefined;
+  const { text } = token;
+  return text === 'AND' || text === 'OR' || text === 'NOT' ? text : undefined;
+}
+
+/** `not`, `Or`, `aNd`: an operator's word not written as the operator. */
+function isSpokenOperator(token: Token): boolean {
+  return token.kind === 'word' && SPOKEN_OPERATORS.has(token.text.toLowerCase()) && operatorOf(token) === undefined;
+}
+
+/** `NEAR`, `SAME`, and either with a distance in any case: `near/3`. */
+function isProximity(text: string): boolean {
+  const [head, distance] = text.split('/');
+  return UNSUPPORTED_OPERATORS.has(head!) || (distance !== undefined && UNSUPPORTED_OPERATORS.has(head!.toUpperCase()));
 }
 
 /**
@@ -338,7 +364,7 @@ class Parser {
 
     if (token.kind === 'phrase') return leaf(field, token);
 
-    if (UNSUPPORTED_OPERATORS.has(token.text.toUpperCase().split('/')[0]!)) {
+    if (isProximity(token.text)) {
       throw new QueryParseError(
         `${token.text.toUpperCase()} is not supported: no source here can express proximity`,
         token.at
@@ -372,9 +398,34 @@ export type ParseExpressionOptions = {
 /** Parses the grammar, or throws `QueryParseError`. */
 export function parseExpression(input: string, options: ParseExpressionOptions = {}): QueryNode {
   const { field = DEFAULT_FIELD, join = 'AND' } = options;
-  const tokens = tokenize(input);
-  if (tokens.length === 0) throw new QueryParseError('Empty query', 0);
+  const written = tokenize(input);
+  if (written.length === 0) throw new QueryParseError('Empty query', 0);
+  const tokens = written.filter(token => !isSpokenOperator(token));
+  if (tokens.length === 0) {
+    throw new QueryParseError('Nothing to search: lower-case and, or and not are words, not operators, and are not searched. Write AND, OR or NOT in capitals', 0);
+  }
   return new Parser(tokens, input.length, join).parse(field);
+}
+
+/**
+ * The words of `input` that look like operators and are not read as ones, as
+ * written and once each: `ignored`, the `and`, `or` and `not` left out of the
+ * search, and `searched`, the `near` and `same` searched as words. Empty for
+ * text that does not tokenize, which `parseExpression` refuses anyway.
+ */
+export function operatorLookalikes(input: string): { ignored: string[]; searched: string[] } {
+  let tokens: Token[];
+  try {
+    tokens = tokenize(input);
+  } catch {
+    return { ignored: [], searched: [] };
+  }
+  const once = (words: string[]) => words.filter((w, i) => words.findIndex(o => o.toLowerCase() === w.toLowerCase()) === i);
+  const words = tokens.flatMap(t => (t.kind === 'word' ? [t.text] : []));
+  return {
+    ignored: once(tokens.filter(isSpokenOperator).map(t => (t as { text: string }).text)),
+    searched: once(words.filter(w => UNSUPPORTED_OPERATORS.has(w.toUpperCase()) && !isProximity(w)))
+  };
 }
 
 /**

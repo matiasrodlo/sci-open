@@ -102,6 +102,12 @@ request its description. Over HTTP, `?toolsets=all` does the same.
   source for one record and returns the count that comes with it: one request
   per source, nothing read, merged or checked. Tune a query with it, then
   search once.
+- **Operators in capitals.** `AND`, `OR` and `NOT` are operators only in
+  capitals. Written any other way, `and`, `or` and `not` are left out as
+  common words, so `do not resuscitate orders` searches for those orders
+  rather than excluding resuscitation, and `near` and `same` are searched as
+  words. A result names every such word it read that way, so a query that
+  meant an operator in lower case finds out.
 - **Sorting.** A sort other than relevance is sent to the sources that can
   apply it, so "newest first" reads each source's newest matches; a source
   that cannot sort contributes its most relevant, and the coverage says so.

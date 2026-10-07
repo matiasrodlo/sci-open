@@ -45,6 +45,15 @@ in `test/__toolsnaps__/` are the record of every schema change.
 
 ### Changed
 
+- Query operators are capitals only. `and`, `or` and `not` written any other
+  way are left out of the search as common words, and `near` and `same` are
+  searched as words. In any case, the English in a query was read as logic:
+  `do not resuscitate orders` was sent to Europe PMC and PubMed as
+  `do AND NOT resuscitate AND orders`, the opposite of what was asked, and
+  `near infrared spectroscopy` was refused as a proximity search. A result
+  names every such word it read that way (`query.read_as_words`, and a
+  "Read as words" line), so a query that meant an operator in lower case
+  finds out. `NEAR/3` is still refused in any case.
 - Where writes are not allowed — over HTTP, or with `--no-writes` — read_paper
   and export_citations offer no `save_to` or `overwrite`, and are annotated
   read-only; a `save_to` sent anyway is answered `writes_disabled`. On a local

@@ -37,6 +37,13 @@ HTTP status the PDF route answered with; `SearchResponseV2` is
 `createPooledClient` function; `SearchSettings`, down to one field, is the
 engine's `depth` option; and `OASource` is `SourceId`.
 
+Query operators are capitals only since then
+(`packages/shared/src/query-grammar.ts`): `and`, `or` and `not` written any
+other way are left out of the search, `near` and `same` are searched as words,
+and a result names every such word (`read_as_words`), because the English in
+a model's query was read as logic — `do not resuscitate orders` excluded
+resuscitation.
+
 Steps that changed the removed apps are kept, condensed, as the record of how
 the current layout came to be; their full text is in git history at
 `14e6aba9` and on `feat/mcp-server`. Every other step describes the server
@@ -1369,7 +1376,7 @@ export function toToolError(error: unknown): ToolError {
     return new ToolError(
       'invalid_input',
       `The query could not be parsed at position ${error.position}: ${error.message}`,
-      'Quote words that look like operators ("or"), balance brackets, and use the tags in the server instructions. NEAR and SAME are not supported.'
+      'Write operators in capitals (AND, OR, NOT), balance brackets and quotes, and use the tags in the server instructions. NEAR and SAME are not supported.'
     );
   }
   if (error instanceof PdfFetchError) {
@@ -2249,6 +2256,8 @@ Query grammar (search_papers.query), Web of Science style:
   TS= topic (default)  TI= title  AB= abstract  AU= author  SO= venue
   PU= publisher  PY= year (2020, 2020-2024, 2020-, -2024)  DO= DOI  ALL= every field
   AND OR NOT, brackets, "exact phrase", * (rest of word), ? (one character).
+  Operators in capitals only: lower-case and, or, not are left out of the
+  search, and near, same are searched as words; quote a phrase to keep them.
   Precedence: OR < AND < NOT < brackets. NEAR and SAME are rejected.
   Example: TS=(crispr OR cas9) AND PY=2020-2024 NOT AU=Doudna
 
@@ -3258,8 +3267,9 @@ async function verifyOne(ref: ParsedReference, deps: ToolDeps, openalex: Readonl
   return found ? done('title', found.p, found.j) : unmatched('not_found', 'title', ['no_similar_title_in_any_source']);
 }
 
-/** Words the grammar reads as operators in any case; as bare terms they are a syntax error. */
-const OPERATOR_WORDS = new Set(['and', 'or', 'not', 'near', 'same']);
+/** Words the grammar leaves out of a search in lower case: dropped here first,
+ * so the twelve words sent are twelve that are searched. */
+const OPERATOR_WORDS = new Set(['and', 'or', 'not']);
 
 /** The exact title first; its content words only when the exact title finds nothing. */
 async function findByTitle(ref: ParsedReference, deps: ToolDeps): Promise<{ p: Paper; j: Judgement } | undefined> {

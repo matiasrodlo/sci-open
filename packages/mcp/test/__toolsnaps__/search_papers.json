@@ -6,7 +6,7 @@
     "type": "object",
     "properties": {
       "query": {
-        "description": "Query in the Web of Science grammar, e.g. TS=(crispr OR cas9) AND PY=2020-2024. Untagged words search title, abstract and keywords.",
+        "description": "Query in the Web of Science grammar, e.g. TS=(crispr OR cas9) AND PY=2020-2024. Untagged words search title, abstract and keywords. Operators in capitals only.",
         "type": "string",
         "maxLength": 2000
       },
@@ -119,6 +119,28 @@
           },
           "sort": {
             "type": "string"
+          },
+          "read_as_words": {
+            "type": "object",
+            "properties": {
+              "left_out": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "searched": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "left_out",
+              "searched"
+            ],
+            "additionalProperties": false
           }
         },
         "additionalProperties": false
@@ -539,6 +561,28 @@
         "properties": {
           "query": {
             "type": "string"
+          },
+          "read_as_words": {
+            "type": "object",
+            "properties": {
+              "left_out": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "searched": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "left_out",
+              "searched"
+            ],
+            "additionalProperties": false
           },
           "per_source": {
             "type": "array",

@@ -212,8 +212,9 @@ async function verifyOne(ref: ParsedReference, deps: ToolDeps, openalex: Readonl
 
 const normalizedDoi = (doi: string | undefined) => doi?.trim().toLowerCase();
 
-/** Words the grammar reads as operators in any case; as bare terms they are a syntax error. */
-const OPERATOR_WORDS = new Set(['and', 'or', 'not', 'near', 'same']);
+/** Words the grammar leaves out of a search in lower case: dropped here first,
+ * so the twelve words sent are twelve that are searched. */
+const OPERATOR_WORDS = new Set(['and', 'or', 'not']);
 
 type Found = { p: Paper; j: Judgement };
 

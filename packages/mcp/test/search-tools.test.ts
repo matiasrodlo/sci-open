@@ -88,6 +88,26 @@ describe('search_papers and get_search_page', () => {
     expect(admitted()).toBe(0);
   });
 
+  it('says which words that look like operators were read as words, on every page and in counts', async () => {
+    const { deps } = fakeEngine(WORLD);
+    const read = { left_out: ['not', 'Or'], searched: ['near'] };
+    const line = '**Read as words:** `not`, `Or` left out of the search; `near` searched as a word.';
+
+    const first = await searchPapers.run(searchArgs({ query: 'crispr not near Or cas9' }), deps);
+    expect(first.structured.query?.read_as_words).toEqual(read);
+    expect(first.text).toContain(line);
+    const again = await getSearchPage.run(pageArgs({ handle: first.structured.handle!, page: 1 }), deps);
+    expect(again.text).toContain(line);
+
+    const counted = await searchPapers.run(searchArgs({ query: 'crispr not near Or cas9', count_only: true }), deps);
+    expect(counted.structured.counts?.read_as_words).toEqual(read);
+    expect(counted.text).toContain(line);
+
+    const plain = await searchPapers.run(searchArgs({ query: 'crispr OR cas9', count_only: true }), deps);
+    expect(plain.structured.counts).not.toHaveProperty('read_as_words');
+    expect(plain.text).not.toContain('Read as words');
+  });
+
   it('leaves the tail of a page off to fit the budget, and says so', async () => {
     const { deps } = fakeEngine(WORLD);
     const tight = { ...deps, config: { ...deps.config, structuredBudgetChars: 2_000 } };

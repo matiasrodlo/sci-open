@@ -42,7 +42,7 @@ export function toToolError(error: unknown): ToolError {
     return new ToolError(
       'invalid_input',
       `The query could not be parsed at position ${error.position}: ${error.message}`,
-      'Quote words that look like operators ("or"), balance brackets, and use the tags in the server instructions. NEAR and SAME are not supported.'
+      'Write operators in capitals (AND, OR, NOT), balance brackets and quotes, and use the tags in the server instructions. NEAR and SAME are not supported.'
     );
   }
   // A paced host with no slot soon enough: a copy that cannot be fetched yet,

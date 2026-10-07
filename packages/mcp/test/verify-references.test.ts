@@ -124,11 +124,11 @@ describe('verify_references', () => {
     expect(results[0]).toMatchObject({ verdict: 'ambiguous', issues: ['year_mismatch: cited 1956, record 1953'] });
   });
 
-  it('searches a title holding "not" and "same" without them, which the grammar reads as operators', async () => {
+  it('searches a title holding "not" without it, which the grammar leaves out, and "same" as the word it is', async () => {
     // Every query also goes through the real grammar in the fake engine.
     const { results, fake } = await verify(['Rossi M. Same day discharge is not inferior to overnight stay. JAMA. 2020.']);
     expect(results[0]!.verdict).toBe('verified');
-    expect(fake.searches).toEqual(['TI=(day discharge is inferior overnight stay) AND PY=2019-2021']);
+    expect(fake.searches).toEqual(['TI=(same day discharge is inferior overnight stay) AND PY=2019-2021']);
   });
 
   it('ignores the punctuation sources disagree on', async () => {

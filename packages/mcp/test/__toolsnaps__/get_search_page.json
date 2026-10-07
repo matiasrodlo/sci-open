@@ -48,6 +48,28 @@
           },
           "sort": {
             "type": "string"
+          },
+          "read_as_words": {
+            "type": "object",
+            "properties": {
+              "left_out": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "searched": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "left_out",
+              "searched"
+            ],
+            "additionalProperties": false
           }
         },
         "additionalProperties": false

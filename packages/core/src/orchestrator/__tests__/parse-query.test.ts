@@ -1,14 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { QueryParseError, formatExpression } from '@sci-open/shared';
+import { QueryParseError, formatExpression, operatorLookalikes } from '@sci-open/shared';
 import { parseQuery } from '../parse-query';
 
 /**
  * Three of these changed meaning when the grammar arrived, and the changes are
  * the feature rather than fallout:
  *
- * - `AND`, `OR` and `NOT` are operators now. `"a" and "b"` used to yield a term
- *   `and` beside the two phrases, which was the flat parser having nowhere to
- *   put an operator, not a decision.
+ * - `AND`, `OR` and `NOT` are operators now, in capitals. `"a" and "b"` used to
+ *   yield a term `and` beside the two phrases, which was the flat parser having
+ *   nowhere to put an operator, not a decision; a lower-case `and` is now left
+ *   out, so the two phrases are joined as adjacent clauses are.
  * - An unclosed quote is an error. The flat parser left it alone, which is right
  *   for a bag of words and wrong once operators exist, because swallowing the
  *   rest of the line changes what they apply to.
@@ -42,7 +43,7 @@ describe('parseQuery', () => {
     expect(formatExpression(parseQuery('crispr').expression!)).toBe('TS=crispr');
   });
 
-  it('treats and/or/not between phrases as the operators they are', () => {
+  it('leaves a lower-case and out, so the phrases either side are both required', () => {
     // The old parser produced a term `and` here, having nowhere to put one.
     const q = parseQuery('"gene editing" and "base editing"');
     expect(q.phrases).toEqual(['gene editing', 'base editing']);
@@ -135,6 +136,44 @@ describe('parseQuery: the Web of Science grammar', () => {
   it('refuses the proximity operators rather than searching for the word', () => {
     expect(() => parseQuery('gene NEAR/3 editing')).toThrow(/NEAR/);
     expect(() => parseQuery('gene SAME editing')).toThrow(/SAME/);
+    // A distance says what was meant, in any case.
+    expect(() => parseQuery('gene near/3 editing')).toThrow(/NEAR/);
+  });
+
+  /**
+   * Operators in capitals only. In any case, the English a model writes was
+   * read as logic: `do not resuscitate orders` excluded resuscitation.
+   */
+  describe('words that look like operators', () => {
+    it('leaves lower-case and, or and not out, rather than reading them as operators', () => {
+      expect(expression('do not resuscitate orders')).toBe('TS=do AND TS=resuscitate AND TS=orders');
+      expect(expression('surgery with or without chemotherapy')).toBe('TS=surgery AND TS=with AND TS=without AND TS=chemotherapy');
+      expect(expression('To Be Or Not')).toBe('TS=To AND TS=Be');
+      expect(flat(parseQuery('salt and pepper')).terms).toEqual(['salt', 'pepper']);
+    });
+
+    it('still reads them as operators in capitals', () => {
+      expect(expression('crispr OR cas9 NOT plants')).toBe('TS=crispr OR (TS=cas9 AND NOT TS=plants)');
+    });
+
+    it('searches lower-case near and same as words', () => {
+      expect(expression('near infrared spectroscopy')).toBe('TS=near AND TS=infrared AND TS=spectroscopy');
+      expect(expression('same sex couples')).toBe('TS=same AND TS=sex AND TS=couples');
+    });
+
+    it('keeps them inside a quoted phrase', () => {
+      expect(expression('"do not resuscitate" orders')).toBe('TS="do not resuscitate" AND TS=orders');
+    });
+
+    it('refuses a query of nothing else, saying how to write an operator', () => {
+      expect(() => parseQuery('and or not')).toThrow(/capitals/);
+    });
+
+    it('names them, as written and once each', () => {
+      expect(operatorLookalikes('do not resuscitate, Not now or near infrared "or" OR NEAR')).toEqual({ ignored: ['not', 'or'], searched: ['near'] });
+      expect(operatorLookalikes('crispr AND cas9')).toEqual({ ignored: [], searched: [] });
+      expect(operatorLookalikes('gene near/3 editing')).toEqual({ ignored: [], searched: [] });
+    });
   });
 
   it('refuses an unbalanced parenthesis', () => {
