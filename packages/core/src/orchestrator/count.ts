@@ -84,5 +84,9 @@ export async function countSearch(params: SearchParams, options: CountOptions): 
     ...(options.signal ? { signal: options.signal } : {})
   });
   options.signal?.throwIfAborted();
-  return { reports: [...reports, ...silent], complete: isComplete(reports) };
+  // A count reads one record to learn the total, so every source with more
+  // than one match would be marked read in part. Nothing was read: the flag
+  // describes a search, and a count only previews one.
+  const counted = reports.map(({ truncated: _read, ...report }) => report);
+  return { reports: [...counted, ...silent], complete: isComplete(reports) };
 }

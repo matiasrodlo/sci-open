@@ -50,6 +50,8 @@ describe('countSearch', () => {
     expect(reports.find(r => r.provider === 'arxiv')).toMatchObject({ status: 'ok', totalHits: 1200 });
     expect(reports.find(r => r.provider === 'europepmc')).toMatchObject({ status: 'ok', totalHits: 54_000 });
     expect(complete).toBe(true);
+    // A count reads one record and nothing else, so no source is "read in part".
+    expect(reports.some(r => r.truncated)).toBe(false);
   });
 
   it('does not ask a source that reports no count, and says why', async () => {
