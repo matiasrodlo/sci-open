@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import path from 'path';
 import { parseReference } from '../src/references/parse';
-import { judge, surnameIn, titleOverlap, venueConsistent } from '../src/references/match';
+import { citedPlace, judge, surnameIn, titleOverlap, venueConsistent } from '../src/references/match';
 import { paper, ref } from '@sci-open/core/testing';
 
 type Case = {
@@ -168,5 +168,41 @@ describe('venueConsistent', () => {
   it('judges nothing when the citation names no venue, or the record names a host', () => {
     expect(venueConsistent(parseReference('Doe J, Roe R. A title. 2020.'), withVenue('Nature'))).toBeUndefined();
     expect(venueConsistent(cited('NeurIPS'), withVenue('arXiv (Cornell University)'))).toBeUndefined();
+  });
+});
+
+describe('citedPlace', () => {
+  it.each([
+    ['Vancouver', 'LeCun Y, Bengio Y, Hinton G. Deep learning. Nature. 2015;521(7553):436-444.', '521', '436'],
+    ['APA', 'LeCun, Y., Bengio, Y., & Hinton, G. (2015). Deep learning. Nature, 521(7553), 436–444.', '521', '436'],
+    ['Nature', 'LeCun, Y., Bengio, Y. & Hinton, G. Deep learning. Nature 521, 436–444 (2015).', '521', '436'],
+    ['Chicago', 'LeCun, Yann, Yoshua Bengio, and Geoffrey Hinton. 2015. "Deep Learning." Nature 521 (7553): 436–44.', '521', '436'],
+    ['IEEE', 'Y. LeCun, Y. Bengio, and G. Hinton, "Deep learning," Nature, vol. 521, no. 7553, pp. 436–444, 2015.', '521', '436'],
+    ['article number', 'Becke AD. A new mixing. J. Chem. Phys. vol. 132, no. 15, Art. no. 154104, 2014.', '132', '154104'],
+    ['lettered article number', 'Doe J. A trial. Sci Transl Med. 2021;13(588):eabc1234.', '13', 'eabc1234']
+  ])('reads the volume and first page of a %s citation', (_style, text, volume, firstPage) => {
+    expect(citedPlace(parseReference(text))).toEqual({ volume, firstPage });
+  });
+
+  it('reads nothing from a citation that gives neither', () => {
+    expect(citedPlace(parseReference('Vaswani A, Shazeer N. Attention is all you need. NeurIPS. 2017.'))).toEqual({});
+  });
+});
+
+describe('judge — volume and pages', () => {
+  const nature = paper({
+    title: 'Deep learning', authors: ['Yann LeCun', 'Yoshua Bengio', 'Geoffrey Hinton'], year: 2015, venue: 'Nature',
+    biblio: { volume: '521', issue: '7553', firstPage: '436', lastPage: '444' }
+  });
+
+  it('verifies a citation whose volume and pages are the record\'s', () => {
+    const j = judge(parseReference('LeCun Y, Bengio Y, Hinton G. Deep learning. Nature. 2015;521(7553):436-444.'), nature);
+    expect(j).toMatchObject({ verdict: 'verified', volume_consistent: true, pages_consistent: true });
+  });
+
+  it('calls a real paper cited with the wrong volume and pages likely, and says which', () => {
+    const j = judge(parseReference('LeCun Y, Bengio Y, Hinton G. Deep learning. Nature. 2015;550(7676):354-359.'), nature);
+    expect(j.verdict).toBe('likely');
+    expect(j.issues).toEqual(['volume_mismatch: cited 550, record 521', 'pages_mismatch: cited from 354, record from 436']);
   });
 });

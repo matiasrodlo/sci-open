@@ -1,7 +1,7 @@
 {
   "name": "verify_references",
   "title": "Verify references",
-  "description": "Check up to 25 references (free-text citations, DOIs, arXiv ids or PMIDs) and grade each: verified (title, year, an author and the journal where one is cited agree with the record), likely (the paper exists; a detail differs, named in issues), ambiguous, mismatch (the DOI is wrong: it belongs to a different paper, given as doi_target, or does not exist; matched is then the paper the rest of the citation names, when one is found), not_found, or not_checked (the search budget ran out or a lookup failed; send those again later). Use it to catch fabricated or garbled citations and to fill in missing DOIs. Closed papers count as existing.",
+  "description": "Check up to 25 references (free-text citations, DOIs, arXiv ids or PMIDs) and grade each: verified (title, year, an author and the journal, volume and first page where they are cited agree with the record), likely (the paper exists; a detail differs, named in issues), ambiguous, mismatch (the DOI is wrong: it belongs to a different paper, given as doi_target, or does not exist; matched is then the paper the rest of the citation names, when one is found), not_found, or not_checked (the search budget ran out or a lookup failed; send those again later). Use it to catch fabricated or garbled citations and to fill in missing DOIs. Closed papers count as existing.",
   "inputSchema": {
     "type": "object",
     "properties": {
@@ -439,6 +439,12 @@
                   "type": "boolean"
                 },
                 "venue_consistent": {
+                  "type": "boolean"
+                },
+                "volume_consistent": {
+                  "type": "boolean"
+                },
+                "pages_consistent": {
                   "type": "boolean"
                 },
                 "corroborated_by": {

@@ -25,6 +25,8 @@ const resultSchema = z.object({
     year_consistent: z.boolean().optional(),
     author_consistent: z.boolean().optional(),
     venue_consistent: z.boolean().optional(),
+    volume_consistent: z.boolean().optional(),
+    pages_consistent: z.boolean().optional(),
     corroborated_by: z.array(z.string())
   }),
   issues: z.array(z.string())
@@ -37,7 +39,7 @@ export const verifyReferences = defineTool({
   toolset: 'core',
   description:
     'Check up to 25 references (free-text citations, DOIs, arXiv ids or PMIDs) and grade each: verified (title, year, an author ' +
-    'and the journal where one is cited agree with the record), likely (the paper exists; a detail differs, named in issues), ambiguous, ' +
+    'and the journal, volume and first page where they are cited agree with the record), likely (the paper exists; a detail differs, named in issues), ambiguous, ' +
     'mismatch (the DOI is wrong: it belongs to a different paper, given as doi_target, or does not exist; matched is then the paper ' +
     'the rest of the citation names, when one is found), not_found, ' +
     'or not_checked (the search budget ran out or a lookup failed; send those again later). ' +
@@ -151,6 +153,8 @@ async function verifyOne(ref: ParsedReference, deps: ToolDeps, openalex: Readonl
       ...(j.year_consistent !== undefined ? { year_consistent: j.year_consistent } : {}),
       ...(j.author_consistent !== undefined ? { author_consistent: j.author_consistent } : {}),
       ...(j.venue_consistent !== undefined ? { venue_consistent: j.venue_consistent } : {}),
+      ...(j.volume_consistent !== undefined ? { volume_consistent: j.volume_consistent } : {}),
+      ...(j.pages_consistent !== undefined ? { pages_consistent: j.pages_consistent } : {}),
       corroborated_by: j.corroborated_by
     },
     // The paper exists, so the verdict stands; it is just not evidence.

@@ -121,6 +121,42 @@ export function venueConsistent(ref: ParsedReference, paper: Paper): boolean | u
   return found / words.length >= 0.6;
 }
 
+/** A page or a volume as two sources would both write it: `e1000097` is page 1000097, `0436` is 436. */
+const number = (text: string): string => text.replace(/^[^\d]+/, '').replace(/^0+(?=\d)/, '').toLowerCase();
+
+/**
+ * The volume and first page a citation gives, in the styles that give them:
+ * `vol. 98, … pp. 5648` (IEEE), `2015;521(7553):436-444` (Vancouver),
+ * `521(7553), 436–444` (APA), `521 (7553): 436–44` (Chicago),
+ * `521, 436–444 (2015)` (Nature). An article number counts as the first page.
+ * A number that is the citation's own year is never taken for a volume.
+ */
+export function citedPlace(ref: ParsedReference): { volume?: string; firstPage?: string } {
+  const text = ref.remainder;
+  if (!text) return {};
+  const page = String.raw`([A-Za-z]{0,4}\d+)`;
+  const patterns: RegExp[] = [
+    new RegExp(String.raw`;\s*(\d+)\s*(?:\([^)]*\))?\s*:\s*${page}`),
+    new RegExp(String.raw`(?:^|[\s,])(\d+)\s*\([^)]*\)\s*[,:]\s*${page}`),
+    new RegExp(String.raw`(?:^|[\s,])(\d+)\s*,\s*${page}(?:\s*[–-]\s*[A-Za-z]?\d+)?\s*\((?:1[89]|20)\d{2}\)`)
+  ];
+  const ieeeVolume = text.match(/\bvol\.?\s*(\d+)/i)?.[1];
+  const ieeePage = text.match(/\b(?:pp?\.|art\.?\s*no\.?)\s*([A-Za-z]{0,4}\d+)/i)?.[1];
+  let volume = ieeeVolume;
+  let firstPage = ieeePage;
+  if (!volume || !firstPage) {
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match && match[1] !== String(ref.year)) {
+        volume ??= match[1];
+        firstPage ??= match[2];
+        break;
+      }
+    }
+  }
+  return { ...(volume ? { volume } : {}), ...(firstPage ? { firstPage } : {}) };
+}
+
 export type Verdict = 'verified' | 'likely' | 'ambiguous' | 'mismatch' | 'not_found';
 
 export type Judgement = {
@@ -130,6 +166,9 @@ export type Judgement = {
   year_consistent?: boolean;
   author_consistent?: boolean;
   venue_consistent?: boolean;
+  /** The cited volume and first page against the record's, where both give them. */
+  volume_consistent?: boolean;
+  pages_consistent?: boolean;
   corroborated_by: string[];
   issues: string[];
 };
@@ -142,9 +181,9 @@ export type Judgement = {
  * on the eval set, not settled numbers.
  *
  * `verified` means the citation agrees with the record on everything checked:
- * title, year, an author, and the venue where the citation names one. A wrong
- * venue makes it `likely` — the paper exists, a detail of the citation does
- * not — and says which.
+ * title, year, an author, and the venue, volume and first page where the
+ * citation gives them. A wrong one makes it `likely` — the paper exists, a
+ * detail of the citation does not — and says which.
  */
 export function judge(ref: ParsedReference, paper: Paper): Judgement {
   const corroborated_by = [...new Set(paper.sources.map(s => s.provider))];
@@ -154,10 +193,15 @@ export function judge(ref: ParsedReference, paper: Paper): Judgement {
   // A record with no authors cannot contradict a cited one.
   const authorOk = ref.surnames.length === 0 || paper.authors.length === 0 ? undefined : ref.surnames.some(s => surnameIn(s, paper.authors));
   const venueOk = venueConsistent(ref, paper);
+  const place = citedPlace(ref);
+  const volumeOk = place.volume && paper.biblio?.volume ? number(place.volume) === number(paper.biblio.volume) : undefined;
+  const pagesOk = place.firstPage && paper.biblio?.firstPage ? number(place.firstPage) === number(paper.biblio.firstPage) : undefined;
 
   if (yearOk === false) issues.push(`year_mismatch: cited ${ref.year}, record ${paper.year}`);
   if (authorOk === false) issues.push('author_mismatch: no cited surname appears in the record');
   if (venueOk === false) issues.push(`venue_mismatch: the citation does not name the record's venue, ${paper.venue}`);
+  if (volumeOk === false) issues.push(`volume_mismatch: cited ${place.volume}, record ${paper.biblio!.volume}`);
+  if (pagesOk === false) issues.push(`pages_mismatch: cited from ${place.firstPage}, record from ${paper.biblio!.firstPage}`);
 
   const precision = overlap?.precision ?? 0;
   const recall = overlap?.recall ?? 0;
@@ -167,7 +211,7 @@ export function judge(ref: ParsedReference, paper: Paper): Judgement {
   const score = precision + 0.5 * recall + (yearOk ? 0.3 : 0) + (authorOk ? 0.3 : 0) + 0.05 * Math.min(corroborated_by.length - 1, 3);
   const contradicted = yearOk === false || authorOk === false;
   // A detail the paper does not settle: it exists, and the citation is off.
-  const detailWrong = venueOk === false;
+  const detailWrong = venueOk === false || volumeOk === false || pagesOk === false;
   // Year and authors both wrong leaves a partial title nothing to stand on.
   // Measured live: a fabricated "Quantum annealing of protein folding
   // landscapes" (2021) shares three of five title words with a real 2012 paper
@@ -188,6 +232,8 @@ export function judge(ref: ParsedReference, paper: Paper): Judgement {
     ...(yearOk !== undefined ? { year_consistent: yearOk } : {}),
     ...(authorOk !== undefined ? { author_consistent: authorOk } : {}),
     ...(venueOk !== undefined ? { venue_consistent: venueOk } : {}),
+    ...(volumeOk !== undefined ? { volume_consistent: volumeOk } : {}),
+    ...(pagesOk !== undefined ? { pages_consistent: pagesOk } : {}),
     corroborated_by,
     issues
   };
