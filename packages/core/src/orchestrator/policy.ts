@@ -111,8 +111,11 @@ export type PolicyPartition = {
  * `passesPolicy` reads `fullText`, `oaStatus` and `stage`, and all three are
  * fields the authorities fill — so a paper failing that check has not been
  * judged on what is knowable about it, only on what the providers happened to
- * say. `matchesFilters` reads nothing an authority supplies first, so a paper
- * failing *that* is settled and is neither kept nor a candidate.
+ * say. `matchesFilters` reads what the providers said, and a paper failing
+ * *that* is settled and is neither kept nor a candidate — the stage included,
+ * though enrichment may fill an `unknown` one: the providers leave a notice
+ * `unknown` on purpose, and Crossref, which types an editorial or an erratum
+ * `journal-article`, would call it published.
  *
  * A candidate must carry a DOI, because that is the only key the authorities
  * are asked by. A paper with no DOI and no copy is excluded exactly as before;

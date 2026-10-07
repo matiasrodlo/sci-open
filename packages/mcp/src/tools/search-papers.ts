@@ -24,7 +24,7 @@ export const searchPapers = defineTool({
     year_from: z.number().int().min(1600).max(2100).optional(),
     year_to: z.number().int().min(1600).max(2100).optional(),
     sources: z.array(z.enum(SOURCES)).max(SOURCES.length).optional().describe('Ask only these sources; coverage then reports only them. Omit to ask every source able to answer the query.'),
-    publication_type: z.array(z.enum(PUBLICATION_TYPES)).optional(),
+    publication_type: z.array(z.enum(PUBLICATION_TYPES)).optional().describe('peer-reviewed: the published version of a journal article, review, book or chapter — no preprints, theses, reports, editorials, letters or errata. The sources record the kind and version of a work, not whether it was reviewed. preprint: preprints.'),
     open_access_only: z.boolean().default(true).describe('Keep only papers with a legal open copy. Set false to include closed papers (metadata only).'),
     sort: z.enum(SORTS).default('relevance').describe('relevance, date (newest first), date_asc, citations (most cited first) or citations_asc. A source that can sort reads in that order; one that cannot reads by relevance, and coverage says which did which.'),
     page_size: z.number().int().min(1).max(25).default(10),

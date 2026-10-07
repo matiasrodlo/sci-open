@@ -193,7 +193,7 @@ const STAGES_AND_FACETS: Record<string, { holds: string[]; filter: boolean; face
   datacite: { holds: ['preprint', 'published', 'unknown'], filter: false, facets: [] },
   doaj: { holds: ['published'], filter: false, facets: ['year', 'stage'] },
   europepmc: { holds: ['preprint', 'published', 'unknown'], filter: true, facets: ['year', 'stage'] },
-  ncbi: { holds: ['published', 'unknown'], filter: true, facets: ['year', 'stage'] },
+  ncbi: { holds: ['preprint', 'published', 'unknown'], filter: true, facets: ['year', 'stage'] },
   openaire: { holds: ['published', 'unknown'], filter: true, facets: ['year', 'stage'] },
   openalex: { holds: ['preprint', 'published', 'unknown'], filter: true, facets: ['year', 'stage', 'venue', 'publisher', 'topics'] },
   plos: { holds: ['published'], filter: false, facets: ['year', 'stage', 'venue', 'publisher'] }

@@ -1,5 +1,6 @@
-import type { Paper, FullText, SourceRef } from '@sci-open/shared';
+import type { Paper, PaperStage, FullText, SourceRef } from '@sci-open/shared';
 import { fullTextAt } from '@sci-open/shared';
+import { isNotice } from '../publication-types';
 
 /**
  * Parsed PubMed XML -> Paper[]. Pure, and isolated per record.
@@ -190,8 +191,29 @@ function pickFullText(pmcId: string | undefined): FullText | undefined {
  * retracted article itself, not the notice ("Retraction of Publication").
  */
 function isRetracted(article: any): boolean {
+  return publicationTypes(article).some(type => type.toLowerCase() === 'retracted publication');
+}
+
+function publicationTypes(article: any): string[] {
   return asArray(one(article, 'PublicationTypeList')?.PublicationType)
-    .some((t: any) => textOf(t)?.toLowerCase() === 'retracted publication');
+    .map((t: any) => textOf(t))
+    .filter((t: string | undefined): t is string => typeof t === 'string' && t.trim().length > 0);
+}
+
+/**
+ * Which version this is, from the publication types: a preprint when PubMed
+ * says so (it has indexed NIH-funded preprints since 2020), not a version of
+ * an article at all when it is a notice (`NOTICE_TYPES`), and otherwise the
+ * published article — everything else PubMed indexes is a journal's.
+ *
+ * It was `published` only when PMC held a copy, so a closed MEDLINE article
+ * was `unknown`, and a search for peer-reviewed papers that included closed
+ * ones asked PubMed for its PMC subset alone.
+ */
+function pickStage(article: any): PaperStage {
+  const types = publicationTypes(article);
+  if (types.some(type => type.toLowerCase() === 'preprint')) return 'preprint';
+  return isNotice(types) ? 'unknown' : 'published';
 }
 
 function normalizeOne(raw: any, ref: SourceRef): Paper {
@@ -227,9 +249,7 @@ function normalizeOne(raw: any, ref: SourceRef): Paper {
     // The route is Unpaywall's to supply. What is known here is whether PMC
     // holds a copy, which `fullText` carries.
     oaStatus: 'unknown',
-    // A PMC copy is the published version. Without one, PubMed says nothing
-    // about which version this is, so the stage is unknown rather than guessed.
-    stage: pmcId ? 'published' : 'unknown',
+    stage: pickStage(article),
     ...(fullText ? { fullText } : {}),
     landingPage: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,
 

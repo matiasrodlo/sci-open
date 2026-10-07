@@ -31,9 +31,9 @@ export const capabilities: ProviderCapabilities = {
   // oldest first and no citation counts to sort by.
   sorts: ['date'],
 
-  // Published when PubMed Central holds it, which `pubmed pmc[sb]` asks for.
-  // Under the open-access filter every record is in PMC already.
-  stages: { holds: ['published', 'unknown'], filter: true },
+  // From the publication types: `preprint[pt]`, notices (`NOTICE_TYPES`)
+  // unknown, and every other record published. See `normalize`.
+  stages: { holds: ['preprint', 'published', 'unknown'], filter: true },
 
   // Counted with `rettype=count`, one request a year. ESearch has no facets.
   facets: ['year', 'stage']

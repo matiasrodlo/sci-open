@@ -44,6 +44,19 @@ describe('normalize — the access route, reported rather than assumed', () => {
     expect(find('W2').stage).toBe('preprint');
   });
 
+  it('calls a review published, and a thesis, a report or a notice no published article', () => {
+    // A review was `unknown` and left out of every peer-reviewed search; a
+    // dissertation and a report were in.
+    const typed = (type: string) => normalize({ results: [{
+      id: 'https://openalex.org/W9', title: 'A title', display_name: 'A title', type, publication_year: 2024,
+      authorships: [], open_access: { oa_status: 'gold' }
+    }] } as any, { retrievedAt: 'now' }).papers[0]!.stage;
+    expect(typed('review')).toBe('published');
+    for (const type of ['dissertation', 'report', 'letter', 'editorial', 'erratum', 'retraction', 'paratext']) {
+      expect(typed(type), type).toBe('unknown');
+    }
+  });
+
   it('leaves the route unknown for a status this model has no name for', () => {
     expect(find('W4').oaStatus).toBe('unknown');
     expect(find('W4').stage).toBe('unknown');

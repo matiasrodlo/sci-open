@@ -39,8 +39,10 @@ export function pickFullText(work: any): FullText | undefined {
 /**
  * Crossref's `type`, which is the closest it comes to reporting a version.
  *
- * `posted-content` is a preprint server deposit; everything else Crossref
- * registers is a published record of some kind.
+ * `posted-content` is a preprint server deposit, and the rest here are the
+ * published versions of articles, books and chapters. Crossref types an
+ * editorial or an erratum `journal-article` too, which is why a stage it
+ * supplies fills an `unknown` on a page but never settles a filter.
  */
 const STAGES: Record<string, PaperStage> = {
   'journal-article': 'published',
@@ -48,9 +50,8 @@ const STAGES: Record<string, PaperStage> = {
   'book-chapter': 'published',
   book: 'published',
   monograph: 'published',
-  'reference-entry': 'published',
-  dissertation: 'published',
-  report: 'published',
+  // Not `reference-entry`, `dissertation` or `report`: what `published` stands
+  // for is a reviewed article, review, book or chapter (see OpenAlex's STAGES).
   'posted-content': 'preprint'
 };
 

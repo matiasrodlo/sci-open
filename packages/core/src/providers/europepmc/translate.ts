@@ -1,5 +1,6 @@
 import type { PaperStage, Query, QueryField, YearRange } from '@sci-open/shared';
 import { cannotSend, flatTerms, joinFlat, renderExpression, type Dialect } from '../render-query';
+import { NOTICE_TYPES } from '../publication-types';
 
 /**
  * Query -> the Europe PMC query string. Pure, and the only place that knows
@@ -165,19 +166,23 @@ function flatClauses(query: Query): string[] {
 }
 
 /**
- * The stages asked for, as a clause on the record's source.
+ * The stages asked for, as a clause on the record's source and type.
  *
- * `normalize` calls a record a preprint exactly when its source is `PPR`, so
- * the clause is that test and its negation. Nothing when both are asked for,
- * or neither can be expressed — `unknown` is a record with no date, which no
- * clause selects — and the orchestrator's own filter settles the rest.
+ * `normalize` calls a record a preprint exactly when its source is `PPR`, and
+ * a notice (`NOTICE_TYPES`) no version at all, so the clauses are those tests.
+ * Nothing when `unknown` is asked for — it is also a record with no date,
+ * which no clause selects — and the orchestrator's own filter settles the rest.
+ * Measured on 2026-10-06, `crispr` 237,764; `NOT SRC:PPR` 223,965; less the
+ * notices too, 216,437.
  */
 function stageClause(stages: readonly PaperStage[] | undefined): string | undefined {
-  if (!stages?.length) return undefined;
+  if (!stages?.length || stages.includes('unknown')) return undefined;
   const preprints = stages.includes('preprint');
-  const published = stages.includes('published');
+  const published = stages.includes('published') || stages.includes('accepted');
   if (preprints && !published) return 'SRC:PPR';
-  if (published && !preprints) return 'NOT SRC:PPR';
+  const notices = `NOT (${NOTICE_TYPES.map(type => `PUB_TYPE:"${type}"`).join(' OR ')})`;
+  if (published && !preprints) return `NOT SRC:PPR AND ${notices}`;
+  if (published && preprints) return notices;
   return undefined;
 }
 

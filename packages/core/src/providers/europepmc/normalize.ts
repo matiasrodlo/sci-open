@@ -1,6 +1,7 @@
 import type { Paper, PaperStage, FullText, SourceRef } from '@sci-open/shared';
 import { fullTextAt, httpUrl, stripMarkup } from '@sci-open/shared';
 import type { EuropePmcPayload } from './fetch';
+import { isNotice } from '../publication-types';
 
 /**
  * Raw payload -> Paper[]. Pure, and isolated per record.
@@ -106,7 +107,14 @@ function pickAuthors(raw: any): string[] {
  */
 function pickStage(raw: any): PaperStage {
   if (raw?.source === 'PPR') return 'preprint';
+  // A notice is no version of an article: see `NOTICE_TYPES`.
+  if (isNotice(pubTypes(raw))) return 'unknown';
   return raw?.pubYear || raw?.firstPublicationDate ? 'published' : 'unknown';
+}
+
+function pubTypes(raw: any): string[] {
+  const types = raw?.pubTypeList?.pubType;
+  return (Array.isArray(types) ? types : [types]).filter((t: unknown): t is string => typeof t === 'string');
 }
 
 /**
@@ -115,10 +123,7 @@ function pickStage(raw: any): PaperStage {
  * record, "Retraction of Publication"). Verified 2026-10-02 on PMID 9500320.
  */
 function isRetracted(raw: any): boolean {
-  const types = raw?.pubTypeList?.pubType;
-  return (Array.isArray(types) ? types : [types]).some(
-    (t: unknown) => typeof t === 'string' && t.trim().toLowerCase() === 'retracted publication'
-  );
+  return pubTypes(raw).some(t => t.trim().toLowerCase() === 'retracted publication');
 }
 
 function normalizeOne(raw: any, ref: SourceRef): Paper {

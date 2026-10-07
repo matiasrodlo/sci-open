@@ -175,13 +175,13 @@ describe('toParams — the publication type', () => {
     // Read from `STAGES`, so a type added there is asked for here without a
     // second list to keep in step.
     expect(toParams(query({ terms: ['x'], stages: ['published', 'accepted'] })).filter)
-      .toBe('type:article|book|book-chapter|dissertation|report,title_and_abstract.search:x');
+      .toBe('type:article|book|book-chapter|review,title_and_abstract.search:x');
   });
 
   it('writes a set including unknown as the types to leave out', () => {
     // Unknown is every type `STAGES` does not name, which cannot be listed.
     expect(toParams(query({ terms: ['x'], stages: ['preprint', 'unknown'] })).filter)
-      .toBe('type:!article,type:!book,type:!book-chapter,type:!dissertation,type:!report,title_and_abstract.search:x');
+      .toBe('type:!article,type:!book,type:!book-chapter,type:!review,title_and_abstract.search:x');
   });
 
   it('asks nothing when no type carries the stages asked for', () => {

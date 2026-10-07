@@ -95,14 +95,24 @@ describe('translate — year bounds', () => {
 describe('translate — the publication type', () => {
   const base = '(ai[tiab] OR ai[mh])';
 
-  it('asks for PubMed Central when only published papers are wanted', () => {
-    expect(translate(query({ terms: ['ai'], stages: ['published', 'accepted'] }))).toBe(`${base} AND pubmed pmc[sb]`);
+  const notices = '"editorial"[pt] OR "letter"[pt] OR "comment"[pt] OR "news"[pt] OR "newspaper article"[pt] OR ' +
+    '"published erratum"[pt] OR "retraction notice"[pt] OR "expression of concern"[pt] OR "biography"[pt] OR ' +
+    '"portrait"[pt] OR "interview"[pt]';
+
+  it('leaves out preprints and notices when only published papers are wanted, closed ones included', () => {
+    // It asked for PMC (`pubmed pmc[sb]`), which left out every closed MEDLINE article.
+    expect(translate(query({ terms: ['ai'], stages: ['published', 'accepted'] })))
+      .toBe(`${base} NOT (preprint[pt] OR ${notices})`);
   });
 
-  it('adds nothing under the open-access filter, whose subset is inside PMC already', () => {
-    // Which keeps the query — and the cache key — the same as the unnarrowed one.
+  it('puts the NOT after the open-access filter, so it takes away from all of it', () => {
     expect(translate(query({ terms: ['ai'], stages: ['published'] }), { openAccessOnly: true }))
-      .toBe(translate(query({ terms: ['ai'] }), { openAccessOnly: true }));
+      .toMatch(/^\(ai\[tiab\] OR ai\[mh\]\) AND .+ NOT \(preprint\[pt\] OR /);
+  });
+
+  it('asks for preprints by their publication type', () => {
+    expect(translate(query({ terms: ['ai'], stages: ['preprint'] }))).toBe(`${base} AND preprint[pt]`);
+    expect(translate(query({ terms: ['ai'], stages: ['preprint', 'published'] }))).toBe(`${base} NOT (${notices})`);
   });
 
   it('adds nothing when unknown papers are wanted too', () => {

@@ -26,6 +26,13 @@ describe('crossref normalize', () => {
     expect(facts.stage).toBe('published');
   });
 
+  it('supplies no stage for a thesis, a report or a reference entry, which are not reviewed articles', () => {
+    for (const type of ['dissertation', 'report', 'reference-entry']) {
+      expect(normalize({ message: { ...(open as any).message, type } } as any)!.stage, type).toBeUndefined();
+    }
+    expect(normalize({ message: { ...(open as any).message, type: 'posted-content' } } as any)!.stage).toBe('preprint');
+  });
+
   it('prefers the print year over the online one', () => {
     // The closed work was online in April 2020 and in print that September.
     expect(normalize(closed as any)!.year).toBe(2020);

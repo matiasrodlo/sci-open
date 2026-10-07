@@ -46,6 +46,7 @@
         }
       },
       "publication_type": {
+        "description": "peer-reviewed: the published version of a journal article, review, book or chapter — no preprints, theses, reports, editorials, letters or errata. The sources record the kind and version of a work, not whether it was reviewed. preprint: preprints.",
         "type": "array",
         "items": {
           "type": "string",

@@ -87,20 +87,41 @@ describe('normalize — dates', () => {
 });
 
 describe('normalize — record shapes', () => {
-  it('links the PMC pdf and calls the record published', () => {
+  it('links the PMC pdf', () => {
     const [first] = run(recorded).papers;
     expect(first.fullText).toEqual({
       url: 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC13509134/pdf/',
       kind: 'pdf',
       verified: false
     });
-    expect(first.stage).toBe('published');
   });
 
-  it('leaves stage unknown and fullText absent with no PMC copy', () => {
+  it('reads the stage off the publication types: an erratum is no version of an article, a journal article is published', () => {
+    const [erratum, article] = run(recorded).papers;
+    expect(erratum.stage).toBe('unknown'); // "Published Erratum", in PMC all the same
+    expect(article.stage).toBe('published'); // "Journal Article"
+  });
+
+  it('calls a record published without a PMC copy, and gives it no full text', () => {
+    // It was `unknown` without one, so a search for peer-reviewed papers
+    // that included closed ones asked PubMed for its PMC subset alone.
     const record = run(edge).papers.find(p => p.id === 'ncbi:11111111')!;
-    expect(record.stage).toBe('unknown');
+    expect(record.stage).toBe('published');
     expect(record.fullText).toBeUndefined();
+  });
+
+  it('calls a PubMed preprint a preprint, and a notice unknown', async () => {
+    const typed = async (type: string) => {
+      const xml = `<PubmedArticleSet><PubmedArticle><MedlineCitation><PMID>9</PMID><Article><ArticleTitle>A title</ArticleTitle>` +
+        `<PublicationTypeList><PublicationType UI="x">${type}</PublicationType></PublicationTypeList></Article></MedlineCitation></PubmedArticle></PubmedArticleSet>`;
+      return run((await parseStringPromise(xml)).PubmedArticleSet.PubmedArticle).papers[0]!.stage;
+    };
+    expect(await typed('Preprint')).toBe('preprint');
+    for (const notice of ['Editorial', 'Letter', 'Published Erratum', 'Retraction Notice', 'Retraction of Publication']) {
+      expect(await typed(notice), notice).toBe('unknown');
+    }
+    expect(await typed('Review')).toBe('published');
+    expect(await typed('Retracted Publication')).toBe('published');
   });
 
   it('keeps a collective author as written', () => {

@@ -199,14 +199,21 @@ describe('translateIds', () => {
 describe('translate — the publication type', () => {
   const base = '(TITLE_ABS:ai OR MESH:ai OR KW:ai)';
 
-  it('selects the preprint source for preprints, and everything else for published', () => {
-    // `normalize` calls a record a preprint exactly when its source is PPR.
+  const notices = 'NOT (PUB_TYPE:"Editorial" OR PUB_TYPE:"Letter" OR PUB_TYPE:"Comment" OR PUB_TYPE:"News" OR ' +
+    'PUB_TYPE:"Newspaper Article" OR PUB_TYPE:"Published Erratum" OR PUB_TYPE:"Retraction Notice" OR ' +
+    'PUB_TYPE:"Retraction of Publication" OR PUB_TYPE:"Expression of Concern" OR PUB_TYPE:"Biography" OR ' +
+    'PUB_TYPE:"Portrait" OR PUB_TYPE:"Interview")';
+
+  it('selects the preprint source for preprints, and everything else but notices for published', () => {
+    // `normalize` calls a record a preprint exactly when its source is PPR,
+    // and a notice no version of an article.
     expect(translate(query({ terms: ['ai'], stages: ['preprint'] }))).toBe(`${base} AND SRC:PPR`);
-    expect(translate(query({ terms: ['ai'], stages: ['published', 'accepted'] }))).toBe(`${base} AND NOT SRC:PPR`);
+    expect(translate(query({ terms: ['ai'], stages: ['published', 'accepted'] }))).toBe(`${base} AND NOT SRC:PPR AND ${notices}`);
   });
 
-  it('adds nothing when both are asked for', () => {
-    expect(translate(query({ terms: ['ai'], stages: ['preprint', 'published'] }))).toBe(base);
+  it('leaves out only the notices when both are asked for, and nothing when unknown is', () => {
+    expect(translate(query({ terms: ['ai'], stages: ['preprint', 'published'] }))).toBe(`${base} AND ${notices}`);
+    expect(translate(query({ terms: ['ai'], stages: ['published', 'unknown'] }))).toBe(base);
   });
 
   it('keeps the open-access clause last', () => {

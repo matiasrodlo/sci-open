@@ -1,4 +1,5 @@
-import type { Query, QueryField } from '@sci-open/shared';
+import type { PaperStage, Query, QueryField } from '@sci-open/shared';
+import { NOTICE_TYPES } from '../publication-types';
 import { cannotSend, flatTerms, joinFlat, renderExpression, type Dialect } from '../render-query';
 
 /**
@@ -174,19 +175,32 @@ export function translate(query: Query, options: TranslateOptions = {}): string 
     clauses.push(`${from ?? EARLIEST}:${to ?? LATEST}[PDAT]`);
   }
 
-  // `normalize` calls a record published when it has a PMC id, which is what
-  // `pubmed pmc[sb]` selects. The open-access subset is inside PMC already, so
-  // under that filter the clause would change nothing and is left off — which
-  // keeps the query, and the cache key, identical to the unnarrowed one.
-  const stages = query.stages;
-  if (
-    stages?.length && !query.doi && !options.openAccessOnly &&
-    stages.includes('published') && !stages.includes('unknown')
-  ) {
-    clauses.push('pubmed pmc[sb]');
-  }
+  // `normalize` reads the stage off the publication types, so the stages are
+  // asked for as those: preprints are `preprint[pt]`, and the published
+  // papers are everything but preprints and notices. Measured on 2026-10-06,
+  // `crispr[tiab]` 65,488; less preprints and notices 61,566; preprints 1,772.
+  const excluded = query.doi ? [] : excludedTypes(query.stages);
+  if (!query.doi && onlyPreprints(query.stages)) clauses.push('preprint[pt]');
 
   if (options.openAccessOnly) clauses.push(OPEN_ACCESS);
 
-  return clauses.join(' AND ');
+  // `NOT` last: PubMed reads its operators left to right, so a trailing `NOT`
+  // takes away from everything the clauses before it select.
+  const joined = clauses.join(' AND ');
+  return excluded.length ? `${joined} NOT (${excluded.join(' OR ')})` : joined;
+}
+
+function onlyPreprints(stages: readonly PaperStage[] | undefined): boolean {
+  return !!stages?.length && stages.includes('preprint') && !stages.some(s => s === 'published' || s === 'accepted' || s === 'unknown');
+}
+
+/** The publication types a search for these stages leaves out. */
+function excludedTypes(stages: readonly PaperStage[] | undefined): string[] {
+  if (!stages?.length || stages.includes('unknown')) return [];
+  if (!stages.includes('published') && !stages.includes('accepted')) return [];
+  // Spelled as PubMed indexes them; one it does not know is a warning, not a match.
+  return [
+    ...(stages.includes('preprint') ? [] : ['preprint[pt]']),
+    ...NOTICE_TYPES.filter(type => type !== 'Retraction of Publication').map(type => `"${type.toLowerCase()}"[pt]`)
+  ];
 }

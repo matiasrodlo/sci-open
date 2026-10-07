@@ -64,14 +64,20 @@ function pickRoute(work: any): OaRoute {
  * Exported because `translate` narrows by it: a search for preprints is a
  * `type:` filter over exactly the types this maps to `preprint`, so what is
  * asked for and what `normalize` then calls it cannot drift apart.
+ *
+ * `published` is what the `peer-reviewed` publication type asks for, so it is
+ * the published version of an article, a review, a book or a chapter. A
+ * review article was `unknown` — OpenAlex has typed reviews apart since 2023
+ * — and so was left out of every search for peer-reviewed papers, while a
+ * dissertation and a report, which no journal reviewed, were in. Letters,
+ * editorials, errata, retraction notices and the rest stay `unknown`.
  */
 export const STAGES: Record<string, PaperStage> = {
   article: 'published',
+  review: 'published',
   preprint: 'preprint',
   'book-chapter': 'published',
   book: 'published',
-  dissertation: 'published',
-  report: 'published',
   paratext: 'unknown'
 };
 
