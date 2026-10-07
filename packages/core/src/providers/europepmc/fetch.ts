@@ -1,3 +1,4 @@
+import type { SourceSort } from '@sci-open/shared';
 import { getPooledClient } from '../../lib/http-client-factory';
 
 /**
@@ -26,6 +27,8 @@ export type FetchOptions = {
    * 17 bytes a record on the wire — for the first half of a search read.
    */
   resultType?: 'core' | 'idlist';
+  /** Read in this order rather than by relevance: `date` or `citations`. */
+  sort?: SourceSort;
   timeoutMs: number;
   signal?: AbortSignal;
   userAgent?: string;
@@ -92,11 +95,18 @@ export function assertSearchResponse(payload: EuropePmcPayload): void {
   );
 }
 
+/** Europe PMC's spelling of the orders it can read in. Relevance is its default. */
+const SORTS: Partial<Record<SourceSort, string>> = {
+  date: 'FIRST_PDATE_D desc',
+  citations: 'CITED desc'
+};
+
 export async function fetchPage(
   nativeQuery: string,
   options: FetchOptions
 ): Promise<EuropePmcPayload> {
-  const { baseUrl = DEFAULT_BASE_URL, pageSize, resultType = 'core', timeoutMs, signal, userAgent } = options;
+  const { baseUrl = DEFAULT_BASE_URL, pageSize, resultType = 'core', sort, timeoutMs, signal, userAgent } = options;
+  const order = sort ? SORTS[sort] : undefined;
 
   const client = getPooledClient(baseUrl);
 
@@ -105,7 +115,8 @@ export async function fetchPage(
       query: nativeQuery,
       format: 'json',
       pageSize,
-      resultType
+      resultType,
+      ...(order ? { sort: order } : {})
     },
     timeout: timeoutMs,
     ...(signal ? { signal } : {}),

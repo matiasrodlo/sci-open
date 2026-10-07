@@ -26,7 +26,7 @@ export const searchPapers = defineTool({
     sources: z.array(z.enum(SOURCES)).max(SOURCES.length).optional().describe('Ask only these sources; coverage then reports only them. Omit to ask every source able to answer the query.'),
     publication_type: z.array(z.enum(PUBLICATION_TYPES)).optional(),
     open_access_only: z.boolean().default(true).describe('Keep only papers with a legal open copy. Set false to include closed papers (metadata only).'),
-    sort: z.enum(SORTS).default('relevance'),
+    sort: z.enum(SORTS).default('relevance').describe('relevance, date (newest first), date_asc, citations (most cited first) or citations_asc. A source that can sort reads in that order; one that cannot reads by relevance, and coverage says which did which.'),
     page_size: z.number().int().min(1).max(25).default(10),
     detail: z.enum(['concise', 'full']).default('concise').describe('concise: a compact table. full: every field, each abstract whole in the text, and which source supplied each field — for screening.'),
     include_facets: z.boolean().default(false).describe('Add the top values per facet (year, venue, publisher, topics, source, access), counted across everything each source holds. It costs the sources dozens of extra requests: set it only when the distribution itself is wanted.'),

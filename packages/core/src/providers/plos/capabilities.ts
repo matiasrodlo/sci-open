@@ -23,6 +23,10 @@ export const capabilities: ProviderCapabilities = {
 
   reportsTotal: true,
 
+  // Solr's `sort=publication_date desc` (and `asc`), checked live on
+  // 2026-10-06. PLOS's search carries no citation counts.
+  sorts: ['date', 'date_asc'],
+
   // Journals only, and `ARTICLE_TYPES` keeps the read to research articles.
   stages: { holds: ['published'], filter: false },
 

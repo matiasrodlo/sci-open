@@ -1,4 +1,5 @@
 import type { PaperStage } from './paper';
+import type { SourceSort } from './types';
 
 /**
  * The structured form of a search, and the only thing a provider translates
@@ -110,6 +111,15 @@ export type Query = {
    * `ProviderCapabilities.stages` and `plan`.
    */
   stages?: PaperStage[];
+  /**
+   * The order to read each source in, when it is not relevance — sent for the
+   * reason `years` is. A search reads the top of each source, and sorting that
+   * top by date gave the newest of the most relevant papers rather than the
+   * newest papers. A source that can sort reads in this order
+   * (`ProviderCapabilities.sorts`); one that cannot still reads by relevance,
+   * and the merged set is sorted either way.
+   */
+  sort?: SourceSort;
   /** Set when the query is a DOI lookup rather than a keyword search. */
   doi?: string;
   /**

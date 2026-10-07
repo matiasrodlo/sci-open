@@ -1,4 +1,5 @@
 import { getPooledClient } from '../../lib/http-client-factory';
+import type { SourceSort } from '@sci-open/shared';
 import type { OpenAireParams } from './translate';
 
 /** The only I/O in this provider. */
@@ -40,6 +41,10 @@ export type FetchOptions = {
   baseUrl?: string;
   pageSize: number;
   offset: number;
+  /** `date` or `citations`; anything else reads by relevance. */
+  sort?: SourceSort;
+  /** The clock `date` bounds the read by. */
+  now?: () => Date;
   timeoutMs: number;
   signal?: AbortSignal;
   userAgent?: string;
@@ -59,17 +64,33 @@ function requestConfig(options: Omit<FetchOptions, 'pageSize' | 'offset'>) {
   };
 }
 
+/**
+ * The order to read in, as the Graph API takes it. Newest first needs an end
+ * date: records dated 9999-01-01 lead it otherwise, so a read with no end of
+ * its own ends with next year, which is as far ahead as any journal dates an
+ * issue.
+ */
+function orderOf(params: OpenAireParams, sort: SourceSort | undefined, now: () => Date): Record<string, string> {
+  if (sort === 'citations') return { sortBy: 'citationCount DESC' };
+  if (sort !== 'date') return {};
+  return {
+    sortBy: 'publicationDate DESC',
+    ...(params.toPublicationDate ? {} : { toPublicationDate: `${now().getUTCFullYear() + 1}-12-31` })
+  };
+}
+
 export async function fetchPage(
   params: OpenAireParams,
   options: FetchOptions
 ): Promise<OpenAirePayload> {
-  const { baseUrl = DEFAULT_BASE_URL, pageSize, offset } = options;
+  const { baseUrl = DEFAULT_BASE_URL, pageSize, offset, sort, now = () => new Date() } = options;
 
   const client = getPooledClient(baseUrl);
 
   const response = await client.get<OpenAirePayload>('/researchProducts', {
     params: {
       ...params,
+      ...orderOf(params, sort, now),
       pageSize,
       // Pages are 1-based, so an offset lands exactly on page boundaries.
       page: Math.floor(Math.max(offset, 0) / Math.max(pageSize, 1)) + 1

@@ -30,6 +30,8 @@ export type ProviderCacheKeyParts = {
   nativeQuery: string;
   depth: number;
   offset: number;
+  /** The order the provider was asked to read in; absent for relevance. */
+  sort?: string;
 };
 
 export function providerCacheKey(parts: ProviderCacheKeyParts): string {
@@ -37,7 +39,9 @@ export function providerCacheKey(parts: ProviderCacheKeyParts): string {
     parts.provider,
     parts.nativeQuery,
     `depth=${parts.depth}`,
-    `offset=${parts.offset}`
+    `offset=${parts.offset}`,
+    // Only when set, so every key made before sorting existed is unchanged.
+    ...(parts.sort ? [`sort=${parts.sort}`] : [])
   ].join('|');
 
   // Hashed for a bounded key length. The provider stays in the clear so

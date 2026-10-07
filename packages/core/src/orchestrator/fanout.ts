@@ -122,6 +122,11 @@ export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOut
   async function ask(provider: Plan['planned'][number]): Promise<{ papers: Paper[]; report: ProviderReport }> {
     const startedAt = Date.now();
     const nativeQuery = provider.translate(query, { openAccessOnly });
+    // The order this provider reads in, when the search asked for one it can
+    // apply. Not part of `translate`, which states what matches, not in what
+    // order; so it joins the cache key here instead, and a provider that
+    // cannot sort answers a sorted search from its relevance read.
+    const sorted = query.sort && provider.capabilities.sorts?.includes(query.sort) ? query.sort : undefined;
 
     /**
      * Nothing of this query the provider can express — a wildcard its API
@@ -167,7 +172,8 @@ export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOut
           provider: provider.id,
           nativeQuery,
           depth,
-          offset
+          offset,
+          ...(sorted ? { sort: sorted } : {})
         },
         shared => withBudget(timeoutMs, work, shared),
         signal
@@ -188,6 +194,7 @@ export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOut
           // normaliser skipped was read all the same, and a provider that
           // answered everything it holds is not cut short by losing one.
           ...(outcome.totalHits !== undefined && outcome.totalHits > offset + depth ? { truncated: true as const } : {}),
+          ...(sorted ? { sorted } : {}),
           latency: Date.now() - startedAt
         }
       };

@@ -106,6 +106,16 @@ describe('runSearch: what the providers are asked', () => {
     }
   });
 
+  it('sends a sort other than relevance with the query, and never with a DOI', async () => {
+    const { entry, calls } = recorder();
+    await run({ q: 'crispr', sort: 'date' }, [entry]);
+    await run({ q: 'crispr', sort: 'relevance' }, [entry]);
+    await run({ q: 'crispr' }, [entry]);
+    await run({ doi: '10.1038/s41586-020-2008-3', sort: 'citations' }, [entry]);
+
+    expect(calls.map(c => c.query.sort)).toEqual(['date', undefined, undefined, undefined]);
+  });
+
   it('leaves years unset when neither bound was given', async () => {
     const { entry, calls } = recorder();
     await run({ q: 'crispr' }, [entry]);

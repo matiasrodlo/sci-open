@@ -1,3 +1,4 @@
+import type { SourceSort } from '@sci-open/shared';
 import { getPooledClient } from '../../lib/http-client-factory';
 
 /** The only I/O in this provider. */
@@ -34,6 +35,8 @@ export type FetchOptions = {
   baseUrl?: string;
   pageSize: number;
   offset: number;
+  /** `date` or `date_asc`; anything else reads by relevance, Solr's default. */
+  sort?: SourceSort;
   timeoutMs: number;
   signal?: AbortSignal;
   userAgent?: string;
@@ -44,7 +47,8 @@ export type PlosPayload = {
 };
 
 export async function fetchPage(nativeQuery: string, options: FetchOptions): Promise<PlosPayload> {
-  const { baseUrl = DEFAULT_BASE_URL, pageSize, offset, timeoutMs, signal, userAgent } = options;
+  const { baseUrl = DEFAULT_BASE_URL, pageSize, offset, sort, timeoutMs, signal, userAgent } = options;
+  const order = sort === 'date' ? 'publication_date desc' : sort === 'date_asc' ? 'publication_date asc' : undefined;
 
   const client = getPooledClient(baseUrl);
 
@@ -57,7 +61,8 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
       start: Math.max(offset, 0),
       wt: 'json',
       fl: FIELDS,
-      fq: ARTICLE_TYPES
+      fq: ARTICLE_TYPES,
+      ...(order ? { sort: order } : {})
     },
     timeout: timeoutMs,
     headers: { Accept: 'application/json', ...(userAgent ? { 'User-Agent': userAgent } : {}) },

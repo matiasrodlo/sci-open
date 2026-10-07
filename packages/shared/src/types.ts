@@ -15,6 +15,10 @@ export type SearchFilters = {
 
 export type SearchSort = "relevance" | "date" | "date_asc" | "citations" | "citations_asc";
 
+/** An order a source can be asked to read in: every sort but relevance, which
+ * is the order every source reads in unless asked otherwise. */
+export type SourceSort = Exclude<SearchSort, "relevance">;
+
 export type SearchParams = {
   q?: string;
   doi?: string;

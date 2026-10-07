@@ -27,6 +27,10 @@ export const capabilities: ProviderCapabilities = {
   // `esearchresult.count`.
   reportsTotal: true,
 
+  // `sort=pub_date`, newest first, checked live on 2026-10-06. PubMed has no
+  // oldest first and no citation counts to sort by.
+  sorts: ['date'],
+
   // Published when PubMed Central holds it, which `pubmed pmc[sb]` asks for.
   // Under the open-access filter every record is in PMC already.
   stages: { holds: ['published', 'unknown'], filter: true },

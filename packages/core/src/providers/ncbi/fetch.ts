@@ -1,4 +1,5 @@
 import type { AxiosInstance } from 'axios';
+import type { SourceSort } from '@sci-open/shared';
 import { parseStringPromise } from 'xml2js';
 import { getPooledClient } from '../../lib/http-client-factory';
 import { usableApiKey } from '../../lib/api-key';
@@ -32,6 +33,8 @@ export type FetchOptions = {
   apiKey?: string;
   pageSize: number;
   offset: number;
+  /** `date` reads newest first; PubMed has no other order but relevance. */
+  sort?: SourceSort;
   timeoutMs: number;
   signal?: AbortSignal;
   userAgent?: string;
@@ -134,6 +137,7 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
     apiKey,
     pageSize,
     offset,
+    sort,
     timeoutMs,
     signal,
     userAgent
@@ -159,7 +163,9 @@ export async function fetchPage(nativeQuery: string, options: FetchOptions): Pro
       // provider contributed its most relevant, and `SourceRef.rank` — which
       // feeds reciprocal rank fusion — carried a date ordering into a
       // relevance fusion.
-      sort: 'relevance',
+      // `pub_date` when the search asked for the newest first, the one other
+      // order PubMed has.
+      sort: sort === 'date' ? 'pub_date' : 'relevance',
       ...(key ? { api_key: key } : {})
     },
     timeout: timeoutMs,

@@ -31,6 +31,10 @@ export const capabilities: ProviderCapabilities = {
   // `opensearch:totalResults`, on every feed.
   reportsTotal: true,
 
+  // `sortBy=submittedDate`, either way, checked live on 2026-10-06. arXiv
+  // counts no citations.
+  sorts: ['date', 'date_asc'],
+
   // Every record is a preprint; `normalize` says so of all of them. Nothing to
   // narrow, so a search for peer-reviewed papers skips arXiv instead.
   stages: { holds: ['preprint'], filter: false },

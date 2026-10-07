@@ -38,7 +38,9 @@ import { progressTo, type SearchProgress } from './progress';
  * before faceting for exactly the reason faceting runs after filtering.
  *
  * Everything up to the facets resolves the *set*, and depends on neither the
- * page nor the sort; what follows presents one page of it. The two halves are
+ * page nor the sort — except where a source reads in the sort's order
+ * (`Query.sort`), which is part of the query and so of the set's key; what
+ * follows presents one page of it. The two halves are
  * `resolveResultSet` and the rest of `search`, and the line between them is
  * where `ResultSetCache` holds the set — see `result-set.ts`.
  */

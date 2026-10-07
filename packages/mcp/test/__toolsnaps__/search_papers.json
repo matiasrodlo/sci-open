@@ -62,6 +62,7 @@
       },
       "sort": {
         "default": "relevance",
+        "description": "relevance, date (newest first), date_asc, citations (most cited first) or citations_asc. A source that can sort reads in that order; one that cannot reads by relevance, and coverage says which did which.",
         "type": "string",
         "enum": [
           "relevance",
@@ -258,6 +259,32 @@
               ],
               "additionalProperties": false
             }
+          },
+          "order": {
+            "type": "object",
+            "properties": {
+              "sort": {
+                "type": "string"
+              },
+              "sorted_by_source": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "read_by_relevance": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "sort",
+              "sorted_by_source",
+              "read_by_relevance"
+            ],
+            "additionalProperties": false
           },
           "per_source": {
             "type": "array",
@@ -643,6 +670,32 @@
                   ],
                   "additionalProperties": false
                 }
+              },
+              "order": {
+                "type": "object",
+                "properties": {
+                  "sort": {
+                    "type": "string"
+                  },
+                  "sorted_by_source": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "read_by_relevance": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "sort",
+                  "sorted_by_source",
+                  "read_by_relevance"
+                ],
+                "additionalProperties": false
               },
               "per_source": {
                 "type": "array",

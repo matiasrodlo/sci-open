@@ -21,6 +21,11 @@ export const capabilities: ProviderCapabilities = {
   maxPageSize: 1000,
   reportsTotal: true,
 
+  // `sort=FIRST_PDATE_D desc` and `sort=CITED desc`, checked live on
+  // 2026-10-06. Not oldest first: `P_PDATE_D asc` opened on papers of that
+  // very week, so the ascending orders read by relevance here.
+  sorts: ['date', 'citations'],
+
   // `SRC:PPR` is the preprint source, and `normalize` reads it the same way.
   stages: { holds: ['preprint', 'published', 'unknown'], filter: true },
 

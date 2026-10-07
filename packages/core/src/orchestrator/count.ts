@@ -51,7 +51,8 @@ export type CountOutcome = {
  * they are never summed (see `ProviderReport.totalHits`).
  */
 export async function countSearch(params: SearchParams, options: CountOptions): Promise<CountOutcome> {
-  const { query, openAccessOnly } = queryOf(params);
+  // A count does not depend on the order a search would read in.
+  const { query: { sort: _order, ...query }, openAccessOnly } = queryOf(params);
 
   // A year range that ends before it starts matches nothing anywhere, and a
   // search answers it without asking anyone (`emptyYears`); so does a count.

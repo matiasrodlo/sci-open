@@ -31,7 +31,8 @@ export async function search(query: Query, options: SearchOptions): Promise<Prov
   const payload = await fetchPage(nativeQuery, {
     ...fetchOptions,
     pageSize: Math.min(Math.max(pageSize, 1), capabilities.maxPageSize),
-    offset
+    offset,
+    ...(query.sort ? { sort: query.sort } : {})
   });
 
   const { papers, skipped } = normalize(payload, {

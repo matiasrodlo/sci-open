@@ -25,6 +25,12 @@ export const capabilities: ProviderCapabilities = {
 
   reportsTotal: true,
 
+  // `sortBy=publicationDate DESC` and `citationCount DESC`, checked live on
+  // 2026-10-06. Newest first opens on records dated 9999-01-01 unless the
+  // read ends somewhere, so `fetchPage` ends it at the close of next year;
+  // oldest first opens on 0001-12-30 and records with no date, and is left out.
+  sorts: ['date', 'citations'],
+
   // Published when the instance is refereed, which `isPeerReviewed=true` asks
   // for; everything else is unknown. `normalize` never calls a record a
   // preprint, so a search for preprints skips OpenAIRE.

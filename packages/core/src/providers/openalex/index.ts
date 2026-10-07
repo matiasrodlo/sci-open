@@ -72,7 +72,7 @@ export async function search(query: Query, options: SearchOptions): Promise<Prov
     wanted: pageSize,
     perPage: capabilities.maxPageSize,
     offset,
-    fetch: page => fetchPage(params, { ...fetchOptions, ...page }),
+    fetch: page => fetchPage(params, { ...fetchOptions, ...page, ...(query.sort ? { sort: query.sort } : {}) }),
     itemsOf: payload => payload.results ?? [],
     totalOf: totalHits
   });

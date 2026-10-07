@@ -10,13 +10,18 @@ export const coverageSchema = z.object({
   /** Sources that matched more than a search reads from each: the top `read`
    * of their `matches`, so the total counts what was read, not every match. */
   truncated: z.array(z.object({ source: z.string(), read: z.number().int(), matches: z.number().int() })),
+  /** For a sort other than relevance: the sources that read in that order,
+   * and those that could only read by relevance, whose part is sorted among
+   * their most relevant matches. */
+  order: z.object({ sort: z.string(), sorted_by_source: z.array(z.string()), read_by_relevance: z.array(z.string()) }).optional(),
   per_source: z.array(z.object({ source: z.string(), status: z.string(), retrieved: z.number().int(), total_hits: z.number().int().optional() }))
 });
 export type Coverage = z.infer<typeof coverageSchema>;
 
 /** What a search's sources did: which answered, failed or were skipped, and why. A
  * search response, or a count's reports, which have no rescue to bound. */
-export function coverageOf(r: Pick<SearchResponse, 'complete' | 'bounded' | 'providers'>): Coverage {
+export function coverageOf(r: Pick<SearchResponse, 'complete' | 'bounded' | 'providers'>, sort?: string): Coverage {
+  const answered = r.providers.filter(p => p.status === 'ok');
   return {
     complete: r.complete,
     bounded: r.bounded,
@@ -29,6 +34,15 @@ export function coverageOf(r: Pick<SearchResponse, 'complete' | 'bounded' | 'pro
       .filter((p): p is typeof p & { totalHits: number } => p.status === 'ok' && p.truncated === true && p.totalHits !== undefined)
       .sort((a, b) => b.totalHits - a.totalHits)
       .map(p => ({ source: p.provider, read: p.retrieved, matches: p.totalHits })),
+    ...(sort && sort !== 'relevance'
+      ? {
+          order: {
+            sort,
+            sorted_by_source: answered.filter(p => p.sorted === sort).map(p => p.provider),
+            read_by_relevance: answered.filter(p => p.sorted !== sort).map(p => p.provider)
+          }
+        }
+      : {}),
     per_source: r.providers.map(p => ({
       source: p.provider,
       status: p.status,
@@ -50,7 +64,23 @@ export function coverageSentence(c: Coverage): string {
   if (c.skipped.length) parts.push(`skipped ${c.skipped.map(s => `${s.source} (${s.reason})`).join(', ')}`);
   if (c.bounded) parts.push('the access check was cut short, so a few papers may be missing');
   if (c.truncated.length) parts.push(truncatedClause(c.truncated));
+  if (c.order) parts.push(orderClause(c.order));
   return `${parts.join('; ')}.`;
+}
+
+const ORDERS: Record<string, string> = {
+  date: 'newest first', date_asc: 'oldest first', citations: 'most cited first', citations_asc: 'least cited first'
+};
+
+/** Which sources read in the order asked, and what the rest contributed. */
+function orderClause(order: NonNullable<Coverage['order']>): string {
+  const name = ORDERS[order.sort] ?? order.sort;
+  const sorted = order.sorted_by_source.length
+    ? `${order.sorted_by_source.join(', ')} read ${name}`
+    : `no source could read ${name}`;
+  return order.read_by_relevance.length
+    ? `${sorted}; ${order.read_by_relevance.join(', ')} can only read by relevance, so their part is sorted among their most relevant matches`
+    : sorted;
 }
 
 /** The sources a search read only the top of, and what that makes the total. */

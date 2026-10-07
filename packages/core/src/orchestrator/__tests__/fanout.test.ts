@@ -188,6 +188,26 @@ describe('fanOut', () => {
     expect(search).toHaveBeenCalledTimes(1);
   });
 
+  it('reads a sorting provider in the order asked, and the rest by relevance from their own cache entry', async () => {
+    const sorting = vi.fn(async () => ({ papers: [paper()], skipped: [] }));
+    const relevant = vi.fn(async () => ({ papers: [paper()], skipped: [] }));
+    const providers = [
+      stubProvider('openalex', sorting, { sorts: ['date', 'citations'] }),
+      stubProvider('doaj', relevant)
+    ];
+    const cache = new ProviderCache();
+    const byDate: Query = { ...QUERY, sort: 'date' };
+
+    await fanOut(plan(QUERY, providers), { ...base, cache });
+    const { reports } = await fanOut(plan(byDate, providers), { ...base, query: byDate, cache });
+
+    expect(reports.find(r => r.provider === 'openalex')?.sorted).toBe('date');
+    expect(reports.find(r => r.provider === 'doaj')?.sorted).toBeUndefined();
+    // The sorted read is its own; the one that cannot sort is the read it already had.
+    expect(sorting).toHaveBeenCalledTimes(2);
+    expect(relevant).toHaveBeenCalledTimes(1);
+  });
+
   it('collapses concurrent identical fan-outs onto one upstream call', async () => {
     const search = vi.fn(async () => {
       await new Promise(r => setTimeout(r, 30));

@@ -1,4 +1,5 @@
 import type { AxiosInstance } from 'axios';
+import type { SourceSort } from '@sci-open/shared';
 import { getPooledClient } from '../../lib/http-client-factory';
 import { extractContactEmail } from '../../lib/contact-email';
 import { usableApiKey } from '../../lib/api-key';
@@ -62,9 +63,19 @@ export type FetchOptions = {
   apiKey?: string;
   pageSize: number;
   offset: number;
+  /** Read in this order rather than by relevance. */
+  sort?: SourceSort;
   timeoutMs: number;
   signal?: AbortSignal;
   userAgent?: string;
+};
+
+/** OpenAlex's spelling of each order. Without one it orders a search by `relevance_score`. */
+const SORTS: Record<SourceSort, string> = {
+  date: 'publication_date:desc',
+  date_asc: 'publication_date:asc',
+  citations: 'cited_by_count:desc',
+  citations_asc: 'cited_by_count:asc'
 };
 
 export type OpenAlexPayload = {
@@ -137,7 +148,7 @@ export async function fetchPage(
   options: FetchOptions
 ): Promise<OpenAlexPayload> {
   const {
-    baseUrl = DEFAULT_BASE_URL, apiKey, pageSize, offset, timeoutMs, signal, userAgent
+    baseUrl = DEFAULT_BASE_URL, apiKey, pageSize, offset, sort, timeoutMs, signal, userAgent
   } = options;
 
   const client: AxiosInstance = getPooledClient(baseUrl);
@@ -167,6 +178,7 @@ export async function fetchPage(
       per_page: pageSize,
       // Pages are 1-based, so an offset lands exactly on page boundaries.
       page: Math.floor(Math.max(offset, 0) / Math.max(pageSize, 1)) + 1,
+      ...(sort ? { sort: SORTS[sort] } : {}),
       select: SELECT,
       ...(contactEmail ? { mailto: contactEmail } : {})
     },

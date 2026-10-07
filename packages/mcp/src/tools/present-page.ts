@@ -65,7 +65,7 @@ export function presentPage(
   const handle = encodeSearchHandle(spec);
   const { kept, omitted } = fitWholeItems(r.papers.map(p => shapePaper(p, opts.detail)), opts.structuredBudget);
   const more = r.page * r.pageSize < r.total;
-  const coverage = coverageOf(r);
+  const coverage = coverageOf(r, spec.sort);
   // A source that failed, a rescue cut short and a source read only to the
   // depth all leave the total short of what matches.
   const lowerBound = totalIsLowerBound(coverage);

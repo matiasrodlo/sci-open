@@ -190,6 +190,32 @@
               "additionalProperties": false
             }
           },
+          "order": {
+            "type": "object",
+            "properties": {
+              "sort": {
+                "type": "string"
+              },
+              "sorted_by_source": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "read_by_relevance": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "sort",
+              "sorted_by_source",
+              "read_by_relevance"
+            ],
+            "additionalProperties": false
+          },
           "per_source": {
             "type": "array",
             "items": {

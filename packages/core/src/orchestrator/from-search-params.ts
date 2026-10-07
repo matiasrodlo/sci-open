@@ -135,7 +135,12 @@ export function queryOf(params: SearchParams) {
   // `doi` wins over `q` when both are set: it is the more specific statement
   // of what the caller wants.
   const text = params.doi ?? params.q ?? '';
-  const withoutStages = parseQuery(text, { ...(bound ? { years: bound } : {}) });
+  const parsed = parseQuery(text, { ...(bound ? { years: bound } : {}) });
+  // The sort is sent too, so a source that can read newest or most cited
+  // first spends its read on those rather than on its most relevant. A DOI
+  // names one paper, which has no order.
+  const sort = params.sort && params.sort !== 'relevance' && !parsed.doi ? params.sort : undefined;
+  const withoutStages: Query = sort ? { ...parsed, sort } : parsed;
   const query: Query = stages?.length && !withoutStages.doi ? { ...withoutStages, stages: [...stages] } : withoutStages;
   const openAccessOnly = filters.openAccessOnly ?? true;
 

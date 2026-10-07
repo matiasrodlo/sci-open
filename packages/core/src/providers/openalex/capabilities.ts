@@ -36,6 +36,10 @@ export const capabilities: ProviderCapabilities = {
   // `meta.count`.
   reportsTotal: true,
 
+  // `sort=publication_date` and `sort=cited_by_count`, either way; checked
+  // live on 2026-10-06 (`crispr`, open, most cited first: W2045435533, 17,876).
+  sorts: ['date', 'date_asc', 'citations', 'citations_asc'],
+
   // Read from `type`, which a `type:` filter narrows to the same values.
   stages: { holds: ['preprint', 'published', 'unknown'], filter: true },
 

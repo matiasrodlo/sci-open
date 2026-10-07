@@ -1,3 +1,4 @@
+import type { SourceSort } from '@sci-open/shared';
 import { getPooledClient } from '../../lib/http-client-factory';
 import { parseStringPromise } from 'xml2js';
 
@@ -24,6 +25,8 @@ export type FetchOptions = {
   pageSize: number;
   /** Record offset. arXiv pages by record, so this lands exactly. */
   offset: number;
+  /** `date` or `date_asc`, by submission; anything else reads by relevance. */
+  sort?: SourceSort;
   timeoutMs: number;
   signal?: AbortSignal;
   userAgent?: string;
@@ -73,15 +76,16 @@ async function get(
 }
 
 export async function fetchPage(nativeQuery: string, options: FetchOptions): Promise<ArxivFeed> {
-  const { pageSize, offset, ...rest } = options;
+  const { pageSize, offset, sort, ...rest } = options;
+  const byDate = sort === 'date' || sort === 'date_asc';
 
   return get(
     {
       search_query: nativeQuery,
       start: Math.max(offset, 0),
       max_results: pageSize,
-      sortBy: 'relevance',
-      sortOrder: 'descending'
+      sortBy: byDate ? 'submittedDate' : 'relevance',
+      sortOrder: sort === 'date_asc' ? 'ascending' : 'descending'
     },
     rest
   );

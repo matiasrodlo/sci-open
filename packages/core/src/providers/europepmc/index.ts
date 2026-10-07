@@ -101,7 +101,10 @@ export async function search(
   const listed = await fetchPage(nativeQuery, {
     ...fetchOptions,
     resultType: 'idlist',
-    pageSize: Math.min(start + Math.max(pageSize, 1), capabilities.maxPageSize)
+    pageSize: Math.min(start + Math.max(pageSize, 1), capabilities.maxPageSize),
+    // The order is the id list's: the records are then fetched by id and
+    // placed back at the rank the list gave them.
+    ...(query.sort && capabilities.sorts?.includes(query.sort) ? { sort: query.sort } : {})
   });
   const ids = (listed.resultList?.result ?? [])
     .slice(start)

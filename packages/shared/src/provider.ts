@@ -1,4 +1,5 @@
 import type { PaperStage, ProviderId } from './paper';
+import type { SourceSort } from './types';
 
 /**
  * What happened when the orchestrator asked one provider, and what that
@@ -36,6 +37,12 @@ export type ProviderReport = {
    * what matches.
    */
   truncated?: true;
+  /**
+   * The order the provider read in, when the search asked for one it can
+   * apply (`ProviderCapabilities.sorts`). Absent, it read by relevance — the
+   * search's order, or the only one this provider has.
+   */
+  sorted?: SourceSort;
   /** Present when `status` is `error` or `timeout`. */
   error?: string;
   /**
@@ -143,6 +150,13 @@ export type ProviderCapabilities = {
   fieldedSearch: boolean;
   /** Largest page the API will serve in one request. */
   maxPageSize: number;
+  /**
+   * The orders this provider can be asked to read in besides relevance, each
+   * checked against the live API. Absent or empty: relevance only. An order a
+   * source documents but answers with junk is left out — OpenAIRE's oldest
+   * first opens on records dated 0001, Europe PMC's on this week's.
+   */
+  sorts?: readonly SourceSort[];
   /** Reports a corpus-wide match count, so `totalHits` can be filled in. */
   reportsTotal: boolean;
   /**
