@@ -32,6 +32,16 @@ in `test/__toolsnaps__/` are the record of every schema change.
   the same way, though its call succeeds.
 - `server.json` and the plugin declare `OPENALEX_API_KEY` and `NCBI_API_KEY`,
   so an installer driven by the registry asks for them.
+- What each source was sent — its native query, the search as run there — is
+  in coverage's `per_source[].query` and the provenance block, and count_only
+  lists it under "Sent to each source". A search page and a count open with a
+  "Filters:" line. The systematic-search skill logs both, and agrees the scope
+  (open access only or not, years, publication type) before searching.
+- A paper carries its volume, issue and pages (`biblio`), from OpenAlex,
+  Crossref, Europe PMC, PubMed and DOAJ. export_citations writes them (BibTeX
+  `volume`, `number`, `pages`; RIS `VL`, `IS`, `SP`, `EP`), get_paper and
+  `detail: "full"` show them, and verify_references checks a cited volume and
+  first page against them.
 
 ### Changed
 
@@ -61,6 +71,33 @@ in `test/__toolsnaps__/` are the record of every schema change.
   DOIs used to be 25 searches of ten sources and most of a minute's
   admissions. Verdicts are unchanged; such a match is corroborated by
   OpenAlex alone, and whether it is retracted is OpenAlex's word.
+- A sort other than relevance is sent to every source that can read in that
+  order (OpenAlex either way by date and citations; Europe PMC and OpenAIRE
+  newest and most cited first; PubMed newest first; arXiv and PLOS by date),
+  and coverage says which sources sorted and which read by relevance. It used
+  to reorder the top 300 each source returned by relevance.
+- Ranking counts the best source's position in full and each further one at
+  half the weight, rather than a point for every index that holds a paper; a
+  title that is the query ranks first; corrections, errata, retraction
+  notices and replies are moved down.
+- publication_type `peer-reviewed` takes in review articles (OpenAlex's
+  `review` type) and closed MEDLINE articles, and leaves out dissertations,
+  reports and notices (editorials, letters, errata, retraction notices) in
+  OpenAlex, PubMed, Europe PMC and Crossref. PubMed's stage comes from its
+  publication types, not from whether PMC holds a copy.
+- verify_references: a `mismatch` for a DOI that belongs to another paper
+  gives the paper the citation names as `matched`, and the DOI's own paper as
+  `doi_target`; `cited_title_not_found` says when there is none. A journal,
+  volume or first page that differs from the record's makes a citation
+  `likely`, with `venue_mismatch`, `volume_mismatch` or `pages_mismatch`.
+- arXiv records without a published version carry their arXiv DOI
+  (`10.48550/arXiv.<id>`), so they merge with OpenAlex's and Europe PMC's
+  copies and have citations to follow and export.
+- PubMed names are written "Surname, Forename"; BibTeX titles brace words a
+  style must not lower-case (CRISPR, mRNA); group authors are braced whole.
+- The server says a search asks seven sources and a DOI lookup ten.
+- read_paper says when it reads the arXiv preprint of a published paper, or
+  a repository copy that may be the accepted manuscript.
 - A paper looked up by id is held half an hour, so read_paper and
   get_citations, given an id, stop asking its source again before every
   outline, section and page. Two lookups of one id at once ask once.
@@ -81,6 +118,16 @@ in `test/__toolsnaps__/` are the record of every schema change.
   `ncbi:…`.
 - search_papers refuses a `doi` that is not a DOI, rather than searching for
   its words and listing what it found under that DOI.
+- A search's total counted the top 300 read from each source and was shown as
+  exact when every source answered, with "End of results" on its last page.
+  A source that matches more than a search reads is now listed in
+  `coverage.truncated`, makes `total_is_lower_bound` true and the heading's
+  total a floor, and the last page says "End of what was read". count_only
+  says whether a search would read each source in full.
+- verify_references took a cited surname for an author's when it was part of
+  any author's name: "Li" verified as Illia Polosukhin.
+- The `sci-open` CLI ignored `SCI_OPEN_ENGINE=fixture` and searched the live
+  sources.
 
 ### Removed
 

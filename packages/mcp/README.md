@@ -92,13 +92,22 @@ request its description. Over HTTP, `?toolsets=all` does the same.
 ## How it behaves
 
 - **Coverage.** A source that times out or fails makes the total a lower
-  bound, and the result says which one. A source whose request quota is spent
+  bound, and the result says which one. So does a source that matches more
+  than a search reads (300 records each): the total then counts the top of
+  each source's answer, and `count_only` says which sources a search would
+  read in full. A source whose request quota is spent
   (HTTP 429) is left alone for ten minutes and named as missing for that
   reason, rather than asked again on every search.
 - **Tuning by counts.** `search_papers` with `count_only: true` asks each
   source for one record and returns the count that comes with it: one request
   per source, nothing read, merged or checked. Tune a query with it, then
   search once.
+- **Sorting.** A sort other than relevance is sent to the sources that can
+  apply it, so "newest first" reads each source's newest matches; a source
+  that cannot sort contributes its most relevant, and the coverage says so.
+- **Search logs.** A result names the filters it ran under, and each source's
+  coverage carries the query it was sent, in its own syntax: the search as
+  run in that database, for a methods section.
 - **Paging.** A search returns a handle that encodes the query, filters, sort
   and page size. Pages of a recent complete search come from memory; an older
   or incomplete one runs again, and the page says so.
@@ -110,7 +119,10 @@ request its description. Over HTTP, `?toolsets=all` does the same.
   `ambiguous`, `mismatch` (a real DOI on another paper, or an invented DOI on a
   real title), `not_found`, or `not_checked` (the search budget ran out; send
   it again later). A DOI no source holds is asked of the DOI registry, which
-  answers for every registration agency, before it is called invented.
+  answers for every registration agency, before it is called invented. A DOI
+  that belongs to another paper comes back with the paper the citation names
+  and the one its DOI names. `verified` means title, year, an author, and the
+  journal, volume and first page where they are cited, agree with the record.
 - **Reading full text.** `read_paper` reads only legal open-access copies,
   best structure first: Europe PMC's JATS, then arXiv's HTML rendering (both
   in real sections), then the PDF the record points at (a section a page).
@@ -133,7 +145,8 @@ request its description. Over HTTP, `?toolsets=all` does the same.
   not every citation, and the result says so.
 - **Exporting citations.** `export_citations` writes BibTeX or RIS for up to
   200 papers from their records, with a formatter rather than the model, so
-  the model never retypes a citation. On a local connection
+  the model never retypes a citation. Entries carry the volume, issue and
+  pages a source gives. On a local connection
   `save_to` writes the file; otherwise it is attached as a resource to save as
   is. Papers that could not be resolved are listed, never dropped; abstracts
   are left out unless asked for.
