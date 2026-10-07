@@ -10,22 +10,22 @@ import { fakeEngine, type FakeOptions } from './fake-engine';
  */
 
 const ATTENTION = paper({
-  id: 'openalex:W2963403868', doi: '10.48550/arxiv.1706.03762', title: 'Attention Is All You Need',
+  id: 'crossref:W2963403868', doi: '10.48550/arxiv.1706.03762', title: 'Attention Is All You Need',
   authors: ['Ashish Vaswani', 'Noam Shazeer', 'Niki Parmar'], year: 2017, stage: 'preprint',
-  sources: [ref('openalex'), ref('arxiv', { nativeId: '1706.03762v7' }), ref('core')]
+  sources: [ref('crossref'), ref('arxiv', { nativeId: '1706.03762v7' }), ref('core')]
 });
 const CRISPR = paper({
-  id: 'openalex:W2045435533', doi: '10.1126/science.1258096', title: 'The new frontier of genome engineering with CRISPR-Cas9',
+  id: 'crossref:W2045435533', doi: '10.1126/science.1258096', title: 'The new frontier of genome engineering with CRISPR-Cas9',
   authors: ['Jennifer A. Doudna', 'Emmanuelle Charpentier'], year: 2014, oaStatus: 'closed', fullText: undefined,
-  sources: [ref('openalex'), ref('europepmc')]
+  sources: [ref('crossref'), ref('europepmc')]
 });
 const DNA = paper({
   id: 'europepmc:13054692', doi: '10.1038/171737a0', title: 'Molecular structure of nucleic acids: a structure for deoxyribose nucleic acid',
-  authors: ['J. D. Watson', 'F. H. C. Crick'], year: 1953, sources: [ref('europepmc'), ref('openalex')]
+  authors: ['J. D. Watson', 'F. H. C. Crick'], year: 1953, sources: [ref('europepmc'), ref('crossref')]
 });
 const DISCHARGE = paper({
-  id: 'openalex:W9', doi: '10.1001/jama.2020.1', title: 'Same-day discharge is not inferior to overnight stay',
-  authors: ['Maria Rossi'], year: 2020, sources: [ref('openalex')]
+  id: 'crossref:W9', doi: '10.1001/jama.2020.1', title: 'Same-day discharge is not inferior to overnight stay',
+  authors: ['Maria Rossi'], year: 2020, sources: [ref('crossref')]
 });
 const WORLD = [ATTENTION, CRISPR, DNA, DISCHARGE];
 
@@ -42,7 +42,7 @@ describe('verify_references', () => {
       'Doudna, J. A., & Charpentier, E. (2014). The new frontier of genome engineering with CRISPR-Cas9. Science. https://doi.org/10.1126/science.1258096'
     ]);
     expect(results.map(r => r.verdict)).toEqual(['verified', 'verified']);
-    expect(results[0]!.evidence).toMatchObject({ matched_on: 'title', corroborated_by: ['openalex', 'arxiv', 'core'] });
+    expect(results[0]!.evidence).toMatchObject({ matched_on: 'title', corroborated_by: ['crossref', 'arxiv', 'core'] });
     expect(results[1]!.evidence.matched_on).toBe('doi');
     expect(summary).toMatchObject({ verified: 2, not_found: 0 });
   });
@@ -69,7 +69,7 @@ describe('verify_references', () => {
   it('still asks every source about a DOI OpenAlex lacks or could not be asked about', async () => {
     const { results, fake } = await verify(
       ['Doudna JA, Charpentier E. The new frontier of genome engineering with CRISPR-Cas9. Science. 2014. doi:10.1126/science.1258096'],
-      { openalex: async dois => ({ found: new Map(), unasked: [...dois] }) }
+      { batch: async dois => ({ found: new Map(), unasked: [...dois] }) }
     );
     expect(results[0]).toMatchObject({ verdict: 'verified', evidence: { matched_on: 'doi' } });
     expect(fake.admitted()).toBe(1); // the lookup in every source is a search
@@ -113,8 +113,8 @@ describe('verify_references', () => {
     // Flexibility…" as "False-Positive Psychology", and the correct citation
     // was called a DOI on another paper. Made up here, as eval references stay out.
     const SHORT = paper({
-      id: 'openalex:W2011', doi: '10.1000/short.2011', title: 'Threshold Memory',
-      authors: ['Ana Lindqvist', 'Ben Okoro'], year: 2011, sources: [ref('openalex')]
+      id: 'crossref:W2011', doi: '10.1000/short.2011', title: 'Threshold Memory',
+      authors: ['Ana Lindqvist', 'Ben Okoro'], year: 2011, sources: [ref('crossref')]
     });
     const check = async (reference: string) => (await verifyReferences.run({ references: [reference] }, fakeEngine([SHORT]).deps)).structured.results[0]!;
 
@@ -175,7 +175,7 @@ describe('verify_references', () => {
 
   it('finds the original of a paper reprinted under its own title, by the year cited', async () => {
     // Measured live: the 1953 paper's title search ranked a 2007 reprint above it.
-    const reprint = paper({ ...DNA, id: 'openalex:W2007', doi: '10.1097/blo.0b013e31814b9304', year: 2007, authors: ['J. D. Watson', 'F. H. C. Crick'] });
+    const reprint = paper({ ...DNA, id: 'crossref:W2007', doi: '10.1097/blo.0b013e31814b9304', year: 2007, authors: ['J. D. Watson', 'F. H. C. Crick'] });
     const fake = fakeEngine([reprint, DNA]);
     const { structured } = await verifyReferences.run({
       references: ['Watson JD, Crick FHC. Molecular structure of nucleic acids: a structure for deoxyribose nucleic acid. Nature. 1953;171:737-738.']
@@ -187,13 +187,13 @@ describe('verify_references', () => {
   describe('a paper reprinted under its own title in another venue and year', () => {
     // Made up, so that no eval reference becomes a test case.
     const original = paper({
-      id: 'openalex:W1979', doi: '10.1000/jtp.1979.301', title: 'Emergent memory in networks of threshold units',
+      id: 'crossref:W1979', doi: '10.1000/jtp.1979.301', title: 'Emergent memory in networks of threshold units',
       authors: ['A. Lindqvist'], year: 1979, venue: 'Journal of Theoretical Physics', biblio: { volume: '12', firstPage: '301' },
-      sources: [ref('openalex'), ref('europepmc')]
+      sources: [ref('crossref'), ref('europepmc')]
     });
     const reprint = paper({
-      ...original, id: 'openalex:W1984', doi: '10.1000/lnp.1984.45', year: 1984, venue: 'Lecture notes in physics',
-      biblio: { firstPage: '45' }, sources: [ref('openalex')]
+      ...original, id: 'crossref:W1984', doi: '10.1000/lnp.1984.45', year: 1984, venue: 'Lecture notes in physics',
+      biblio: { firstPage: '45' }, sources: [ref('crossref')]
     });
     const check = async (reference: string) => {
       const fake = fakeEngine([reprint, original]);

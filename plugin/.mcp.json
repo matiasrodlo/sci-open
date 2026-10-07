@@ -5,7 +5,6 @@
       "args": ["-y", "sci-open-mcp@0.4.0", "--toolsets", "all"],
       "env": {
         "UNPAYWALL_EMAIL": "${UNPAYWALL_EMAIL:-}",
-        "OPENALEX_API_KEY": "${OPENALEX_API_KEY:-}",
         "NCBI_API_KEY": "${NCBI_API_KEY:-}",
         "OPENCITATIONS_TOKEN": "${OPENCITATIONS_TOKEN:-}"
       }

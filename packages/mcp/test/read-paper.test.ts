@@ -40,14 +40,14 @@ const read = (args: Record<string, unknown>, options: FakeOptions = { documents:
 
 describe('read_paper', () => {
   it('says when the copy is the arXiv preprint of a published paper, and not when the record is the preprint', async () => {
-    const preprintCopy: FullTextDocument = { ...DOC, paperId: 'openalex:W9', tier: 'arxiv-html', url: 'https://arxiv.org/html/1706.03762v7' };
-    const published = paper({ id: 'openalex:W9', doi: '10.1234/published', stage: 'published', sources: [ref('openalex', { nativeId: 'W9' }), ref('arxiv', { nativeId: '1706.03762v7' })] });
-    const fake = fakeEngine([published], { documents: { 'openalex:W9': preprintCopy } });
-    const { text } = await readPaper.run(readPaper.input.parse({ paper: 'openalex:W9' }), fake.deps);
+    const preprintCopy: FullTextDocument = { ...DOC, paperId: 'crossref:W9', tier: 'arxiv-html', url: 'https://arxiv.org/html/1706.03762v7' };
+    const published = paper({ id: 'crossref:W9', doi: '10.1234/published', stage: 'published', sources: [ref('crossref', { nativeId: 'W9' }), ref('arxiv', { nativeId: '1706.03762v7' })] });
+    const fake = fakeEngine([published], { documents: { 'crossref:W9': preprintCopy } });
+    const { text } = await readPaper.run(readPaper.input.parse({ paper: 'crossref:W9' }), fake.deps);
     expect(text).toContain('This is the arXiv preprint of a paper published since');
 
     const asPreprint = paper({ ...published, stage: 'preprint' });
-    const again = await readPaper.run(readPaper.input.parse({ paper: 'openalex:W9' }), fakeEngine([asPreprint], { documents: { 'openalex:W9': preprintCopy } }).deps);
+    const again = await readPaper.run(readPaper.input.parse({ paper: 'crossref:W9' }), fakeEngine([asPreprint], { documents: { 'crossref:W9': preprintCopy } }).deps);
     expect(again.text).not.toContain('arXiv preprint of a paper');
   });
 

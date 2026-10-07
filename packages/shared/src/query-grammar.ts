@@ -456,8 +456,8 @@ export function operatorLookalikes(input: string): { ignored: string[]; searched
  * publishers as well as the body text, so `ALL=Doudna` reached a provider
  * reading the flat form as the *word* "Doudna", and every paper she wrote that
  * does not say her name was never fetched. A provider that can state `ALL=` —
- * OpenAlex's `default.search`, the `all:` and every-field forms the others
- * render — is sent it from the parse instead; one that can only read the flat
+ * the `all:` and every-field forms the providers render — is sent it from the
+ * parse instead; one that can only read the flat
  * form now has nothing to search for, and is skipped.
  *
  * `year` and `doi` are left out for a different reason — they are lifted onto

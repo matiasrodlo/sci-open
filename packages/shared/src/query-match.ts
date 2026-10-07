@@ -6,7 +6,7 @@ import type { QueryField, QueryNode, QueryValue } from './query';
  *
  * The grammar is only half of fielded search. The other half is that most of
  * the providers cannot run the query that was typed: OpenAIRE has no query
- * language at all, OpenAlex has no filter key for `SO=` or `PU=`, arXiv's
+ * language at all, Crossref has no field for `PU=`, arXiv's
  * negation is a different shape, and the ones that do all spell their fields
  * differently and index different text under them. Translating
  * as much as each can express and hoping is how the deleted advanced-search tab
@@ -353,8 +353,8 @@ function matchesClause(paper: Paper, field: QueryField, value: QueryValue): Matc
   // holds no copy of. Europe PMC matches `MESH:` and `KW:` — measured in its own
   // translator at a tenth of the hits for `crispr`, records indexed under the
   // subject whose title and abstract never say the word. PubMed expands a bare
-  // word through Automatic Term Mapping. OpenAlex searches full text. All of
-  // them stem, and none of them ship the text they matched on.
+  // word through Automatic Term Mapping. All of them stem, and none of them
+  // ship the text they matched on.
   //
   // So text we hold that does not contain the word is an absence of evidence
   // rather than evidence of absence, and answering `false` would quietly delete

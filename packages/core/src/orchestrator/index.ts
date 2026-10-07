@@ -176,8 +176,6 @@ export type OrchestratorResult = {
  * - DOAJ and OpenAIRE serve 100 records a page, so each pays `depth / 100`
  *   requests, and `readPages` issues everything after the first in one burst.
  *   At 2,000 that is twenty requests arriving at one API at once.
- * - OpenAlex serves 200, against a daily budget its own header notes a 22-query
- *   sweep can already exhaust at the default's three requests per query.
  * - `ProviderCache` charges bytes, and a normalised record measures about
  *   1.8 KB, so one provider's answer at 2,000 is roughly 3.6 MB against a
  *   128 MB budget — still cacheable, which an entry larger than the whole
@@ -309,9 +307,9 @@ async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache
   // Started before the fan-out and awaited only once the set is assembled: the
   // counts run beside the search, and then beside the rescue, neither of which
   // needs them.
-  // A provider left out for its quota is left out of the counts too: OpenAlex
-  // aggregates its facets in requests of its own that do not wait for its
-  // search, and they are billed against the same budget.
+  // A provider left out for its rate limit is left out of the counts too: a
+  // source that aggregates its facets asks in requests of its own that do not
+  // wait for its search, and they count against the same limit.
   const counting = facetQueries
     ? countSourceFacets(unavailable ? (providers as readonly ProviderEntry[]).filter(p => !unavailable.has(p.id)) : providers, {
         queries: facetQueries,

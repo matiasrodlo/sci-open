@@ -165,7 +165,7 @@ describe('ResultSetCache', () => {
     // Asking again gets the same 400, so resolving again would only repeat the
     // fan-out and let `total` move while the reader pages.
     const cache = new ResultSetCache();
-    const refusal = { provider: 'openalex' as const, status: 'error' as const, retrieved: 0, latency: 1, error: 'OpenAlex 400', refused: true };
+    const refusal = { provider: 'europepmc' as const, status: 'error' as const, retrieved: 0, latency: 1, error: 'Europe PMC 400', refused: true };
     const work = vi.fn(async () => set({ complete: false, reports: [refusal] }));
 
     await cache.resolve('k', work);

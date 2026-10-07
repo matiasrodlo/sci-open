@@ -9,14 +9,14 @@
  * response, and it moves `total`, the facets and the ranking, because a paper
  * that was never fetched cannot be merged, counted or ranked.
  *
- * `providers/openalex/index.ts` solved this for itself, and its header explains
- * why it had to: the old path paginated to 600 and the rewrite did not, which
+ * The OpenAlex provider, since removed, solved this for itself, and its
+ * header explained why it had to: the old path paginated to 600 and the rewrite did not, which
  * cost 12,000 records against 4,200 across a 22-query sweep. This is the same
  * fix, factored out, for the two other providers in the keyword fan-out whose
  * page is smaller than the depth — DOAJ and OpenAIRE, both capped at 100.
  *
- * **Two rounds, not `pageCount` of them and not one each.** OpenAlex issues
- * every page at once, on the grounds that walking them in sequence puts a full
+ * **Two rounds, not `pageCount` of them and not one each.** OpenAlex's
+ * provider issued every page at once, on the grounds that walking them in sequence puts a full
  * round trip on the critical path per page. That is right about sequential
  * reads and it over-corrects: with all pages issued blind, a query matching 40
  * records still costs six requests, five of which are answered empty. Here the
@@ -31,7 +31,7 @@
  *
  * **A failed page fails the whole read**, by letting the rejection out of
  * `Promise.all`. That discards the pages that did succeed, and it is deliberate
- * for the reason OpenAlex states: `ProviderReport` has no way to say "short by
+ * for the reason the OpenAlex provider stated: `ProviderReport` has no way to say "short by
  * 400", so returning a partial read would report it as a complete one — which
  * is the silent shortfall this module exists to remove, arriving by a different
  * route.
@@ -56,8 +56,8 @@ export type ReadPagesOptions<Payload, Item> = {
    * not interchangeable. DOAJ and OpenAIRE derive a **page number** from
    * `offset / pageSize`, so a request whose size differs from its neighbours'
    * lands on a different page than the arithmetic intends — which is why
-   * OpenAlex, addressed the same way, states that every request asks for a full
-   * page. NCBI takes `retstart`, an absolute record offset, so the size of a
+   * the OpenAlex provider, addressed the same way, stated that every request
+   * asks for a full page. NCBI takes `retstart`, an absolute record offset, so the size of a
    * request says nothing about where it starts and the last one is free to be
    * short.
    *

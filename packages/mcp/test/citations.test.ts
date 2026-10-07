@@ -12,23 +12,23 @@ import { toToolError } from '../src/errors';
 import { fakeEngine } from './fake-engine';
 
 const SUBJECT = paper({
-  id: 'openalex:W3134956838',
+  id: 'crossref:W3134956838',
   doi: '10.7717/peerj-cs.421',
   title: 'Software must be recognised as an important output of scholarly research',
   authors: ['Caifan Du'],
   year: 2021,
-  sources: [ref('openalex', { nativeId: 'W3134956838' })]
+  sources: [ref('crossref', { nativeId: 'W3134956838' })]
 });
 
 const work = (doi: string, over: Partial<Paper> = {}): Paper =>
   paper({
-    id: `openalex:W${doi.replace(/\D/g, '')}`,
+    id: `crossref:W${doi.replace(/\D/g, '')}`,
     doi,
     title: `Work at ${doi}`,
     authors: ['Ada Lovelace', 'Grace Hopper', 'Alan Turing', 'Katherine Johnson'],
     year: 2020,
     abstract: 'An abstract long enough to matter.',
-    sources: [ref('openalex', { nativeId: `W${doi.replace(/\D/g, '')}` })],
+    sources: [ref('crossref', { nativeId: `W${doi.replace(/\D/g, '')}` })],
     ...over
   });
 
@@ -42,8 +42,8 @@ const link = (dois: string[], over: Partial<CitationLink> = {}): CitationLink =>
 const REFERENCES: CitationLink[] = [
   link(['10.7287/peerj.preprints.26727v1', '10.7717/peerj-cs.163'], { pmid: '33816816', journalSelfCitation: true }),
   link(['10.1007/s11192-020-03792-z'], { authorSelfCitation: true }),
-  link([], { openalex: 'W999' }),
-  link(['10.5555/not-in-openalex'])
+  link([]),
+  link(['10.5555/not-in-crossref'])
 ];
 
 const citations = { 'references|10.7717/peerj-cs.421': REFERENCES };
@@ -85,13 +85,14 @@ describe('get_citations', () => {
     expect(structured.links[1]!.author_self_citation).toBe(true);
   });
 
-  it('names a work with no DOI by its OpenAlex id, and one with no record by its DOI', async () => {
+  it('keeps a link with no DOI, and names one with no record by its DOI', async () => {
     const fake = fakeEngine([], { citations });
     const { structured, text } = await getCitations.run(getCitations.input.parse({ paper: '10.7717/peerj-cs.421', direction: 'references' }), fake.deps);
 
-    expect(structured.links[2]).toEqual({ id: 'openalex:W999', journal_self_citation: false, author_self_citation: false });
-    expect(structured.links[3]).toEqual({ doi: '10.5555/not-in-openalex', journal_self_citation: false, author_self_citation: false });
-    expect(text).toMatch(/^4\. no record doi:10\.5555\/not-in-openalex$/m);
+    // OpenCitations' OpenAlex id for it names nothing any source here is asked for.
+    expect(structured.links[2]).toEqual({ journal_self_citation: false, author_self_citation: false });
+    expect(structured.links[3]).toEqual({ doi: '10.5555/not-in-crossref', journal_self_citation: false, author_self_citation: false });
+    expect(text).toMatch(/^4\. no record doi:10\.5555\/not-in-crossref$/m);
   });
 
   it('pages by offset and says how to ask for the next page', async () => {
@@ -120,7 +121,7 @@ describe('get_citations', () => {
   it('says when the records could not be looked up, rather than that the works are not in them', async () => {
     const fake = fakeEngine([], {
       citations,
-      openalex: async dois => ({ found: new Map(), unasked: [...dois] })
+      batch: async dois => ({ found: new Map(), unasked: [...dois] })
     });
     const { structured, text } = await getCitations.run(getCitations.input.parse({ paper: '10.7717/peerj-cs.421', direction: 'references' }), fake.deps);
     expect(structured.records_incomplete).toBe(true);
@@ -142,8 +143,8 @@ describe('get_citations', () => {
     const noDoi = paper({ id: 'arxiv:2101.00001', title: 'No DOI', sources: [ref('arxiv', { nativeId: '2101.00001' })] });
     const fake = fakeEngine([SUBJECT, noDoi, PREPRINT, ARTICLE, OTHER], { citations });
 
-    const byId = await getCitations.run(getCitations.input.parse({ paper: 'openalex:W3134956838', direction: 'references' }), fake.deps);
-    expect(byId.structured).toMatchObject({ paper: 'openalex:W3134956838', doi: '10.7717/peerj-cs.421', total_links: 4 });
+    const byId = await getCitations.run(getCitations.input.parse({ paper: 'crossref:W3134956838', direction: 'references' }), fake.deps);
+    expect(byId.structured).toMatchObject({ paper: 'crossref:W3134956838', doi: '10.7717/peerj-cs.421', total_links: 4 });
     await expect(getCitations.run(getCitations.input.parse({ paper: 'arxiv:2101.00001', direction: 'references' }), fake.deps))
       .rejects.toMatchObject({ code: 'not_found', message: 'This paper has no DOI, and OpenCitations is keyed by DOI.' });
   });
@@ -168,7 +169,7 @@ describe('export_citations', () => {
     const fake = fakeEngine([SUBJECT, ARTICLE, OTHER]);
     const resolveDois = vi.spyOn(fake.engine, 'resolveDois');
     const { structured, resources, text } = await exportCitations.run(
-      exportCitations.input.parse({ papers: ['10.7717/peerj-cs.163', 'openalex:W3134956838', 'https://doi.org/10.1007/s11192-020-03792-z'] }),
+      exportCitations.input.parse({ papers: ['10.7717/peerj-cs.163', 'crossref:W3134956838', 'https://doi.org/10.1007/s11192-020-03792-z'] }),
       fake.deps
     );
 
@@ -229,7 +230,7 @@ describe('export_citations', () => {
     const elsewhere = work('10.5281/zenodo.1', { sources: [ref('datacite', { nativeId: '10.5281/zenodo.1' })] });
     const fake = fakeEngine([ARTICLE, elsewhere], {
       // OpenAlex holds only the article.
-      openalex: async () => ({ found: new Map([['10.7717/peerj-cs.163', ARTICLE]]), unasked: [] })
+      batch: async () => ({ found: new Map([['10.7717/peerj-cs.163', ARTICLE]]), unasked: [] })
     });
     const { structured, text } = await exportCitations.run(
       exportCitations.input.parse({ papers: ['10.7717/peerj-cs.163', '10.5281/zenodo.1', '10.9999/nobody', 'arxiv:0000.00000'] }),
@@ -246,7 +247,7 @@ describe('export_citations', () => {
   });
 
   it('lists a DOI the search budget refused, and says to wait when it refused them all', async () => {
-    const fake = fakeEngine([ARTICLE], { admissions: 0, openalex: async dois => ({ found: new Map(), unasked: [...dois] }) });
+    const fake = fakeEngine([ARTICLE], { admissions: 0, batch: async dois => ({ found: new Map(), unasked: [...dois] }) });
     await expect(exportCitations.run(exportCitations.input.parse({ papers: ['10.7717/peerj-cs.163'] }), fake.deps))
       .rejects.toMatchObject({ code: 'not_found', hint: 'The search budget ran out on the DOI lookups; retry in a minute.' });
   });
@@ -254,7 +255,7 @@ describe('export_citations', () => {
   it('leaves out a paper named twice, and says so', async () => {
     const fake = fakeEngine([SUBJECT]);
     const { structured, text } = await exportCitations.run(
-      exportCitations.input.parse({ papers: ['10.7717/peerj-cs.421', 'openalex:W3134956838'] }),
+      exportCitations.input.parse({ papers: ['10.7717/peerj-cs.421', 'crossref:W3134956838'] }),
       fake.deps
     );
     expect(structured).toMatchObject({ entries: 1, duplicates: 1 });

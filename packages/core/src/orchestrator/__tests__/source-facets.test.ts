@@ -69,10 +69,10 @@ describe('yearWindow', () => {
 
 describe('countSourceFacets', () => {
   it('asks a provider that aggregates without waiting for its search', async () => {
-    const aggregate = provider('openalex', async () => counted(2026, 424757), { facetsAggregate: true });
+    const aggregate = provider('plos', async () => counted(2026, 424757), { facetsAggregate: true });
     const results = await countSourceFacets([aggregate], options({ settled: () => new Promise(() => {}) }));
 
-    expect(results).toEqual([{ provider: 'openalex', facets: { year: [{ value: 2026, count: 424757 }] } }]);
+    expect(results).toEqual([{ provider: 'plos', facets: { year: [{ value: 2026, count: 424757 }] } }]);
   });
 
   it('hands a count-by-count provider the total its search reported', async () => {
@@ -152,7 +152,7 @@ describe('countSourceFacets', () => {
   it('serves a repeat from the cache, but not a partial answer', async () => {
     const cache = new ProviderCache();
     let failures: string[] = ['429'];
-    const counter = provider('openalex', async () => ({ ...counted(2026, 5), failures }), { facetsAggregate: true });
+    const counter = provider('plos', async () => ({ ...counted(2026, 5), failures }), { facetsAggregate: true });
 
     await countSourceFacets([counter], options({ cache }));
     await countSourceFacets([counter], options({ cache }));

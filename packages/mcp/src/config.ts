@@ -20,7 +20,7 @@ export type McpConfig = {
   openCitationsToken?: string;
   /** `fixture` serves recorded answers, for evals and demos. */
   engine: 'live' | 'fixture';
-  /** Sources never asked (`--without openalex`): see EngineOptions.without. */
+  /** Sources never asked (`--without core`): see EngineOptions.without. */
   without?: SourceId[];
   fixturesPath?: string;
   /** Serve Streamable HTTP instead of stdio (`--http`). */
@@ -40,8 +40,6 @@ export type HttpConfig = {
   /** New searches a minute across every client: the ceiling over the
    * per-client budgets (`maxNewSearchesPerMinute`). */
   totalNewSearchesPerMinute: number;
-  /** Serve without an OpenAlex key. For a trial, never a shared deployment. */
-  allowUnkeyed: boolean;
   /** Enables GET /metrics for whoever sends it as a bearer token. */
   adminKey?: string;
 };
@@ -51,7 +49,7 @@ export type HttpConfig = {
 export type ConfigResult = { config: McpConfig; warnings: string[]; exit?: { code: number; output: string } };
 
 const LOG_LEVELS = ['error', 'warn', 'info', 'debug'] as const;
-const KEYED = ['core', 'ncbi', 'doaj', 'datacite', 'openalex'] as const;
+const KEYED = ['core', 'ncbi', 'doaj', 'datacite'] as const;
 
 export const USAGE = `sci-open-mcp: MCP server for open-access scientific literature, over stdio or HTTP.
 
@@ -62,15 +60,13 @@ export const USAGE = `sci-open-mcp: MCP server for open-access scientific litera
   --engine <live|fixture>   fixture serves recorded answers          [SCI_OPEN_ENGINE]
   --fixtures <path>         the recordings for --engine fixture      [SCI_OPEN_FIXTURES]
   --log-level <level>       error, warn, info or debug, to stderr    [SCI_OPEN_LOG_LEVEL]
-  --without <list>          sources never asked, e.g. openalex       [SCI_OPEN_WITHOUT]
+  --without <list>          sources never asked, e.g. core           [SCI_OPEN_WITHOUT]
   --http                    serve Streamable HTTP at /mcp, not stdio [SCI_OPEN_HTTP=1]
   --port <n>                HTTP port, 8080 by default               [SCI_OPEN_HTTP_PORT]
   --host <address>          HTTP address, 127.0.0.1 by default       [SCI_OPEN_HTTP_HOST]
   --help, --version
 
-Over HTTP: OPENALEX_API_KEY is required unless --without openalex
-(SCI_OPEN_ALLOW_UNKEYED=1 for a trial),
-SCI_OPEN_ALLOWED_ORIGINS names hostnames a browser may call from,
+Over HTTP: SCI_OPEN_ALLOWED_ORIGINS names hostnames a browser may call from,
 SCI_OPEN_TRUST_PROXY the proxies that may name the client,
 SCI_OPEN_TOTAL_NEW_SEARCHES_PER_MIN caps new searches across every client,
 SCI_OPEN_ADMIN_KEY enables GET /metrics, and no file is ever written.
@@ -157,7 +153,7 @@ export function readMcpConfig(env: NodeJS.ProcessEnv, argv: string[]): ConfigRes
 
   const email = read('UNPAYWALL_EMAIL');
   if (!email) {
-    warnings.push('UNPAYWALL_EMAIL is not set: Unpaywall refuses anonymous requests and OpenAlex meters them more tightly');
+    warnings.push('UNPAYWALL_EMAIL is not set: Unpaywall refuses anonymous requests and Crossref answers them from its slower public pool');
   }
 
   const apiKeys: ApiKeys = {};
@@ -192,7 +188,6 @@ export function readMcpConfig(env: NodeJS.ProcessEnv, argv: string[]): ConfigRes
       trustProxy: list(read('SCI_OPEN_TRUST_PROXY')) ?? [],
       requestsPerMinute: whole('SCI_OPEN_REQUESTS_PER_MIN', 60, 1, 6000),
       totalNewSearchesPerMinute: whole('SCI_OPEN_TOTAL_NEW_SEARCHES_PER_MIN', 120, 1, 6000),
-      allowUnkeyed: isOn('SCI_OPEN_ALLOW_UNKEYED'),
       ...(adminKey ? { adminKey } : {})
     };
   } else if (flags.port || flags.host) {

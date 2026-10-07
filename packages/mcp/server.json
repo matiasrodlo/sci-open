@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.matiasrodlo/sci-open",
   "title": "sci-open",
-  "description": "Search seven open-access sources, verify references, read and cite papers, and see what was missed.",
+  "description": "Search free scholarly sources, verify references, read and cite papers, and see what was missed.",
   "version": "0.4.0",
   "repository": {
     "url": "https://github.com/matiasrodlo/sci-open",
@@ -19,15 +19,9 @@
       "environmentVariables": [
         {
           "name": "UNPAYWALL_EMAIL",
-          "description": "Contact email sent to Unpaywall and OpenAlex. Strongly recommended: without it Unpaywall refuses requests and OpenAlex meters them more tightly.",
+          "description": "Contact email sent to Unpaywall and Crossref. Strongly recommended: without it Unpaywall refuses requests and Crossref answers from its slower public pool.",
           "isRequired": false,
           "isSecret": false
-        },
-        {
-          "name": "OPENALEX_API_KEY",
-          "description": "OpenAlex API key, free from openalex.org/settings/api. Strongly recommended: without one OpenAlex allows a tenth of a key's daily budget, and searches stop reaching it once that is spent.",
-          "isRequired": false,
-          "isSecret": true
         },
         {
           "name": "NCBI_API_KEY",

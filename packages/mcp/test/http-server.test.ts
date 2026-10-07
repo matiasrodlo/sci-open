@@ -18,7 +18,7 @@ import { FIXTURES } from './fixtures';
  */
 
 const PAPERS = [1, 2, 3].map(i =>
-  paper({ id: `openalex:W${i}`, doi: `10.1234/s.${i}`, title: `Crispr malaria cholera dengue study ${i}`, year: 2020, sources: [ref('openalex', { nativeId: `W${i}` })] })
+  paper({ id: `crossref:W${i}`, doi: `10.1234/s.${i}`, title: `Crispr malaria cholera dengue study ${i}`, year: 2020, sources: [ref('crossref', { nativeId: `W${i}` })] })
 );
 
 const quiet = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} };
@@ -32,7 +32,7 @@ async function serve(http: Partial<HttpConfig> = {}, newSearchesPerMinute = 30, 
     deps: { engine: engine ?? fake.engine, config: { ...fake.deps.config, allowWrites: true }, metrics },
     http: {
       host: '127.0.0.1', port: 0, allowedOrigins: [], trustProxy: [], requestsPerMinute: 60, totalNewSearchesPerMinute: 120,
-      allowUnkeyed: false, ...http
+      ...http
     },
     newSearchesPerMinute,
     logger: quiet

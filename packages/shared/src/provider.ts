@@ -150,10 +150,10 @@ export type ProviderCapabilities = {
    * False for OpenAIRE alone, whose API takes keywords and has no query
    * language to name a field in.
    *
-   * True does not mean *every* field. OpenAlex has a filter key for the title,
-   * the abstract, the topic and the author and none for `SO=` or `PU=`; what a
-   * provider cannot name is dropped from its request and applied to the merged
-   * records instead. This flag answers the coarser question `plan` asks — is
+   * True does not mean *every* field. Crossref has a field for the author and
+   * the venue and none for the title alone or `PU=`; what a provider cannot
+   * name is dropped from its request and applied to the merged records
+   * instead. This flag answers the coarser question `plan` asks — is
    * there any point sending this provider a fielded query at all.
    *
    * It only decides anything for a query that is *entirely* field-scoped.
@@ -198,14 +198,14 @@ export type ProviderCapabilities = {
    * than over the records a search reads from it.
    *
    * The read is the top `depth` records, and a facet counted over it describes
-   * the top of the answer: on `ai`, OpenAlex matched 983,815 open papers and
-   * the year facet said 964 of them were from 2026, where OpenAlex's own count
-   * for that year is 424,757. A reader looking at the panel to see how much
-   * work there is on a topic was being shown the size of our read.
+   * the top of the answer: on `ai`, a source matched 983,815 open papers and
+   * the year facet said 964 of them were from 2026, where that source's own
+   * count for the year was 424,757. A reader looking at the panel to see how
+   * much work there is on a topic was being shown the size of our read.
    *
-   * Only what the API can actually answer. Two providers aggregate natively —
-   * OpenAlex's `group_by` and PLOS's Solr facets — and answer every facet they
-   * list in one request each. The rest can only be asked for a count, so a year
+   * Only what the API can actually answer. One provider aggregates natively —
+   * PLOS, with its Solr facets — and answers every facet it lists in one
+   * request each. The rest can only be asked for a count, so a year
    * facet costs them one request per year and they list it only where that is
    * affordable: arXiv asks for three seconds between requests, so it lists only
    * `stage` — every record it holds is a preprint, so that count is its total,

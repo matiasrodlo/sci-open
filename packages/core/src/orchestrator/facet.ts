@@ -162,9 +162,9 @@ export function generateFacets(papers: readonly Paper[], bases: FacetBases = {},
  * A year after the current one is dropped. No paper is from 2035; a bucket for
  * it is a source's bad date, and on "crispr gene editing" the panel offered
  * 2035 and 2027 at the top of the year list. Both routes carry them — a paper
- * read with that year, and OpenAlex's `group_by`, which answers every year it
- * holds rather than the window asked for — so the cut is here, where they
- * meet. The papers themselves are still listed; only the bucket is not offered.
+ * read with that year, and a source's own aggregation, which can answer every
+ * year it holds rather than the window asked for — so the cut is here, where
+ * they meet. The papers themselves are still listed; only the bucket is not offered.
  */
 function arrange(facet: FacetKey, buckets: FacetBucket[], now: Date): FacetBucket[] {
   if (facet === 'year') {

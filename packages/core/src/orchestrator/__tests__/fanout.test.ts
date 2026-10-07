@@ -81,11 +81,11 @@ describe('fanOut', () => {
     // anyway, it would answer `ok` with nothing retrieved — a "0" in the panel
     // for a question it was never put.
     const search = vi.fn(async () => ({ papers: [], skipped: [] }));
-    const mute = { ...stubProvider('openalex', search), translate: () => '' };
+    const mute = { ...stubProvider('doaj', search), translate: () => '' };
     const { reports } = await fanOut(plan(QUERY, [ok('europepmc', 1), mute]), base);
 
     expect(search).not.toHaveBeenCalled();
-    expect(reports.find(r => r.provider === 'openalex')).toMatchObject({
+    expect(reports.find(r => r.provider === 'doaj')).toMatchObject({
       status: 'skipped', retrieved: 0, skipReason: 'cannot express this query'
     });
     // A skip is not a failure, so the set is still whole.
@@ -104,14 +104,14 @@ describe('fanOut', () => {
   });
 
   it('records a 400 or 422 as the provider refusing the query', async () => {
-    // As OpenAlex's own error carries it, and as an axios error does.
+    // As a provider's own error carries it, and as an axios error does.
     const refusals = [
-      Object.assign(new Error('OpenAlex 400: Wildcards (* or ?) require the exact field'), { status: 400 }),
+      Object.assign(new Error('Europe PMC 400: bad query'), { status: 400 }),
       Object.assign(new Error('Unprocessable'), { status: 422 }),
       Object.assign(new Error('Request failed with status code 400'), { response: { status: 400 } })
     ];
     for (const error of refusals) {
-      const { reports } = await fanOut(plan(QUERY, [stubProvider('openalex', async () => { throw error; })]), base);
+      const { reports } = await fanOut(plan(QUERY, [stubProvider('europepmc', async () => { throw error; })]), base);
       expect(reports[0]).toMatchObject({ status: 'error', refused: true });
     }
   });
@@ -119,7 +119,7 @@ describe('fanOut', () => {
   it('calls nothing else a refusal, since a retry may be answered', async () => {
     const failures: ProviderEntry['search'][] = [
       // Rate-limited, and a server error: both may be answered next time.
-      async () => { throw Object.assign(new Error('OpenAlex 429: budget'), { status: 429 }); },
+      async () => { throw Object.assign(new Error('Crossref 429'), { status: 429 }); },
       async () => { throw Object.assign(new Error('Request failed with status code 500'), { response: { status: 500 } }); },
       // A status in the message is not read: guessing from text is how a 503
       // page that mentions a 400 becomes a set held for half an hour.
@@ -200,7 +200,7 @@ describe('fanOut', () => {
     const sorting = vi.fn(async () => ({ papers: [paper()], skipped: [] }));
     const relevant = vi.fn(async () => ({ papers: [paper()], skipped: [] }));
     const providers = [
-      stubProvider('openalex', sorting, { sorts: ['date', 'citations'] }),
+      stubProvider('europepmc', sorting, { sorts: ['date', 'citations'] }),
       stubProvider('doaj', relevant)
     ];
     const cache = new ProviderCache();
@@ -209,7 +209,7 @@ describe('fanOut', () => {
     await fanOut(plan(QUERY, providers), { ...base, cache });
     const { reports } = await fanOut(plan(byDate, providers), { ...base, query: byDate, cache });
 
-    expect(reports.find(r => r.provider === 'openalex')?.sorted).toBe('date');
+    expect(reports.find(r => r.provider === 'europepmc')?.sorted).toBe('date');
     expect(reports.find(r => r.provider === 'doaj')?.sorted).toBeUndefined();
     // The sorted read is its own; the one that cannot sort is the read it already had.
     expect(sorting).toHaveBeenCalledTimes(2);
@@ -239,7 +239,7 @@ describe('fanOut', () => {
 describe('onlyRefused', () => {
   const report = (over: Partial<ProviderReport>): ProviderReport =>
     ({ provider: 'ncbi', status: 'ok', retrieved: 1, latency: 1, ...over });
-  const refused = report({ provider: 'openalex', status: 'error', retrieved: 0, error: 'OpenAlex 400', refused: true });
+  const refused = report({ provider: 'europepmc', status: 'error', retrieved: 0, error: 'Europe PMC 400', refused: true });
 
   it('is true when every provider that did not answer refused the query', () => {
     expect(onlyRefused([report({}), refused, report({ status: 'skipped' })])).toBe(true);

@@ -215,7 +215,7 @@ describe('facets sent to the sources, and counted by them', () => {
     const searched: Query[] = [];
     const counted: Counted[] = [];
     const entry: ProviderEntry = {
-      id: 'openalex',
+      id: 'plos',
       capabilities: {
         keywordSearch: true, fieldedSearch: false, doiLookup: true,
         maxPageSize: 200, reportsTotal: true,
@@ -284,7 +284,7 @@ describe('facets sent to the sources, and counted by them', () => {
     // A source filter is this service's own label: no source can be sent it,
     // so no source's count describes the search.
     const { entry, counted } = counter();
-    const response = await run({ q: 'crispr', filters: { source: ['openalex'] } }, [entry], { facets: true });
+    const response = await run({ q: 'crispr', filters: { source: ['plos'] } }, [entry], { facets: true });
 
     expect(counted).toEqual([]);
     expect(response.countsFromSources).toBe(false);

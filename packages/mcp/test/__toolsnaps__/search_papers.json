@@ -1,7 +1,7 @@
 {
   "name": "search_papers",
   "title": "Search papers",
-  "description": "Search open-access scientific literature across seven sources at once, eight with closed papers, or look up one DOI in eleven. Use the Web of Science query grammar described in the server instructions. Returns the first page, a handle for get_search_page, and coverage: which sources answered, failed or were skipped. Set count_only=true to tune a query: each source's own match count, with no results read. Use get_paper for a full record.",
+  "description": "Search open-access scientific literature across six sources at once, seven with closed papers, or look up one DOI in ten. Use the Web of Science query grammar described in the server instructions. Returns the first page, a handle for get_search_page, and coverage: which sources answered, failed or were skipped. Set count_only=true to tune a query: each source's own match count, with no results read. Use get_paper for a full record.",
   "inputSchema": {
     "type": "object",
     "properties": {
@@ -27,7 +27,7 @@
       },
       "sources": {
         "description": "Ask only these sources; coverage then reports only them. Omit to ask every source able to answer the query.",
-        "maxItems": 11,
+        "maxItems": 10,
         "type": "array",
         "items": {
           "type": "string",
@@ -39,7 +39,6 @@
             "openaire",
             "datacite",
             "biorxiv",
-            "openalex",
             "crossref",
             "core",
             "europepmc"

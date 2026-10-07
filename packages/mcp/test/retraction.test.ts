@@ -18,22 +18,22 @@ import { fakeEngine } from './fake-engine';
  */
 
 const RETRACTED: Paper = paper({
-  id: 'openalex:W2117847125',
+  id: 'crossref:W2117847125',
   doi: '10.1016/s0140-6736(97)11096-0',
   title: 'Ileal-lymphoid-nodular hyperplasia, non-specific colitis, and pervasive developmental disorder in children',
   authors: ['A J Wakefield', 'S H Murch'],
   year: 1998,
   venue: 'The Lancet',
   retracted: true,
-  sources: [ref('openalex', { nativeId: 'W2117847125' })]
+  sources: [ref('crossref', { nativeId: 'W2117847125' })]
 });
 const STANDING: Paper = paper({
-  id: 'openalex:W1',
+  id: 'crossref:W1',
   doi: '10.1234/standing',
   title: 'Ileal hyperplasia revisited in a later cohort',
   authors: ['Ada Lovelace'],
   year: 2005,
-  sources: [ref('openalex', { nativeId: 'W1' })]
+  sources: [ref('crossref', { nativeId: 'W1' })]
 });
 
 const WARNING = /^\*\*Warning: .* recorded as retracted\.\*\* A retracted paper is not evidence; do not cite it as support\.$/;

@@ -14,7 +14,6 @@ vi.mock('../../lib/http-client-factory', () => ({
   getPooledClient: () => ({ get, post })
 }));
 
-import * as openalex from '../openalex';
 import * as europepmc from '../europepmc';
 import * as ncbi from '../ncbi';
 import * as arxiv from '../arxiv';
@@ -31,27 +30,6 @@ beforeEach(() => {
 });
 
 describe('the orders each source is asked to read in', () => {
-  it('OpenAlex: date and citations, either way', async () => {
-    const sent: Record<string, unknown> = {};
-    for (const sort of ['date', 'date_asc', 'citations', 'citations_asc'] as const) {
-      get.mockReset();
-      get.mockResolvedValue({ status: 200, data: { results: [], meta: { count: 0 } } });
-      await openalex.fetchPage({ filter: 'is_oa:true' }, { ...BASE, sort });
-      sent[sort] = sentParams().sort;
-    }
-    expect(sent).toEqual({
-      date: 'publication_date:desc', date_asc: 'publication_date:asc',
-      citations: 'cited_by_count:desc', citations_asc: 'cited_by_count:asc'
-    });
-    expect(openalex.capabilities.sorts).toEqual(['date', 'date_asc', 'citations', 'citations_asc']);
-  });
-
-  it('OpenAlex: nothing, for relevance', async () => {
-    get.mockResolvedValue({ status: 200, data: { results: [], meta: { count: 0 } } });
-    await openalex.fetchPage({ filter: 'is_oa:true' }, BASE);
-    expect(sentParams()).not.toHaveProperty('sort');
-  });
-
   it('Europe PMC: newest and most cited first, never oldest first', async () => {
     get.mockResolvedValue({ status: 200, data: { hitCount: 0 } });
     await europepmc.fetchPage('crispr', { ...BASE, sort: 'date' });

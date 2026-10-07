@@ -59,13 +59,6 @@ const EXPECTED: Record<ProviderId | string, Expected> = {
 
   openaire: { keywordSearch: true, fieldedSearch: false, doiLookup: true, maxPageSize: 100, reportsTotal: true },
 
-  // 200 is OpenAlex's own per-page cap; the provider paginates internally to
-  // reach the requested depth.
-  // `fieldedSearch` is TRUE, against the comment that used to sit here saying
-  // OpenAlex could not scope a field. It has a `*.search` filter for the title,
-  // the abstract, the topic and the author — measured 2026-09-30 — and only
-  // `SO=`/`PU=` have none, which widen. See `FIELD_FILTERS` in its translate.
-  openalex: { keywordSearch: true, fieldedSearch: true, doiLookup: true, maxPageSize: 200, reportsTotal: true },
 
   plos: { keywordSearch: true, fieldedSearch: true, doiLookup: true, maxPageSize: 1000, reportsTotal: true }
 };
@@ -172,8 +165,6 @@ describe('provider capabilities', () => {
     expect(yielded).toEqual({
       // At or above the requested depth, so they yield all of it.
       europepmc: 600, plos: 600, arxiv: 600, datacite: 600, crossref: 600,
-      // OpenAlex caps a page at 200 and paginates internally to reach 600.
-      openalex: 200,
       ncbi: 500,
       doaj: 100, openaire: 100,
       biorxiv: 30,
@@ -201,7 +192,6 @@ const STAGES_AND_FACETS: Record<string, { holds: string[]; filter: boolean; face
   europepmc: { holds: ['preprint', 'published', 'unknown'], filter: true, facets: ['year', 'stage'] },
   ncbi: { holds: ['preprint', 'published', 'unknown'], filter: true, facets: ['year', 'stage'] },
   openaire: { holds: ['published', 'unknown'], filter: true, facets: ['year', 'stage'] },
-  openalex: { holds: ['preprint', 'published', 'unknown'], filter: true, facets: ['year', 'stage', 'venue', 'publisher', 'topics'] },
   plos: { holds: ['published'], filter: false, facets: ['year', 'stage', 'venue', 'publisher'] }
 };
 

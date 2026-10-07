@@ -23,7 +23,7 @@ export function usableApiKey(value?: string): string | undefined {
 }
 
 /** The providers that take a key. */
-export type KeyedProvider = 'core' | 'ncbi' | 'doaj' | 'datacite' | 'openalex';
+export type KeyedProvider = 'core' | 'ncbi' | 'doaj' | 'datacite';
 
 export type ApiKeys = Partial<Record<KeyedProvider, string>>;
 

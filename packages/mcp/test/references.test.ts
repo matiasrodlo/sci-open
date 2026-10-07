@@ -46,17 +46,17 @@ describe('titleOverlap', () => {
 
 describe('judge', () => {
   const record = paper({
-    id: 'openalex:W1',
+    id: 'crossref:W1',
     title: 'Attention Is All You Need',
     authors: ['Ashish Vaswani', 'Noam Shazeer'],
     year: 2017,
-    sources: [ref('openalex'), ref('arxiv'), ref('core')]
+    sources: [ref('crossref'), ref('arxiv'), ref('core')]
   });
 
   it('verifies a matching title, year and author, and counts the sources behind it', () => {
     const j = judge(parseReference('Vaswani A, Shazeer N. Attention is all you need. NeurIPS. 2017.'), record);
     expect(j.verdict).toBe('verified');
-    expect(j.corroborated_by).toEqual(['openalex', 'arxiv', 'core']);
+    expect(j.corroborated_by).toEqual(['crossref', 'arxiv', 'core']);
     expect(j.issues).toEqual([]);
   });
 
@@ -83,6 +83,17 @@ describe('judge', () => {
     expect(judge(cited, near).verdict).toBe('not_found');
     // The same overlap with only the year wrong is still worth a look.
     expect(judge({ ...cited, surnames: ['perdomo'] }, near).verdict).toBe('ambiguous');
+  });
+
+  it('finds nothing behind four title words in five when the year and the authors both disagree', () => {
+    // Measured live once Crossref was searched: closer than the 2012 paper,
+    // and by other authors and in another year all the same.
+    const closer = paper({ title: 'Exploring quantum annealing for coarse-grained protein folding', authors: ['Ana Lindqvist'], year: 2025 });
+    const cited = parseReference('Okafor L, Brandt P. Quantum annealing of protein folding landscapes. Nature 2021;590:112-118.');
+    expect(judge(cited, closer).verdict).toBe('not_found');
+    // The whole title, under other names and another year, is still worth a look.
+    const same = paper({ title: 'Quantum annealing of protein folding landscapes', authors: ['Ana Lindqvist'], year: 2025 });
+    expect(judge(cited, same).verdict).toBe('ambiguous');
   });
 
   it('finds nothing in a title that shares little', () => {

@@ -3,7 +3,7 @@ import axiosRetry from 'axios-retry';
 import http from 'http';
 import https from 'https';
 import { log } from './logger';
-import { costOf, recordUpstream } from './upstream-usage';
+import { recordUpstream } from './upstream-usage';
 
 /**
  * The most of one upstream answer any pooled client will read.
@@ -98,7 +98,7 @@ function countUsage(client: AxiosInstance): void {
   };
   client.interceptors.response.use(
     (response: AxiosResponse) => {
-      recordUpstream(urlOf(response.config), { status: response.status, costUsd: costOf(response.data) });
+      recordUpstream(urlOf(response.config), { status: response.status });
       return response;
     },
     (error: AxiosError) => {

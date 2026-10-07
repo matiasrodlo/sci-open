@@ -24,10 +24,7 @@ import {
 } from './graph/opencitations';
 import { SourceBusyError } from './lib/host-pacer';
 import { RequestBudget } from './lib/request-budget';
-import { fetchWorksByDoi, OpenAlexUnavailableError, WORKS_BY_DOI_MAX } from './providers/openalex/fetch';
-import { normalize as normalizeOpenAlex } from './providers/openalex/normalize';
 import { lookupDois as fetchCrossrefDois, DOIS_PER_REQUEST as CROSSREF_DOIS_MAX } from './providers/crossref';
-import { apiKeyFor } from './lib/api-key';
 import { log } from './lib/logger';
 
 /**
@@ -50,11 +47,10 @@ export type EngineOptions = {
   providers?: readonly ProviderEntry[];
   authorities?: readonly AuthorityEntry[];
   /** Sources left out entirely: never searched, never asked about a paper,
-   * and OpenAlex never asked to resolve a batch of DOIs, which every source
-   * is then asked one at a time instead. How the engine runs with no metered
-   * source: `['openalex']`. */
+   * and Crossref never asked to resolve a batch of DOIs, which every source
+   * is then asked one at a time instead. */
   without?: readonly SourceId[];
-  /** How long a source that answered 429 is left alone. Ten minutes by default. */
+  /** How long a source that answered 429 is left alone. A minute by default. */
   quotaCoolDownMs?: number;
   /** The clock the cool-down runs on, for tests. */
   now?: () => number;
@@ -72,8 +68,8 @@ export const SOURCE_IDS: readonly SourceId[] = [...new Set<SourceId>([...PROVIDE
 export type SearchOutcome = { response: SearchResponse; fromCache: boolean };
 
 /** What `resolveDois` found, by lower-cased DOI, and the DOIs it could not ask
- * about: neither OpenAlex nor Crossref could be asked, or the DOI cannot be
- * listed in their filters. A DOI in neither was asked about and is not held. */
+ * about: Crossref could not be asked, or the DOI cannot be listed in its
+ * filter. A DOI in neither was asked about and is not held. */
 export type DoiResolution = { found: Map<string, Paper>; unasked: string[] };
 
 type Admit = () => Promise<void>;
@@ -133,11 +129,10 @@ export type Engine = {
    * is fetched once however it is paged. No admission: one request, to a
    * source the search does not ask. */
   citationLinks(doi: string, direction: CitationDirection, options?: Cancellable): Promise<CitationLink[]>;
-  /** Records for a list of DOIs, fifty to a request, from OpenAlex, and from
-   * Crossref for those OpenAlex could not be asked about — left out, cooling
-   * down or failed — when Crossref is one of the sources. As that source alone
-   * has them: not merged with other sources, not enriched. Enough to cite a
-   * paper or list it. Not a search, and no admission. */
+  /** Records for a list of DOIs from Crossref, fifty to a request, when it is
+   * one of the sources. As Crossref alone has them: not merged with other
+   * sources, not enriched. Enough to cite a paper or list it. Not a search,
+   * and no admission. */
   resolveDois(dois: readonly string[], options?: Cancellable): Promise<DoiResolution>;
 };
 
@@ -223,8 +218,8 @@ export function createEngine(options: EngineOptions): Engine {
     return value;
   };
 
-  /** OpenAlex the authority is billed against the same budget as OpenAlex the
-   * source, so a cooled-down OpenAlex is left out of enrichment too. */
+  /** Crossref the authority keeps to the same limits as Crossref the source,
+   * so a cooled-down Crossref is left out of enrichment too. */
   const authoritiesNow = (unavailable: ReadonlyMap<ProviderId, string>) => {
     // OpenCitations the authority shares an address's allowance with the
     // citation links, so it sits out their cool-down too.
@@ -265,38 +260,6 @@ export function createEngine(options: EngineOptions): Engine {
     // A held set's reports are what was learned when it was resolved.
     if (!fromCache) quota.note(response.providers);
     return { response, fromCache };
-  };
-
-  /** OpenAlex's records for these DOIs, into `found`; returns the DOIs it could not be asked about. */
-  const openAlexBatches = async (wanted: readonly string[], found: Map<string, Paper>, signal?: AbortSignal): Promise<string[]> => {
-    const unasked = wanted.filter(doi => /[|,]/.test(doi));
-    const listable = wanted.filter(doi => !/[|,]/.test(doi));
-    for (let i = 0; i < listable.length; i += WORKS_BY_DOI_MAX) {
-      signal?.throwIfAborted();
-      const batch = listable.slice(i, i + WORKS_BY_DOI_MAX);
-      // OpenAlex the batch is billed against the same budget as OpenAlex the
-      // source: while one is cooling down, so is the other.
-      if (quota.unavailable().has('openalex')) {
-        unasked.push(...listable.slice(i));
-        break;
-      }
-      try {
-        const payload = await fetchWorksByDoi(batch, {
-          userAgent, timeoutMs: 15_000, ...apiKeyFor('openalex'), ...(signal ? { signal } : {})
-        });
-        const { papers } = normalizeOpenAlex(payload, { retrievedAt: new Date().toISOString() });
-        for (const paper of papers) if (paper.doi) found.set(normalizeDoi(paper.doi), paper);
-      } catch (error) {
-        // Stopped, not failed: no batch after it is asked.
-        signal?.throwIfAborted();
-        // One batch's failure is its own: the others are still worth asking,
-        // unless this one was refused for the budget.
-        if (error instanceof OpenAlexUnavailableError && error.status === 429) quota.refuse('openalex');
-        log.warn('OpenAlex did not resolve a batch of DOIs', { dois: batch.length, err: error instanceof Error ? error.message : String(error) });
-        unasked.push(...batch);
-      }
-    }
-    return unasked;
   };
 
   /** Crossref's records for these DOIs, into `found`; returns the DOIs it could not be asked about. */
@@ -346,9 +309,8 @@ export function createEngine(options: EngineOptions): Engine {
       return outcome;
     },
     async lookup(id, extra = {}) {
-      // Not gated: a lookup asks one provider through its entity endpoint,
-      // which OpenAlex does not bill against the search budget. Its enrichment
-      // is, so it leaves out a cooled-down OpenAlex like a search's.
+      // Not gated: a lookup asks one provider through its entity endpoint.
+      // Its enrichment leaves out a cooled-down source like a search's.
       const found = await providerRecord(id, extra.signal);
       // A provider can answer "none" for a request the signal cut off.
       extra.signal?.throwIfAborted();
@@ -416,10 +378,8 @@ export function createEngine(options: EngineOptions): Engine {
     async resolveDois(dois, extra = {}) {
       const wanted = [...new Set(dois.map(normalizeDoi))].filter(Boolean);
       const found = new Map<string, Paper>();
-      const afterOpenAlex = without.has('openalex') ? wanted : await openAlexBatches(wanted, found, extra.signal);
-      // Free, and the registry of most of the same DOIs: what OpenAlex could
-      // not be asked about is asked of Crossref, where it is a source.
-      const unasked = providers.some(p => p.id === 'crossref') ? await crossrefBatches(afterOpenAlex, found, extra.signal) : afterOpenAlex;
+      // Crossref, the registry of most DOIs, where it is a source.
+      const unasked = providers.some(p => p.id === 'crossref') ? await crossrefBatches(wanted, found, extra.signal) : wanted;
       return { found, unasked };
     },
     async readFullText(paper, { trustedOnly, signal }) {

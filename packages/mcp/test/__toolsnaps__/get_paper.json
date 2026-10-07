@@ -1,7 +1,7 @@
 {
   "name": "get_paper",
   "title": "Get paper",
-  "description": "One full record by sci-open id (e.g. openalex:W2741809807, arxiv:2101.00001) or by DOI, with every field and which source supplied it. A DOI is looked up in every source and merged; an id asks only the source it names. Works for closed papers too.",
+  "description": "One full record by sci-open id (e.g. europepmc:13054692, arxiv:2101.00001) or by DOI, with every field and which source supplied it. A DOI is looked up in every source and merged; an id asks only the source it names. Works for closed papers too.",
   "inputSchema": {
     "type": "object",
     "properties": {

@@ -19,10 +19,10 @@ Build the server first (`pnpm build --filter=sci-open-mcp`); the harness
 starts its stdio binary as a client would.
 
 The references suite asks the live sources for every reference — up to three
-searches each — and is billed against their quotas like any other search, the
-OpenAlex key's daily budget included. Run it deliberately, not in a loop: a
-holdout run is 70 references, up to 210 searches, and a tune run 130, which
-together can spend more than a day's budget.
+searches each — and counts against their rate limits like any other search.
+Every source is free, so a run costs nothing, but run it deliberately, not in
+a loop: a holdout run is 70 references, up to 210 searches, and a tune run
+130, and arXiv and Crossref answer 429 to a process that asks too fast.
 
 ## Through Claude Code
 
@@ -47,11 +47,12 @@ the account's usage limits.
 
 `--without <sources>` runs the references or reading suite against sci-open
 with those sources left out (`SCI_OPEN_WITHOUT`), and names the report after
-them (`2026-10-07-references-holdout-without-openalex.md`). Run beside the
-same suite with every source, it measures what a source is worth:
+them (`2026-10-07-references-holdout-without-crossref.md`). Run beside the
+same suite with every source, it measures what a source is worth. It is how
+OpenAlex was measured before it was removed, on 2026-10-07:
 
 ```bash
-pnpm --filter mcp-evals eval:references holdout --without openalex
+pnpm --filter mcp-evals eval:references holdout --without crossref
 ```
 
 ## Baselines
@@ -87,8 +88,7 @@ reference; `--via-model` does the same for any server, sci-open included,
 which is the like-for-like comparison. A reference the model gave no verdict
 for is scored wrong. Model runs cost API credit, and report tool calls and
 tokens per list. Against sci-open, every suite also reports the requests its
-calls sent the sources and OpenAlex's price for them, read from each result's
-`_meta` — the number the OpenAlex budget is spent against.
+calls sent the sources, read from each result's `_meta`.
 
 The selection suite is sci-open's alone: it scores sci-open's tool names.
 

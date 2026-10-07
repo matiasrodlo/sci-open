@@ -17,9 +17,9 @@ beforeEach(() => {
 });
 
 describe('idsIn', () => {
-  it('reads every DOI, the PMID and the OpenAlex id, whatever their order', () => {
+  it('reads every DOI and the PMID, whatever their order, and no id no source here is asked for', () => {
     expect(idsIn('omid:br/06101801781 doi:10.7717/peerj-cs.421 openalex:W3134956838 pmid:33817056')).toEqual({
-      dois: ['10.7717/peerj-cs.421'], pmid: '33817056', openalex: 'W3134956838'
+      dois: ['10.7717/peerj-cs.421'], pmid: '33817056'
     });
   });
 
@@ -43,9 +43,9 @@ describe('citationLinks', () => {
 
     expect(get.mock.calls[0]![0]).toBe('/citations/doi:10.7717%2Fpeerj-cs.421');
     expect(links).toEqual([
-      { dois: ['10.48366/r109904'], openalex: 'W6910306851', created: '2021', journalSelfCitation: false, authorSelfCitation: true },
-      { dois: ['10.1177/09610006211036734'], openalex: 'W3189909973', created: '2021-08-04', journalSelfCitation: false, authorSelfCitation: false },
-      { dois: ['10.1063/5.0110347'], openalex: 'W4322579315', created: '2023', journalSelfCitation: false, authorSelfCitation: false }
+      { dois: ['10.48366/r109904'], created: '2021', journalSelfCitation: false, authorSelfCitation: true },
+      { dois: ['10.1177/09610006211036734'], created: '2021-08-04', journalSelfCitation: false, authorSelfCitation: false },
+      { dois: ['10.1063/5.0110347'], created: '2023', journalSelfCitation: false, authorSelfCitation: false }
     ]);
   });
 

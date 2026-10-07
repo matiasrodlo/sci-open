@@ -77,7 +77,7 @@ describe('protocol', () => {
     expect(result.structuredContent).toMatchObject({
       total_links: 2,
       links: [
-        { doi: '10.1234/hostile', id: 'openalex:W1', created: '2021', record: { title: 'A study of things' } },
+        { doi: '10.1234/hostile', id: 'crossref:W1', created: '2021', record: { title: 'A study of things' } },
         { doi: '10.9999/elsewhere', author_self_citation: true }
       ]
     });
@@ -85,7 +85,7 @@ describe('protocol', () => {
   });
 
   it('exports citations as an embedded resource the client can save as is', async () => {
-    const result = await allClient.callTool({ name: 'export_citations', arguments: { papers: ['10.48550/arXiv.1706.03762', 'openalex:W1'] } });
+    const result = await allClient.callTool({ name: 'export_citations', arguments: { papers: ['10.48550/arXiv.1706.03762', 'crossref:W1'] } });
     expect(result.isError).toBeFalsy();
     const blocks = result.content as Array<{ type: string; resource?: { uri: string; mimeType: string; text: string } }>;
     const attached = blocks.find(b => b.type === 'resource')!.resource!;
@@ -138,7 +138,7 @@ describe('protocol', () => {
     const handle = (first.structuredContent as { handle: string }).handle;
     const second = await client.callTool({ name: 'get_search_page', arguments: { handle, page: 2 } });
     expect(second.isError).toBeFalsy();
-    expect((second.structuredContent as { results: Array<{ id: string }> }).results.map(r => r.id)).toEqual(['openalex:W3', 'openalex:W4']);
+    expect((second.structuredContent as { results: Array<{ id: string }> }).results.map(r => r.id)).toEqual(['crossref:W3', 'crossref:W4']);
   });
 
   it('returns an actionable error, accepted despite the output schema', async () => {
@@ -155,7 +155,7 @@ describe('protocol', () => {
   });
 
   it('fences third-party text, and keeps the injection inside the fence', async () => {
-    const result = await client.callTool({ name: 'get_paper', arguments: { id: 'openalex:W1' } });
+    const result = await client.callTool({ name: 'get_paper', arguments: { id: 'crossref:W1' } });
     const body = text(result);
     const tag = body.match(/<(untrusted-[0-9a-f-]{36})>/)![1]!;
     const inside = body.slice(body.indexOf(`<${tag}>`), body.indexOf(`</${tag}>`));
@@ -168,19 +168,19 @@ describe('protocol', () => {
     const result = await client.callTool({ name: 'search_papers', arguments: { query: 'TS=crispr', count_only: true } });
     expect(result.isError).toBeFalsy();
     expect(result.structuredContent).toMatchObject({
-      counts: { query: 'TS=crispr', largest: { source: 'openalex', count: 81_234 } }
+      counts: { query: 'TS=crispr', largest: { source: 'ncbi', count: 81_234 } }
     });
     expect(result.structuredContent).not.toHaveProperty('handle');
     expect(text(result)).toContain('no results read');
     // Whether a search would read each source whole: 300 records a source.
     expect((result.structuredContent as any).counts.per_source).toEqual(expect.arrayContaining([
-      { source: 'openalex', status: 'ok', count: 81_234, read_in_full: false }
+      { source: 'ncbi', status: 'ok', count: 81_234, read_in_full: false }
     ]));
-    expect(text(result)).toContain('| openalex | 81,234 | the top 300 |');
+    expect(text(result)).toContain('| ncbi | 81,234 | the top 300 |');
     expect(text(result)).toContain('it would read only the top of');
     // What a methods section reports: the filters, and each database's search as run.
     expect(text(result)).toContain('**Filters:** open access only');
-    expect(text(result)).toContain('- openalex: `filter=is_oa:true,title_and_abstract.search:crispr`');
+    expect(text(result)).toContain('- ncbi: `crispr[tiab] AND free full text[sb]`');
     expect((result.structuredContent as any).counts.coverage.per_source).toEqual(expect.arrayContaining([
       expect.objectContaining({ source: 'arxiv', query: '(ti:crispr OR abs:crispr)' })
     ]));

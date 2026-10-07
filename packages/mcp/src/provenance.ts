@@ -23,8 +23,8 @@ export function canonicalJson(value: unknown): string {
 
 /**
  * What a call asked of the sources, beside the provenance in every result's
- * `_meta`, failed ones included: how many requests, to which sources, and what
- * OpenAlex priced them at. The evals sum it per case; a client may log it.
+ * `_meta`, failed ones included: how many requests, and to which sources. The
+ * evals sum it per case; a client may log it.
  */
 export const USAGE_KEY = 'io.github.matiasrodlo/usage';
 
@@ -32,7 +32,6 @@ export function usageMeta(usage: UpstreamUsage): Record<string, unknown> {
   return {
     [USAGE_KEY]: {
       upstream_requests: usage.requests,
-      openalex_cost_usd: usage.costUsd,
       by_source: Object.fromEntries(Object.entries(usage.sources).map(([source, u]) => [source, u.requests]))
     }
   };

@@ -16,9 +16,8 @@ import type { ProviderCache } from './provider-cache';
  * see how much work there is on a topic, and where it sits, was shown the size
  * of our read instead.
  *
- * Every source is asked what it can answer. Two aggregate natively — OpenAlex
- * through `group_by`, PLOS through Solr's facets — and answer each facet in a
- * request. The rest report a total and nothing finer, so each bucket is a count
+ * Every source is asked what it can answer. One aggregates natively — PLOS,
+ * through Solr's facets — and answers each facet in a request. The rest report a total and nothing finer, so each bucket is a count
  * of a narrower query: a year is the query bounded to that year, a stage the
  * query narrowed to that stage. See `providers/count-facets.ts`.
  *

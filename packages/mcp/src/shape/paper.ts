@@ -114,7 +114,7 @@ export function placeIn(p: Pick<ShapedPaper, 'volume' | 'issue' | 'pages'>): str
 /**
  * A title as a list shows it: marked when the paper is retracted, unless the
  * title already says so — publishers often rename a retracted article
- * "RETRACTED: …", and OpenAlex carries that title.
+ * "RETRACTED: …", and Crossref carries that title.
  */
 export function listedTitle(p: { retracted?: true; title: string }): string {
   return p.retracted && !/^\s*retracted\b/i.test(p.title) ? `RETRACTED — ${p.title}` : p.title;

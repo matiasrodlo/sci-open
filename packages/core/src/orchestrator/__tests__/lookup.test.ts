@@ -73,11 +73,6 @@ describe('splitPaperId', () => {
     expect(splitPaperId('2404.18021v2')).toEqual({ provider: 'arxiv', nativeId: '2404.18021v2' });
   });
 
-  it('reads an old OpenAlex link, which carried the full URL, as the id records carry', () => {
-    expect(splitPaperId('openalex:https://openalex.org/W2741809807')).toEqual({ provider: 'openalex', nativeId: 'W2741809807' });
-    expect(splitPaperId('openalex:W2741809807')).toEqual({ provider: 'openalex', nativeId: 'W2741809807' });
-  });
-
   it('names no provider for an unprefixed id that is not one', () => {
     expect(splitPaperId('something')).toEqual({ nativeId: 'something' });
   });
@@ -85,14 +80,14 @@ describe('splitPaperId', () => {
 
 describe('lookupPaper — which way it asks', () => {
   it('uses the by-id endpoint when the provider has one, and does not search', async () => {
-    const openalex = provider('openalex', [from('openalex', 'W1')], true);
+    const europepmc = provider('europepmc', [from('europepmc', 'PMC1')], true);
 
-    const found = await lookupPaper('openalex:W1', { providers: [openalex] });
+    const found = await lookupPaper('europepmc:PMC1', { providers: [europepmc] });
 
-    expect(found?.id).toBe('openalex:W1');
-    expect(openalex.lookedUp).toHaveLength(1);
-    expect(openalex.lookedUp[0]!.nativeId).toBe('W1');
-    expect(openalex.searched).toHaveLength(0);
+    expect(found?.id).toBe('europepmc:PMC1');
+    expect(europepmc.lookedUp).toHaveLength(1);
+    expect(europepmc.lookedUp[0]!.nativeId).toBe('PMC1');
+    expect(europepmc.searched).toHaveLength(0);
   });
 
   it('searches the provider when it has no by-id endpoint', async () => {
@@ -164,23 +159,21 @@ describe('lookupPaper — what counts as found', () => {
   });
 
   it('holds a by-id endpoint to the same answer, because one can normalise the id', async () => {
-    // OpenAlex resolves `works/W0000000000` to `W0` and returns that record.
-    // Unchecked, the endpoint answered a mistyped id with a real paper about
-    // postpartum family planning in Ethiopia, under HTTP 200.
-    const openalex = provider('openalex', [from('openalex', 'W0')], true);
+    // Measured on OpenAlex, since removed: `works/W0000000000` resolved to
+    // `W0` and returned that record, so an unchecked endpoint answered a
+    // mistyped id with a real paper about postpartum family planning in
+    // Ethiopia, under HTTP 200.
+    const europepmc = provider('europepmc', [from('europepmc', 'PMC1')], true);
 
-    expect(await lookupPaper('openalex:W0000000000', { providers: [openalex] })).toBeNull();
-    expect(openalex.lookedUp).toHaveLength(1);
+    expect(await lookupPaper('europepmc:PMC0001', { providers: [europepmc] })).toBeNull();
+    expect(europepmc.lookedUp).toHaveLength(1);
   });
 
-  it('finds the record behind an old OpenAlex link', async () => {
-    // fetchWork stripped the URL and the record came back as `W…`, which the
-    // match then compared against the URL and refused: a 404 for every such link.
-    const openalex = provider('openalex', [from('openalex', 'W2741809807')], true);
-    const found = await lookupPaper('openalex:https://openalex.org/W2741809807', { providers: [openalex] });
+  it('answers nothing for an OpenAlex id, a source no longer asked', async () => {
+    const europepmc = provider('europepmc', [from('europepmc', 'PMC1')], true);
 
-    expect(found?.id).toBe('openalex:W2741809807');
-    expect(openalex.lookedUp[0]!.nativeId).toBe('W2741809807');
+    expect(await lookupPaper('openalex:W2741809807', { providers: [europepmc] })).toBeNull();
+    expect(europepmc.lookedUp).toHaveLength(0);
   });
 
   it('compares DOIs without regard to case', async () => {

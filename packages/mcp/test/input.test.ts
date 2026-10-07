@@ -105,7 +105,7 @@ describe('a tool that can write a file', () => {
       expect(Object.keys(tool.inputSchema.properties ?? {}), tool.name).not.toContain('overwrite');
       expect(tool.annotations, tool.name).toMatchObject({ readOnlyHint: true, destructiveHint: false, idempotentHint: true });
     }
-    const refused = await client.callTool({ name: 'export_citations', arguments: { papers: ['openalex:W1'], save_to: '/tmp/sci-open-x' } });
+    const refused = await client.callTool({ name: 'export_citations', arguments: { papers: ['crossref:W1'], save_to: '/tmp/sci-open-x' } });
     expect(text(refused)).toMatch(/^Error \(writes_disabled\)/);
     await close();
   });

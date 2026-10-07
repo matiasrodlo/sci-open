@@ -62,7 +62,7 @@ type CitationData = {
  * A DOI as the `doi` field of both formats defines it: the bare identifier.
  *
  * Records arrive with it spelled several ways depending on the provider —
- * OpenAlex stores a URL, others store `doi:10.x`, most store it bare. Emitting
+ * some store a URL, others store `doi:10.x`, most store it bare. Emitting
  * a URL into a `doi` field is what made APA and Chicago produce
  * `https://doi.org/https://doi.org/10.x`.
  */

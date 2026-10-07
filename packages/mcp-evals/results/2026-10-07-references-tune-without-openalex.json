@@ -1,0 +1,1621 @@
+{
+  "summary": {
+    "suite": "references",
+    "split": "tune",
+    "date": "2026-10-07",
+    "cases": 0,
+    "scored": 0,
+    "server": "sci-open",
+    "mode": "direct",
+    "without": "openalex",
+    "references": 130,
+    "upstreamRequests": 1749,
+    "upstreamRequestsPerReference": 13.453846153846154,
+    "openalexCostUsd": 0,
+    "recallByType": {
+      "none": 1,
+      "preprint_version": 1,
+      "fabricated": 0.9230769230769231,
+      "doi_wrong": 0.9230769230769231,
+      "year_wrong": 0.8461538461538461,
+      "author_wrong": 1,
+      "doi_invented": 0.9230769230769231,
+      "closed_real": 0.9375
+    },
+    "flagPrecision": 0.9846153846153847,
+    "falseFabricatedRate": 0,
+    "notChecked": 4
+  },
+  "cases": [],
+  "grades": [
+    {
+      "list": "refs-01.json",
+      "text": "LeCun Y, Bengio Y, Hinton G. Deep learning. Nature. 2015;521(7553):436-444. doi:10.1038/nature14539",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/nature14539, 2015, Nature"
+    },
+    {
+      "list": "refs-01.json",
+      "text": "He K, Zhang X, Ren S, Sun J. Deep residual learning for image recognition. In: Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR); 2016. p. 770-778.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1109/cvpr.2016.90, 2016, 2016 IEEE Conference on Computer Vision and Pattern Recognition (CVPR)"
+    },
+    {
+      "list": "refs-01.json",
+      "text": "Vaswani A, Shazeer N, Parmar N, et al. Attention is all you need. arXiv:1706.03762. 2017.",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.48550/arXiv.1706.03762, 2017"
+    },
+    {
+      "list": "refs-01.json",
+      "text": "Okafor L, Brandt P. Quantum annealing of protein folding landscapes. Nature. 2021;590:112-118.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1038/s41598-026-46916-w, 2026, Scientific Reports",
+      "issues": [
+        "year_mismatch: cited 2021, record 2026",
+        "author_mismatch: no cited surname appears in the record",
+        "venue_mismatch: the citation does not name the record's venue, Scientific Reports",
+        "volume_mismatch: cited 590, record 16",
+        "pages_mismatch: cited from 112, record from 12035",
+        "title_partial_match: the cited title and the record's share 80% of the cited words"
+      ]
+    },
+    {
+      "list": "refs-01.json",
+      "text": "Hochreiter S, Schmidhuber J. Long short-term memory. Neural Computation. 1997;9(8):1735-1780. doi:10.1038/nature14236",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1162/neco.1997.9.8.1735, 1997, Neural Computation",
+      "issues": [
+        "doi_points_to_different_work"
+      ]
+    },
+    {
+      "list": "refs-01.json",
+      "text": "Mnih V, Kavukcuoglu K, Silver D, et al. Human-level control through deep reinforcement learning. Nature. 2012;518:529-533.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1038/nature14236, 2015, Nature",
+      "issues": [
+        "year_mismatch: cited 2012, record 2015"
+      ]
+    },
+    {
+      "list": "refs-01.json",
+      "text": "Smith R, Patel K. Mastering the game of Go with deep neural networks and tree search. Nature. 2016;529:484-489.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1038/nature16961, 2016, Nature",
+      "issues": [
+        "author_mismatch: no cited surname appears in the record"
+      ]
+    },
+    {
+      "list": "refs-01.json",
+      "text": "Kingma DP, Ba J. Adam: A method for stochastic optimization. International Conference on Learning Representations. 2015. doi:10.9999/iclr.2015.adam",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.48550/arxiv.1412.6980, 2014",
+      "issues": [
+        "doi_not_registered"
+      ]
+    },
+    {
+      "list": "refs-01.json",
+      "text": "Krizhevsky A, Sutskever I, Hinton GE. ImageNet classification with deep convolutional neural networks. Communications of the ACM. 2017;60(6):84-90.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1145/3065386, 2017, Communications of the ACM"
+    },
+    {
+      "list": "refs-01.json",
+      "text": "Watson JD, Crick FHC. Molecular structure of nucleic acids: a structure for deoxyribose nucleic acid. Nature. 1953;171(4356):737-738.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/171737a0, 1953, Nature"
+    },
+    {
+      "list": "refs-02.json",
+      "text": "Laemmli UK. Cleavage of structural proteins during the assembly of the head of bacteriophage T4. Nature. 1970;227(5259):680-685.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/227680a0, 1970, Nature"
+    },
+    {
+      "list": "refs-02.json",
+      "text": "Bradford MM. A rapid and sensitive method for the quantitation of microgram quantities of protein utilizing the principle of protein-dye binding. Anal Biochem. 1976;72:248-254. doi:10.1016/0003-2697(76)90527-3",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1016/0003-2697(76)90527-3, 1976, Analytical Biochemistry"
+    },
+    {
+      "list": "refs-02.json",
+      "text": "Livak KJ, Schmittgen TD. Analysis of relative gene expression data using real-time quantitative PCR and the 2(-Delta Delta C(T)) method. Methods. 2001;25(4):402-408.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "openaire:pmid________::fed458219e27ed90c5c3be8e6c9f0e4c, 2002, Methods (San Diego, Calif.)"
+    },
+    {
+      "list": "refs-02.json",
+      "text": "Altschul SF, Gish W, Miller W, Myers EW, Lipman DJ. Basic local alignment search tool. J Mol Biol. 1990;215(3):403-410. doi:10.1038/nmeth.1923",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1016/s0022-2836(05)80360-2, 1990, Journal of Molecular Biology",
+      "issues": [
+        "doi_points_to_different_work"
+      ]
+    },
+    {
+      "list": "refs-02.json",
+      "text": "Lindqvist H, Moreau A. Mitochondrial tethering of ribosomal RNA in quiescent hepatocytes. Cell. 2018;172(4):801-815.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ],
+      "verdict": "not_found",
+      "issues": [
+        "no_similar_title_in_any_source"
+      ]
+    },
+    {
+      "list": "refs-02.json",
+      "text": "Takahashi K, Yamanaka S. Induction of pluripotent stem cells from mouse embryonic and adult fibroblast cultures by defined factors. Cell. 2009;126(4):663-676.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1016/j.cell.2006.07.024, 2006, Cell",
+      "issues": [
+        "year_mismatch: cited 2009, record 2006"
+      ]
+    },
+    {
+      "list": "refs-02.json",
+      "text": "Love MI, Huber W, Anders S. Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. Genome Biol. 2014;15(12):550.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1186/s13059-014-0550-8, 2014, Genome Biology"
+    },
+    {
+      "list": "refs-02.json",
+      "text": "Langmead B, Salzberg SL. Fast gapped-read alignment with Bowtie 2. Nat Methods. 2012;9(4):357-359. doi:10.1038/nmeth.99999",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1038/nmeth.1923, 2012, Nature Methods",
+      "issues": [
+        "doi_not_registered"
+      ]
+    },
+    {
+      "list": "refs-02.json",
+      "text": "Kowalski J, Brennan T. Fast and accurate short read alignment with Burrows-Wheeler transform. Bioinformatics. 2009;25(14):1754-1760.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1093/bioinformatics/btp324, 2009, Bioinformatics",
+      "issues": [
+        "author_mismatch: no cited surname appears in the record"
+      ]
+    },
+    {
+      "list": "refs-02.json",
+      "text": "Jinek M, Chylinski K, Fonfara I, Hauer M, Doudna JA, Charpentier E. A programmable dual-RNA-guided DNA endonuclease in adaptive bacterial immunity. Science. 2012;337(6096):816-821.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1126/science.1225829, 2012, Science"
+    },
+    {
+      "list": "refs-03.json",
+      "text": "Ioannidis JPA. Why most published research findings are false. PLoS Med. 2005;2(8):e124. doi:10.1371/journal.pmed.0020124",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1371/journal.pmed.0020124, 2005, PLoS Medicine"
+    },
+    {
+      "list": "refs-03.json",
+      "text": "Benjamini Y, Hochberg Y. Controlling the false discovery rate: a practical and powerful approach to multiple testing. J R Stat Soc Series B. 1995;57(1):289-300.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1111/j.2517-6161.1995.tb02031.x, 1995, Journal of the Royal Statistical Society Series B: Statistical Methodology"
+    },
+    {
+      "list": "refs-03.json",
+      "text": "Kaplan EL, Meier P. Nonparametric estimation from incomplete observations. J Am Stat Assoc. 1958;53(282):457-481.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1080/01621459.1958.10501452, 1958, Journal of the American Statistical Association"
+    },
+    {
+      "list": "refs-03.json",
+      "text": "Haverkamp S, Ito R. A unified theory of replication failure in observational epidemiology. Lancet. 2019;393(10180):1402-1411.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ],
+      "verdict": "not_found",
+      "issues": [
+        "no_similar_title_in_any_source"
+      ]
+    },
+    {
+      "list": "refs-03.json",
+      "text": "Moher D, Liberati A, Tetzlaff J, Altman DG. Preferred reporting items for systematic reviews and meta-analyses: the PRISMA statement. PLoS Med. 2009;6(7):e1000097. doi:10.1136/bmj.n71",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1371/journal.pmed.1000097, 2009, PLoS Medicine",
+      "issues": [
+        "doi_points_to_different_work"
+      ]
+    },
+    {
+      "list": "refs-03.json",
+      "text": "Shannon CE. A mathematical theory of communication. Bell System Technical Journal. 1951;27(3):379-423.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "likely",
+      "matched": "doi:10.1063/1.3067010, 1950, Physics Today",
+      "issues": [
+        "venue_mismatch: the citation does not name the record's venue, Physics Today",
+        "volume_mismatch: cited 27, record 3",
+        "pages_mismatch: cited from 379, record from 31"
+      ]
+    },
+    {
+      "list": "refs-03.json",
+      "text": "Garcia M, Chen L. Hallmarks of cancer: the next generation. Cell. 2011;144(5):646-674.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1016/j.cell.2011.02.013, 2011, Cell",
+      "issues": [
+        "author_mismatch: no cited surname appears in the record"
+      ]
+    },
+    {
+      "list": "refs-03.json",
+      "text": "Page MJ, McKenzie JE, Bossuyt PM, et al. The PRISMA 2020 statement: an updated guideline for reporting systematic reviews. BMJ. 2021;372:n71. doi:10.1136/bmj.zz71",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1136/bmj.n71, 2021, BMJ",
+      "issues": [
+        "doi_not_registered"
+      ]
+    },
+    {
+      "list": "refs-03.json",
+      "text": "Kaplan J, McCandlish S, Henighan T, et al. Scaling laws for neural language models. arXiv:2001.08361. 2020.",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "not_checked",
+      "issues": [
+        "rate_limited: retry in 60 s"
+      ]
+    },
+    {
+      "list": "refs-03.json",
+      "text": "Polack FP, Thomas SJ, Kitchin N, et al. Safety and efficacy of the BNT162b2 mRNA Covid-19 vaccine. N Engl J Med. 2020;383(27):2603-2615.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1056/nejmoa2034577, 2020, The New England journal of medicine"
+    },
+    {
+      "list": "refs-07.json",
+      "text": "Parmesan C, Yohe G. A globally coherent fingerprint of climate change impacts across natural systems. Nature. 2007;421(6918):37-42.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1038/nature01286, 2003, Nature",
+      "issues": [
+        "year_mismatch: cited 2007, record 2003"
+      ]
+    },
+    {
+      "list": "refs-07.json",
+      "text": "Hooper DU, Chapin FS, Ewel JJ, et al. Effects of biodiversity on ecosystem functioning: a consensus of current knowledge. Ecol Monogr. 2005;75(1):3-35. doi:10.1038/nature09678",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1890/04-0922, 2005, Ecological Monographs",
+      "issues": [
+        "doi_points_to_different_work"
+      ]
+    },
+    {
+      "list": "refs-07.json",
+      "text": "Lindholm E, Mbeki T. A safe operating space for humanity. Nature. 2009;461(7263):472-475.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1038/461472a, 2009, Nature",
+      "issues": [
+        "author_mismatch: no cited surname appears in the record"
+      ]
+    },
+    {
+      "list": "refs-07.json",
+      "text": "Hallmann CA, Sorg M, Jongejans E, et al. More than 75 percent decline over 27 years in total flying insect biomass in protected areas. PLoS One. 2017;12(10):e0185809.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1371/journal.pone.0185809, 2017, PLOS ONE"
+    },
+    {
+      "list": "refs-07.json",
+      "text": "Ceballos G, Ehrlich PR, Barnosky AD, García A, Pringle RM, Palmer TM. Accelerated modern human–induced species losses: Entering the sixth mass extinction. Sci Adv. 2015;1(5):e1400253. doi:10.1126/sciadv.1499977",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1126/sciadv.1400253, 2015, Science Advances",
+      "issues": [
+        "doi_not_registered"
+      ]
+    },
+    {
+      "list": "refs-07.json",
+      "text": "Cardinale BJ, Duffy JE, Gonzalez A, et al. Biodiversity loss and its impact on humanity. Nature. 2012;486(7401):59-67.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/nature11148, 2012, Nature"
+    },
+    {
+      "list": "refs-07.json",
+      "text": "Connell JH. Diversity in Tropical Rain Forests and Coral Reefs. Science. 1978;199(4335):1302-1310.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "likely",
+      "matched": "doi:10.1126/science.199.4335.1302, 1978, Science",
+      "issues": [
+        "title_partial_match: the cited title and the record's share 100% of the cited words"
+      ]
+    },
+    {
+      "list": "refs-07.json",
+      "text": "Myers N, Mittermeier RA, Mittermeier CG, da Fonseca GAB, Kent J. Biodiversity hotspots for conservation priorities. Nature. 2000;403(6772):853-858. doi:10.1038/35002501",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/35002501, 2000, Nature"
+    },
+    {
+      "list": "refs-07.json",
+      "text": "Bar-On YM, Phillips R, Milo R. The biomass distribution on Earth. Proc Natl Acad Sci U S A. 2018;115(25):6506-6511.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1073/pnas.1711842115, 2018, Proceedings of the National Academy of Sciences"
+    },
+    {
+      "list": "refs-07.json",
+      "text": "Halvorsen K, Achebe N, Ruiz-Castillo P. Nocturnal pollinator collapse drives seed-set failure in boreal peatlands. Ecol Lett. 2019;22(7):1103-1114.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ],
+      "verdict": "not_found",
+      "issues": [
+        "no_similar_title_in_any_source"
+      ]
+    },
+    {
+      "list": "refs-08.json",
+      "text": "Karl, T. R., Arguez, A., Huang, B., Lawrimore, J. H., McMahon, J. R., Menne, M. J., Peterson, T. C., Vose, R. S., & Zhang, H.-M. (2015). Possible artifacts of data biases in the recent global surface warming hiatus. Science, 348(6242), 1469–1472. https://doi.org/10.1126/science.aaa5632",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1126/science.aaa5632, 2015, Science"
+    },
+    {
+      "list": "refs-08.json",
+      "text": "Hansen, J., Johnson, D., Lacis, A., Lebedeff, S., Lee, P., Rind, D., & Russell, G. (1981). Climate Impact of Increasing Atmospheric Carbon Dioxide. Science, 213(4511), 957–966. https://doi.org/10.1126/science.213.4511.957",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1126/science.213.4511.957, 1981, Science"
+    },
+    {
+      "list": "refs-08.json",
+      "text": "McGlade, C., & Ekins, P. (2015). The geographical distribution of fossil fuels unused when limiting global warming to 2 °C. Nature, 517(7533), 187–190. https://doi.org/10.1038/nature14016",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/nature14016, 2015, Nature"
+    },
+    {
+      "list": "refs-08.json",
+      "text": "Halloran, P. J., & Odeh, S. (2009). Greenhouse-gas emission targets for limiting global warming to 2 °C. Nature, 458(7242), 1158–1162.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1038/nature08017, 2009, Nature",
+      "issues": [
+        "author_mismatch: no cited surname appears in the record"
+      ]
+    },
+    {
+      "list": "refs-08.json",
+      "text": "Petit, J. R., Jouzel, J., Raynaud, D., Barkov, N. I., Barnola, J.-M., Basile, I., Bender, M., Chappellaz, J., Davis, M., Delaygue, G., Delmotte, M., Kotlyakov, V. M., Legrand, M., Lipenkov, V. Y., Lorius, C., Pépin, L., Ritz, C., Saltzman, E., & Stievenard, M. (2003). Climate and atmospheric history of the past 420,000 years from the Vostok ice core, Antarctica. Nature, 399(6735), 429–436.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1038/20859, 1999, Nature",
+      "issues": [
+        "year_mismatch: cited 2003, record 1999"
+      ]
+    },
+    {
+      "list": "refs-08.json",
+      "text": "Vasquez, R. M., & Lindgren, O. (2021). Stratospheric aerosol feedbacks amplify Arctic sea-ice loss in CMIP6 ensembles. Nature Climate Change, 11(4), 312–319.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ],
+      "verdict": "not_found",
+      "issues": [
+        "no_similar_title_in_any_source"
+      ]
+    },
+    {
+      "list": "refs-08.json",
+      "text": "Rolnick, D., Donti, P. L., Kaack, L. H., Kochanski, K., Lacoste, A., Sankaran, K., Ross, A. S., Milojevic-Dupont, N., Jaques, N., Waldman-Brown, A., Luccioni, A., Maharaj, T., Sherwin, E. D., Mukkavilli, S. K., Kording, K. P., Gomes, C., Ng, A. Y., Hassabis, D., Platt, J. C., . . . Bengio, Y. (2019). Tackling Climate Change with Machine Learning. arXiv. https://doi.org/10.48550/arXiv.1906.05433",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.48550/arxiv.1906.05433, 2019"
+    },
+    {
+      "list": "refs-08.json",
+      "text": "Hansen, J., Ruedy, R., Sato, M., & Lo, K. (2010). Global surface temperature change. Reviews of Geophysics, 48(4), RG4004. https://doi.org/10.1029/2010RG000345",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1029/2010rg000345, 2010, Reviews of Geophysics"
+    },
+    {
+      "list": "refs-08.json",
+      "text": "Zachos, J., Pagani, M., Sloan, L., Thomas, E., & Billups, K. (2001). Trends, Rhythms, and Aberrations in Global Climate 65 Ma to Present. Science, 292(5517), 686–693. https://doi.org/10.1126/science.zz59412",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1126/science.1059412, 2001, Science",
+      "issues": [
+        "doi_not_registered"
+      ]
+    },
+    {
+      "list": "refs-08.json",
+      "text": "Cook, J., Nuccitelli, D., Green, S. A., Richardson, M., Winkler, B., Painting, R., Way, R., Jacobs, P., & Skuce, A. (2013). Quantifying the consensus on anthropogenic global warming in the scientific literature. Environmental Research Letters, 8(2), 024024. https://doi.org/10.1038/nature04188",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1088/1748-9326/8/2/024024, 2013, Environmental Research Letters",
+      "issues": [
+        "doi_points_to_different_work"
+      ]
+    },
+    {
+      "list": "refs-09.json",
+      "text": "Brandt, K., Moreau, J. & Ilić, D. Experimental Test of Bell's Inequalities Using Time-Varying Analyzers. Phys. Rev. Lett. 49, 1804–1807 (1982).",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1103/physrevlett.49.1804, 1982, Physical Review Letters",
+      "issues": [
+        "author_mismatch: no cited surname appears in the record"
+      ]
+    },
+    {
+      "list": "refs-09.json",
+      "text": "Riess, A. G. et al. Observational Evidence from Supernovae for an Accelerating Universe and a Cosmological Constant. Astron. J. 116, 1009–1038 (1998).",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1086/300499, 1998, The Astronomical Journal"
+    },
+    {
+      "list": "refs-09.json",
+      "text": "Abernathy, T. R., Kwon, S. & Delacroix, M. Topological suppression of phonon drag in twisted bilayer tungsten diselenide. Phys. Rev. Lett. 124, 186802 (2020).",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ],
+      "verdict": "not_found",
+      "issues": [
+        "no_similar_title_in_any_source"
+      ]
+    },
+    {
+      "list": "refs-09.json",
+      "text": "Arute, F. et al. Quantum supremacy using a programmable superconducting processor. Nature 574, 505–510 (2019).",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/s41586-019-1666-5, 2019, Nature"
+    },
+    {
+      "list": "refs-09.json",
+      "text": "Castro Neto, A. H., Guinea, F., Peres, N. M. R., Novoselov, K. S. & Geim, A. K. The electronic properties of graphene. Rev. Mod. Phys. 81, 109–162 (2009). https://doi.org/10.1103/RevModPhys.81.10999",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1021/nl102824h, 2010, Nano Letters",
+      "issues": [
+        "doi_not_registered",
+        "author_mismatch: no cited surname appears in the record",
+        "venue_mismatch: the citation does not name the record's venue, Nano Letters",
+        "volume_mismatch: cited 81, record 10",
+        "pages_mismatch: cited from 109, record from 4285",
+        "title_partial_match: the cited title and the record's share 100% of the cited words"
+      ]
+    },
+    {
+      "list": "refs-09.json",
+      "text": "Einstein, A., Podolsky, B. & Rosen, N. Can Quantum-Mechanical Description of Physical Reality Be Considered Complete? Phys. Rev. 47, 777–780 (1939).",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1017/9781139028493.013, 2024, The Einstein Paradox",
+      "issues": [
+        "year_mismatch: cited 1939, record 2024",
+        "venue_mismatch: the citation does not name the record's venue, The Einstein Paradox",
+        "pages_mismatch: cited from 777, record from 157"
+      ]
+    },
+    {
+      "list": "refs-09.json",
+      "text": "Anderson, P. W. Absence of Diffusion in Certain Random Lattices. Phys. Rev. 109, 1492–1505 (1958).",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1103/physrev.109.1492, 1958, Physical Review"
+    },
+    {
+      "list": "refs-09.json",
+      "text": "Novoselov, K. S. et al. Electric Field Effect in Atomically Thin Carbon Films. Science 306, 666–669 (2004).",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1126/science.1102896, 2004, Science"
+    },
+    {
+      "list": "refs-09.json",
+      "text": "Perlmutter, S. et al. Measurements of Ω and Λ from 42 High-Redshift Supernovae. Astrophys. J. 517, 565–586 (1999). https://doi.org/10.1103/PhysRevLett.13.508",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1086/307221, 1999, The Astrophysical Journal",
+      "issues": [
+        "doi_points_to_different_work"
+      ]
+    },
+    {
+      "list": "refs-09.json",
+      "text": "LIGO Scientific Collaboration & Virgo Collaboration. Observation of Gravitational Waves from a Binary Black Hole Merger. Preprint at https://arxiv.org/abs/1602.03837 (2016).",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "not_checked",
+      "issues": [
+        "rate_limited: retry in 60 s"
+      ]
+    },
+    {
+      "list": "refs-11.json",
+      "text": "Boyden ES, Zhang F, Bamberg E, Nagel G, Deisseroth K. Millisecond-timescale, genetically targeted optical control of neural activity. Nat Neurosci. 2005;8(9):1263-1268.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/nn1525, 2005, Nature Neuroscience"
+    },
+    {
+      "list": "refs-11.json",
+      "text": "Deisseroth K. Optogenetics. Nat Methods. 2011;8(1):26-29. doi:10.1038/nmeth.f.324",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/nmeth.f.324, 2011, Nature Methods"
+    },
+    {
+      "list": "refs-11.json",
+      "text": "Mathis A, Mamidanna P, Abe T, et al. Markerless tracking of user-defined features with deep learning. arXiv:1804.03142. 2018.",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "not_checked",
+      "issues": [
+        "rate_limited: retry in 60 s"
+      ]
+    },
+    {
+      "list": "refs-11.json",
+      "text": "Logothetis NK, Pauls J, Augath M, Trinath T, Oeltermann A. Neurophysiological investigation of the basis of the fMRI signal. Nature. 2005;412(6843):150-157.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1038/35084005, 2001, Nature",
+      "issues": [
+        "year_mismatch: cited 2005, record 2001"
+      ]
+    },
+    {
+      "list": "refs-11.json",
+      "text": "Raichle ME, MacLeod AM, Snyder AZ, Powers WJ, Gusnard DA, Shulman GL. A default mode of brain function. Proc Natl Acad Sci U S A. 2001;98(2):676-682. doi:10.1016/j.neuron.2007.06.026",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1073/pnas.98.2.676, 2001, Proceedings of the National Academy of Sciences",
+      "issues": [
+        "doi_points_to_different_work"
+      ]
+    },
+    {
+      "list": "refs-11.json",
+      "text": "O'Keefe J, Dostrovsky J. The hippocampus as a spatial map. Preliminary evidence from unit activity in the freely-moving rat. Brain Res. 1971;34(1):171-175.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "likely",
+      "matched": "doi:10.1016/0006-8993(71)90358-1, 1971, Brain Research",
+      "issues": [
+        "title_partial_match: the cited title and the record's share 100% of the cited words"
+      ]
+    },
+    {
+      "list": "refs-11.json",
+      "text": "Hartmann P, Okafor C. The mirror-neuron system. Annu Rev Neurosci. 2004;27(1):169-192.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1146/annurev.neuro.27.070203.144230, 2004, Annual Review of Neuroscience",
+      "issues": [
+        "author_mismatch: no cited surname appears in the record"
+      ]
+    },
+    {
+      "list": "refs-11.json",
+      "text": "Delgado-Rios M, Fenner J, Okoro E. Thalamic gating of interoceptive prediction errors in the posterior insula of awake mice. Neuron. 2021;109(14):2290-2305.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ],
+      "verdict": "not_found",
+      "issues": [
+        "no_similar_title_in_any_source"
+      ]
+    },
+    {
+      "list": "refs-11.json",
+      "text": "Glasser MF, Coalson TS, Robinson EC, et al. A multi-modal parcellation of human cerebral cortex. Nature. 2016;536(7615):171-178. doi:10.1038/nature18933x",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1038/nature18933, 2016, Nature",
+      "issues": [
+        "doi_not_registered"
+      ]
+    },
+    {
+      "list": "refs-11.json",
+      "text": "Hafting T, Fyhn M, Molden S, Moser MB, Moser EI. Microstructure of a spatial map in the entorhinal cortex. Nature. 2005;436(7052):801-806.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/nature03721, 2005, Nature"
+    },
+    {
+      "list": "refs-12.json",
+      "text": "Open Science Collaboration. (2015). Estimating the reproducibility of psychological science. Science, 349(6251), aac4716. https://doi.org/10.1126/science.aac4716",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "likely",
+      "matched": "doi:10.1126/science.aac4716, 2015, Science (New York, N.Y.)",
+      "issues": [
+        "title_partial_match: the cited title and the record's share 100% of the cited words"
+      ]
+    },
+    {
+      "list": "refs-12.json",
+      "text": "Castellanos, J. P., & Moriarty, E. (2016). Moral licensing persists across delays: Evidence from 14 preregistered replications. Psychological Science, 27(9), 1241–1255.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ],
+      "verdict": "not_found",
+      "issues": [
+        "no_similar_title_in_any_source"
+      ]
+    },
+    {
+      "list": "refs-12.json",
+      "text": "Festinger, L., & Carlsmith, J. M. (1964). Cognitive consequences of forced compliance. The Journal of Abnormal and Social Psychology, 58(2), 203–210.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1037/h0041593, 1959, Journal of abnormal psychology",
+      "issues": [
+        "year_mismatch: cited 1964, record 1959"
+      ]
+    },
+    {
+      "list": "refs-12.json",
+      "text": "Henrich, J., Heine, S. J., & Norenzayan, A. (2010). The weirdest people in the world? Behavioral and Brain Sciences, 33(2-3), 61–83. https://doi.org/10.1017/S0140525X0999152X",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1017/s0140525x0999152x, 2010, The Behavioral and brain sciences"
+    },
+    {
+      "list": "refs-12.json",
+      "text": "Simmons, J. P., Nelson, L. D., & Simonsohn, U. (2011). False-Positive Psychology: Undisclosed Flexibility in Data Collection and Analysis Allows Presenting Anything as Significant. Psychological Science, 22(11), 1359–1366. https://doi.org/10.1177/0956797611417632",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1177/0956797611417632, 2011, Psychological science"
+    },
+    {
+      "list": "refs-12.json",
+      "text": "Tversky, A., & Kahneman, D. (1974). Judgment under Uncertainty: Heuristics and Biases. Science, 185(4157), 1124–1131. https://doi.org/10.1126/science.185.4157.1124",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1126/science.185.4157.1124, 1974, Science (New York, N.Y.)"
+    },
+    {
+      "list": "refs-12.json",
+      "text": "Baumeister, R. F., Bratslavsky, E., Muraven, M., & Tice, D. M. (1998). Ego depletion: Is the active self a limited resource? Journal of Personality and Social Psychology, 74(5), 1252–1265. https://doi.org/10.1037/0033-295X.84.2.191",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1037//0022-3514.74.5.1252, 1998, Journal of personality and social psychology",
+      "issues": [
+        "doi_points_to_different_work"
+      ]
+    },
+    {
+      "list": "refs-12.json",
+      "text": "Whitfield, A. M., & Sato, K. (2000). Self-determination theory and the facilitation of intrinsic motivation, social development, and well-being. American Psychologist, 55(1), 68–78.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1037//0003-066x.55.1.68, 2000, The American psychologist",
+      "issues": [
+        "author_mismatch: no cited surname appears in the record"
+      ]
+    },
+    {
+      "list": "refs-12.json",
+      "text": "Miller, G. A. (1956). The magical number seven, plus or minus two: Some limits on our capacity for processing information. Psychological Review, 63(2), 81–97. https://doi.org/10.1037/h0043158",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1037/h0043158, 1956, Psychological Review"
+    },
+    {
+      "list": "refs-12.json",
+      "text": "Duckworth, A. L., Peterson, C., Matthews, M. D., & Kelly, D. R. (2007). Grit: Perseverance and passion for long-term goals. Journal of Personality and Social Psychology, 92(6), 1087–1101. https://doi.org/10.1037/0022-3514.92.6.1999",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1037/0022-3514.92.6.1087, 2007, Journal of personality and social psychology",
+      "issues": [
+        "doi_not_registered"
+      ]
+    },
+    {
+      "list": "refs-14.json",
+      "text": "Ferguson NM, Cummings DAT, Fraser C, Cajka JC, Cooley PC, Burke DS. Strategies for mitigating an influenza pandemic. Nature. 2006;442(7101):448-452.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/nature04795, 2006, Nature"
+    },
+    {
+      "list": "refs-14.json",
+      "text": "Keys A, Menotti A, Karvonen MJ, et al. The diet and 15-year death rate in the Seven Countries Study. Am J Epidemiol. 1986;124(6):903-915.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1093/oxfordjournals.aje.a114480, 1986, American journal of epidemiology"
+    },
+    {
+      "list": "refs-14.json",
+      "text": "Okeke A, Lindqvist M, Barros F. The global distribution and burden of dengue. Nature. 2013;496(7446):504-507.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1038/nature12060, 2013, Nature",
+      "issues": [
+        "author_mismatch: no cited surname appears in the record"
+      ]
+    },
+    {
+      "list": "refs-14.json",
+      "text": "Barker DJP, Osmond C. Infant mortality, childhood nutrition, and ischaemic heart disease in England and Wales. Lancet. 1990;327(8489):1077-1081.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1016/s0140-6736(86)91340-1, 1986, Lancet (London, England)",
+      "issues": [
+        "year_mismatch: cited 1990, record 1986",
+        "volume_mismatch: cited 327, record 1"
+      ]
+    },
+    {
+      "list": "refs-14.json",
+      "text": "Kermack WO, McKendrick AG. A contribution to the mathematical theory of epidemics. Proc R Soc Lond A. 1927;115(772):700-721. doi:10.1098/rspa.1927.9118",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1098/rspa.1927.0118, 1927, Proceedings of the Royal Society of London. Series A, Containing Papers of a Mathematical and Physical Character",
+      "issues": [
+        "doi_not_registered"
+      ]
+    },
+    {
+      "list": "refs-14.json",
+      "text": "Hill AB. The Environment and Disease: Association or Causation? Proc R Soc Med. 1965;58(5):295-300. doi:10.1136/bmj.2.4682.739",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1177/003591576505800503, 1965, Proceedings of the Royal Society of Medicine",
+      "issues": [
+        "doi_points_to_different_work"
+      ]
+    },
+    {
+      "list": "refs-14.json",
+      "text": "Doll R, Peto R, Boreham J, Sutherland I. Mortality in relation to smoking: 50 years' observations on male British doctors. BMJ. 2004;328(7455):1519.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1136/bmj.38142.554479.ae, 2004, BMJ (Clinical research ed.)"
+    },
+    {
+      "list": "refs-14.json",
+      "text": "Marmot M. Social determinants of health inequalities. Lancet. 2005;365(9464):1099-1104.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1016/s0140-6736(05)71146-6, 2005, Lancet (London, England)"
+    },
+    {
+      "list": "refs-14.json",
+      "text": "Mwangi P, Sorensen H, Delacroix A. Household air pollution and tuberculosis incidence in 31 sub-Saharan cohorts: a pooled analysis. Lancet Glob Health. 2020;8(6):e812-e821.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ],
+      "verdict": "not_found",
+      "issues": [
+        "no_similar_title_in_any_source"
+      ]
+    },
+    {
+      "list": "refs-14.json",
+      "text": "Lim SS, Vos T, Flaxman AD, et al. A comparative risk assessment of burden of disease and injury attributable to 67 risk factors and risk factor clusters in 21 regions, 1990–2010: a systematic analysis for the Global Burden of Disease Study 2010. Lancet. 2012;380(9859):2224-2260. doi:10.1016/S0140-6736(12)61766-8",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1016/s0140-6736(12)61766-8, 2012, Lancet (London, England)"
+    },
+    {
+      "list": "refs-15.json",
+      "text": "Ostrowski, J., Banerjee, N. & Faulkner, R. Recurrent horizontal transfer of telomerase cassettes between rotifers and fungi. Nature 571, 412–417 (2019).",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ],
+      "verdict": "not_found",
+      "issues": [
+        "no_similar_title_in_any_source"
+      ]
+    },
+    {
+      "list": "refs-15.json",
+      "text": "Lieberman-Aiden, E. et al. Comprehensive Mapping of Long-Range Interactions Reveals Folding Principles of the Human Genome. Science 326, 289–293 (2009).",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1126/science.1181369, 2009, Science (New York, N.Y.)"
+    },
+    {
+      "list": "refs-15.json",
+      "text": "Green, R. E. et al. A Draft Sequence of the Neandertal Genome. Science 328, 710–722 (2010).",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1126/science.1188021, 2010, Science (New York, N.Y.)"
+    },
+    {
+      "list": "refs-15.json",
+      "text": "King, M.-C. & Wilson, A. C. Evolution at Two Levels in Humans and Chimpanzees. Science 188, 107–116 (1979).",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1126/science.1090005, 1975, Science (New York, N.Y.)",
+      "issues": [
+        "year_mismatch: cited 1979, record 1975"
+      ]
+    },
+    {
+      "list": "refs-15.json",
+      "text": "The 1000 Genomes Project Consortium. A global reference for human genetic variation. Nature 526, 68–74 (2015).",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/nature15393, 2015, Nature"
+    },
+    {
+      "list": "refs-15.json",
+      "text": "Rasmussen, H. Confidence limits on phylogenies: an approach using the bootstrap. Evolution 39, 783–791 (1985).",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1111/j.1558-5646.1985.tb00420.x, 1985, Evolution; international journal of organic evolution",
+      "issues": [
+        "author_mismatch: no cited surname appears in the record"
+      ]
+    },
+    {
+      "list": "refs-15.json",
+      "text": "Kimura, M. Evolutionary Rate at the Molecular Level. Nature 217, 624–626 (1968).",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/217624a0, 1968, Nature"
+    },
+    {
+      "list": "refs-15.json",
+      "text": "Danecek, P. et al. The variant call format and VCFtools. Bioinformatics 27, 2156–2158 (2011). https://doi.org/10.1093/bioinformatics/btp352",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1093/bioinformatics/btr330, 2011, Bioinformatics (Oxford, England)",
+      "issues": [
+        "doi_points_to_different_work"
+      ]
+    },
+    {
+      "list": "refs-15.json",
+      "text": "McKenna, A. et al. The Genome Analysis Toolkit: A MapReduce framework for analyzing next-generation DNA sequencing data. Genome Res. 20, 1297–1303 (2010). https://doi.org/10.1101/gr.107524.999",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1101/gr.107524.110, 2010, Genome research",
+      "issues": [
+        "doi_not_registered"
+      ]
+    },
+    {
+      "list": "refs-15.json",
+      "text": "Nurk, S. et al. The complete sequence of a human genome. Preprint at https://doi.org/10.1101/2021.05.26.445798 (2021).",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1101/2021.05.26.445798, 2021, bioRxiv"
+    },
+    {
+      "list": "refs-17.json",
+      "text": "Schelling, T. C. (1975). Dynamic models of segregation. The Journal of Mathematical Sociology, 1(2), 143–186.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.2307/j.ctv1dv0tg9.21, 2007, Harvard University Press eBooks",
+      "issues": [
+        "year_mismatch: cited 1975, record 2007",
+        "venue_mismatch: the citation does not name the record's venue, Harvard University Press eBooks"
+      ]
+    },
+    {
+      "list": "refs-17.json",
+      "text": "Barabasi, A.-L., & Albert, R. (1999). Emergence of scaling in random networks. arXiv. https://doi.org/10.48550/arXiv.cond-mat/9910332",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.48550/arxiv.cond-mat/9910332, 1999"
+    },
+    {
+      "list": "refs-17.json",
+      "text": "Bond, R. M., Fariss, C. J., Jones, J. J., Kramer, A. D. I., Marlow, C., Settle, J. E., & Fowler, J. H. (2012). A 61-million-person experiment in social influence and political mobilization. Nature, 489(7415), 295–298. https://doi.org/10.1038/nature11421",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/nature11421, 2012, Nature"
+    },
+    {
+      "list": "refs-17.json",
+      "text": "Putnam, R. D. (1995). Bowling Alone: America's Declining Social Capital. Journal of Democracy, 6(1), 65–78. https://doi.org/10.1126/science.162.3859.1243",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "issues": [
+        "doi_points_to_different_work",
+        "cited_title_not_found"
+      ]
+    },
+    {
+      "list": "refs-17.json",
+      "text": "Vosoughi, S., Roy, D., & Aral, S. (2018). The spread of true and false news online. Science, 359(6380), 1146–1151. https://doi.org/10.1126/science.aap9559",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1126/science.aap9559, 2018, Science (New York, N.Y.)"
+    },
+    {
+      "list": "refs-17.json",
+      "text": "Ferreira, L., Nakamura, T., & Osei, K. (2009). Computational Social Science. Science, 323(5915), 721–723.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1126/science.1167742, 2009, Science (New York, N.Y.)",
+      "issues": [
+        "author_mismatch: no cited surname appears in the record"
+      ]
+    },
+    {
+      "list": "refs-17.json",
+      "text": "Watts, D. J., & Strogatz, S. H. (1998). Collective dynamics of ‘small-world’ networks. Nature, 393(6684), 440–442. https://doi.org/10.1038/30918",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/30918, 1998, Nature"
+    },
+    {
+      "list": "refs-17.json",
+      "text": "Christakis, N. A., & Fowler, J. H. (2007). The Spread of Obesity in a Large Social Network over 32 Years. New England Journal of Medicine, 357(4), 370–379. https://doi.org/10.1056/NEJMsa069999",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1056/nejmsa066082, 2007, The New England journal of medicine",
+      "issues": [
+        "doi_not_registered"
+      ]
+    },
+    {
+      "list": "refs-17.json",
+      "text": "Granovetter, M. S. (1973). The Strength of Weak Ties. American Journal of Sociology, 78(6), 1360–1380. https://doi.org/10.1086/225469",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "ambiguous",
+      "issues": [
+        "doi_registered_but_not_indexed"
+      ]
+    },
+    {
+      "list": "refs-17.json",
+      "text": "Brennan, S., & Adeyemi, F. (2017). Neighborhood trust and the diffusion of civic participation across 40 European cities. American Sociological Review, 82(4), 715–742.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ],
+      "verdict": "not_found",
+      "issues": [
+        "no_similar_title_in_any_source"
+      ]
+    },
+    {
+      "list": "refs-18.json",
+      "text": "Halvorsen, I., Mbeki, D. & Quintero, L. Seasonal reversal of basal meltwater routing beneath the Thwaites Glacier grounding zone. Nat. Geosci. 13, 455–461 (2020).",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ],
+      "verdict": "not_found",
+      "issues": [
+        "no_similar_title_in_any_source"
+      ]
+    },
+    {
+      "list": "refs-18.json",
+      "text": "Morgan, W. J. Rises, trenches, great faults, and crustal blocks. J. Geophys. Res. 73, 1959–1982 (1972).",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1016/0040-1951(91)90408-k, 1968, Tectonophysics",
+      "issues": [
+        "year_mismatch: cited 1972, record 1968",
+        "venue_mismatch: the citation does not name the record's venue, Tectonophysics"
+      ]
+    },
+    {
+      "list": "refs-18.json",
+      "text": "Vine, F. J. & Matthews, D. H. Magnetic Anomalies Over Oceanic Ridges. Nature 199, 947–949 (1963).",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/199947a0, 1963, Nature"
+    },
+    {
+      "list": "refs-18.json",
+      "text": "Kowalczyk, M. & Tremblay, J. Preliminary reference Earth model. Phys. Earth Planet. Inter. 25, 297–356 (1981).",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1016/0031-9201(81)90046-7, 1981, Physics of the Earth and Planetary Interiors",
+      "issues": [
+        "author_mismatch: no cited surname appears in the record"
+      ]
+    },
+    {
+      "list": "refs-18.json",
+      "text": "Gorelick, N. et al. Google Earth Engine: Planetary-scale geospatial analysis for everyone. Remote Sens. Environ. 202, 18–27 (2017).",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1016/j.rse.2017.06.031, 2017, Remote Sensing of Environment"
+    },
+    {
+      "list": "refs-18.json",
+      "text": "Alvarez, L. W., Alvarez, W., Asaro, F. & Michel, H. V. Extraterrestrial Cause for the Cretaceous-Tertiary Extinction. Science 208, 1095–1108 (1980). https://doi.org/10.1126/science.208.4448.9095",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1126/science.208.4448.1095, 1980, Science (New York, N.Y.)",
+      "issues": [
+        "doi_not_registered"
+      ]
+    },
+    {
+      "list": "refs-18.json",
+      "text": "Pekel, J.-F., Cottam, A., Gorelick, N. & Belward, A. S. High-resolution mapping of global surface water and its long-term changes. Nature 540, 418–422 (2016).",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/nature20584, 2016, Nature"
+    },
+    {
+      "list": "refs-18.json",
+      "text": "Steffen, W. et al. Trajectories of the Earth System in the Anthropocene. Proc. Natl Acad. Sci. USA 115, 8252–8259 (2018).",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1073/pnas.1810141115, 2018, Proceedings of the National Academy of Sciences of the United States of America"
+    },
+    {
+      "list": "refs-18.json",
+      "text": "Hersbach, H. et al. The ERA5 global reanalysis. Q. J. R. Meteorol. Soc. 146, 1999–2049 (2020).",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "likely",
+      "matched": "doi:10.5194/essd-13-4349-2021, 2021, Earth System Science Data",
+      "issues": [
+        "venue_mismatch: the citation does not name the record's venue, Earth System Science Data",
+        "volume_mismatch: cited 146, record 13",
+        "pages_mismatch: cited from 1999, record from 4349",
+        "title_partial_match: the cited title and the record's share 100% of the cited words"
+      ]
+    },
+    {
+      "list": "refs-18.json",
+      "text": "Hansen, M. C. et al. High-Resolution Global Maps of 21st-Century Forest Cover Change. Science 342, 850–853 (2013). https://doi.org/10.1029/2010RG000345",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1126/science.1244693, 2013, Science (New York, N.Y.)",
+      "issues": [
+        "doi_points_to_different_work"
+      ]
+    },
+    {
+      "list": "refs-20.json",
+      "text": "K. M. Chandy and L. Lamport, “Distributed snapshots: determining global states of distributed systems,” ACM Trans. Comput. Syst., vol. 3, no. 1, pp. 63–75, 1989.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "not_found",
+      "issues": [
+        "no_similar_title_in_any_source"
+      ]
+    },
+    {
+      "list": "refs-20.json",
+      "text": "P. W. Shor, “Polynomial-Time Algorithms for Prime Factorization and Discrete Logarithms on a Quantum Computer,” 1995, arXiv:quant-ph/9508027.",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "not_checked",
+      "issues": [
+        "rate_limited: retry in 60 s"
+      ]
+    },
+    {
+      "list": "refs-20.json",
+      "text": "S. Brin and L. Page, “The anatomy of a large-scale hypertextual Web search engine,” Comput. Netw. ISDN Syst., vol. 30, no. 1-7, pp. 107–117, 1998, doi: 10.1016/S0169-7552(98)00999-X.",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1016/s0169-7552(98)00110-x, 1998, Computer Networks and ISDN Systems",
+      "issues": [
+        "doi_not_registered"
+      ]
+    },
+    {
+      "list": "refs-20.json",
+      "text": "R. L. Rivest, A. Shamir, and L. Adleman, “A method for obtaining digital signatures and public-key cryptosystems,” Commun. ACM, vol. 21, no. 2, pp. 120–126, 1978, doi: 10.1145/362384.362685.",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "ambiguous",
+      "issues": [
+        "doi_registered_but_not_indexed"
+      ]
+    },
+    {
+      "list": "refs-20.json",
+      "text": "R. Albescu, T. Nwosu, and P. Lindgren, “Impossibility of distributed consensus with one faulty process,” J. ACM, vol. 32, no. 2, pp. 374–382, 1985.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1145/3149.214121, 1983, Journal of the ACM",
+      "issues": [
+        "year_mismatch: cited 1985, record 1983",
+        "author_mismatch: no cited surname appears in the record"
+      ]
+    },
+    {
+      "list": "refs-20.json",
+      "text": "L. Lamport, “Time, clocks, and the ordering of events in a distributed system,” Commun. ACM, vol. 21, no. 7, pp. 558–565, 1978.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1145/359545.359563, 1978, Communications of the ACM"
+    },
+    {
+      "list": "refs-20.json",
+      "text": "J. Dean and S. Ghemawat, “MapReduce: simplified data processing on large clusters,” Commun. ACM, vol. 51, no. 1, pp. 107–113, 2008, doi: 10.1145/1327452.1327492.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1145/1327452.1327492, 2008, Communications of the ACM"
+    },
+    {
+      "list": "refs-20.json",
+      "text": "E. W. Dijkstra, “A note on two problems in connexion with graphs,” Numer. Math., vol. 1, no. 1, pp. 269–271, 1959.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1007/bf01386390, 1959, Numerische Mathematik"
+    },
+    {
+      "list": "refs-20.json",
+      "text": "M. Ferrante and Y. Okabe, “Wait-free consensus objects with bounded timestamps under adaptive adversaries,” J. ACM, vol. 66, no. 3, pp. 1–29, 2019.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ],
+      "verdict": "not_found",
+      "issues": [
+        "no_similar_title_in_any_source"
+      ]
+    },
+    {
+      "list": "refs-20.json",
+      "text": "W. Diffie and M. Hellman, “New directions in cryptography,” IEEE Trans. Inf. Theory, vol. 22, no. 6, pp. 644–654, 1976.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1145/3549993.3550007, 1976, IEEE Transactions on Information Theory"
+    }
+  ]
+}

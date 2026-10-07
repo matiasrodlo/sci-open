@@ -9,7 +9,6 @@ import * as doaj from '../providers/doaj';
 import * as europepmc from '../providers/europepmc';
 import * as ncbi from '../providers/ncbi';
 import * as openaire from '../providers/openaire';
-import * as openalex from '../providers/openalex';
 import * as plos from '../providers/plos';
 import type { ProviderFacetArgs, ProviderFacetOutcome } from '../providers/count-facets';
 
@@ -97,7 +96,7 @@ export type ProviderEntry = {
  *
  * Every provider's `search`, `lookup` and `facets` already take the same core
  * options — the provider's own option types are supersets of these — so one
- * adapter drives all eleven. There used to be ten, written out by hand: thirty
+ * adapter drives all ten. There used to be ten, written out by hand: thirty
  * lines each of copying `signal`, `userAgent` and `now` across and reading an
  * API key from `process.env`, identical but for which key, and a place for
  * one of them to forward something the others did not.
@@ -177,7 +176,6 @@ export const PROVIDERS: ProviderEntry[] = [
   defineProvider('openaire', openaire),
   defineProvider('datacite', datacite, { key: 'datacite' }),
   defineProvider('biorxiv', biorxiv),
-  defineProvider('openalex', openalex, { key: 'openalex', facetsAggregate: true }),
   defineProvider('crossref', crossref),
   defineProvider('core', core, { key: 'core' }),
   defineProvider('europepmc', europepmc)

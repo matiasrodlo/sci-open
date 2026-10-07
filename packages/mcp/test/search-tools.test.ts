@@ -8,7 +8,7 @@ import { ToolError } from '../src/errors';
 import { fakeEngine } from './fake-engine';
 
 const study = (n: number): Paper =>
-  paper({ id: `openalex:W${n}`, doi: `10.1234/s.${n}`, title: `Crispr study ${n}`, year: 2020, sources: [ref('openalex', { nativeId: `W${n}` })] });
+  paper({ id: `crossref:W${n}`, doi: `10.1234/s.${n}`, title: `Crispr study ${n}`, year: 2020, sources: [ref('crossref', { nativeId: `W${n}` })] });
 const WORLD = Array.from({ length: 30 }, (_, i) => study(i + 1));
 
 /** The tool's input as the SDK hands it over: parsed, defaults filled in. */
@@ -19,11 +19,11 @@ describe('search_papers and get_search_page', () => {
   it('pages at the size the search asked for, so page 2 after a page of one is result 2', async () => {
     const { deps } = fakeEngine(WORLD);
     const first = await searchPapers.run(searchArgs({ query: 'crispr', page_size: 1 }), deps);
-    expect(first.structured.results?.map(r => r.id)).toEqual(['openalex:W1']);
+    expect(first.structured.results?.map(r => r.id)).toEqual(['crossref:W1']);
 
     const next = first.structured.next!;
     const second = await getSearchPage.run(pageArgs({ handle: next.handle, page: next.page }), deps);
-    expect(second.structured.results.map(r => r.id)).toEqual(['openalex:W2']);
+    expect(second.structured.results.map(r => r.id)).toEqual(['crossref:W2']);
     expect(second.structured.page_size).toBe(1);
   });
 
@@ -38,8 +38,8 @@ describe('search_papers and get_search_page', () => {
   it('narrows the fan-out itself to the sources asked for', async () => {
     const { deps, engine } = fakeEngine(WORLD);
     const search = vi.spyOn(engine, 'search');
-    await searchPapers.run(searchArgs({ query: 'crispr', sources: ['arxiv', 'openalex'] }), deps);
-    expect(search.mock.calls[0]![1]).toMatchObject({ sources: ['arxiv', 'openalex'] });
+    await searchPapers.run(searchArgs({ query: 'crispr', sources: ['arxiv', 'crossref'] }), deps);
+    expect(search.mock.calls[0]![1]).toMatchObject({ sources: ['arxiv', 'crossref'] });
   });
 
   it('counts facets across the sources only when asked, and pages that search as the same set', async () => {
@@ -120,14 +120,14 @@ describe('search_papers and get_search_page', () => {
   it('looks a DOI up, given as a URL', async () => {
     const { deps } = fakeEngine(WORLD);
     const outcome = await searchPapers.run(searchArgs({ doi: 'https://doi.org/10.1234/s.7' }), deps);
-    expect(outcome.structured.results?.map(r => r.id)).toEqual(['openalex:W7']);
+    expect(outcome.structured.results?.map(r => r.id)).toEqual(['crossref:W7']);
     expect(outcome.structured.query).toEqual({ doi: '10.1234/s.7', sort: 'relevance' });
   });
 
   it('looks a DOI up written doi:10.…, and refuses a doi that is not one before asking anything', async () => {
     const { deps, searches } = fakeEngine(WORLD);
     const outcome = await searchPapers.run(searchArgs({ doi: 'doi:10.1234/s.7' }), deps);
-    expect(outcome.structured.results?.map(r => r.id)).toEqual(['openalex:W7']);
+    expect(outcome.structured.results?.map(r => r.id)).toEqual(['crossref:W7']);
     expect(outcome.structured.query).toEqual({ doi: '10.1234/s.7', sort: 'relevance' });
 
     // Searched as words, it would list somebody else's papers under that DOI.
@@ -139,8 +139,8 @@ describe('search_papers and get_search_page', () => {
 describe('get_paper', () => {
   it('finds a paper by id, and says an id asks one source', async () => {
     const { deps, admitted } = fakeEngine(WORLD);
-    const outcome = await getPaper.run({ id: 'openalex:W3' }, deps);
-    expect(outcome.structured.paper).toMatchObject({ id: 'openalex:W3', field_sources: {}, sources: [{ source: 'openalex' }] });
+    const outcome = await getPaper.run({ id: 'crossref:W3' }, deps);
+    expect(outcome.structured.paper).toMatchObject({ id: 'crossref:W3', field_sources: {}, sources: [{ source: 'crossref' }] });
     expect(outcome.text).toContain('looked up by id, which asks only that source');
     expect(admitted()).toBe(0);
   });
@@ -148,7 +148,7 @@ describe('get_paper', () => {
   it('finds a paper by DOI, spending an admission like any search', async () => {
     const { deps, admitted } = fakeEngine(WORLD);
     const outcome = await getPaper.run({ doi: 'https://doi.org/10.1234/s.4' }, deps);
-    expect(outcome.structured.paper.id).toBe('openalex:W4');
+    expect(outcome.structured.paper.id).toBe('crossref:W4');
     expect(admitted()).toBe(1);
   });
 
@@ -159,7 +159,7 @@ describe('get_paper', () => {
       { id: 'doi:10.1234/s.4' }, { id: '10.1234/s.4' }, { id: 'https://doi.org/10.1234/s.4' }
     ]) {
       const outcome = await getPaper.run(args, deps);
-      expect(outcome.structured.paper.id, JSON.stringify(args)).toBe('openalex:W4');
+      expect(outcome.structured.paper.id, JSON.stringify(args)).toBe('crossref:W4');
       expect(outcome.text).not.toContain('looked up by id');
     }
   });
@@ -174,8 +174,8 @@ describe('get_paper', () => {
 
   it('says what to do when no source holds it, and refuses both or neither', async () => {
     const { deps } = fakeEngine(WORLD);
-    await expect(getPaper.run({ id: 'openalex:W999' }, deps)).rejects.toMatchObject({ code: 'not_found' });
+    await expect(getPaper.run({ id: 'crossref:W999' }, deps)).rejects.toMatchObject({ code: 'not_found' });
     await expect(getPaper.run({}, deps)).rejects.toBeInstanceOf(ToolError);
-    await expect(getPaper.run({ id: 'openalex:W1', doi: '10.1234/s.1' }, deps)).rejects.toMatchObject({ code: 'invalid_input' });
+    await expect(getPaper.run({ id: 'crossref:W1', doi: '10.1234/s.1' }, deps)).rejects.toMatchObject({ code: 'invalid_input' });
   });
 });

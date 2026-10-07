@@ -1,7 +1,7 @@
 /**
- * Both OpenAlex and Unpaywall ask callers to identify themselves with a
- * contact address, and both treat a request that does so as belonging to a
- * more generous rate-limit pool. The address travels in the User-Agent this
+ * Both Crossref and Unpaywall ask callers to identify themselves with a
+ * contact address: Crossref treats a request that does so as belonging to a
+ * more generous rate-limit pool, and Unpaywall refuses one that does not. The address travels in the User-Agent this
  * service builds at startup, so the clients read it back out of there rather
  * than taking it as a second constructor argument that could drift from it.
  */

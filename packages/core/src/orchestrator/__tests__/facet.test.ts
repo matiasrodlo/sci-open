@@ -191,7 +191,7 @@ describe('withSourceCounts', () => {
 
   it('takes the largest single source’s count', () => {
     const f = withSourceCounts(read, [
-      { provider: 'openalex', facets: { year: [{ value: 2024, count: 900 }] } },
+      { provider: 'plos', facets: { year: [{ value: 2024, count: 900 }] } },
       { provider: 'europepmc', facets: { year: [{ value: 2024, count: 400 }, { value: 2023, count: 50 }] } }
     ], ['year']);
 
@@ -202,9 +202,9 @@ describe('withSourceCounts', () => {
   });
 
   it('drops a future year a source reports', () => {
-    // OpenAlex's `group_by` answers every year it holds, whatever was asked.
+    // PLOS's Solr facets answer every year it holds, whatever was asked.
     const f = withSourceCounts(read, [
-      { provider: 'openalex', facets: { year: [{ value: 2035, count: 2 }, { value: 2024, count: 900 }] } }
+      { provider: 'plos', facets: { year: [{ value: 2035, count: 2 }, { value: 2024, count: 900 }] } }
     ], ['year'], new Date('2026-09-25T00:00:00Z'));
 
     expect(f.year.map(b => b.value)).toEqual([2024, 2023]);
@@ -218,7 +218,7 @@ describe('withSourceCounts', () => {
   it('meets a source’s spelling with the read’s, and keeps the read’s', () => {
     // So ticking it finds the papers the list holds.
     const f = withSourceCounts(read, [
-      { provider: 'openalex', facets: { venue: [{ value: 'Frontiers in Psychology', count: 210 }] } }
+      { provider: 'plos', facets: { venue: [{ value: 'Frontiers in Psychology', count: 210 }] } }
     ], ['venue']);
 
     expect(f.venue[0]).toEqual({ value: 'Frontiers in psychology', count: 210 });
@@ -226,7 +226,7 @@ describe('withSourceCounts', () => {
 
   it('adds a value only a source holds', () => {
     const f = withSourceCounts(read, [
-      { provider: 'openalex', facets: { venue: [{ value: 'Malaria Journal', count: 608 }] } }
+      { provider: 'plos', facets: { venue: [{ value: 'Malaria Journal', count: 608 }] } }
     ], ['venue']);
 
     expect(f.venue.map(b => b.value)).toEqual(['Malaria Journal', 'Frontiers in psychology', 'Nature']);
@@ -234,7 +234,7 @@ describe('withSourceCounts', () => {
 
   it('leaves a facet it was not told to count as the read counted it', () => {
     const f = withSourceCounts(read, [
-      { provider: 'openalex', facets: { venue: [{ value: 'Nature', count: 5000 }] } }
+      { provider: 'plos', facets: { venue: [{ value: 'Nature', count: 5000 }] } }
     ], ['year']);
 
     expect(f.venue).toEqual(read.venue);

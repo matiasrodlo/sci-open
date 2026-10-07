@@ -45,13 +45,23 @@ export function paperRefKind(ref: string): { doi: string } | { id: string } {
   return doi ? { doi } : { id: canonicalId(trimmed) };
 }
 
+/**
+ * The answer for a paper no source holds. An OpenAlex id — which earlier
+ * versions printed, and a model may still hold — names a source no longer
+ * asked, and says so rather than that the paper does not exist.
+ */
+export function paperNotFound(ref: string | undefined, hint: string): ToolError {
+  if (ref && /^openalex\s*:/i.test(ref.trim())) {
+    return new ToolError('not_found', 'OpenAlex is no longer one of the sources, so its ids name no paper here.', 'Pass the paper\'s DOI, or find it with search_papers.');
+  }
+  return new ToolError('not_found', 'No source holds this paper.', hint);
+}
+
 export async function resolvePaperRef(ref: string, deps: ToolDeps): Promise<Paper> {
   const kind = paperRefKind(ref);
   const paper = 'doi' in kind
     ? await deps.engine.lookupDoi(kind.doi, { admit: deps.admit, signal: deps.signal }) // a DOI lookup is a search
     : await deps.engine.lookup(kind.id, { signal: deps.signal });
-  if (!paper) {
-    throw new ToolError('not_found', 'No source holds this paper.', 'Pass a DOI or an id from search_papers, such as openalex:W2741809807.');
-  }
+  if (!paper) throw paperNotFound(ref, 'Pass a DOI or an id from search_papers, such as europepmc:13054692.');
   return paper;
 }

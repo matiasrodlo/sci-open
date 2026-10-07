@@ -164,7 +164,7 @@ describe('createEngine', () => {
 describe('what a call costs the sources', () => {
   /** A source that counts facets across its index, and says how often it was asked to. */
   function faceted() {
-    const source = stub('openalex');
+    const source = stub('crossref');
     let counted = 0;
     source.entry.capabilities = { ...source.entry.capabilities, facets: ['year'] };
     source.entry.facets = async () => { counted++; return { facets: { year: [{ value: 2021, count: 999 }] }, failures: [] }; };
@@ -173,17 +173,17 @@ describe('what a call costs the sources', () => {
   }
 
   it('counts facets across the sources only when a search asks, and holds the two sets apart', async () => {
-    const openalex = faceted();
-    const engine = engineWith(openalex.entry);
+    const crossref = faceted();
+    const engine = engineWith(crossref.entry);
 
     const plain = await engine.search({ q: 'crispr' });
-    expect(openalex.counted()).toBe(0);
+    expect(crossref.counted()).toBe(0);
     expect(plain.response.facets.year).not.toContainEqual({ value: 2021, count: 999 });
 
     // Not answered by the set that has no counts in it...
     const counted = await engine.search({ q: 'crispr' }, { facets: true });
     expect(counted.fromCache).toBe(false);
-    expect(openalex.counted()).toBe(1);
+    expect(crossref.counted()).toBe(1);
     expect(counted.response.facets.year).toContainEqual({ value: 2021, count: 999 });
 
     // ...and each held under its own key, so the pages of either cost nothing.
@@ -191,7 +191,7 @@ describe('what a call costs the sources', () => {
     expect((await engine.search({ q: 'crispr', page: 2 })).fromCache).toBe(true);
     // The read is shared through the provider cache: asking for the counts
     // later costs the counts, not the search again.
-    expect(openalex.calls).toHaveLength(1);
+    expect(crossref.calls).toHaveLength(1);
   });
 
   it('reads each source as deep as a call asks, and holds that set apart', async () => {
@@ -363,61 +363,61 @@ describe('a spent quota', () => {
 
   it('leaves a source alone after its 429, says so, and holds no set without it', async () => {
     let t = 0;
-    const openalex = scripted('openalex', [429, 3]);
+    const crossref = scripted('crossref', [429, 3]);
     const arxiv = stub('arxiv');
     const engine = createEngine({
-      userAgent: 'engine-test', providers: [openalex.entry, arxiv.entry], authorities: [],
+      userAgent: 'engine-test', providers: [crossref.entry, arxiv.entry], authorities: [],
       quotaCoolDownMs: 600_000, now: () => t
     });
 
     const refused = await engine.search({ q: 'crispr' });
-    expect(refused.response.providers.find(p => p.provider === 'openalex')).toMatchObject({ status: 'error', rateLimited: 'refused' });
+    expect(refused.response.providers.find(p => p.provider === 'crossref')).toMatchObject({ status: 'error', rateLimited: 'refused' });
 
     t = 300_000;
     const cooling = await engine.search({ q: 'microbiome' });
-    expect(openalex.calls).toHaveLength(1);
-    expect(cooling.response.providers.find(p => p.provider === 'openalex')).toMatchObject({ status: 'error', rateLimited: 'cooling-down' });
+    expect(crossref.calls).toHaveLength(1);
+    expect(cooling.response.providers.find(p => p.provider === 'crossref')).toMatchObject({ status: 'error', rateLimited: 'cooling-down' });
     expect(cooling.response.complete).toBe(false);
     // Not held: the same search again runs again.
     expect((await engine.search({ q: 'microbiome' })).fromCache).toBe(false);
-    expect(openalex.calls).toHaveLength(1);
+    expect(crossref.calls).toHaveLength(1);
 
     t = 600_000;
     const recovered = await engine.search({ q: 'microbiome' });
-    expect(openalex.calls).toHaveLength(2);
+    expect(crossref.calls).toHaveLength(2);
     expect(recovered.response.complete).toBe(true);
 
     // The answer ended the cool-down, so nothing is left out now.
     await engine.search({ q: 'plasmid' });
-    expect(openalex.calls).toHaveLength(3);
+    expect(crossref.calls).toHaveLength(3);
   });
 
   it('leaves a cooled-down source out of a count too', async () => {
-    const openalex = scripted('openalex', [429]);
-    const engine = createEngine({ userAgent: 'engine-test', providers: [openalex.entry], authorities: [] });
+    const crossref = scripted('crossref', [429]);
+    const engine = createEngine({ userAgent: 'engine-test', providers: [crossref.entry], authorities: [] });
 
     await engine.count({ q: 'crispr' });
     const { reports, complete } = await engine.count({ q: 'microbiome' });
 
-    expect(openalex.calls).toHaveLength(1);
+    expect(crossref.calls).toHaveLength(1);
     expect(reports[0]).toMatchObject({ status: 'error', rateLimited: 'cooling-down' });
     expect(complete).toBe(false);
   });
 
-  it('asks a cooled-down OpenAlex neither for its facet counts nor as an authority', async () => {
+  it('asks a cooled-down Crossref neither for its facet counts nor as an authority', async () => {
     let facetCalls = 0;
     let authorityCalls = 0;
-    const openalex = scripted('openalex', [429], {
+    const crossref = scripted('crossref', [429], {
       facets: async () => { facetCalls++; return { facets: {}, failures: [] }; },
       facetsAggregate: true
     });
-    openalex.entry.capabilities = { ...openalex.entry.capabilities, facets: ['year'] };
+    crossref.entry.capabilities = { ...crossref.entry.capabilities, facets: ['year'] };
     const arxiv = stub('arxiv');
     const engine = createEngine({
       userAgent: 'engine-test',
-      providers: [openalex.entry, arxiv.entry],
+      providers: [crossref.entry, arxiv.entry],
       authorities: [{
-        id: 'openalex',
+        id: 'crossref',
         capabilities: { fields: ['citationCount'], authoritative: [] },
         pass: 0,
         lookup: async () => { authorityCalls++; return null; }
@@ -434,7 +434,7 @@ describe('a spent quota', () => {
     await engine.search({ q: 'microbiome' }, { facets: true });
     await engine.lookupDoi('10.1234/arxiv-1');
 
-    expect(openalex.calls).toHaveLength(1);
+    expect(crossref.calls).toHaveLength(1);
     expect(facetCalls).toBe(0);
     expect(authorityCalls).toBe(0);
   });

@@ -13,18 +13,18 @@ describe('readMcpConfig', () => {
     const { config } = readMcpConfig({
       ...EMAIL, SCI_OPEN_HTTP_PORT: '9000', SCI_OPEN_ALLOWED_ORIGINS: 'a.example, b.example',
       SCI_OPEN_TRUST_PROXY: 'loopback,10.0.0.0/8', SCI_OPEN_REQUESTS_PER_MIN: '90', SCI_OPEN_TOTAL_NEW_SEARCHES_PER_MIN: '300',
-      SCI_OPEN_ADMIN_KEY: 'k', SCI_OPEN_ALLOW_UNKEYED: '1'
+      SCI_OPEN_ADMIN_KEY: 'k'
     }, ['--http', '--port', '8081', '--host', '0.0.0.0']);
     expect(config.http).toEqual({
       host: '0.0.0.0', port: 8081, allowedOrigins: ['a.example', 'b.example'], trustProxy: ['loopback', '10.0.0.0/8'],
-      requestsPerMinute: 90, totalNewSearchesPerMinute: 300, allowUnkeyed: true, adminKey: 'k'
+      requestsPerMinute: 90, totalNewSearchesPerMinute: 300, adminKey: 'k'
     });
     expect(config.allowWrites).toBe(false);
   });
 
   it('defaults to loopback on 8080, trusting no proxy and allowing no browser', () => {
     expect(readMcpConfig({ ...EMAIL, SCI_OPEN_HTTP: '1' }, []).config.http).toEqual({
-      host: '127.0.0.1', port: 8080, allowedOrigins: [], trustProxy: [], requestsPerMinute: 60, totalNewSearchesPerMinute: 120, allowUnkeyed: false
+      host: '127.0.0.1', port: 8080, allowedOrigins: [], trustProxy: [], requestsPerMinute: 60, totalNewSearchesPerMinute: 120
     });
   });
 
@@ -77,18 +77,18 @@ describe('readMcpConfig', () => {
     expect(readMcpConfig({ ...EMAIL, SEARCH_DEPTH: '2001' }, []).config.searchDepth).toBe(300);
   });
 
-  it('takes provider keys, but not the placeholders .env.example ships with', () => {
-    const { config } = readMcpConfig({ ...EMAIL, OPENALEX_API_KEY: 'real-key', CORE_API_KEY: 'your_core_api_key_here' }, []);
-    expect(config.apiKeys).toEqual({ openalex: 'real-key' });
+  it('takes provider keys, but not the placeholders .env.example ships with, nor one for a source no longer asked', () => {
+    const { config } = readMcpConfig({ ...EMAIL, NCBI_API_KEY: 'real-key', CORE_API_KEY: 'your_core_api_key_here', OPENALEX_API_KEY: 'old-key' }, []);
+    expect(config.apiKeys).toEqual({ ncbi: 'real-key' });
   });
 
   it('leaves out the sources it is told to, flag first, and warns about a name that is no source', () => {
     expect(readMcpConfig(EMAIL, []).config).not.toHaveProperty('without');
-    expect(readMcpConfig({ ...EMAIL, SCI_OPEN_WITHOUT: 'OpenAlex' }, []).config.without).toEqual(['openalex']);
-    expect(readMcpConfig({ ...EMAIL, SCI_OPEN_WITHOUT: 'core' }, ['--without', 'openalex,crossref']).config.without).toEqual(['openalex', 'crossref']);
-    const { config, warnings } = readMcpConfig({ ...EMAIL, SCI_OPEN_WITHOUT: 'openalex,scopus' }, []);
-    expect(config.without).toEqual(['openalex']);
-    expect(warnings).toEqual([expect.stringMatching(/^--without scopus is not a source \(.*openalex.*\); ignored$/)]);
+    expect(readMcpConfig({ ...EMAIL, SCI_OPEN_WITHOUT: 'Crossref' }, []).config.without).toEqual(['crossref']);
+    expect(readMcpConfig({ ...EMAIL, SCI_OPEN_WITHOUT: 'doaj' }, ['--without', 'core,crossref']).config.without).toEqual(['core', 'crossref']);
+    const { config, warnings } = readMcpConfig({ ...EMAIL, SCI_OPEN_WITHOUT: 'crossref,openalex' }, []);
+    expect(config.without).toEqual(['crossref']);
+    expect(warnings).toEqual([expect.stringMatching(/^--without openalex is not a source \(.*crossref.*\); ignored$/)]);
   });
 
   it('exits 0 for --help and --version and 2 for an unknown flag, writing nothing to stdout', () => {

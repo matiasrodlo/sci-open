@@ -9,7 +9,7 @@ import type { SourceId } from './types';
  * they are asked different questions at different points in the pipeline — the
  * search providers are fanned out to before anything is known, the authorities
  * are consulted about the twenty records that survived ranking and pagination.
- * OpenAlex implements both, which is exactly why the two roles need to be
+ * Crossref implements both, which is exactly why the two roles need to be
  * expressible apart from each other.
  */
 
@@ -48,10 +48,10 @@ export type AuthorityCapabilities = {
  * returned.
  *
  * Extracted from `SourceId` rather than from `ProviderId`, which is the half of
- * the split that is easy to get wrong: `ProviderId` no longer contains
- * Crossref, Unpaywall or OpenCitations, so narrowing *it* would silently leave
- * this as `'openalex'` alone and every other authority would stop type-checking
- * where it is named. The two sets are both subsets of `SourceId`, and they
- * overlap — OpenAlex is a provider and an authority both.
+ * the split that is easy to get wrong: `ProviderId` does not contain
+ * Unpaywall or OpenCitations, so narrowing *it* would silently leave this as
+ * `'crossref'` alone and every other authority would stop type-checking where
+ * it is named. The two sets are both subsets of `SourceId`, and they overlap —
+ * Crossref is a provider and an authority both.
  */
-export type AuthorityId = Extract<SourceId, 'crossref' | 'unpaywall' | 'openalex' | 'opencitations' | 'preprints'>;
+export type AuthorityId = Extract<SourceId, 'crossref' | 'unpaywall' | 'opencitations' | 'preprints'>;

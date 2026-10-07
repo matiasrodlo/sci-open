@@ -51,7 +51,7 @@ const STAGES: Record<string, PaperStage> = {
   book: 'published',
   monograph: 'published',
   // Not `reference-entry`, `dissertation` or `report`: what `published` stands
-  // for is a reviewed article, review, book or chapter (see OpenAlex's STAGES).
+  // for is a reviewed article, review, book or chapter.
   'posted-content': 'preprint'
 };
 

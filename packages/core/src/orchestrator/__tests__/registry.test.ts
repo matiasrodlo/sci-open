@@ -54,9 +54,9 @@ describe('defineProvider', () => {
 
   it('sends a keyed provider its key on every kind of call, read when the call is made', async () => {
     const module = fakeModule();
-    const entry = defineProvider('openalex', module, { key: 'openalex' });
+    const entry = defineProvider('core', module, { key: 'core' });
     // Configured after the entry was built, as `useApiKeys` is at startup.
-    useApiKeys({ openalex: 'secret' });
+    useApiKeys({ core: 'secret' });
 
     await entry.search({ query, depth: 10, offset: 0, timeoutMs: 1000, openAccessOnly: true });
     await entry.lookup!({ nativeId: 'W1', timeoutMs: 1000 });
@@ -68,7 +68,7 @@ describe('defineProvider', () => {
   });
 
   it('sends an unkeyed provider no key, even when some other provider has one', async () => {
-    useApiKeys({ openalex: 'secret' });
+    useApiKeys({ core: 'secret' });
     const module = fakeModule();
     await defineProvider('arxiv', module)
       .search({ query, depth: 10, offset: 0, timeoutMs: 1000, openAccessOnly: true });

@@ -1,7 +1,7 @@
 {
   "name": "get_citations",
   "title": "Get citations",
-  "description": "The references of a paper (direction=\"references\") or the papers citing it (direction=\"cited_by\"), from OpenCitations, each resolved to a record where OpenAlex or Crossref holds it, with self-citations flagged. Paged by offset. The paper needs a DOI; pass the DOI itself when you have it, which skips looking the paper up.",
+  "description": "The references of a paper (direction=\"references\") or the papers citing it (direction=\"cited_by\"), from OpenCitations, each resolved to a record where Crossref holds it, with self-citations flagged. Paged by offset. The paper needs a DOI; pass the DOI itself when you have it, which skips looking the paper up.",
   "inputSchema": {
     "type": "object",
     "properties": {
@@ -9,7 +9,7 @@
         "type": "string",
         "minLength": 1,
         "maxLength": 300,
-        "description": "DOI (preferred) or sci-open id, e.g. 10.7717/peerj-cs.421 or openalex:W3134956838"
+        "description": "DOI (preferred) or sci-open id, e.g. 10.7717/peerj-cs.421 or europepmc:33817056"
       },
       "direction": {
         "type": "string",

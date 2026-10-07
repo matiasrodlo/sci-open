@@ -16,10 +16,12 @@ export function tokens(text: string): string[] {
 
 /**
  * Whether a record's title is the cited title's main title, its subtitle — after
- * a colon, a question mark or a dash — left off. Sources do that: OpenAlex titles
- * "False-Positive Psychology: Undisclosed Flexibility in Data Collection…" as
- * "False-Positive Psychology" and "MapReduce: simplified data processing on
- * large clusters" as "MapReduce".
+ * a colon, a question mark or a dash — left off. Sources do that: OpenAlex, a
+ * source until 2026-10-07, titled "False-Positive Psychology: Undisclosed
+ * Flexibility in Data Collection…" as "False-Positive Psychology" and
+ * "MapReduce: simplified data processing on large clusters" as "MapReduce";
+ * Crossref keeps the subtitle apart, and a source that read only its title
+ * would do the same.
  */
 function isMainTitleOf(record: string, cited: string): boolean {
   const main = cited.split(/[:?]\s|\s[–—-]\s/)[0]!;
@@ -106,7 +108,7 @@ function venueTokens(text: string): string[] {
  * Read from what the citation says besides its authors and title
  * (`remainder`); nothing there means no venue was cited, and nothing is
  * judged. The venue's main title — before a colon, comma, full stop or
- * bracket, where OpenAlex adds "Series B (Methodological)" or ", Condensed
+ * bracket, where a source adds "Series B (Methodological)" or ", Condensed
  * matter" — must mostly be there, its distinctive words in full or
  * abbreviated as ISO 4 abbreviates them (`Proc Natl Acad Sci`, `J R Stat
  * Soc`), or its initials must be (`JAMA`), or a short name it gives in
@@ -241,17 +243,21 @@ export function judge(ref: ParsedReference, paper: Paper): Judgement {
   const contradicted = yearOk === false || authorOk === false;
   // A detail the paper does not settle: it exists, and the citation is off.
   const detailWrong = venueOk === false || volumeOk === false || pagesOk === false;
-  // Year and authors both wrong leaves a partial title nothing to stand on.
-  // Measured live: a fabricated "Quantum annealing of protein folding
-  // landscapes" (2021) shares three of five title words with a real 2012 paper
-  // by other authors, and was called ambiguous rather than not found.
+  // Year and authors both wrong leave only the title to say a real paper is
+  // meant, and a title shared in part says no such thing. Measured live: a
+  // fabricated "Quantum annealing of protein folding landscapes" (2021) shares
+  // three of five title words with a real 2012 paper by other authors, and —
+  // once Crossref was searched — four of five with "Exploring quantum
+  // annealing for coarse-grained protein folding", by others again; both were
+  // called ambiguous rather than not found. Only the whole title is worth a
+  // look then.
   const bothContradicted = yearOk === false && authorOk === false;
 
   let verdict: Verdict;
   if (!overlap) verdict = contradicted ? 'ambiguous' : detailWrong ? 'likely' : 'verified'; // identifier-only reference
   else if (precision >= 0.9 && recall >= 0.9 && !contradicted) verdict = detailWrong ? 'likely' : 'verified';
   else if (precision >= 0.8 && (yearOk || authorOk) && !contradicted) verdict = 'likely';
-  else if (precision >= 0.8 || (precision >= 0.6 && !bothContradicted)) verdict = 'ambiguous';
+  else if (bothContradicted ? precision >= 0.9 && recall >= 0.9 : precision >= 0.6) verdict = 'ambiguous';
   else verdict = 'not_found';
 
   return {

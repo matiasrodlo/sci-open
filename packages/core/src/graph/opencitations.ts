@@ -19,8 +19,6 @@ export type CitationLink = {
   /** In OpenCitations' order, which is not a ranking: see `idsIn`. */
   dois: string[];
   pmid?: string;
-  /** OpenAlex's work id, `W…`, which names a record even without a DOI. */
-  openalex?: string;
   /** When the citing work was published. Only for a paper's citers: for its
    * references the citing work is the paper itself, the same on every link. */
   created?: string;
@@ -62,19 +60,18 @@ export type CitationLinkOptions = {
  * reliably the publisher's. Measured 2026-10-02, a reference of
  * 10.7717/peerj-cs.421 is listed as `doi:10.7287/peerj.preprints.26727v1
  * doi:10.7717/peerj-cs.163` — the preprint before the published article.
- * Which one to cite is decided by the records they resolve to.
+ * Which one to cite is decided by the records they resolve to. The OpenAlex
+ * and OMID ids beside them name records no source here is asked for.
  */
-export function idsIn(field: string): { dois: string[]; pmid?: string; openalex?: string } {
+export function idsIn(field: string): { dois: string[]; pmid?: string } {
   const dois: string[] = [];
   let pmid: string | undefined;
-  let openalex: string | undefined;
   for (const id of field.split(' ')) {
     if (id.startsWith('doi:') && id.length > 4) {
       if (!dois.some(d => d.toLowerCase() === id.slice(4).toLowerCase())) dois.push(id.slice(4));
     } else if (id.startsWith('pmid:') && id.length > 5) pmid ??= id.slice(5);
-    else if (id.startsWith('openalex:') && id.length > 9) openalex ??= id.slice(9);
   }
-  return { dois, ...(pmid ? { pmid } : {}), ...(openalex ? { openalex } : {}) };
+  return { dois, ...(pmid ? { pmid } : {}) };
 }
 
 export async function citationLinks(
@@ -87,8 +84,8 @@ export async function citationLinks(
   const response = await client.get<unknown>(path, {
     // A much-cited paper's list is every citing work at once: measured
     // 2026-10-02, the 24,956 citers of 10.48550/arXiv.1706.03762 came back as
-    // 8.5 MB in 15.8 s. Forty seconds, and OpenAlex's fifteen after it for the
-    // records, keep an MCP call under a minute.
+    // 8.5 MB in 15.8 s. Forty seconds, and Crossref's fifteen after it for
+    // the records, keep an MCP call under a minute.
     timeout: options.timeoutMs ?? 40_000,
     headers: {
       Accept: 'application/json',

@@ -20,9 +20,9 @@ export type FakeOptions = {
   documents?: Record<string, FullTextDocument> | ((paperId: string, trustedOnly: boolean) => Promise<FullTextDocument | null>);
   /** Citation links by `references|<doi>` or `cited_by|<doi>`; a function to answer, or throw. */
   citations?: Record<string, CitationLink[]> | ((doi: string, direction: 'references' | 'cited_by') => Promise<CitationLink[]>);
-  /** OpenAlex's records for `resolveDois`. Defaults to every paper with a DOI;
-   * a function to answer, or to leave DOIs unasked. */
-  openalex?: (dois: readonly string[]) => Promise<DoiResolution>;
+  /** The records for `resolveDois`, Crossref's batch. Defaults to every paper
+   * with a DOI; a function to answer, or to leave DOIs unasked. */
+  batch?: (dois: readonly string[]) => Promise<DoiResolution>;
 };
 
 /** A logger that drops everything, for deps whose log no test reads. */
@@ -93,7 +93,7 @@ export function fakeEngine(papers: readonly Paper[], options: FakeOptions = {}):
       return citations?.[`${direction}|${doi.toLowerCase()}`] ?? [];
     },
     async resolveDois(dois) {
-      if (options.openalex) return options.openalex(dois);
+      if (options.batch) return options.batch(dois);
       const found = new Map<string, Paper>();
       for (const doi of dois) {
         const paper = papers.find(p => p.doi?.toLowerCase() === doi.toLowerCase());
@@ -119,6 +119,6 @@ export function fakeEngine(papers: readonly Paper[], options: FakeOptions = {}):
 function response(papers: Paper[], total: number, page: number, pageSize: number): SearchResponse {
   return {
     papers, total, page, pageSize, facets: {}, complete: true, bounded: false, countsFromSources: false,
-    providers: [{ provider: 'openalex', status: 'ok', retrieved: total, totalHits: total, latency: 1 }]
+    providers: [{ provider: 'crossref', status: 'ok', retrieved: total, totalHits: total, latency: 1 }]
   };
 }

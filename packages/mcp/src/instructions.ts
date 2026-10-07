@@ -8,16 +8,16 @@
  * which is fixed for a configuration, so the text still never changes
  * between requests.
  */
-export const INSTRUCTIONS = `sci-open searches open-access scientific literature across seven sources
-(arXiv, DOAJ, Europe PMC, NCBI/PubMed, OpenAIRE, OpenAlex, PLOS), and Crossref
-too when closed papers are asked for (open_access_only=false), looks a DOI up
-in those and three more (bioRxiv/medRxiv, CORE, DataCite), merges duplicates,
-and reports which sources answered.
+export const INSTRUCTIONS = `sci-open searches open-access scientific literature across six free sources
+(arXiv, DOAJ, Europe PMC, NCBI/PubMed, OpenAIRE, PLOS), and Crossref too when
+closed papers are asked for (open_access_only=false), looks a DOI up in those
+and three more (bioRxiv/medRxiv, CORE, DataCite), merges duplicates, and
+reports which sources answered.
 
 Honesty rules:
 - When total_is_lower_bound is true, the total is a floor. Say so, and why:
-  a source failed (name any left out for its request quota: it is missing for
-  minutes, not for good), or coverage.truncated lists sources that match more
+  a source failed (name any left out for its rate limit: it is missing for
+  a minute, not for good), or coverage.truncated lists sources that match more
   than a search reads, so only the top of their answers was read. A search
   that ends with such sources has not found everything that matches.
 - found_in lists the sources that returned a paper: which indexes hold it,

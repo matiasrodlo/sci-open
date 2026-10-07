@@ -37,7 +37,7 @@ import { writeReport, type CaseRecord, type Grade } from './report';
  * report carries `claude-code`: Claude Code's system prompt makes it another
  * measurement, not the same one paid for differently.
  *
- * `--without openalex` serves sci-open with those sources left out
+ * `--without crossref` serves sci-open with those sources left out
  * (SCI_OPEN_WITHOUT), and its report says so: what they are worth, measured.
  */
 
@@ -56,7 +56,7 @@ const record = (id: string, score: { pass: boolean; why?: string }, run: RunResu
   stopReason: run.stopReason,
   models: run.models,
   fallbackTurns: run.usage.fallbackTurns,
-  ...(run.upstream ? { upstreamRequests: run.upstream.requests, openalexCostUsd: run.upstream.openalexCostUsd } : {})
+  ...(run.upstream ? { upstreamRequests: run.upstream.requests } : {})
 });
 
 /** A run a fallback model answered, or that was refused, measures no server. */
@@ -208,10 +208,10 @@ async function main(): Promise<void> {
       server: server.name, mode: viaModel ? `model (${asked})` : 'direct',
       ...(without.length ? { without: without.join(', ') } : {}),
       references: items.length, ...cost,
-      // What the run asked of the sources, when the server says: the number
-      // the OpenAlex budget is spent against.
+      // What the run asked of the sources, when the server says: what their
+      // rate limits are counted against.
       ...(upstream
-        ? { upstreamRequests: upstream.requests, upstreamRequestsPerReference: upstream.requests / items.length, openalexCostUsd: upstream.openalexCostUsd }
+        ? { upstreamRequests: upstream.requests, upstreamRequestsPerReference: upstream.requests / items.length }
         : {}),
       ...score,
       grades

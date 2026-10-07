@@ -42,19 +42,6 @@ const PROVIDER_ALIASES: Partial<Record<ProviderId, ProviderId>> = { medrxiv: 'bi
 /** An id with no `source:` prefix that is unambiguously an arXiv identifier. */
 const BARE_ARXIV_ID = /^\d{4}\.\d{4,5}(v\d+)?$/;
 
-/**
- * Other spellings of a native id, and what records carry now.
- *
- * OpenAlex names a work by its URL as often as by its bare id, so a caller —
- * a model quoting OpenAlex, or a link that carried the URL — may send
- * `openalex:https://openalex.org/W…`. `fetchWork` strips the URL before
- * asking, and the record comes back as `W…`; stripping it here too is what
- * lets `matches` accept that record as the one asked for.
- */
-const URL_PREFIXES: Partial<Record<ProviderId, RegExp>> = {
-  openalex: /^https?:\/\/(?:www\.)?openalex\.org\//i
-};
-
 const DEFAULT_TIMEOUT_MS = 15000;
 
 /**
@@ -96,7 +83,7 @@ export function splitPaperId(id: string): PaperRef {
 
   const provider = id.slice(0, separator) as ProviderId;
   const nativeId = id.slice(separator + 1);
-  return { provider, nativeId: nativeId.replace(URL_PREFIXES[provider] ?? /^$/, '') };
+  return { provider, nativeId };
 }
 
 export type LookupOptions = {

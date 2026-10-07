@@ -81,7 +81,7 @@ export function fixtureEngine(fixtures: Fixtures, options: { strict?: boolean } 
     async citationLinks(doi, direction) {
       return fixtures.citations?.[citationKey(doi, direction)] ?? [];
     },
-    // Every recorded paper stands in for OpenAlex's record of its DOI.
+    // Every recorded paper stands in for Crossref's record of its DOI.
     async resolveDois(dois) {
       const found = new Map<string, Paper>();
       for (const doi of dois) {

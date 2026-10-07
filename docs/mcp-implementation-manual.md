@@ -37,6 +37,18 @@ HTTP status the PDF route answered with; `SearchResponseV2` is
 `createPooledClient` function; `SearchSettings`, down to one field, is the
 engine's `depth` option; and `OASource` is `SourceId`.
 
+**2026-10-07: OpenAlex removed.** The server is built on free sources only:
+no key, no metered budget. OpenAlex was a search source, an authority and the
+DOI batch; Crossref now does each of those (`providers/crossref`, the batch in
+`engine.resolveDois`, retractions from its `updated-by`), measured on the
+references eval at tune 122 of 128 and holdout 68 of 69 without OpenAlex
+against 120 of 127 and 69 of 69 with it. `OPENALEX_API_KEY`,
+`SCI_OPEN_ALLOW_UNKEYED`, the HTTP server's refusal to start without a key
+(D11's first half), `openalex:` ids and the per-request price in `_meta` went
+with it, and a 429 now benches a source for a minute, not ten. Every step
+below that names OpenAlex describes the design before that day; Appendix A is
+current.
+
 Query operators are capitals only since then
 (`packages/shared/src/query-grammar.ts`): `and`, `or` and `not` written any
 other way are left out of the search, `near` and `same` are searched as words,
@@ -6856,8 +6868,8 @@ list.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `UNPAYWALL_EMAIL` | — (warns if unset) | Contact for Unpaywall and OpenAlex; put in the `User-Agent` |
-| `OPENALEX_API_KEY`, `CORE_API_KEY`, `NCBI_API_KEY`, `DOAJ_API_KEY`, `DATACITE_API_KEY` | unset | Provider keys. Optional on stdio; `OPENALEX_API_KEY` is required over HTTP (D11) unless OpenAlex is left out |
+| `UNPAYWALL_EMAIL` | — (warns if unset) | Contact for Unpaywall and Crossref (its polite pool); put in the `User-Agent` |
+| `CORE_API_KEY`, `NCBI_API_KEY`, `DOAJ_API_KEY`, `DATACITE_API_KEY` | unset | Provider keys, all optional: they raise rate limits, and every source answers without one |
 | `OPENCITATIONS_TOKEN` | unset | Optional OpenCitations access token, for `get_citations` |
 | `SCI_OPEN_TOOLSETS` [`--toolsets`] | `core,read` | Comma-separated: `core`, `read`, `graph`, `export`, `all`, `default` |
 | `SCI_OPEN_TOOLS` [`--tools`] | unset | Extra individual tools, added to the toolsets |
@@ -6870,9 +6882,9 @@ list.
 | `SCI_OPEN_LOG_LEVEL` [`--log-level`] | `warn` | `error`, `warn`, `info`, `debug` (stderr only) |
 | `SCI_OPEN_ENGINE` [`--engine`] | `live` | `fixture` serves recorded answers (evals and demos, Step 11.2) |
 | `SCI_OPEN_FIXTURES` [`--fixtures`] | `packages/mcp/fixtures/engine.json` | The recordings `--engine fixture` reads |
-| `SCI_OPEN_WITHOUT` [`--without`] | unset | Comma-separated sources never asked: not searched, not asked about a paper. `openalex` also leaves cited DOIs to a lookup in every other source, and needs no OpenAlex key over HTTP |
+| `SCI_OPEN_WITHOUT` [`--without`] | unset | Comma-separated sources never asked: not searched, not asked about a paper. `crossref` also leaves cited DOIs to a lookup in every other source |
 
-Over HTTP (`--http`, Steps 10.4–10.5), nine more:
+Over HTTP (`--http`, Steps 10.4–10.5), eight more:
 
 | Variable | Default | Meaning |
 |---|---|---|
@@ -6884,7 +6896,6 @@ Over HTTP (`--http`, Steps 10.4–10.5), nine more:
 | `SCI_OPEN_REQUESTS_PER_MIN` | `60` | Requests a minute per client, of any kind |
 | `SCI_OPEN_TOTAL_NEW_SEARCHES_PER_MIN` | `120` | New searches a minute across every client, over the per-client budgets |
 | `SCI_OPEN_ADMIN_KEY` | unset | Bearer token for `GET /metrics`; unset hides the route |
-| `SCI_OPEN_ALLOW_UNKEYED` | off | Serve without `OPENALEX_API_KEY`; trials only |
 
 Over HTTP nothing is written, whatever `SCI_OPEN_ALLOW_WRITES` says:
 `save_paper` is not served and `save_to` is refused.

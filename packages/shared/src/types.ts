@@ -1,8 +1,8 @@
 // Every source the engine asks: the providers a search fans out to, then the
 // authorities asked about a paper by DOI. `ProviderId` and `AuthorityId` are
-// its two halves, and OpenAlex is in both.
+// its two halves, and Crossref is in both.
 export type SourceId =
-  | "arxiv" | "core" | "europepmc" | "ncbi" | "openaire" | "biorxiv" | "medrxiv" | "doaj" | "plos" | "datacite" | "openalex"
+  | "arxiv" | "core" | "europepmc" | "ncbi" | "openaire" | "biorxiv" | "medrxiv" | "doaj" | "plos" | "datacite"
   | "crossref" | "unpaywall" | "opencitations" | "preprints";
 
 export type SearchFilters = {

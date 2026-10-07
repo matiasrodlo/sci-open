@@ -38,14 +38,14 @@ describe('canonicalJson', () => {
 
 describe('search handles', () => {
   const spec: SearchSpec = {
-    q: 'TS=crispr', filters: { openAccessOnly: true, yearFrom: 2020, source: ['openalex', 'arxiv'] }, sort: 'relevance', pageSize: 10
+    q: 'TS=crispr', filters: { openAccessOnly: true, yearFrom: 2020, source: ['plos', 'arxiv'] }, sort: 'relevance', pageSize: 10
   };
 
   it('round-trip, and treat a set filter as a set', () => {
     const handle = encodeSearchHandle(spec);
     expect(handle).toMatch(/^s1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{10}$/);
-    expect(decodeSearchHandle(handle)).toEqual({ ...spec, filters: { ...spec.filters, source: ['arxiv', 'openalex'] } });
-    expect(encodeSearchHandle({ ...spec, filters: { ...spec.filters, source: ['arxiv', 'openalex'] } })).toBe(handle);
+    expect(decodeSearchHandle(handle)).toEqual({ ...spec, filters: { ...spec.filters, source: ['arxiv', 'plos'] } });
+    expect(encodeSearchHandle({ ...spec, filters: { ...spec.filters, source: ['arxiv', 'plos'] } })).toBe(handle);
   });
 
   it('carry whether the search counted its facets, so its pages ask for the same set', () => {
@@ -164,9 +164,9 @@ describe('coverage', () => {
     ({ provider, status: 'ok', retrieved: 10, latency: 1, ...over });
 
   it('says everything answered when it did', () => {
-    const c = coverageOf({ complete: true, bounded: false, providers: [report('arxiv'), report('openalex', { totalHits: 9 })] });
+    const c = coverageOf({ complete: true, bounded: false, providers: [report('arxiv'), report('crossref', { totalHits: 9 })] });
     expect(coverageSentence(c)).toBe('2 of 2 sources answered.');
-    expect(c.per_source[1]).toEqual({ source: 'openalex', status: 'ok', retrieved: 10, total_hits: 9 });
+    expect(c.per_source[1]).toEqual({ source: 'crossref', status: 'ok', retrieved: 10, total_hits: 9 });
   });
 
   it('names failures, a spent quota, skips and a bounded access check', () => {
@@ -176,14 +176,14 @@ describe('coverage', () => {
       providers: [
         report('arxiv'),
         report('europepmc', { status: 'timeout', retrieved: 0 }),
-        report('openalex', { status: 'error', retrieved: 0, rateLimited: 'cooling-down' }),
+        report('crossref', { status: 'error', retrieved: 0, rateLimited: 'cooling-down' }),
         report('biorxiv', { status: 'skipped', retrieved: 0, skipReason: 'no keyword index' })
       ]
     });
-    expect(c.failed).toEqual([{ source: 'europepmc', status: 'timeout' }, { source: 'openalex', status: 'error', rate_limited: true }]);
+    expect(c.failed).toEqual([{ source: 'europepmc', status: 'timeout' }, { source: 'crossref', status: 'error', rate_limited: true }]);
     expect(coverageSentence(c)).toBe(
       '1 of 3 sources answered; no answer from europepmc (timeout) — the total is a lower bound; ' +
-      'openalex (request quota spent) left out for a few minutes — the total is a lower bound; ' +
+      'crossref (rate-limited) left out for a minute — the total is a lower bound; ' +
       'skipped biorxiv (no keyword index); the access check was cut short, so a few papers may be missing.'
     );
   });
@@ -195,17 +195,17 @@ describe('coverage', () => {
       providers: [
         report('arxiv', { retrieved: 114, totalHits: 114 }),
         report('europepmc', { retrieved: 300, totalHits: 35_799, truncated: true }),
-        report('openalex', { retrieved: 300, totalHits: 92_421, truncated: true })
+        report('crossref', { retrieved: 300, totalHits: 92_421, truncated: true })
       ]
     });
     expect(c.truncated).toEqual([
-      { source: 'openalex', read: 300, matches: 92_421 },
+      { source: 'crossref', read: 300, matches: 92_421 },
       { source: 'europepmc', read: 300, matches: 35_799 }
     ]);
     expect(totalIsLowerBound(c)).toBe(true);
     expect(coverageSentence(c)).toBe(
       '3 of 3 sources answered; some sources match more than a search reads, and only the top of their answers was read ' +
-      '(openalex 300 of 92,421, europepmc 300 of 35,799), so the total counts what was read, not every match.'
+      '(crossref 300 of 92,421, europepmc 300 of 35,799), so the total counts what was read, not every match.'
     );
   });
 
@@ -214,18 +214,18 @@ describe('coverage', () => {
       complete: true,
       bounded: false,
       providers: [
-        report('openalex', { sorted: 'date' }),
+        report('crossref', { sorted: 'date' }),
         report('ncbi', { sorted: 'date' }),
         report('doaj'),
         report('biorxiv', { status: 'skipped', retrieved: 0, skipReason: 'no keyword index' })
       ]
     }, 'date');
-    expect(c.order).toEqual({ sort: 'date', sorted_by_source: ['openalex', 'ncbi'], read_by_relevance: ['doaj'] });
+    expect(c.order).toEqual({ sort: 'date', sorted_by_source: ['crossref', 'ncbi'], read_by_relevance: ['doaj'] });
     expect(coverageSentence(c)).toBe(
-      '3 of 3 sources answered; skipped biorxiv (no keyword index); openalex, ncbi read newest first; ' +
+      '3 of 3 sources answered; skipped biorxiv (no keyword index); crossref, ncbi read newest first; ' +
       'doaj can only read by relevance, so their part is sorted among their most relevant matches.'
     );
-    expect(coverageOf({ complete: true, bounded: false, providers: [report('openalex')] }, 'relevance').order).toBeUndefined();
+    expect(coverageOf({ complete: true, bounded: false, providers: [report('crossref')] }, 'relevance').order).toBeUndefined();
   });
 });
 
@@ -299,11 +299,14 @@ describe('build info', () => {
     expect(json('server.json').description.length).toBeLessThanOrEqual(100);
   });
 
-  it('asks an installer for the OpenAlex key, and the plugin passes on whatever the registry entry asks for', () => {
-    // An installer driven by the registry prompts only for what it declares,
-    // and the key decides whether OpenAlex lasts the day (D11).
+  it('asks an installer for no key a source needs, and the plugin passes on whatever the registry entry asks for', () => {
+    // An installer driven by the registry prompts only for what it declares.
+    // Every source is free and answers without a key; the contact moves
+    // Crossref to its polite pool, and the rest only raise rate limits.
     const declared = json('server.json').packages[0].environmentVariables.map((v: { name: string }) => v.name);
-    expect(declared).toContain('OPENALEX_API_KEY');
+    expect(declared).toContain('UNPAYWALL_EMAIL');
+    expect(declared).not.toContain('OPENALEX_API_KEY');
+    expect(json('server.json').packages[0].environmentVariables.every((v: { isRequired: boolean }) => !v.isRequired)).toBe(true);
     expect(Object.keys(json('..', '..', 'plugin', '.mcp.json').mcpServers['sci-open'].env).sort()).toEqual([...declared].sort());
   });
 });

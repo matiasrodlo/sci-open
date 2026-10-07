@@ -21,7 +21,7 @@ import { fakeEngine, quietLogger } from './fake-engine';
  * it asked of them (packages/core, `SingleFlight` and `fanOut`).
  */
 
-const STUDY = paper({ id: 'openalex:W1', doi: '10.1234/s.1', title: 'Crispr study', year: 2020, sources: [ref('openalex', { nativeId: 'W1' })] });
+const STUDY = paper({ id: 'crossref:W1', doi: '10.1234/s.1', title: 'Crispr study', year: 2020, sources: [ref('crossref', { nativeId: 'W1' })] });
 const DOC = {
   paperId: STUDY.id, tier: 'europepmc-jats' as const, url: 'https://www.ebi.ac.uk/x', retrievedAt: '2026-10-06T00:00:00Z',
   sections: [{ id: 's1', title: 'Introduction', text: 'Crispr.' }], totalChars: 7
@@ -58,7 +58,7 @@ describe('a cancelled call', () => {
   });
 
   it('starts no reference once the call is cancelled, and asks nothing more of the sources', async () => {
-    const fake = fakeEngine([STUDY], { openalex: async () => ({ found: new Map(), unasked: [] }) });
+    const fake = fakeEngine([STUDY], { batch: async () => ({ found: new Map(), unasked: [] }) });
     const caller = new AbortController();
     const lookupDoi = vi.spyOn(fake.engine, 'lookupDoi').mockImplementation(async () => {
       caller.abort(); // the client gives up while the first lookup is out

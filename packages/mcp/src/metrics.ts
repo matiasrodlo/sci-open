@@ -16,8 +16,8 @@ export type ToolCall = {
 
 type ToolTotals = {
   calls: number; errors: Record<string, number>; totalMs: number; maxMs: number; textChars: number; newSearches: number;
-  /** Requests its calls sent the sources, and OpenAlex's price for them. */
-  upstreamRequests: number; openalexCostUsd: number;
+  /** Requests its calls sent the sources. */
+  upstreamRequests: number;
 };
 
 export type Metrics = {
@@ -28,8 +28,7 @@ export type Metrics = {
   stop(): void;
 };
 
-const NOTHING: UpstreamUsage = { requests: 0, costUsd: 0, sources: {} };
-const dollars = (n: number) => Math.round(n * 1e6) / 1e6;
+const NOTHING: UpstreamUsage = { requests: 0, sources: {} };
 
 /**
  * Per-tool totals in memory. On stdio a summary line goes to the log every ten
@@ -47,14 +46,13 @@ export function createMetrics(
 
   const metrics: Metrics = {
     record(call) {
-      const t = (tools[call.tool] ??= { calls: 0, errors: {}, totalMs: 0, maxMs: 0, textChars: 0, newSearches: 0, upstreamRequests: 0, openalexCostUsd: 0 });
+      const t = (tools[call.tool] ??= { calls: 0, errors: {}, totalMs: 0, maxMs: 0, textChars: 0, newSearches: 0, upstreamRequests: 0 });
       t.calls++;
       t.totalMs += call.ms;
       t.maxMs = Math.max(t.maxMs, call.ms);
       t.textChars += call.textChars ?? 0;
       t.newSearches += call.newSearches;
       t.upstreamRequests += call.upstream?.requests ?? 0;
-      t.openalexCostUsd = dollars(t.openalexCostUsd + (call.upstream?.costUsd ?? 0));
       if (!call.ok) t.errors[call.code ?? 'internal'] = (t.errors[call.code ?? 'internal'] ?? 0) + 1;
     },
     snapshot: () => ({ since: since.toISOString(), tools: structuredClone(tools), upstream: usageSince(upstream(), base) }),

@@ -10,26 +10,23 @@ in `test/__toolsnaps__/` are the record of every schema change.
 ### Added
 
 - `--without <sources>` (`SCI_OPEN_WITHOUT`) leaves sources out entirely: not
-  searched and not asked about a paper. `--without openalex` runs with no
-  metered source; cited DOIs are then looked up in every other source, and
-  HTTP needs no OpenAlex key.
+  searched and not asked about a paper. It is how OpenAlex's worth was
+  measured before it was removed (see Removed).
 - Crossref is a search source: free, with no key, and the registry of most
   journal DOIs, closed papers included. Every DOI lookup asks it, and so does
   a keyword search that wants closed papers too (verify_references' title
   searches, `open_access_only: false`); an open-access search does not, since
   it says whether a paper is open for none of its records, and coverage says
   so. Its requests, and the Crossref authority's, keep to Crossref's stated
-  limits for the pool the User-Agent's contact puts them in. On the references
-  eval without OpenAlex, it recovers what OpenAlex was there for: tune 122 of
-  128 checked and holdout 68 of 69, against 120 of 127 and 69 of 69 with
-  OpenAlex and none of its budget.
-- DOIs OpenAlex cannot be asked about — left out, cooling down or failed — are
-  resolved from Crossref instead, fifty to a request: verify_references judges
-  them on its record, and get_citations' and export_citations' rows keep
-  their records without OpenAlex.
+  limits for the pool the User-Agent's contact puts them in. Measured on the
+  references eval as OpenAlex's replacement: tune 122 of 128 checked and
+  holdout 68 of 69 without OpenAlex, against 120 of 127 and 69 of 69 with it.
+- Cited and listed DOIs are resolved from Crossref, fifty to a request:
+  verify_references judges them on its record, and get_citations' and
+  export_citations' rows carry its records.
 - Crossref reports retractions: a work its `updated-by` names retracted,
   withdrawn or removed — the publisher's notices and Retraction Watch's data,
-  which Crossref carries — is `retracted`, as OpenAlex's and PubMed's are.
+  which Crossref carries — is `retracted`, as Europe PMC's and PubMed's are.
 
 - `sci-open-mcp --http` serves Streamable HTTP at `/mcp` on its own, with
   per-client request and new-search budgets, a new-search ceiling across every
@@ -77,6 +74,11 @@ in `test/__toolsnaps__/` are the record of every schema change.
 
 ### Changed
 
+- A source that answers 429 is left out for a minute, not ten. Every source
+  is free, and a 429 from one is a limit per second or minute; ten minutes
+  was the setting for OpenAlex's daily budget, and on a references eval it
+  benched Crossref for a whole list. Coverage says "rate-limited" and "a
+  minute" accordingly.
 - Query operators are capitals only. `and`, `or` and `not` written any other
   way are left out of the search as common words, and `near` and `same` are
   searched as words. In any case, the English in a query was read as logic:
@@ -187,6 +189,12 @@ in `test/__toolsnaps__/` are the record of every schema change.
   ten now.
 - Crossref's records lost their subtitle: "MapReduce" for "MapReduce:
   simplified data processing on large clusters". The title now carries it.
+- verify_references called a fabricated citation `ambiguous` when a real
+  paper shared most of its title words, though the year and every author
+  disagreed: "Quantum annealing of protein folding landscapes" (2021) and
+  "Exploring quantum annealing for coarse-grained protein folding", by others.
+  With the year and the authors both wrong, only the whole title cited is now
+  `ambiguous`; anything less is `not_found`.
 - A source's HTTP 429 reached the model as `internal`, a fault of this server:
   arXiv's, on every arXiv id while it was limiting requests, so verify_references
   left those references not checked for no stated reason. A 429 is now
@@ -202,6 +210,17 @@ in `test/__toolsnaps__/` are the record of every schema change.
 
 ### Removed
 
+- OpenAlex, which was a search source, an authority and the DOI batch. Every
+  source is now free, with no key needed and no budget to run out; Crossref
+  does what OpenAlex was asked for (see Added). Gone with it:
+  `OPENALEX_API_KEY`; `SCI_OPEN_ALLOW_UNKEYED` and the HTTP server's refusal
+  to start without a key; `openalex` in search_papers' `sources`; `openalex:`
+  ids, which get_paper and the other tools now answer `not_found` saying
+  OpenAlex is no longer a source; OpenAlex ids on get_citations' rows;
+  whole-index topic counts (the topics facet counts the records read); and
+  OpenAlex's price per request, from `_meta` (`openalex_cost_usd`), the
+  metrics and the evals. Entries above that name OpenAlex describe this
+  release before it was removed.
 - read_paper's `save_to` and `overwrite`: use save_paper.
 - The sci-open web app and API, and with them `/api/mcp`,
   `MCP_HTTP_ENABLED` and `MCP_ALLOWED_ORIGINS`. The repository is the MCP

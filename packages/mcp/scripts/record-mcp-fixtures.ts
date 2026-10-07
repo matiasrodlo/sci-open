@@ -10,13 +10,13 @@
  * full texts of the papers alone: Europe PMC and arXiv, no search fan-out.
  *
  * `--citations-only` keeps everything else and records the citation lists
- * below, with OpenAlex's records for each list's first page and for the
- * papers the export cases name: OpenCitations and a few OpenAlex list
+ * below, with Crossref's records for each list's first page and for the
+ * papers the export cases name: OpenCitations and a few Crossref list
  * queries, no search fan-out. UNPAYWALL_EMAIL is optional in this mode.
  */
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
-import { createEngine, usableApiKey } from '@sci-open/core';
+import { createEngine } from '@sci-open/core';
 import { citationKey, fixtureKey, type Fixtures } from '../src/fixture-engine';
 
 /** What the evals' first calls ask. Add a line when a dataset asks something new. */
@@ -50,10 +50,8 @@ async function main(): Promise<void> {
   const citationsOnly = process.argv.includes('--citations-only');
   const email = process.env.UNPAYWALL_EMAIL;
   if (!email && !citationsOnly) throw new Error('Set UNPAYWALL_EMAIL: the recording asks Unpaywall too');
-  const openalex = usableApiKey(process.env.OPENALEX_API_KEY);
   const engine = createEngine({
     userAgent: `sci-open-mcp fixtures (+https://github.com/matiasrodlo/sci-open${email ? `; mailto:${email}` : ''})`,
-    ...(openalex ? { apiKeys: { openalex } } : {}),
     // The depth the MCP server reads at (D11), so the recordings are its answers.
     depth: 300
   });
@@ -104,7 +102,7 @@ async function main(): Promise<void> {
   console.log(`${Object.keys(fixtures.searches).length} searches, ${Object.keys(fixtures.papers).length} papers, ${Object.keys(fixtures.documents ?? {}).length} full texts → ${out}`);
 }
 
-/** The citation lists, then OpenAlex's records for their first pages and the export papers. */
+/** The citation lists, then Crossref's records for their first pages and the export papers. */
 async function recordCitations(engine: ReturnType<typeof createEngine>, fixtures: Fixtures): Promise<void> {
   fixtures.citations ??= {};
   const wanted = new Set(EXPORT_DOIS);

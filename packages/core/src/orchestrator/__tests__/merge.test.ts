@@ -134,16 +134,11 @@ describe('mergePapers', () => {
   });
 
   it('does not treat an unknown oaStatus as a value worth keeping', () => {
-    // openalex outranks europepmc, so openalex is the base and its 'unknown'
-    // has to lose to a real route from the lower-priority contributor.
-    //
-    // Written with `crossref` and `unpaywall` until `ProviderId` stopped
-    // admitting them. Those are authorities: they answer about a record rather
-    // than returning one, so no paper can carry either in `sources` and the
-    // ranks the test leaned on were rows the merge could never consult. The
-    // behaviour under test is real; only the cast was fictional.
+    // crossref outranks europepmc, so crossref is the base and its 'unknown' —
+    // the only access status a Crossref record ever has — has to lose to a
+    // real route from the lower-priority contributor.
     const merged = mergePapers([
-      paper({ id: 'o', doi: '10.1/x', oaStatus: 'unknown', sources: [ref('openalex')] }),
+      paper({ id: 'c', doi: '10.1/x', oaStatus: 'unknown', sources: [ref('crossref')] }),
       paper({ id: 'e', doi: '10.1/x', oaStatus: 'gold', sources: [ref('europepmc')] })
     ]);
     expect(merged[0].oaStatus).toBe('gold');
@@ -152,7 +147,7 @@ describe('mergePapers', () => {
 
   it('prefers the higher-priority provider for a field they both supply', () => {
     const merged = mergePapers([
-      paper({ id: 'o', doi: '10.1/x', oaStatus: 'gold', sources: [ref('openalex')] }),
+      paper({ id: 'c', doi: '10.1/x', oaStatus: 'gold', sources: [ref('crossref')] }),
       paper({ id: 'e', doi: '10.1/x', oaStatus: 'bronze', sources: [ref('europepmc')] })
     ]);
     expect(merged[0].oaStatus).toBe('gold');
@@ -178,11 +173,11 @@ describe('mergePapers', () => {
 
 describe('mergePapers — an arXiv preprint and the other sources\' copies of it', () => {
   it('merges on the arXiv DOI, whatever its case', () => {
-    // arXiv's normaliser writes `10.48550/arXiv.<id>`; OpenAlex lower-cases it.
+    // arXiv's normaliser writes `10.48550/arXiv.<id>`; DataCite lower-cases it.
     const fromArxiv = paper({ id: 'arxiv:1706.03762v7', doi: '10.48550/arXiv.1706.03762', title: 'Attention Is All You Need', sources: [ref('arxiv', { nativeId: '1706.03762v7' })] });
-    const fromOpenAlex = paper({ id: 'openalex:W2963403868', doi: '10.48550/arxiv.1706.03762', title: 'Attention Is All You Need', sources: [ref('openalex')] });
-    const merged = mergePapers([fromArxiv, fromOpenAlex]);
+    const fromDataCite = paper({ id: 'datacite:10.48550/arxiv.1706.03762', doi: '10.48550/arxiv.1706.03762', title: 'Attention Is All You Need', sources: [ref('datacite')] });
+    const merged = mergePapers([fromArxiv, fromDataCite]);
     expect(merged).toHaveLength(1);
-    expect(merged[0]!.sources.map(s => s.provider)).toEqual(['openalex', 'arxiv']);
+    expect(merged[0]!.sources.map(s => s.provider)).toEqual(['arxiv', 'datacite']);
   });
 });

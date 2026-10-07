@@ -39,7 +39,7 @@ export async function connect(server: Server): Promise<Client> {
 export type Call = { name: string; input: unknown; isError: boolean };
 
 /** What a server's calls asked of its sources. */
-export type Upstream = { requests: number; openalexCostUsd: number };
+export type Upstream = { requests: number };
 
 /** The `_meta` key sci-open reports a call's requests under
  * (packages/mcp/src/provenance.ts, `USAGE_KEY`). The baselines send none. */
@@ -47,15 +47,15 @@ const USAGE_KEY = 'io.github.matiasrodlo/usage';
 
 /** A call's upstream usage, when its server reports one. */
 export function upstreamOf(result: { _meta?: Record<string, unknown> }): Upstream | undefined {
-  const usage = result._meta?.[USAGE_KEY] as { upstream_requests?: unknown; openalex_cost_usd?: unknown } | undefined;
+  const usage = result._meta?.[USAGE_KEY] as { upstream_requests?: unknown } | undefined;
   if (typeof usage?.upstream_requests !== 'number') return undefined;
-  return { requests: usage.upstream_requests, openalexCostUsd: typeof usage.openalex_cost_usd === 'number' ? usage.openalex_cost_usd : 0 };
+  return { requests: usage.upstream_requests };
 }
 
 /** Two usages summed; `undefined` stays so until a call reports one. */
 export function addUpstream(a: Upstream | undefined, b: Upstream | undefined): Upstream | undefined {
   if (!a || !b) return a ?? b;
-  return { requests: a.requests + b.requests, openalexCostUsd: Math.round((a.openalexCostUsd + b.openalexCostUsd) * 1e6) / 1e6 };
+  return { requests: a.requests + b.requests };
 }
 
 export type RunResult = {

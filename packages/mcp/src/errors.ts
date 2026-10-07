@@ -75,7 +75,7 @@ export function toToolError(error: unknown): ToolError {
     return new ToolError('upstream_unavailable', 'A source did not answer in time.', 'Retry once; if it persists, narrow the query or restrict sources.');
   }
   // A source's own refusal or failure, by the HTTP status its client attached
-  // (arXiv, bioRxiv, OpenAlex) or the HTTP client's error carries. Measured
+  // (arXiv, bioRxiv, Crossref) or the HTTP client's error carries. Measured
   // live: arXiv's 429s reached the model as `internal`, a fault of this server.
   const status = httpStatus(error);
   if (status === 429) {

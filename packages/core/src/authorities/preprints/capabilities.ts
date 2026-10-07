@@ -4,9 +4,9 @@ import type { AuthorityCapabilities } from '@sci-open/shared';
  * What the preprint servers themselves can be asked about a DOI: where the
  * PDF is, and nothing else.
  *
- * Here because the two databases that say where a copy is — OpenAlex and
- * Unpaywall — agree with each other and are both silent for much of what the
- * preprint servers hold. On "malaria vaccine", 2024 preprints, 31 papers were
+ * Here because the databases that say where a copy is — Unpaywall, and
+ * OpenAlex while it was a source — agreed with each other and were both silent
+ * for much of what the preprint servers hold. On "malaria vaccine", 2024 preprints, 31 papers were
  * dropped for want of a copy; for 28 of them both databases listed the DOI as
  * the only open-access location, while the servers were serving the PDF at an
  * address the DOI determines.

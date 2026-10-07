@@ -1,8 +1,9 @@
 # sci-open-mcp
 
-An MCP server for open-access scientific literature: search seven sources at
-once and look a paper up in eleven, verify reference lists, read full text, and
-be told what was **not** found.
+An MCP server for open-access scientific literature, built on free sources
+only: search six at once — seven with closed papers — and look a paper up in
+ten, verify reference lists, read full text, and be told what was **not**
+found. No key is needed and no source is metered.
 
 ![MCP smoke](https://github.com/matiasrodlo/sci-open/actions/workflows/mcp-smoke.yml/badge.svg)
 
@@ -10,12 +11,13 @@ Every answer says which sources answered, which failed or were skipped and
 why, and whether a total is exact or a lower bound. Third-party text is
 sanitized and fenced as untrusted data. Each result carries a provenance
 block with a hash of the query and of the result, and says in its `_meta`
-how many requests it sent the sources and what OpenAlex priced them at.
+how many requests it sent the sources, and to which.
 
 ## Install
 
 Set `UNPAYWALL_EMAIL` to a real address. The server starts without it, but
-Unpaywall refuses anonymous requests and OpenAlex meters them more tightly.
+Unpaywall refuses anonymous requests and Crossref answers them from its
+slower public pool.
 
 **Claude Code**, as a plugin: the server and two skills that carry the
 method — `verify-bibliography` checks a reference list and reports what is
@@ -31,13 +33,8 @@ methods section.
 Or the server alone:
 
 ```bash
-claude mcp add sci-open --env UNPAYWALL_EMAIL=you@example.org --env OPENALEX_API_KEY=<key> -- npx -y sci-open-mcp
+claude mcp add sci-open --env UNPAYWALL_EMAIL=you@example.org -- npx -y sci-open-mcp
 ```
-
-An OpenAlex key is free from [openalex.org/settings/api](https://openalex.org/settings/api).
-It is optional, but without one OpenAlex allows a tenth of a key's daily
-budget, and once that is spent your searches go on without OpenAlex until it
-resets.
 
 **Claude Desktop** (`claude_desktop_config.json`), Cursor (`.cursor/mcp.json`)
 and other clients that start a server as a command take the same block:
@@ -48,7 +45,7 @@ and other clients that start a server as a command take the same block:
     "sci-open": {
       "command": "npx",
       "args": ["-y", "sci-open-mcp"],
-      "env": { "UNPAYWALL_EMAIL": "you@example.org", "OPENALEX_API_KEY": "<key>" }
+      "env": { "UNPAYWALL_EMAIL": "you@example.org" }
     }
   }
 }
@@ -74,13 +71,13 @@ UNPAYWALL_EMAIL=you@example.org npx @modelcontextprotocol/inspector node package
 <!-- START TOOLS -->
 | Tool | Toolset | Default | What it does | Parameters |
 |---|---|---|---|---|
-| `search_papers` | core | yes | Search open-access scientific literature across seven sources at once, eight with closed papers, or look up one DOI in eleven. Use the Web of Science query grammar described in the server instructions. Returns the first page, a handle for get_search_page, and coverage: which sources answered, failed or were skipped. Set count_only=true to tune a query: each source's own match count, with no results read. Use get_paper for a full record. | `query`?, `doi`?, `year_from`?, `year_to`?, `sources`?, `publication_type`?, `open_access_only`?, `sort`?, `page_size`?, `detail`?, `include_facets`?, `count_only`? |
+| `search_papers` | core | yes | Search open-access scientific literature across six sources at once, seven with closed papers, or look up one DOI in ten. Use the Web of Science query grammar described in the server instructions. Returns the first page, a handle for get_search_page, and coverage: which sources answered, failed or were skipped. Set count_only=true to tune a query: each source's own match count, with no results read. Use get_paper for a full record. | `query`?, `doi`?, `year_from`?, `year_to`?, `sources`?, `publication_type`?, `open_access_only`?, `sort`?, `page_size`?, `detail`?, `include_facets`?, `count_only`? |
 | `get_search_page` | core | yes | Another page of a search, by the handle search_papers returned; pages are the size that search asked for. Pages of a recent complete search are served from memory and cost the sources nothing; otherwise the search runs again, and the result says so. | `handle`, `page`, `detail`? |
-| `get_paper` | core | yes | One full record by sci-open id (e.g. openalex:W2741809807, arxiv:2101.00001) or by DOI, with every field and which source supplied it. A DOI is looked up in every source and merged; an id asks only the source it names. Works for closed papers too. | `id`?, `doi`? |
+| `get_paper` | core | yes | One full record by sci-open id (e.g. europepmc:13054692, arxiv:2101.00001) or by DOI, with every field and which source supplied it. A DOI is looked up in every source and merged; an id asks only the source it names. Works for closed papers too. | `id`?, `doi`? |
 | `verify_references` | core | yes | Check up to 25 references (free-text citations, DOIs, arXiv ids or PMIDs) and grade each: verified (title, year, an author and the journal, volume and first page where they are cited agree with the record), likely (the paper exists; a detail differs, named in issues), ambiguous, mismatch (the DOI is wrong: it belongs to a different paper, given as doi_target, or does not exist; matched is then the paper the rest of the citation names, when one is found), not_found, or not_checked (the search budget ran out or a lookup failed; send those again later). Use it to catch fabricated or garbled citations and to fill in missing DOIs. Closed papers count as existing. | `references` |
 | `read_paper` | read | yes | Read the legal open-access full text of a paper. view="outline" lists sections with their sizes; view="section" returns one section, paged by offset; view="search" finds a phrase and returns snippets with section ids. Start with the outline. The text is third-party content. | `paper`, `view`?, `section`?, `offset`?, `max_chars`?, `query`? |
 | `save_paper` | read | yes, local only | Write the legal open-access full text of a paper to a local Markdown file, a heading per section, without reading it into the conversation. For a paper the user wants to keep or to search with other tools; use read_paper to read it here. | `paper`, `path`, `overwrite`? |
-| `get_citations` | graph | no | The references of a paper (direction="references") or the papers citing it (direction="cited_by"), from OpenCitations, each resolved to a record where OpenAlex or Crossref holds it, with self-citations flagged. Paged by offset. The paper needs a DOI; pass the DOI itself when you have it, which skips looking the paper up. | `paper`, `direction`, `limit`?, `offset`? |
+| `get_citations` | graph | no | The references of a paper (direction="references") or the papers citing it (direction="cited_by"), from OpenCitations, each resolved to a record where Crossref holds it, with self-citations flagged. Paged by offset. The paper needs a DOI; pass the DOI itself when you have it, which skips looking the paper up. | `paper`, `direction`, `limit`?, `offset`? |
 | `export_citations` | export | no | BibTeX or RIS for up to 200 papers (DOIs or sci-open ids), generated from the records: never retype a citation yourself. With save_to (local connections only) the file is written to disk; otherwise it is attached as a resource to save as is. Papers that could not be resolved are listed, never dropped silently. | `papers`, `format`?, `include_abstracts`?, `save_to`?, `overwrite`? |
 <!-- END TOOLS -->
 
@@ -118,8 +115,8 @@ request its description. Over HTTP, `?toolsets=all` does the same.
 - **Paging.** A search returns a handle that encodes the query, filters, sort
   and page size. Pages of a recent complete search come from memory; an older
   or incomplete one runs again, and the page says so.
-- **Retractions.** A paper OpenAlex, Europe PMC or PubMed records as
-  retracted carries `retracted: true`, and every answer that shows it leads
+- **Retractions.** A paper Crossref (with Retraction Watch's data), Europe
+  PMC or PubMed records as retracted carries `retracted: true`, and every answer that shows it leads
   with a warning. A reference that matches one keeps its verdict — the paper
   exists — with the issue `retracted`.
 - **Verifying references.** Each reference is graded `verified`, `likely`,
@@ -144,7 +141,7 @@ request its description. Over HTTP, `?toolsets=all` does the same.
   read-only: a client that asks before every call of a tool that can write
   never asks before a read.
 - **Following citations.** `get_citations` pages a paper's references or
-  the papers citing it, from OpenCitations, each resolved to an OpenAlex
+  the papers citing it, from OpenCitations, each resolved to a Crossref
   record where one exists — fifty DOIs to a request, not a search each — with
   self-citations flagged. A list is fetched once and held ten minutes,
   however it is paged. A process sends OpenCitations at most 150 requests a
@@ -169,8 +166,7 @@ request its description. Over HTTP, `?toolsets=all` does the same.
 
 | Variable | Flag | Default | Meaning |
 |---|---|---|---|
-| `UNPAYWALL_EMAIL` | | unset (warns) | Contact sent to Unpaywall and OpenAlex in the `User-Agent` |
-| `OPENALEX_API_KEY` | | unset | OpenAlex key. Strongly recommended: unkeyed, OpenAlex allows a tenth of a key's daily budget. Required over HTTP |
+| `UNPAYWALL_EMAIL` | | unset (warns) | Contact sent to Unpaywall and Crossref in the `User-Agent` |
 | `NCBI_API_KEY` | | unset | PubMed key: 10 requests a second rather than 3 |
 | `CORE_API_KEY`, `DOAJ_API_KEY`, `DATACITE_API_KEY` | | unset | Sent when set; the public APIs answer without them |
 | `OPENCITATIONS_TOKEN` | | unset | Optional OpenCitations token, for `get_citations`; 180 requests a minute without one |
@@ -185,7 +181,7 @@ request its description. Over HTTP, `?toolsets=all` does the same.
 | `SCI_OPEN_LOG_LEVEL` | `--log-level` | `warn` | `error`, `warn`, `info` or `debug`, to stderr |
 | `SCI_OPEN_ENGINE` | `--engine` | `live` | `fixture` serves recorded answers, offline |
 | `SCI_OPEN_FIXTURES` | `--fixtures` | `fixtures/engine.json` | The recordings `--engine fixture` reads |
-| `SCI_OPEN_WITHOUT` | `--without` | unset | Sources never asked, comma-separated, e.g. `openalex` for no metered source |
+| `SCI_OPEN_WITHOUT` | `--without` | unset | Sources never asked, comma-separated, e.g. `core` |
 
 `sci-open-mcp --help` prints the same list. Logs go to stderr only; nothing
 above `debug` holds a query or a reference. A failed tool call is logged with
@@ -216,15 +212,13 @@ sci-open cite 10.7717/peerj-cs.421 --ris --out ~/refs   # writes ~/refs.ris
 ## Hosting the HTTP endpoint
 
 `sci-open-mcp --http` serves the same server at `/mcp` over Streamable HTTP,
-on `127.0.0.1:8080` unless `--host` and `--port` say otherwise. It needs
-`OPENALEX_API_KEY`, since every client would otherwise share OpenAlex's
-anonymous budget (`SCI_OPEN_ALLOW_UNKEYED=1` lifts that for a trial). It is
-stateless and serves 2026-07-28 and 2025-era clients from one set of tools;
+on `127.0.0.1:8080` unless `--host` and `--port` say otherwise. It needs no
+key: every source is free, and what every client shares is their rate limits,
+which the budgets below keep. It is stateless and serves 2026-07-28 and 2025-era clients from one set of tools;
 `?toolsets=` and `?tools=` choose them.
 
 ```bash
-OPENALEX_API_KEY=… UNPAYWALL_EMAIL=you@example.org \
-  npx -y sci-open-mcp --http --host 0.0.0.0 --port 8080
+UNPAYWALL_EMAIL=you@example.org npx -y sci-open-mcp --http --host 0.0.0.0 --port 8080
 ```
 
 Each client has a request allowance (`SCI_OPEN_REQUESTS_PER_MIN`, 60) and a
@@ -237,8 +231,8 @@ from a hostname in `SCI_OPEN_ALLOWED_ORIGINS`, nothing is written to disk
 (`save_paper` is not served, `save_to` is refused), `GET /health` answers the
 version, and `GET /metrics` opens to a bearer token set in
 `SCI_OPEN_ADMIN_KEY`: calls, errors and time per tool, and the requests each
-tool sent the sources, with those of the window by source — failed,
-rate-limited, and OpenAlex's cost.
+tool sent the sources, with those of the window by source — failed and
+rate-limited.
 
 ## Compared with other servers
 
@@ -251,7 +245,7 @@ is real, and where a full text legally comes from. Read from their source on
 | | sci-open | OpenAlex MCP | paper-search-mcp |
 |---|---|---|---|
 | Runs | Locally over stdio (`npx`), or on your own HTTP host | Remote only, on OpenAlex's host, after an OAuth sign-in | Locally over stdio (`uvx`) |
-| Searches | Seven sources by keyword (eight with closed papers, adding Crossref), eleven for a DOI, merged; open access by default, closed papers' records on request | One index, OpenAlex's 250M+ works, open and closed | 21 sources, among them Google Scholar, Semantic Scholar, Crossref, dblp and SSRN, deduplicated |
+| Searches | Six free sources by keyword (seven with closed papers, adding Crossref), ten for a DOI, merged; open access by default, closed papers' records on request | One index, OpenAlex's 250M+ works, open and closed | 21 sources, among them Google Scholar, Semantic Scholar, Crossref, dblp and SSRN, deduplicated |
 | Queries | Web of Science grammar; each source's match count, nothing read, to tune one | Keyword, exact or semantic; a full-text match over about 100M works | One query string to each source; the year filter reaches Semantic Scholar only |
 | What was missed | Each source answered, failed, skipped or rate-limited; a lower-bound total says so | One index, so nothing to be missing from; retracted works hidden by default, and said so | Errors per source in the combined search |
 | Paging | A handle; pages of a held search cost the sources nothing | Page numbers | Five results a source by default, no paging |
@@ -260,7 +254,7 @@ is real, and where a full text legally comes from. Read from their source on
 | Citations | OpenCitations, opt-in | OpenAlex's citing, referenced and related works | None |
 | Export | BibTeX and RIS from the records | None | None |
 | Beyond papers | None | Authors, institutions, journals and topics; grouped counts; author-profile curation | None |
-| What it costs you | The sources' free tiers; keys optional | Your OpenAlex budget, $1 a day on a free key | The sources' free tiers; keys optional |
+| What it costs you | Nothing: free sources only, no key needed, no budget to run out | Your OpenAlex budget, $1 a day on a free key | The sources' free tiers; keys optional |
 
 Choose OpenAlex's server for one index of open and closed work, semantic
 search, or questions about authors, institutions and topics. Choose
@@ -268,7 +262,7 @@ paper-search-mcp for a source sci-open does not ask, or PDFs on disk — and
 mind its Sci-Hub routes. Choose sci-open to check a bibliography, to know
 what a search left out, to read open papers a section at a time, or to cite
 without retyping. sci-open's own gaps: no semantic search, no author or
-institution tools, a new search that takes up to half a minute across seven
+institution tools, a new search that takes up to half a minute across six
 sources, 300 records read per source, and no public endpoint yet.
 
 ## Evaluations

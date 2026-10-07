@@ -28,7 +28,6 @@ export type CaseRecord = {
   fallbackTurns: number;
   /** What the case's calls asked of the sources, from a server that says. */
   upstreamRequests?: number;
-  openalexCostUsd?: number;
 };
 
 /**
@@ -64,7 +63,7 @@ export function writeReport(
           meanCacheReadTokens: mean(c => c.cacheReadTokens),
           // Only from a server that reports it: a baseline's absence is not zero.
           ...(scored.some(c => c.upstreamRequests !== undefined)
-            ? { meanUpstreamRequests: mean(c => c.upstreamRequests ?? 0), meanOpenAlexCostUsd: mean(c => c.openalexCostUsd ?? 0) }
+            ? { meanUpstreamRequests: mean(c => c.upstreamRequests ?? 0) }
             : {})
         }
       : {}),
@@ -90,10 +89,7 @@ export function writeReport(
           `| Mean input / output tokens | ${Math.round(summary.meanInputTokens ?? 0)} / ${Math.round(summary.meanOutputTokens ?? 0)} |`,
           `| Mean cache-read tokens | ${Math.round(summary.meanCacheReadTokens ?? 0)} |`,
           ...(summary.meanUpstreamRequests !== undefined
-            ? [
-                `| Mean requests to the sources | ${summary.meanUpstreamRequests.toFixed(1)} |`,
-                `| Mean OpenAlex cost | $${(summary.meanOpenAlexCostUsd ?? 0).toFixed(4)} |`
-              ]
+            ? [`| Mean requests to the sources | ${summary.meanUpstreamRequests.toFixed(1)} |`]
             : []),
           `| Answered by a fallback model, or refused (not scored) | ${cases.length - scored.length} |`
         ]

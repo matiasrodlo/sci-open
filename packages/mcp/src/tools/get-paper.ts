@@ -3,14 +3,14 @@ import { defineTool } from '../framework/define-tool';
 import { ToolError } from '../errors';
 import { shapePaper, paperSchema, placeIn, retractionWarning } from '../shape/paper';
 import { fenceUntrusted } from '../safety/untrusted';
-import { doiIn, paperRefKind } from './resolve-paper';
+import { doiIn, paperNotFound, paperRefKind } from './resolve-paper';
 
 export const getPaper = defineTool({
   name: 'get_paper',
   title: 'Get paper',
   toolset: 'core',
   description:
-    'One full record by sci-open id (e.g. openalex:W2741809807, arxiv:2101.00001) or by DOI, with every field and which source supplied it. ' +
+    'One full record by sci-open id (e.g. europepmc:13054692, arxiv:2101.00001) or by DOI, with every field and which source supplied it. ' +
     'A DOI is looked up in every source and merged; an id asks only the source it names. Works for closed papers too.',
   input: z.object({
     id: z.string().max(300).optional(),
@@ -27,9 +27,7 @@ export const getPaper = defineTool({
     const paper = 'doi' in ref
       ? await deps.engine.lookupDoi(ref.doi, { admit: deps.admit, signal: deps.signal })
       : await deps.engine.lookup(ref.id, { signal: deps.signal });
-    if (!paper) {
-      throw new ToolError('not_found', 'No source holds this paper.', 'Ids look like openalex:W2741809807 or arxiv:2101.00001. Try search_papers, or pass doi.');
-    }
+    if (!paper) throw paperNotFound(id, 'Ids look like europepmc:13054692 or arxiv:2101.00001. Try search_papers, or pass doi.');
     const shaped = shapePaper(paper, 'full');
     // Title, authors and venue are third-party text as much as the abstract is.
     // So are the links: a landing page or a copy's URL is whatever a source

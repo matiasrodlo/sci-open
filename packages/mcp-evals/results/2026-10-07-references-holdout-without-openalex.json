@@ -1,0 +1,883 @@
+{
+  "summary": {
+    "suite": "references",
+    "split": "holdout",
+    "date": "2026-10-07",
+    "cases": 0,
+    "scored": 0,
+    "server": "sci-open",
+    "mode": "direct",
+    "without": "openalex",
+    "references": 70,
+    "upstreamRequests": 814,
+    "upstreamRequestsPerReference": 11.628571428571428,
+    "openalexCostUsd": 0,
+    "recallByType": {
+      "none": 1,
+      "closed_real": 1,
+      "fabricated": 1,
+      "doi_wrong": 1,
+      "doi_invented": 0.8571428571428571,
+      "year_wrong": 1,
+      "preprint_version": 1,
+      "author_wrong": 1
+    },
+    "flagPrecision": 1,
+    "falseFabricatedRate": 0,
+    "notChecked": 1
+  },
+  "cases": [],
+  "grades": [
+    {
+      "list": "refs-04.json",
+      "text": "Harris CR, Millman KJ, van der Walt SJ, et al. Array programming with NumPy. Nature. 2020;585(7825):357-362. doi:10.1038/s41586-020-2649-2",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/s41586-020-2649-2, 2020, Nature"
+    },
+    {
+      "list": "refs-04.json",
+      "text": "Virtanen P, Gommers R, Oliphant TE, et al. SciPy 1.0: fundamental algorithms for scientific computing in Python. Nat Methods. 2020;17(3):261-272.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/s41592-019-0686-2, 2020, Nature methods"
+    },
+    {
+      "list": "refs-04.json",
+      "text": "Hunter JD. Matplotlib: a 2D graphics environment. Computing in Science & Engineering. 2007;9(3):90-95.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1109/mcse.2007.55, 2007, Computing in Science &amp; Engineering"
+    },
+    {
+      "list": "refs-04.json",
+      "text": "Schindelin J, Arganda-Carreras I, Frise E, et al. Fiji: an open-source platform for biological-image analysis. Nat Methods. 2012;9(7):676-682.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/nmeth.2019, 2012, Nature Methods"
+    },
+    {
+      "list": "refs-04.json",
+      "text": "Dubois C, Okonkwo E. Lattice-free tensor scheduling for sparse attention on heterogeneous clusters. Proceedings of the VLDB Endowment. 2022;15(9):1873-1886.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ],
+      "verdict": "not_found",
+      "issues": [
+        "no_similar_title_in_any_source"
+      ]
+    },
+    {
+      "list": "refs-04.json",
+      "text": "Ronneberger O, Fischer P, Brox T. U-Net: convolutional networks for biomedical image segmentation. MICCAI 2015. Lecture Notes in Computer Science, vol 9351. doi:10.1038/s41592-019-0686-2",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1007/978-3-319-24574-4_28, 2015, Lecture Notes in Computer Science",
+      "issues": [
+        "doi_points_to_different_work"
+      ]
+    },
+    {
+      "list": "refs-04.json",
+      "text": "Mikolov T, Chen K, Corrado G, Dean J. Efficient estimation of word representations in vector space. ICLR Workshop. 2013. doi:10.9999/iclr.2013.word2vec",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.48550/arxiv.1301.3781, 2013",
+      "issues": [
+        "doi_not_registered"
+      ]
+    },
+    {
+      "list": "refs-04.json",
+      "text": "Goodfellow I, Pouget-Abadie J, Mirza M, et al. Generative adversarial networks. Communications of the ACM. 2017;63(11):139-144.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1101/304774, 2018, bioRxiv (Cold Spring Harbor Laboratory)",
+      "issues": [
+        "author_mismatch: no cited surname appears in the record",
+        "title_partial_match: the cited title and the record's share 100% of the cited words"
+      ]
+    },
+    {
+      "list": "refs-04.json",
+      "text": "Devlin J, Chang MW, Lee K, Toutanova K. BERT: pre-training of deep bidirectional transformers for language understanding. arXiv:1810.04805. 2018.",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.48550/arXiv.1810.04805, 2018"
+    },
+    {
+      "list": "refs-04.json",
+      "text": "Novak P, Lindgren S. Neural machine translation by jointly learning to align and translate. International Conference on Learning Representations. 2015.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.48550/arxiv.1409.0473, 2014",
+      "issues": [
+        "author_mismatch: no cited surname appears in the record"
+      ]
+    },
+    {
+      "list": "refs-05.json",
+      "text": "Zhu N, Zhang D, Wang W, et al. A novel coronavirus from patients with pneumonia in China, 2019. N Engl J Med. 2020;382(8):727-733.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1056/nejmoa2001017, 2020, The New England journal of medicine"
+    },
+    {
+      "list": "refs-05.json",
+      "text": "Mullis KB, Faloona FA. Specific synthesis of DNA in vitro via a polymerase-catalyzed chain reaction. Methods Enzymol. 1987;155:335-350.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "likely",
+      "matched": "doi:10.1016/0076-6879(87)55023-6, 1987, Methods in Enzymology",
+      "issues": [
+        "title_partial_match: the cited title and the record's share 100% of the cited words"
+      ]
+    },
+    {
+      "list": "refs-05.json",
+      "text": "Ritchie ME, Phipson B, Wu D, et al. limma powers differential expression analyses for RNA-sequencing and microarray studies. Nucleic Acids Res. 2015;43(7):e47. doi:10.1093/nar/gkv007",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1093/nar/gkv007, 2015, Nucleic Acids Research"
+    },
+    {
+      "list": "refs-05.json",
+      "text": "Ferreira A, Walsh K. Circadian gating of hepatic ketogenesis by microglial interleukin-9. Nature Medicine. 2020;26(5):712-724.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ],
+      "verdict": "not_found",
+      "issues": [
+        "no_similar_title_in_any_source"
+      ]
+    },
+    {
+      "list": "refs-05.json",
+      "text": "Tanaka H, Obi R. Deep learning predicts antibiotic resistance from colony morphology alone. Science Translational Medicine. 2021;13(588):eabc1234.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ],
+      "verdict": "not_found",
+      "issues": [
+        "no_similar_title_in_any_source"
+      ]
+    },
+    {
+      "list": "refs-05.json",
+      "text": "Folkman J. Tumor angiogenesis: therapeutic implications. N Engl J Med. 1971;285(21):1182-1186. doi:10.1056/NEJMoa2001017",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1056/nejm197111182852108, 1971, New England Journal of Medicine",
+      "issues": [
+        "doi_points_to_different_work"
+      ]
+    },
+    {
+      "list": "refs-05.json",
+      "text": "Chomczynski P, Sacchi N. Single-step method of RNA isolation by acid guanidinium thiocyanate-phenol-chloroform extraction. Anal Biochem. 1991;162(1):156-159.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1016/0003-2697(87)90021-2, 1987, Analytical Biochemistry",
+      "issues": [
+        "year_mismatch: cited 1991, record 1987"
+      ]
+    },
+    {
+      "list": "refs-05.json",
+      "text": "Mortazavi A, Williams BA, McCue K, Schaeffer L, Wold B. Mapping and quantifying mammalian transcriptomes by RNA-Seq. Nat Methods. 2008;5(7):621-628. doi:10.1038/nmeth.12266",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1038/nmeth.1226, 2008, Nature Methods",
+      "issues": [
+        "doi_not_registered"
+      ]
+    },
+    {
+      "list": "refs-05.json",
+      "text": "Okonkwo R, Haldane M. Gene set enrichment analysis: a knowledge-based approach for interpreting genome-wide expression profiles. Proc Natl Acad Sci U S A. 2005;102(43):15545-15550.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1073/pnas.0506580102, 2005, Proceedings of the National Academy of Sciences",
+      "issues": [
+        "author_mismatch: no cited surname appears in the record"
+      ]
+    },
+    {
+      "list": "refs-05.json",
+      "text": "Weinstein JN, Collisson EA, Mills GB, et al. The Cancer Genome Atlas Pan-Cancer analysis project. Nat Genet. 2013;45(10):1113-1120.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/ng.2764, 2013, Nature Genetics"
+    },
+    {
+      "list": "refs-06.json",
+      "text": "Radford A, Kim JW, Hallacy C, et al. Learning transferable visual models from natural language supervision. arXiv:2103.00020. 2021.",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.48550/arXiv.2103.00020, 2021"
+    },
+    {
+      "list": "refs-06.json",
+      "text": "Hinton GE, Salakhutdinov RR. Reducing the dimensionality of data with neural networks. Science. 2006;313(5786):504-507.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1126/science.1127647, 2006, Science"
+    },
+    {
+      "list": "refs-06.json",
+      "text": "Rumelhart DE, Hinton GE, Williams RJ. Learning representations by back-propagating errors. Nature. 1986;323(6088):533-536.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/323533a0, 1986, Nature"
+    },
+    {
+      "list": "refs-06.json",
+      "text": "Moreno J, Albrecht D. Self-supervised retrieval of chemical reaction mechanisms from patent text. Journal of Chemical Information and Modeling. 2022;62(14):3311-3324.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ],
+      "verdict": "not_found",
+      "issues": [
+        "no_similar_title_in_any_source"
+      ]
+    },
+    {
+      "list": "refs-06.json",
+      "text": "Breiman L. Random forests. Mach Learn. 2001;45(1):5-32. doi:10.1007/BF00994018",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1023/a:1010933404324, 2001, Machine Learning",
+      "issues": [
+        "doi_points_to_different_work"
+      ]
+    },
+    {
+      "list": "refs-06.json",
+      "text": "Stuart T, Butler A, Hoffman P, et al. Comprehensive integration of single-cell data. Cell. 2019;177(7):1888-1902. doi:10.1016/j.cell.2019.05.931",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1016/j.cell.2019.05.031, 2019, Cell",
+      "issues": [
+        "doi_not_registered"
+      ]
+    },
+    {
+      "list": "refs-06.json",
+      "text": "Hopfield JJ. Neural networks and physical systems with emergent collective computational abilities. Proc Natl Acad Sci U S A. 1986;79(8):2554-2558.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1073/pnas.79.8.2554, 1982, Proceedings of the National Academy of Sciences of the United States of America",
+      "issues": [
+        "year_mismatch: cited 1986, record 1982"
+      ]
+    },
+    {
+      "list": "refs-06.json",
+      "text": "Kovacs P, Albright S. Regression shrinkage and selection via the lasso. J R Stat Soc Series B. 1996;58(1):267-288.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1111/j.2517-6161.1996.tb02080.x, 1996, Journal of the Royal Statistical Society Series B: Statistical Methodology",
+      "issues": [
+        "author_mismatch: no cited surname appears in the record"
+      ]
+    },
+    {
+      "list": "refs-06.json",
+      "text": "Ho J, Jain A, Abbeel P. Denoising diffusion probabilistic models. arXiv:2006.11239. 2020.",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.48550/arXiv.2006.11239, 2020"
+    },
+    {
+      "list": "refs-06.json",
+      "text": "Schmidhuber J. Deep learning in neural networks: an overview. Neural Netw. 2015;61:85-117.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1016/j.neunet.2014.09.003, 2015, Neural Networks"
+    },
+    {
+      "list": "refs-10.json",
+      "text": "A. D. Becke, “Density-functional thermochemistry. III. The role of exact exchange,” J. Chem. Phys., vol. 98, no. 7, pp. 5648–5652, 1993.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1063/1.464913, 1993, The Journal of Chemical Physics"
+    },
+    {
+      "list": "refs-10.json",
+      "text": "T. Okonjo, L. Varga, and M. Esposito, “Click Chemistry: Diverse Chemical Function from a Few Good Reactions,” Angew. Chem. Int. Ed., vol. 40, no. 11, pp. 2004–2021, 2001.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1002/1521-3773(20010601)40:11<2004::aid-anie2004>3.0.co;2-5, 2001, Angewandte Chemie International Edition",
+      "issues": [
+        "year_mismatch: cited 2004, record 2001",
+        "author_mismatch: no cited surname appears in the record"
+      ]
+    },
+    {
+      "list": "refs-10.json",
+      "text": "J. P. Perdew, K. Burke, and M. Ernzerhof, “Generalized Gradient Approximation Made Simple,” Phys. Rev. Lett., vol. 77, no. 18, pp. 3865–3868, 1996.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1103/physrevlett.77.3865, 1996, Physical Review Letters"
+    },
+    {
+      "list": "refs-10.json",
+      "text": "R. Gómez-Bombarelli et al., “Automatic chemical design using a data-driven continuous representation of molecules,” 2016, arXiv:1610.02415.",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "not_checked",
+      "issues": [
+        "rate_limited: retry in 60 s"
+      ]
+    },
+    {
+      "list": "refs-10.json",
+      "text": "O. M. Yaghi, M. O'Keeffe, N. W. Ockwig, H. K. Chae, M. Eddaoudi, and J. Kim, “Reticular synthesis and the design of new materials,” Nature, vol. 423, no. 6941, pp. 705–714, 2003.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/nature01650, 2003, Nature"
+    },
+    {
+      "list": "refs-10.json",
+      "text": "G. Kresse and J. Furthmüller, “Efficient iterative schemes for ab initio total-energy calculations using a plane-wave basis set,” Phys. Rev. B, vol. 54, no. 16, pp. 11169–11186, 1996, doi: 10.1103/PhysRevB.37.785.",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1103/physrevb.54.11169, 1996, Physical Review B",
+      "issues": [
+        "doi_points_to_different_work"
+      ]
+    },
+    {
+      "list": "refs-10.json",
+      "text": "S. Grimme, J. Antony, S. Ehrlich, and H. Krieg, “A consistent and accurate ab initio parametrization of density functional dispersion correction (DFT-D) for the 94 elements H-Pu,” J. Chem. Phys., vol. 132, no. 15, Art. no. 154104, 2014.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1063/1.3382344, 2010, The Journal of Chemical Physics",
+      "issues": [
+        "year_mismatch: cited 2014, record 2010"
+      ]
+    },
+    {
+      "list": "refs-10.json",
+      "text": "H. Nakashima, P. Oduya, and C. R. Whitlock, “Cobalt-free layered cathodes stabilized by entropic oxygen sublattices,” J. Am. Chem. Soc., vol. 143, no. 18, pp. 7012–7021, 2021.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ],
+      "verdict": "not_found",
+      "issues": [
+        "no_similar_title_in_any_source"
+      ]
+    },
+    {
+      "list": "refs-10.json",
+      "text": "A. Jain et al., “Commentary: The Materials Project: A materials genome approach to accelerating materials innovation,” APL Mater., vol. 1, no. 1, Art. no. 011002, 2013, doi: 10.1063/1.4812323.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1063/1.4812323, 2013, APL Materials"
+    },
+    {
+      "list": "refs-10.json",
+      "text": "A. Kojima, K. Teshima, Y. Shirai, and T. Miyasaka, “Organometal Halide Perovskites as Visible-Light Sensitizers for Photovoltaic Cells,” J. Am. Chem. Soc., vol. 131, no. 17, pp. 6050–6051, 2009, doi: 10.1021/ja809598zz.",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1021/ja809598r, 2009, Journal of the American Chemical Society",
+      "issues": [
+        "doi_not_registered"
+      ]
+    },
+    {
+      "list": "refs-13.json",
+      "text": "Marquez, D. L., & Fenwick, R. (1988). On the mechanics of economic development. Journal of Monetary Economics, 22(1), 3–42.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1016/0304-3932(88)90168-7, 1988, Journal of Monetary Economics",
+      "issues": [
+        "author_mismatch: no cited surname appears in the record"
+      ]
+    },
+    {
+      "list": "refs-13.json",
+      "text": "Chetty, R., Hendren, N., Kline, P., & Saez, E. (2014). Where is the Land of Opportunity? The Geography of Intergenerational Mobility in the United States. The Quarterly Journal of Economics, 129(4), 1553–1623. https://doi.org/10.1093/qje/qju022",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "likely",
+      "matched": "doi:10.1093/qje/qju022, 2014, The Quarterly Journal of Economics",
+      "issues": [
+        "title_partial_match: the cited title and the record's share 100% of the cited words"
+      ]
+    },
+    {
+      "list": "refs-13.json",
+      "text": "Acemoglu, D., Johnson, S., & Robinson, J. A. (2001). The Colonial Origins of Comparative Development: An Empirical Investigation. American Economic Review, 91(5), 1369–1401. https://doi.org/10.1257/aer.91.5.1369",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1257/aer.91.5.1369, 2001, American Economic Review"
+    },
+    {
+      "list": "refs-13.json",
+      "text": "Solow, R. M. (1961). A Contribution to the Theory of Economic Growth. The Quarterly Journal of Economics, 70(1), 65–94.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.2139/ssrn.2827743, 2016, SSRN Electronic Journal",
+      "issues": [
+        "year_mismatch: cited 1961, record 2016",
+        "author_mismatch: no cited surname appears in the record",
+        "title_partial_match: the cited title and the record's share 100% of the cited words"
+      ]
+    },
+    {
+      "list": "refs-13.json",
+      "text": "Kahneman, D., & Tversky, A. (1979). Prospect Theory: An Analysis of Decision under Risk. Econometrica, 47(2), 263–291. https://doi.org/10.1257/jep.31.2.211",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.2307/1914185, 1979, Econometrica",
+      "issues": [
+        "doi_points_to_different_work"
+      ]
+    },
+    {
+      "list": "refs-13.json",
+      "text": "Athey, S., & Imbens, G. (2015). Recursive Partitioning for Heterogeneous Causal Effects. arXiv. https://doi.org/10.48550/arXiv.1504.01132",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.48550/arxiv.1504.01132, 2015"
+    },
+    {
+      "list": "refs-13.json",
+      "text": "Piketty, T., & Saez, E. (2003). Income Inequality in the United States, 1913-1998. The Quarterly Journal of Economics, 118(1), 1–41. https://doi.org/10.1162/00335530360599999",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1162/00335530360535135, 2003, The Quarterly Journal of Economics",
+      "issues": [
+        "doi_not_registered"
+      ]
+    },
+    {
+      "list": "refs-13.json",
+      "text": "Okonkwo, C., & Steinbach, M. (2019). Credit rationing and the geography of rural entrepreneurship: Evidence from mobile lending in Kenya. The Quarterly Journal of Economics, 134(3), 1601–1648.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ],
+      "verdict": "not_found",
+      "issues": [
+        "no_similar_title_in_any_source"
+      ]
+    },
+    {
+      "list": "refs-13.json",
+      "text": "Banerjee, A., Duflo, E., Goldberg, N., Karlan, D., Osei, R., Parienté, W., Shapiro, J., Thuysbaert, B., & Udry, C. (2015). A multifaceted program causes lasting progress for the very poor: Evidence from six countries. Science, 348(6236), 1260799. https://doi.org/10.1126/science.1260799",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1126/science.1260799, 2015, Science"
+    },
+    {
+      "list": "refs-13.json",
+      "text": "Akerlof, G. A. (1970). The Market for \"Lemons\": Quality Uncertainty and the Market Mechanism. The Quarterly Journal of Economics, 84(3), 488–500. https://doi.org/10.2307/1879431",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.2307/1879431, 1970, The Quarterly Journal of Economics"
+    },
+    {
+      "list": "refs-16.json",
+      "text": "Hollis, Margaret, and Daniel Achterberg. 1974. “Restriction of in vitro T cell-mediated cytotoxicity in lymphocytic choriomeningitis within a syngeneic or semiallogeneic system.” Nature 248 (5450): 701–702.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1038/248701a0, 1974, Nature",
+      "issues": [
+        "author_mismatch: no cited surname appears in the record"
+      ]
+    },
+    {
+      "list": "refs-16.json",
+      "text": "Turnbaugh, Peter J., Ruth E. Ley, Michael A. Mahowald, Vincent Magrini, Elaine R. Mardis, and Jeffrey I. Gordon. 2006. “An obesity-associated gut microbiome with increased capacity for energy harvest.” Nature 444 (7122): 1027–1031. https://doi.org/10.1038/nature05414.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/nature05414, 2006, Nature"
+    },
+    {
+      "list": "refs-16.json",
+      "text": "Sakaguchi, S., N. Sakaguchi, M. Asano, M. Itoh, and M. Toda. 1995. “Immunologic self-tolerance maintained by activated T cells expressing IL-2 receptor α-chains (CD25). Breakdown of a single mechanism of self-tolerance causes various autoimmune diseases.” The Journal of Immunology 155 (3): 1151–1164. https://doi.org/10.4049/jimmunol.155.3.1151.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.4049/jimmunol.155.3.1151, 1995, The Journal of Immunology"
+    },
+    {
+      "list": "refs-16.json",
+      "text": "Bolyen, Evan, Jai Ram Rideout, Matthew R. Dillon, Nicholas A. Bokulich, Christian Abnet, Gabriel A. Al-Ghalith, Harriet Alexander, et al. 2018. “QIIME 2: Reproducible, interactive, scalable, and extensible microbiome data science.” PeerJ Preprints. https://doi.org/10.7287/peerj.preprints.27295v2.",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.7287/peerj.preprints.27295v2, 2018"
+    },
+    {
+      "list": "refs-16.json",
+      "text": "Köhler, G., and C. Milstein. 1975. “Continuous cultures of fused cells secreting antibody of predefined specificity.” Nature 256 (5517): 495–497. https://doi.org/10.1038/256495a0.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/256495a0, 1975, Nature"
+    },
+    {
+      "list": "refs-16.json",
+      "text": "Lindgren, Erik, Thandiwe Mokoena, and Hiroshi Sato. 2020. “Commensal Bacteroides Prime Alveolar Macrophages through Bile Acid Signaling.” Cell Host & Microbe 27 (5): 789–802.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ],
+      "verdict": "not_found",
+      "issues": [
+        "no_similar_title_in_any_source"
+      ]
+    },
+    {
+      "list": "refs-16.json",
+      "text": "Steinman, Ralph M., and Zanvil A. Cohn. 1973. “Identification of a novel cell type in peripheral lymphoid organs of mice. I. Morphology, quantitation, tissue distribution.” The Journal of Experimental Medicine 137 (5): 1142–1162. https://doi.org/10.1084/jem.137.5.9142.",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "ambiguous",
+      "matched": "europepmc:17182535, 2007, Journal of immunology (Baltimore, Md. : 1950)",
+      "issues": [
+        "doi_not_registered",
+        "year_mismatch: cited 1973, record 2007",
+        "venue_mismatch: the citation does not name the record's venue, Journal of immunology (Baltimore, Md. : 1950)",
+        "volume_mismatch: cited 137, record 178",
+        "pages_mismatch: cited from 1142, record from 5",
+        "title_partial_match: the cited title and the record's share 100% of the cited words"
+      ]
+    },
+    {
+      "list": "refs-16.json",
+      "text": "Callahan, Benjamin J., Paul J. McMurdie, Michael J. Rosen, Andrew W. Han, Amy Jo A. Johnson, and Susan P. Holmes. 2016. “DADA2: High-resolution sample inference from Illumina amplicon data.” Nature Methods 13 (7): 581–583. https://doi.org/10.1038/nmeth.3869.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1038/nmeth.3869, 2016, Nature Methods"
+    },
+    {
+      "list": "refs-16.json",
+      "text": "Medzhitov, Ruslan, Paula Preston-Hurlburt, and Charles A. Janeway. 1997. “A human homologue of the Drosophila Toll protein signals activation of adaptive immunity.” Nature 388 (6640): 394–397. https://doi.org/10.1016/j.cell.2006.02.015.",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1038/41131, 1997, Nature",
+      "issues": [
+        "doi_points_to_different_work"
+      ]
+    },
+    {
+      "list": "refs-16.json",
+      "text": "Mosmann, T. R., H. Cherwinski, M. W. Bond, M. A. Giedlin, and R. L. Coffman. 1990. “Two types of murine helper T cell clone. I. Definition according to profiles of lymphokine activities and secreted proteins.” The Journal of Immunology 136 (7): 2348–2357.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.4049/jimmunol.136.7.2348, 1986, The Journal of Immunology",
+      "issues": [
+        "year_mismatch: cited 1990, record 1986"
+      ]
+    },
+    {
+      "list": "refs-19.json",
+      "text": "Slamon DJ, Leyland-Jones B, Shak S, et al. Use of Chemotherapy plus a Monoclonal Antibody against HER2 for Metastatic Breast Cancer That Overexpresses HER2. N Engl J Med. 2001;344(11):783-792. doi:10.1001/jama.288.3.321",
+      "planted": "doi_wrong",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1056/nejm200103153441101, 2001, New England Journal of Medicine",
+      "issues": [
+        "doi_points_to_different_work"
+      ]
+    },
+    {
+      "list": "refs-19.json",
+      "text": "Scandinavian Simvastatin Survival Study Group. Randomised trial of cholesterol lowering in 4444 patients with coronary heart disease: the Scandinavian Simvastatin Survival Study (4S). Lancet. 1998;344(8934):1383-1389.",
+      "planted": "year_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "europepmc:7968073, 1994, Lancet (London, England)",
+      "issues": [
+        "year_mismatch: cited 1998, record 1994"
+      ]
+    },
+    {
+      "list": "refs-19.json",
+      "text": "Druker BJ, Talpaz M, Resta DJ, et al. Efficacy and Safety of a Specific Inhibitor of the BCR-ABL Tyrosine Kinase in Chronic Myeloid Leukemia. N Engl J Med. 2001;344(14):1031-1037. doi:10.1056/NEJM200104053449901",
+      "planted": "doi_invented",
+      "accept": [
+        "mismatch"
+      ],
+      "verdict": "mismatch",
+      "matched": "doi:10.1056/nejm200104053441401, 2001, New England Journal of Medicine",
+      "issues": [
+        "doi_not_registered"
+      ]
+    },
+    {
+      "list": "refs-19.json",
+      "text": "Hodi FS, O'Day SJ, McDermott DF, et al. Improved Survival with Ipilimumab in Patients with Metastatic Melanoma. N Engl J Med. 2010;363(8):711-723.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1056/nejmoa1003466, 2010, The New England journal of medicine"
+    },
+    {
+      "list": "refs-19.json",
+      "text": "SPRINT Research Group. A Randomized Trial of Intensive versus Standard Blood-Pressure Control. N Engl J Med. 2015;373(22):2103-2116. doi:10.1056/NEJMoa1511939",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1056/nejmoa1511939, 2015, New England Journal of Medicine"
+    },
+    {
+      "list": "refs-19.json",
+      "text": "Horby P, Lim WS, Emberson J, et al. Effect of Dexamethasone in Hospitalized Patients with COVID-19 – Preliminary Report. medRxiv. 2020. doi:10.1101/2020.06.22.20137273",
+      "planted": "preprint_version",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1101/2020.06.22.20137273, 2020"
+    },
+    {
+      "list": "refs-19.json",
+      "text": "Zinman B, Wanner C, Lachin JM, et al. Empagliflozin, Cardiovascular Outcomes, and Mortality in Type 2 Diabetes. N Engl J Med. 2015;373(22):2117-2128.",
+      "planted": "none",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1056/nejmoa1504720, 2015, New England Journal of Medicine"
+    },
+    {
+      "list": "refs-19.json",
+      "text": "Ross R. Atherosclerosis — An Inflammatory Disease. N Engl J Med. 1999;340(2):115-126.",
+      "planted": "closed_real",
+      "accept": [
+        "verified",
+        "likely"
+      ],
+      "verdict": "verified",
+      "matched": "doi:10.1056/nejm199901143400207, 1999, New England Journal of Medicine"
+    },
+    {
+      "list": "refs-19.json",
+      "text": "Bergström L, Okafor U, Patel R, et al. Intermittent ketamine infusion versus usual care for refractory status asthmaticus in adults: a randomized trial. N Engl J Med. 2022;386(15):1421-1431.",
+      "planted": "fabricated",
+      "accept": [
+        "not_found"
+      ],
+      "verdict": "not_found",
+      "issues": [
+        "no_similar_title_in_any_source"
+      ]
+    },
+    {
+      "list": "refs-19.json",
+      "text": "Castellano M, Ndiaye B, Holm K. Antiinflammatory Therapy with Canakinumab for Atherosclerotic Disease. N Engl J Med. 2017;377(12):1119-1131.",
+      "planted": "author_wrong",
+      "accept": [
+        "ambiguous"
+      ],
+      "verdict": "ambiguous",
+      "matched": "doi:10.1056/nejmoa1707914, 2017, New England Journal of Medicine",
+      "issues": [
+        "author_mismatch: no cited surname appears in the record"
+      ]
+    }
+  ]
+}

@@ -57,10 +57,9 @@ export const verifyReferences = defineTool({
     results: z.array(resultSchema)
   }),
   async run(args, deps) {
-    // Every cited DOI resolved first, fifty to a request and no admission —
-    // from OpenAlex, or from Crossref where OpenAlex is not asked: a DOI held
-    // is judged on that record, without a search of every source. A batch
-    // failure costs only that shortcut.
+    // Every cited DOI resolved from Crossref first, fifty to a request and no
+    // admission: a DOI it holds is judged on its record, without a search of
+    // every source. A batch failure costs only that shortcut.
     const dois = [...new Set(args.references.flatMap(r => citedDoi(r) ?? []))];
     const resolved = dois.length
       ? await deps.engine.resolveDois(dois, { signal: deps.signal }).then(r => r.found, (error: unknown) => {
@@ -130,9 +129,8 @@ async function checkOne(raw: string, deps: ToolDeps, resolved: ReadonlyMap<strin
  * cited title. A DOI no source holds is asked of the DOI system itself before
  * it is called invented: the registry answers for every agency.
  *
- * A DOI is judged on the record the batch resolved it to (`resolved`: from
- * OpenAlex, or from Crossref where OpenAlex is not asked) when it has one, and
- * looked up in every source only when it has not. The verdict is the same
+ * A DOI is judged on the record Crossref's batch resolved it to (`resolved`)
+ * when it has one, and looked up in every source only when it has not. The verdict is the same
  * either way — corroboration moves the judge's score, never its verdict — but
  * `corroborated_by` then names that one source, and whether the paper is
  * retracted is its word alone.
@@ -237,8 +235,8 @@ const JUDGED = 5;
  * merged ranking fuses each source's own positions (`rank.ts`), so the five
  * judged are made of the top of each source; a record below 25 in every
  * source that holds it never reaches them. Read to 300, the same search costs
- * OpenAlex two requests and DOAJ and OpenAIRE three each, for records that
- * are only discarded — and a batch of 25 references can make 75 of them.
+ * DOAJ and OpenAIRE three requests each, for records that are only discarded
+ * — and a batch of 25 references can make 75 of them.
  */
 const TITLE_DEPTH = 25;
 

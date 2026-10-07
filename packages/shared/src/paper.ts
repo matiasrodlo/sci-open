@@ -18,8 +18,8 @@ import type { Biblio } from './biblio';
  * Narrower than `SourceId` on purpose. That union holds fifteen names, and
  * four of them — Crossref, Unpaywall, OpenCitations, the preprint servers — are
  * authorities: they answer per-DOI questions about a paper somebody else
- * returned, and never return one themselves. (OpenAlex and Crossref are both,
- * and are why the two sets overlap rather than partition.)
+ * returned, and never return one themselves. (Crossref is both, and is why the
+ * two sets overlap rather than partition.)
  *
  * Aliasing the two made the distinction unstateable, and it showed up as three
  * rows in `merge.ts`'s `PROVIDER_PRIORITY` that could never be consulted:
@@ -145,7 +145,8 @@ export type Paper = {
   language?: string;
   citationCount?: number;
   /**
-   * The work was retracted, as a source records it: OpenAlex's `is_retracted`,
+   * The work was retracted, as a source records it: a retraction, withdrawal
+   * or removal in Crossref's `updated-by` (Retraction Watch's data among them),
    * or the MeSH publication type "Retracted Publication" in Europe PMC and
    * PubMed. Only ever `true`: a source that says nothing is not evidence the
    * work stands, and a `false` could hide another source's `true` in a merge.

@@ -27,14 +27,13 @@ vi.mock('../doaj/fetch', async original => ({ ...(await original<object>()), fet
 vi.mock('../europepmc/fetch', async original => ({ ...(await original<object>()), fetchPage: recorder('europepmc') }));
 vi.mock('../ncbi/fetch', async original => ({ ...(await original<object>()), fetchPage: recorder('ncbi') }));
 vi.mock('../openaire/fetch', async original => ({ ...(await original<object>()), fetchPage: recorder('openaire') }));
-vi.mock('../openalex/fetch', async original => ({ ...(await original<object>()), fetchPage: recorder('openalex') }));
 vi.mock('../plos/fetch', async original => ({ ...(await original<object>()), fetchPage: recorder('plos') }));
 
 import { PROVIDERS } from '../../orchestrator/registry';
 import { parseQuery } from '../../orchestrator/parse-query';
 
 /** Every provider that takes a keyword query and reports a total: what a keyword count asks. */
-const COUNTED: ProviderId[] = ['arxiv', 'doaj', 'europepmc', 'ncbi', 'openaire', 'openalex', 'plos'];
+const COUNTED: ProviderId[] = ['arxiv', 'doaj', 'europepmc', 'ncbi', 'openaire', 'plos'];
 
 beforeEach(() => {
   recorded.length = 0;

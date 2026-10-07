@@ -138,16 +138,16 @@ describe('rank', () => {
     const q = query({ phrases: ['attention is all you need'] });
     const canonical = paper({ id: 'arxiv:1706.03762v7', title: 'Attention Is All You Need', sources: [ref('arxiv', { rank: 0 })] });
     const correction = paper({
-      id: 'openalex:W7158626848', title: 'Correction to: Attention is all you need: utilizing attention in AI-enabled drug discovery',
-      sources: [ref('openalex', { rank: 28 }), ref('europepmc', { rank: 0 }), ref('openaire', { rank: 4 })]
+      id: 'crossref:10.1/correction', title: 'Correction to: Attention is all you need: utilizing attention in AI-enabled drug discovery',
+      sources: [ref('crossref', { rank: 28 }), ref('europepmc', { rank: 0 }), ref('openaire', { rank: 4 })]
     });
     const borrowed = paper({
-      id: 'openalex:W4390678101', title: 'Attention is all you need: utilizing attention in AI-enabled drug discovery',
-      sources: [ref('openalex', { rank: 2 }), ref('europepmc', { rank: 1 }), ref('openaire', { rank: 43 })]
+      id: 'crossref:10.1/drug-discovery', title: 'Attention is all you need: utilizing attention in AI-enabled drug discovery',
+      sources: [ref('crossref', { rank: 2 }), ref('europepmc', { rank: 1 }), ref('openaire', { rank: 43 })]
     });
 
     expect(rank([correction, borrowed, canonical], { query: q }).map(s => s.paper.id))
-      .toEqual(['arxiv:1706.03762v7', 'openalex:W4390678101', 'openalex:W7158626848']);
+      .toEqual(['arxiv:1706.03762v7', 'crossref:10.1/drug-discovery', 'crossref:10.1/correction']);
   });
 
   it('breaks a tie on quality, not arbitrarily', () => {

@@ -58,7 +58,7 @@ function europePmc(hit: Record<string, string> | undefined) {
       : { status: 200, data: JATS });
 }
 
-const plos: Paper = paper({ id: 'openalex:W1', doi: '10.1371/journal.pone.0000217', fullText: { url: 'https://journals.plos.org/x.pdf', kind: 'pdf', verified: true } });
+const plos: Paper = paper({ id: 'plos:10.1371/journal.pone.0000217', doi: '10.1371/journal.pone.0000217', fullText: { url: 'https://journals.plos.org/x.pdf', kind: 'pdf', verified: true } });
 const preprint: Paper = paper({ id: 'arxiv:2404.18021v1', doi: undefined, sources: [ref('arxiv', { nativeId: '2404.18021v1' })], fullText: { url: 'https://arxiv.org/pdf/2404.18021v1', kind: 'pdf', verified: true } });
 
 beforeEach(() => {
@@ -74,7 +74,7 @@ describe('resolveFullText', () => {
     const { doc, definitive } = await resolveFullText(plos, OPTIONS);
 
     expect(doc).toMatchObject({
-      paperId: 'openalex:W1', tier: 'europepmc-jats', url: `${EPMC}/PMC1790863/fullTextXML`,
+      paperId: 'plos:10.1371/journal.pone.0000217', tier: 'europepmc-jats', url: `${EPMC}/PMC1790863/fullTextXML`,
       title: 'Quantifying Organismal Complexity using a Population Genetic Approach', retrievedAt: '2026-10-02T00:00:00.000Z'
     });
     expect(doc!.totalChars).toBe(doc!.sections.reduce((n, s) => n + s.text.length, 0));
@@ -105,7 +105,7 @@ describe('resolveFullText', () => {
     let fetched = '';
     europePmc(undefined);
     hosts.set('https://arxiv.org', async (p: string) => { fetched = p; return { status: 404, data: '' }; });
-    await resolveFullText(paper({ doi: '10.48550/arXiv.2404.18021', sources: [ref('openalex')], fullText: undefined }), OPTIONS);
+    await resolveFullText(paper({ doi: '10.48550/arXiv.2404.18021', sources: [ref('datacite')], fullText: undefined }), OPTIONS);
     expect(fetched).toBe('/html/2404.18021');
   });
 

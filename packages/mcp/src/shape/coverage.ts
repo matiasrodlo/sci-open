@@ -61,8 +61,8 @@ export function coverageSentence(c: Coverage): string {
   const down = c.failed.filter(f => !f.rate_limited);
   const limited = c.failed.filter(f => f.rate_limited);
   if (down.length) parts.push(`no answer from ${down.map(f => `${f.source} (${f.status})`).join(', ')} — the total is a lower bound`);
-  // A spent quota is not a fault to retry at once: it says how long the gap lasts (D13).
-  if (limited.length) parts.push(`${limited.map(f => `${f.source} (request quota spent)`).join(', ')} left out for a few minutes — the total is a lower bound`);
+  // A rate limit is not a fault to retry at once: it says how long the gap lasts (D13).
+  if (limited.length) parts.push(`${limited.map(f => `${f.source} (rate-limited)`).join(', ')} left out for a minute — the total is a lower bound`);
   if (c.skipped.length) parts.push(`skipped ${c.skipped.map(s => `${s.source} (${s.reason})`).join(', ')}`);
   if (c.bounded) parts.push('the access check was cut short, so a few papers may be missing');
   if (c.truncated.length) parts.push(truncatedClause(c.truncated));

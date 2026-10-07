@@ -1,7 +1,5 @@
 import type { AuthorityCapabilities, AuthorityFacts, AuthorityId, Paper } from '@sci-open/shared';
-import { apiKeyFor } from '../lib/api-key';
 import * as crossref from './crossref';
-import * as openalex from './openalex';
 import * as unpaywall from './unpaywall';
 import * as opencitations from './opencitations';
 import * as preprints from './preprints';
@@ -47,8 +45,8 @@ export type AuthorityEntry = {
  * Order is load-bearing for gap-filling: the first authority to supply a
  * missing field is the one recorded in `fieldSources`, and later ones leave it
  * alone. Crossref goes first because it is the registrar's own record, then
- * OpenAlex, then Unpaywall — which is last of the three because the two fields
- * it overwrites should overwrite whatever the other two wrote, not race them.
+ * Unpaywall — which is after it because the two fields it overwrites should
+ * overwrite whatever Crossref wrote, not race it.
  */
 /** A DOI arXiv registered (`10.48550/arXiv.…`), which only DataCite holds. */
 const isArxivDoi = (doi: string | undefined): boolean => !!doi && /^10\.48550\/arxiv\./i.test(doi.trim());
@@ -69,18 +67,6 @@ export const AUTHORITIES: AuthorityEntry[] = [
       })
   },
   {
-    id: 'openalex',
-    capabilities: openalex.capabilities,
-    pass: 0,
-    lookup: ({ doi, timeoutMs, signal, userAgent }) =>
-      openalex.lookup(doi, {
-        timeoutMs,
-        ...apiKeyFor('openalex'),
-        ...(signal ? { signal } : {}),
-        ...(userAgent ? { userAgent } : {})
-      })
-  },
-  {
     id: 'unpaywall',
     capabilities: unpaywall.capabilities,
     pass: 0,
@@ -96,8 +82,8 @@ export const AUTHORITIES: AuthorityEntry[] = [
   {
     id: 'opencitations',
     capabilities: opencitations.capabilities,
-    // Second pass, and only for papers still missing a count once Crossref and
-    // OpenAlex have answered. It has exactly one field to offer, so asking it
+    // Second pass, and only for papers still missing a count once Crossref has
+    // answered. It has exactly one field to offer, so asking it
     // about a paper that already has one is a request that cannot change
     // anything. On a measured page that is most of them.
     pass: 1,
