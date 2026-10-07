@@ -26,6 +26,27 @@ export const pageSchema = z.object({
 });
 export type PageOutput = z.infer<typeof pageSchema>;
 
+const ORDERS: Record<string, string> = {
+  date: 'newest first', date_asc: 'oldest first', citations: 'most cited first', citations_asc: 'least cited first'
+};
+
+/**
+ * The filters a search ran under, in one line a search log can keep beside
+ * the query: a search that read open-access papers only, or one year range,
+ * found a different literature from the one the query alone names.
+ */
+export function filtersLine(spec: SearchSpec): string {
+  const f = spec.filters;
+  const parts = [
+    f.openAccessOnly ? 'open access only' : 'open and closed papers',
+    f.yearFrom !== undefined || f.yearTo !== undefined ? `published ${f.yearFrom ?? '…'}–${f.yearTo ?? '…'}` : '',
+    f.publicationType?.length ? f.publicationType.join(' or ') : '',
+    f.source?.length ? `sources ${f.source.join(', ')}` : '',
+    spec.sort !== 'relevance' ? `sorted ${ORDERS[spec.sort] ?? spec.sort}` : ''
+  ].filter(Boolean);
+  return `**Filters:** ${parts.join(' · ')}`;
+}
+
 /** The facets as the output gives them: the top values of each. */
 const TOP_FACET_VALUES = 8;
 
@@ -100,7 +121,7 @@ export function presentPage(
   const text = [
     retractionWarning(retracted.length === 1 ? [`Result ${retracted[0]}`] : retracted.length ? [`Results ${retracted.join(', ')}`] : []),
     `# ${r.total.toLocaleString('en')}${lowerBound ? '+' : ''} results${spec.q ? ` for \`${spec.q}\`` : spec.doi ? ` for DOI ${spec.doi}` : ''} — page ${r.page}`,
-    '',
+    filtersLine(spec),
     `**Coverage:** ${coverageSentence(coverage)}`,
     more
       ? `**Next:** get_search_page(handle="${handle}", page=${r.page + 1})`

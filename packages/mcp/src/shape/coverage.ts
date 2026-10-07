@@ -14,7 +14,8 @@ export const coverageSchema = z.object({
    * and those that could only read by relevance, whose part is sorted among
    * their most relevant matches. */
   order: z.object({ sort: z.string(), sorted_by_source: z.array(z.string()), read_by_relevance: z.array(z.string()) }).optional(),
-  per_source: z.array(z.object({ source: z.string(), status: z.string(), retrieved: z.number().int(), total_hits: z.number().int().optional() }))
+  /** `query` is what the source was sent, in its own syntax: the search as run there. */
+  per_source: z.array(z.object({ source: z.string(), status: z.string(), retrieved: z.number().int(), total_hits: z.number().int().optional(), query: z.string().optional() }))
 });
 export type Coverage = z.infer<typeof coverageSchema>;
 
@@ -47,7 +48,8 @@ export function coverageOf(r: Pick<SearchResponse, 'complete' | 'bounded' | 'pro
       source: p.provider,
       status: p.status,
       retrieved: p.retrieved,
-      ...(p.totalHits !== undefined ? { total_hits: p.totalHits } : {})
+      ...(p.totalHits !== undefined ? { total_hits: p.totalHits } : {}),
+      ...(p.query ? { query: p.query } : {})
     }))
   };
 }

@@ -22,8 +22,8 @@ const crispr = (n: number): Paper =>
   });
 
 const reports: ProviderReport[] = [
-  { provider: 'openalex', status: 'ok', retrieved: 300, totalHits: 81_234, latency: 900 },
-  { provider: 'arxiv', status: 'ok', retrieved: 120, totalHits: 1_456, latency: 400 },
+  { provider: 'openalex', status: 'ok', retrieved: 300, totalHits: 81_234, latency: 900, query: 'filter=is_oa:true,title_and_abstract.search:crispr' },
+  { provider: 'arxiv', status: 'ok', retrieved: 120, totalHits: 1_456, latency: 400, query: '(ti:crispr OR abs:crispr)' },
   { provider: 'europepmc', status: 'timeout', retrieved: 0, latency: 20_000, error: 'exceeded the 20000ms budget' },
   { provider: 'biorxiv', status: 'skipped', retrieved: 0, latency: 0, skipReason: 'no keyword index' }
 ];

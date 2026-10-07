@@ -176,6 +176,12 @@ describe('protocol', () => {
     ]));
     expect(text(result)).toContain('| openalex | 81,234 | the top 300 |');
     expect(text(result)).toContain('it would read only the top of');
+    // What a methods section reports: the filters, and each database's search as run.
+    expect(text(result)).toContain('**Filters:** open access only');
+    expect(text(result)).toContain('- openalex: `filter=is_oa:true,title_and_abstract.search:crispr`');
+    expect((result.structuredContent as any).counts.coverage.per_source).toEqual(expect.arrayContaining([
+      expect.objectContaining({ source: 'arxiv', query: '(ti:crispr OR abs:crispr)' })
+    ]));
   });
 
   it('sends progress only to a caller that asked, in increasing order', async () => {

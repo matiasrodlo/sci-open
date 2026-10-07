@@ -66,7 +66,7 @@ export function buildProvenance(
       query_hash: sha256(canonicalJson(args)),
       result_hash: sha256(canonicalJson(structured)),
       ...(input.sources
-        ? { sources: input.sources.map(s => ({ id: s.provider, status: s.status, retrieved: s.retrieved, latency_ms: s.latency })) }
+        ? { sources: input.sources.map(s => ({ id: s.provider, status: s.status, retrieved: s.retrieved, latency_ms: s.latency, ...(s.query ? { query: s.query } : {}) })) }
         : {}),
       ...(input.complete !== undefined ? { complete: input.complete } : {}),
       ...(input.negativeResult ? { negative_result: true } : {}),

@@ -6,12 +6,20 @@ description: Run a documented literature search with sci-open — build a query 
 # Systematic search
 
 Keep a search log in a file the user names (default `search-log.md`), one row
-per query: date, query, its counts or its total, whether the total is a lower
-bound, the coverage sentence, the handle (searches only) and the result hash
-(the last line of each result).
+per query: date, query, the filters line, its counts or its total, whether
+the total is a lower bound, the coverage sentence, the handle (searches only)
+and the result hash (the last line of each result). For the final query, also
+log the list "Sent to each source" from its count: the search as each
+database ran it, which a methods section reports.
 
-1. Split the question into concepts — population, intervention or exposure,
-   comparison, outcome, as apply — and list synonyms for each.
+1. Agree the scope with the user before searching. Searches return
+   open-access papers only unless `open_access_only` is false; a review of a
+   field usually needs closed papers too, which are listed with their
+   metadata (`read_paper` reads open copies only). Settle the years and the
+   publication type (`peer-reviewed` is journal articles, reviews, books and
+   chapters, without preprints, theses, reports or notices), and log them.
+   Then split the question into concepts — population, intervention or
+   exposure, comparison, outcome, as apply — and list synonyms for each.
 2. Write the query in the grammar from the server instructions: synonyms ORed
    in brackets, concepts ANDed, `PY=` for years. For example:
    `TS=("base editing" OR "base editor*") AND TS=(plant* OR crop*) AND PY=2018-2026`.

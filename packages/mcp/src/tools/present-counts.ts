@@ -1,7 +1,8 @@
 import * as z from 'zod';
 import type { ProviderReport } from '@sci-open/shared';
 import type { CountOutcome } from '@sci-open/core';
-import { pageSchema } from './present-page';
+import { pageSchema, filtersLine } from './present-page';
+import type { SearchSpec } from '../handles';
 import { coverageOf, coverageSchema, coverageSentence } from '../shape/coverage';
 import type { ToolOutcome } from '../framework/define-tool';
 
@@ -27,7 +28,8 @@ export const searchOutputSchema = pageSchema.partial().extend({ counts: countsSc
  * handle, since nothing was resolved to page through. No fence: everything in
  * the text is a number, a source id or the caller's own query.
  */
-export function presentCounts(outcome: CountOutcome, q: string, depth: number): ToolOutcome<z.infer<typeof searchOutputSchema>> {
+export function presentCounts(outcome: CountOutcome, spec: SearchSpec, depth: number): ToolOutcome<z.infer<typeof searchOutputSchema>> {
+  const q = spec.q ?? '';
   const counted = outcome.reports
     .filter((r): r is ProviderReport & { totalHits: number } => r.status === 'ok' && r.totalHits !== undefined)
     .sort((a, b) => b.totalHits - a.totalHits);
@@ -45,10 +47,11 @@ export function presentCounts(outcome: CountOutcome, q: string, depth: number): 
     coverage
   };
   const over = counted.filter(r => r.totalHits > depth);
+  const sent = outcome.reports.filter((r): r is ProviderReport & { query: string } => r.status === 'ok' && typeof r.query === 'string');
 
   const text = [
     `# Match counts for \`${q}\` — no results read`,
-    '',
+    filtersLine(spec),
     `**Coverage:** ${coverageSentence(coverage)}`,
     '',
     ...(counted.length
@@ -65,6 +68,9 @@ export function presentCounts(outcome: CountOutcome, q: string, depth: number): 
       ? `A search reads ${depth.toLocaleString('en')} records a source, so it would read only the top of ${over.map(r => r.provider).join(', ')}. ` +
         'For an exhaustive search, narrow the query or split it by PY= ranges until every source is within that.'
       : `Every source is within the ${depth.toLocaleString('en')} records a search reads from each, so a search would read all of their matches.`,
+    ...(sent.length
+      ? ['', '**Sent to each source**, in its own syntax — the search as run there, for a methods section:', ...sent.map(r => `- ${r.provider}: \`${r.query}\``)]
+      : []),
     '**Next:** search_papers with this query and without count_only, to read results.'
   ].join('\n');
 

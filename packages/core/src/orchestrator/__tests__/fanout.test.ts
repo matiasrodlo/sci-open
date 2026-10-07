@@ -59,6 +59,14 @@ describe('fanOut', () => {
     expect(isComplete(reports)).toBe(true);
   });
 
+  it('says what each provider was sent, and nothing for one it did not ask', async () => {
+    const providers = [ok('europepmc', 1), stubProvider('ncbi', async () => { throw new Error('upstream 500'); }), stubProvider('biorxiv', async () => ({ papers: [], skipped: [] }), { keywordSearch: false })];
+    const { reports } = await fanOut(plan(QUERY, providers), base);
+    expect(Object.fromEntries(reports.map(r => [r.provider, r.query]))).toEqual({
+      europepmc: 'native(europepmc)', ncbi: 'native(ncbi)', biorxiv: undefined
+    });
+  });
+
   it('reports a provider that was never asked, and why', async () => {
     const providers = [ok('europepmc', 1), stubProvider('biorxiv', async () => ({ papers: [], skipped: [] }), { keywordSearch: false })];
     const { reports } = await fanOut(plan(QUERY, providers), base);

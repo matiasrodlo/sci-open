@@ -43,6 +43,13 @@ export type ProviderReport = {
    * search's order, or the only one this provider has.
    */
   sorted?: SourceSort;
+  /**
+   * What this provider was sent: its native query, as its `translate` writes
+   * it — the query string, or the request parameters where its API takes no
+   * query language. Absent when it was not asked. What a methods section
+   * reports as the search run in each database.
+   */
+  query?: string;
   /** Present when `status` is `error` or `timeout`. */
   error?: string;
   /**

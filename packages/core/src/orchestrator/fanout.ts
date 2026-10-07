@@ -195,6 +195,7 @@ export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOut
           // answered everything it holds is not cut short by losing one.
           ...(outcome.totalHits !== undefined && outcome.totalHits > offset + depth ? { truncated: true as const } : {}),
           ...(sorted ? { sorted } : {}),
+          query: nativeQuery,
           latency: Date.now() - startedAt
         }
       };
@@ -209,6 +210,7 @@ export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOut
           // reasonable; retrying a 400 is not — which `refused` records.
           status: timedOut ? 'timeout' : 'error',
           retrieved: 0,
+          query: nativeQuery,
           error: error instanceof Error ? error.message : String(error),
           ...(!timedOut && refusedQuery(error) ? { refused: true } : {}),
           ...(!timedOut && statusOf(error) === 429 ? { rateLimited: 'refused' as const } : {}),
