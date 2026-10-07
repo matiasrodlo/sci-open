@@ -1,4 +1,4 @@
-export { createEngine } from './engine';
+export { createEngine, SOURCE_IDS } from './engine';
 export type { Engine, EngineOptions, SearchOutcome, SearchCallOptions, DoiResolution, Cancellable } from './engine';
 export { parseQuery } from './orchestrator/parse-query';
 export { PROVIDERS } from './orchestrator/registry';

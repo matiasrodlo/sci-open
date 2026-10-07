@@ -108,6 +108,28 @@ describe('verify_references', () => {
     expect(results[0]).toMatchObject({ verdict: 'mismatch', issues: expect.arrayContaining(['doi_points_to_different_work']) });
   });
 
+  describe('a DOI whose record left the cited subtitle off', () => {
+    // Measured live: OpenAlex titles "False-Positive Psychology: Undisclosed
+    // Flexibility…" as "False-Positive Psychology", and the correct citation
+    // was called a DOI on another paper. Made up here, as eval references stay out.
+    const SHORT = paper({
+      id: 'openalex:W2011', doi: '10.1000/short.2011', title: 'Threshold Memory',
+      authors: ['Ana Lindqvist', 'Ben Okoro'], year: 2011, sources: [ref('openalex')]
+    });
+    const check = async (reference: string) => (await verifyReferences.run({ references: [reference] }, fakeEngine([SHORT]).deps)).structured.results[0]!;
+
+    it('verifies the citation, by the authors and year it agrees on', async () => {
+      const result = await check('Lindqvist A, Okoro B. Threshold memory: emergent recall in sparse networks of noisy units. 2011. doi:10.1000/short.2011');
+      expect(result).toMatchObject({ verdict: 'verified', evidence: { matched_on: 'doi', title_precision: 1 } });
+    });
+
+    it('still calls it a DOI on another paper when the cited authors are not the record’s', async () => {
+      // A short main title is shared by many papers; without the authors it names none of them.
+      const result = await check('Brandt K. Threshold memory: a survey of sparse recall. 2011. doi:10.1000/short.2011');
+      expect(result).toMatchObject({ verdict: 'mismatch', issues: ['doi_points_to_different_work', 'cited_title_not_found'] });
+    });
+  });
+
   it('calls an invented DOI on a real title a mismatch, with the real record to correct it from', async () => {
     const { results } = await verify(['Watson JD, Crick FHC. Molecular structure of nucleic acids: a structure for deoxyribose nucleic acid. Nature. 1953. doi:10.1038/fake.0001']);
     expect(results[0]).toMatchObject({ verdict: 'mismatch', issues: ['doi_not_registered'], evidence: { matched_on: 'title' } });
@@ -160,6 +182,45 @@ describe('verify_references', () => {
     }, fake.deps);
     expect(structured.results[0]).toMatchObject({ verdict: 'verified', matched: { doi: '10.1038/171737a0' } });
     expect(fake.searches).toHaveLength(1);
+  });
+
+  describe('a paper reprinted under its own title in another venue and year', () => {
+    // Made up, so that no eval reference becomes a test case.
+    const original = paper({
+      id: 'openalex:W1979', doi: '10.1000/jtp.1979.301', title: 'Emergent memory in networks of threshold units',
+      authors: ['A. Lindqvist'], year: 1979, venue: 'Journal of Theoretical Physics', biblio: { volume: '12', firstPage: '301' },
+      sources: [ref('openalex'), ref('europepmc')]
+    });
+    const reprint = paper({
+      ...original, id: 'openalex:W1984', doi: '10.1000/lnp.1984.45', year: 1984, venue: 'Lecture notes in physics',
+      biblio: { firstPage: '45' }, sources: [ref('openalex')]
+    });
+    const check = async (reference: string) => {
+      const fake = fakeEngine([reprint, original]);
+      const { structured } = await verifyReferences.run({ references: [reference] }, fake.deps);
+      return { result: structured.results[0]!, searches: fake.searches };
+    };
+
+    it('is matched to the original when cited with the reprint’s year, by the journal, volume and page cited', async () => {
+      // Measured live: a 1982 paper cited as 1986 was matched to its 1986
+      // reprint in a book series, and called likely rather than ambiguous.
+      const { result, searches } = await check('Lindqvist A. Emergent memory in networks of threshold units. J Theor Phys. 1984;12(3):301-310.');
+      expect(result).toMatchObject({ verdict: 'ambiguous', matched: { doi: '10.1000/jtp.1979.301' }, issues: ['year_mismatch: cited 1984, record 1979'] });
+      expect(searches).toHaveLength(2);
+    });
+
+    it('is matched to the reprint when cited as the reprint', async () => {
+      const { result, searches } = await check(
+        'Lindqvist A. Emergent memory in networks of threshold units. In: Lecture Notes in Physics. Berlin: Springer; 1984. p. 45-52.'
+      );
+      expect(result).toMatchObject({ verdict: 'verified', matched: { doi: '10.1000/lnp.1984.45' } });
+      expect(searches).toHaveLength(1);
+    });
+
+    it('is matched to the original when the original is cited', async () => {
+      const { result } = await check('Lindqvist A. Emergent memory in networks of threshold units. J Theor Phys. 1979;12(3):301-310.');
+      expect(result).toMatchObject({ verdict: 'verified', matched: { doi: '10.1000/jtp.1979.301' } });
+    });
   });
 
   it('never calls a registered DOI no source indexes unregistered', async () => {

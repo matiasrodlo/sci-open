@@ -295,7 +295,7 @@ async function resolveResultSet(settled: Settled, authorityCache: AuthorityCache
 
   if (emptyYears(query)) return emptySet(settled);
 
-  const planned = plan(query, providers);
+  const planned = plan(query, providers, { openAccessOnly });
 
   // Each planned provider's search, as it settles — which is what a source
   // counted one bucket at a time waits for before it starts counting.

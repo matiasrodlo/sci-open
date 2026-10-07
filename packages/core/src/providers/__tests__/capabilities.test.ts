@@ -42,6 +42,11 @@ const EXPECTED: Record<ProviderId | string, Expected> = {
   // every time measured. 25 is a latency ceiling; 50 failed and 100 timed out.
   core: { keywordSearch: false, fieldedSearch: false, doiLookup: true, maxPageSize: 25, reportsTotal: true },
 
+  // A bag-of-words ranking with no count of matches: its `total-results` is
+  // every work sharing a word with the query. Not asked under an open-access
+  // filter, since it reports no access status (`reportsAccess`).
+  crossref: { keywordSearch: true, fieldedSearch: true, doiLookup: true, maxPageSize: 1000, reportsTotal: false },
+
   // Keyword search turned off on evidence — a registry of repository items,
   // returning datasets and software alongside papers.
   datacite: { keywordSearch: false, fieldedSearch: false, doiLookup: true, maxPageSize: 1000, reportsTotal: true },
@@ -166,7 +171,7 @@ describe('provider capabilities', () => {
 
     expect(yielded).toEqual({
       // At or above the requested depth, so they yield all of it.
-      europepmc: 600, plos: 600, arxiv: 600, datacite: 600,
+      europepmc: 600, plos: 600, arxiv: 600, datacite: 600, crossref: 600,
       // OpenAlex caps a page at 200 and paginates internally to reach 600.
       openalex: 200,
       ncbi: 500,
@@ -190,6 +195,7 @@ const STAGES_AND_FACETS: Record<string, { holds: string[]; filter: boolean; face
   arxiv: { holds: ['preprint'], filter: false, facets: ['stage'] },
   biorxiv: { holds: ['preprint'], filter: false, facets: [] },
   core: { holds: ['unknown'], filter: false, facets: [] },
+  crossref: { holds: ['published', 'preprint', 'unknown'], filter: false, facets: [] },
   datacite: { holds: ['preprint', 'published', 'unknown'], filter: false, facets: [] },
   doaj: { holds: ['published'], filter: false, facets: ['year', 'stage'] },
   europepmc: { holds: ['preprint', 'published', 'unknown'], filter: true, facets: ['year', 'stage'] },

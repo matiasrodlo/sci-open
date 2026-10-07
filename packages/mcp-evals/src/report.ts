@@ -1,6 +1,18 @@
 import { mkdirSync, writeFileSync } from 'fs';
 import path from 'path';
 
+/** One reference of the references suite: what it planted, what it was graded,
+ * and, where the checker said, the record it was matched to and why. */
+export type Grade = {
+  list: string;
+  text: string;
+  planted: string;
+  accept: string[];
+  verdict: string;
+  matched?: string;
+  issues?: string[];
+};
+
 export type CaseRecord = {
   id: string;
   pass: boolean;
@@ -22,7 +34,9 @@ export type CaseRecord = {
 /**
  * One JSON file with every case and one Markdown table per run, dated, under
  * `results/`, which is committed: the published numbers and their history. A
- * case the fallback model answered is reported but not scored.
+ * case the fallback model answered is reported but not scored. `grades` in
+ * `extra` (the references suite's) go beside the summary, not in it, and their
+ * misses and unchecked references are listed under the table.
  */
 export function writeReport(
   suite: string,
@@ -32,6 +46,7 @@ export function writeReport(
   /** Added to the file name, for a run against a baseline. */
   label = ''
 ): string {
+  const { grades, ...rest } = extra as { grades?: Grade[] } & Record<string, unknown>;
   const date = new Date().toISOString().slice(0, 10);
   const scored = cases.filter(c => c.fallbackTurns === 0 && c.stopReason !== 'refusal');
   const passed = scored.filter(c => c.pass).length;
@@ -53,13 +68,13 @@ export function writeReport(
             : {})
         }
       : {}),
-    ...extra
+    ...rest
   };
 
   const dir = path.join(__dirname, '..', 'results');
   mkdirSync(dir, { recursive: true });
   const base = `${date}-${suite}-${split}${label ? `-${label}` : ''}`;
-  writeFileSync(path.join(dir, `${base}.json`), `${JSON.stringify({ summary, cases }, null, 2)}\n`);
+  writeFileSync(path.join(dir, `${base}.json`), `${JSON.stringify({ summary, cases, ...(grades ? { grades } : {}) }, null, 2)}\n`);
 
   const value = (v: unknown) =>
     typeof v === 'number' ? (Number.isInteger(v) ? String(v) : v.toFixed(3)) : typeof v === 'string' ? v : JSON.stringify(v);
@@ -83,13 +98,23 @@ export function writeReport(
           `| Answered by a fallback model, or refused (not scored) | ${cases.length - scored.length} |`
         ]
       : []),
-    ...Object.entries(extra).filter(([k]) => k !== 'misses').map(([k, v]) => `| ${k} | ${value(v)} |`),
+    ...Object.entries(rest).map(([k, v]) => `| ${k} | ${value(v)} |`),
     '',
     '### Failures',
     ...scored.filter(c => !c.pass).map(c => `- ${c.id}: ${c.why ?? ''}`),
-    ...((extra.misses as Array<{ text: string; planted: string; verdict: string }> | undefined) ?? [])
-      .map(m => `- ${m.planted}, graded ${m.verdict}: ${m.text}`)
+    ...(grades ?? [])
+      .filter(g => g.verdict !== 'not_checked' && !g.accept.includes(g.verdict))
+      .flatMap(g => [`- ${g.list}, ${g.planted}, graded ${g.verdict}: ${g.text}`, ...why(g)]),
+    ...(grades?.some(g => g.verdict === 'not_checked')
+      ? ['', '### Not checked', ...grades.filter(g => g.verdict === 'not_checked').flatMap(g => [`- ${g.list}: ${g.text}`, ...why(g)])]
+      : [])
   ].join('\n');
   writeFileSync(path.join(dir, `${base}.md`), `${md}\n`);
   return md;
 }
+
+/** The matched record and the checker's issues, as sub-items. */
+const why = (g: Grade): string[] => [
+  ...(g.matched ? [`  - matched ${g.matched}`] : []),
+  ...(g.issues ?? []).map(issue => `  - ${issue}`)
+];

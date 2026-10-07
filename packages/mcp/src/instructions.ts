@@ -9,7 +9,8 @@
  * between requests.
  */
 export const INSTRUCTIONS = `sci-open searches open-access scientific literature across seven sources
-(arXiv, DOAJ, Europe PMC, NCBI/PubMed, OpenAIRE, OpenAlex, PLOS), looks a DOI up
+(arXiv, DOAJ, Europe PMC, NCBI/PubMed, OpenAIRE, OpenAlex, PLOS), and Crossref
+too when closed papers are asked for (open_access_only=false), looks a DOI up
 in those and three more (bioRxiv/medRxiv, CORE, DataCite), merges duplicates,
 and reports which sources answered.
 

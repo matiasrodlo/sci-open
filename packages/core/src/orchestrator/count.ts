@@ -73,7 +73,7 @@ export async function countSearch(params: SearchParams, options: CountOptions): 
     .map(p => ({ provider: p.id, status: 'skipped', retrieved: 0, latency: 0, skipReason: 'reports no match count' }));
 
   await options.admit?.();
-  const planned = plan(query, counting);
+  const planned = plan(query, counting, { openAccessOnly });
   const progress = progressTo(options.onProgress);
   let settled = 0;
   const { reports } = await fanOut(planned, {

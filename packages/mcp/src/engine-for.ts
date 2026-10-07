@@ -19,6 +19,7 @@ export function engineFor(config: McpConfig): Engine {
     userAgent: config.userAgent,
     apiKeys: config.apiKeys,
     depth: config.searchDepth,
+    ...(config.without?.length ? { without: config.without } : {}),
     ...(config.openCitationsToken ? { openCitationsToken: config.openCitationsToken } : {})
   });
 }

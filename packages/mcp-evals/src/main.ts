@@ -1,17 +1,19 @@
 import { readFileSync, readdirSync } from 'fs';
 import path from 'path';
 import { parseArgs } from 'util';
+import { runClaudeCode } from './claude-code';
 import { addUpstream, connect, runCase, type RunResult, type Upstream } from './run';
-import { serverNamed } from './servers';
+import { serverNamed, type Detail } from './servers';
 import {
   parseVerdicts, scoreReading, scoreReferences, scoreSelection, VERDICT_MEANINGS,
   type ReadingCase, type ReferenceItem, type SelectionCase
 } from './scorers';
-import { writeReport, type CaseRecord } from './report';
+import { writeReport, type CaseRecord, type Grade } from './report';
 
 /**
  * One suite: `tsx src/main.ts <selection|references|reading> [tune|holdout]
- * [--server <name>] [--via-model]`, default `tune` against sci-open. Tune on
+ * [--server <name>] [--via-model] [--client claude-code] [--without <sources>]`,
+ * default `tune` against sci-open. Tune on
  * `tune`; `holdout` is the set not read while changing descriptions, and the
  * number the README publishes.
  *
@@ -29,6 +31,14 @@ import { writeReport, type CaseRecord } from './report';
  *
  * `--server` picks a baseline instead of sci-open (src/servers.ts); its report
  * carries the server's name, and is scored by the same scorers.
+ *
+ * `--client claude-code` has Claude Code ask the model (src/claude-code.ts), on
+ * the signed-in Claude account, where the default calls the Claude API. Its
+ * report carries `claude-code`: Claude Code's system prompt makes it another
+ * measurement, not the same one paid for differently.
+ *
+ * `--without openalex` serves sci-open with those sources left out
+ * (SCI_OPEN_WITHOUT), and its report says so: what they are worth, measured.
  */
 
 const DATA = path.join(__dirname, '..', 'datasets');
@@ -87,9 +97,17 @@ function readArgs() {
     args: process.argv.slice(2).filter(arg => arg !== '--'),
     allowPositionals: true,
     strict: true,
-    options: { server: { type: 'string', default: 'sci-open' }, 'via-model': { type: 'boolean', default: false } }
+    options: {
+      server: { type: 'string', default: 'sci-open' },
+      'via-model': { type: 'boolean', default: false },
+      client: { type: 'string', default: 'api' },
+      without: { type: 'string' }
+    }
   });
-  if (parsed.positionals.length > 2) throw new Error(`Unexpected argument "${parsed.positionals[2]}": <suite> [tune|holdout] [--server <name>] [--via-model]`);
+  if (parsed.positionals.length > 2) {
+    throw new Error(`Unexpected argument "${parsed.positionals[2]}": <suite> [tune|holdout] [--server <name>] [--via-model] [--client claude-code] [--without <sources>]`);
+  }
+  if (parsed.values.client !== 'api' && parsed.values.client !== 'claude-code') throw new Error(`Unknown client "${parsed.values.client}": api or claude-code`);
   return parsed;
 }
 
@@ -98,19 +116,28 @@ async function main(): Promise<void> {
   const [suite, split = 'tune'] = positionals;
   if (split !== 'tune' && split !== 'holdout') throw new Error(`Unknown split "${split}": tune or holdout`);
   const baseline = values.server === 'sci-open' ? undefined : values.server;
+  const viaClaudeCode = values.client === 'claude-code';
+  const ask = viaClaudeCode ? runClaudeCode : runCase;
+  const clientLabel = viaClaudeCode ? 'claude-code' : undefined;
+  // Sources sci-open leaves out, for the server and for the report's name.
+  const without = values.without?.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) ?? [];
+  if (without.length && baseline) throw new Error('--without leaves sources out of sci-open; it does not apply to a baseline.');
+  const withoutEnv: Record<string, string> = without.length ? { SCI_OPEN_WITHOUT: without.join(',') } : {};
+  const withoutLabel = without.length ? `without-${without.join('-')}` : undefined;
 
   if (suite === 'selection') {
     if (baseline) throw new Error('The selection suite scores sci-open\'s own tool names. Run references or reading against a baseline.');
+    if (without.length) throw new Error('The selection suite runs on recorded answers, which --without does not change.');
     const records: CaseRecord[] = [];
     for (const c of jsonl<SelectionCase>('tool-selection.jsonl').filter(c => c.split === split)) {
       const started = Date.now();
       // Four turns are plenty to see the first calls; the fixture engine answers them.
       const server = serverNamed('sci-open', ['--engine', 'fixture', ...(c.toolsets ? ['--toolsets', c.toolsets] : [])]);
-      const run = await runCase(c.prompt, server, 4);
+      const run = await ask(c.prompt, server, 4);
       records.push(record(c.id, scoreSelection(c, run.calls), run, Date.now() - started));
       console.log(`${c.id} ${records.at(-1)!.pass ? 'pass' : `FAIL ${records.at(-1)!.why}`}`);
     }
-    console.log(writeReport('selection', split, records));
+    console.log(writeReport('selection', split, records, viaClaudeCode ? { client: 'claude-code' } : {}, clientLabel));
     return;
   }
 
@@ -118,11 +145,14 @@ async function main(): Promise<void> {
     // A list of 25 can take three lookups a reference; the default budget of
     // 30 new searches a minute would leave most of it not_checked.
     const server = serverNamed(values.server, ['--toolsets', 'core'], {
-      SCI_OPEN_MAX_NEW_SEARCHES_PER_MIN: process.env.SCI_OPEN_MAX_NEW_SEARCHES_PER_MIN ?? '200'
+      SCI_OPEN_MAX_NEW_SEARCHES_PER_MIN: process.env.SCI_OPEN_MAX_NEW_SEARCHES_PER_MIN ?? '200',
+      ...withoutEnv
     });
     const viaModel = values['via-model'] || !server.verify;
     const items: ReferenceItem[] = [];
     const verdicts: string[] = [];
+    const lists: string[] = []; // each reference's list file
+    const details: Detail[] = [];
     const runs: RunResult[] = [];
     let upstream: Upstream | undefined;
 
@@ -130,10 +160,11 @@ async function main(): Promise<void> {
       for (const list of referenceLists(split)) {
         const started = Date.now();
         // Thirty turns: a lookup or two a reference, several at a time, and the answer.
-        const run = await runCase(referencePrompt(list.items.map(i => i.text)), server, 30);
+        const run = await ask(referencePrompt(list.items.map(i => i.text)), server, 30);
         runs.push(run);
         upstream = addUpstream(upstream, run.upstream);
         items.push(...list.items);
+        lists.push(...list.items.map(() => list.file));
         verdicts.push(...(scorable(run) ? parseVerdicts(run.answer, list.items.length) : list.items.map(() => 'not_checked')));
         console.log(`${list.file}: ${Date.now() - started} ms, ${run.calls.length} tool calls`);
       }
@@ -143,8 +174,10 @@ async function main(): Promise<void> {
         for (const list of referenceLists(split)) {
           const started = Date.now();
           items.push(...list.items);
+          lists.push(...list.items.map(() => list.file));
           const checked = await server.verify!(client, list.items.map(i => i.text));
           verdicts.push(...checked.verdicts);
+          details.push(...(checked.details ?? []));
           upstream = addUpstream(upstream, checked.upstream);
           console.log(`${list.file}: ${Date.now() - started} ms`);
         }
@@ -154,6 +187,12 @@ async function main(): Promise<void> {
     }
 
     const score = scoreReferences(items, verdicts);
+    // Every reference's grade, so a miss or an unchecked one can be looked
+    // into without running the list again.
+    const grades: Grade[] = items.map((item, i) => ({
+      list: lists[i]!, text: item.text, planted: item.planted, accept: item.accept,
+      verdict: verdicts[i] ?? 'not_checked', ...details[i]
+    }));
     const perList = (f: (run: RunResult) => number) => runs.reduce((n, run) => n + f(run), 0) / runs.length;
     const cost = runs.length
       ? {
@@ -163,16 +202,19 @@ async function main(): Promise<void> {
           listsNotScored: runs.filter(run => !scorable(run)).length
         }
       : {};
-    const label = [baseline, viaModel ? 'model' : undefined].filter(Boolean).join('-');
+    const label = [baseline, viaModel ? 'model' : undefined, viaModel ? clientLabel : undefined, withoutLabel].filter(Boolean).join('-');
+    const asked = `${runs[0]?.models.join(', ') ?? 'none'}${viaClaudeCode ? ', through Claude Code' : ''}`;
     console.log(writeReport('references', split, [], {
-      server: server.name, mode: viaModel ? `model (${runs[0]?.models.join(', ') ?? 'none'})` : 'direct',
+      server: server.name, mode: viaModel ? `model (${asked})` : 'direct',
+      ...(without.length ? { without: without.join(', ') } : {}),
       references: items.length, ...cost,
       // What the run asked of the sources, when the server says: the number
       // the OpenAlex budget is spent against.
       ...(upstream
         ? { upstreamRequests: upstream.requests, upstreamRequestsPerReference: upstream.requests / items.length, openalexCostUsd: upstream.openalexCostUsd }
         : {}),
-      ...score
+      ...score,
+      grades
     }, label));
     if (score.notChecked > 0) {
       console.error(`${score.notChecked} references were not checked: a search budget ran out, a call failed, or a fallback model answered. Re-run rather than publish this.`);
@@ -182,17 +224,21 @@ async function main(): Promise<void> {
   }
 
   if (suite === 'reading') {
-    const server = serverNamed(values.server, ['--toolsets', 'core,read']);
+    const server = serverNamed(values.server, ['--toolsets', 'core,read'], withoutEnv);
     const records: CaseRecord[] = [];
     for (const c of jsonl<ReadingCase>('reading.jsonl').filter(c => c.split === split)) {
       const started = Date.now();
       const prompt = `${c.question} The paper: ${c.paper}. Read it with the tools; do not answer from memory. End with one line: Answer: <value>`;
       // Eight turns: an outline, a section or two, perhaps a search, and the answer.
-      const run = await runCase(prompt, server, 8);
+      const run = await ask(prompt, server, 8);
       records.push(record(c.id, scoreReading(c.answers, run.answer), run, Date.now() - started));
       console.log(`${c.id} ${records.at(-1)!.pass ? 'pass' : `FAIL ${records.at(-1)!.why}`}`);
     }
-    console.log(writeReport('reading', split, records, baseline ? { server: baseline } : {}, baseline));
+    const label = [baseline, clientLabel, withoutLabel].filter(Boolean).join('-');
+    console.log(writeReport('reading', split, records, {
+      ...(baseline ? { server: baseline } : {}), ...(viaClaudeCode ? { client: 'claude-code' } : {}),
+      ...(without.length ? { without: without.join(', ') } : {})
+    }, label));
     return;
   }
 

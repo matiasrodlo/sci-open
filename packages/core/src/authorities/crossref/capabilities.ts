@@ -34,7 +34,8 @@ export const capabilities: AuthorityCapabilities = {
     'language',
     'citationCount',
     'fullText',
-    'landingPage'
+    'landingPage',
+    'retracted'
   ],
 
   // Crossref is the registrar, but a value several search providers already

@@ -1,5 +1,6 @@
 import { parseArgs } from 'util';
-import { MAX_DEPTH, usableApiKey, type ApiKeys } from '@sci-open/core';
+import { MAX_DEPTH, SOURCE_IDS, usableApiKey, type ApiKeys } from '@sci-open/core';
+import type { SourceId } from '@sci-open/shared';
 import { BUILD } from './build-info';
 import type { LogLevel } from './log';
 
@@ -19,6 +20,8 @@ export type McpConfig = {
   openCitationsToken?: string;
   /** `fixture` serves recorded answers, for evals and demos. */
   engine: 'live' | 'fixture';
+  /** Sources never asked (`--without openalex`): see EngineOptions.without. */
+  without?: SourceId[];
   fixturesPath?: string;
   /** Serve Streamable HTTP instead of stdio (`--http`). */
   http?: HttpConfig;
@@ -59,12 +62,14 @@ export const USAGE = `sci-open-mcp: MCP server for open-access scientific litera
   --engine <live|fixture>   fixture serves recorded answers          [SCI_OPEN_ENGINE]
   --fixtures <path>         the recordings for --engine fixture      [SCI_OPEN_FIXTURES]
   --log-level <level>       error, warn, info or debug, to stderr    [SCI_OPEN_LOG_LEVEL]
+  --without <list>          sources never asked, e.g. openalex       [SCI_OPEN_WITHOUT]
   --http                    serve Streamable HTTP at /mcp, not stdio [SCI_OPEN_HTTP=1]
   --port <n>                HTTP port, 8080 by default               [SCI_OPEN_HTTP_PORT]
   --host <address>          HTTP address, 127.0.0.1 by default       [SCI_OPEN_HTTP_HOST]
   --help, --version
 
-Over HTTP: OPENALEX_API_KEY is required (SCI_OPEN_ALLOW_UNKEYED=1 for a trial),
+Over HTTP: OPENALEX_API_KEY is required unless --without openalex
+(SCI_OPEN_ALLOW_UNKEYED=1 for a trial),
 SCI_OPEN_ALLOWED_ORIGINS names hostnames a browser may call from,
 SCI_OPEN_TRUST_PROXY the proxies that may name the client,
 SCI_OPEN_TOTAL_NEW_SEARCHES_PER_MIN caps new searches across every client,
@@ -116,6 +121,7 @@ export function readMcpConfig(env: NodeJS.ProcessEnv, argv: string[]): ConfigRes
         engine: { type: 'string' },
         fixtures: { type: 'string' },
         'log-level': { type: 'string' },
+        without: { type: 'string' },
         http: { type: 'boolean' },
         port: { type: 'string' },
         host: { type: 'string' },
@@ -164,6 +170,12 @@ export function readMcpConfig(env: NodeJS.ProcessEnv, argv: string[]): ConfigRes
   const tools = list(flags.tools ?? read('SCI_OPEN_TOOLS'));
   const openCitationsToken = read('OPENCITATIONS_TOKEN');
   const fixturesPath = flags.fixtures ?? read('SCI_OPEN_FIXTURES');
+  const without: SourceId[] = [];
+  for (const name of list(flags.without ?? read('SCI_OPEN_WITHOUT')) ?? []) {
+    const id = name.toLowerCase() as SourceId;
+    if (SOURCE_IDS.includes(id)) without.push(id);
+    else warnings.push(`--without ${name} is not a source (${SOURCE_IDS.join(', ')}); ignored`);
+  }
 
   let http: HttpConfig | undefined;
   if (flags.http || isOn('SCI_OPEN_HTTP')) {
@@ -203,6 +215,7 @@ export function readMcpConfig(env: NodeJS.ProcessEnv, argv: string[]): ConfigRes
       ...(openCitationsToken ? { openCitationsToken } : {}),
       engine: oneOf('engine', flags.engine ?? read('SCI_OPEN_ENGINE'), ['live', 'fixture'] as const, 'live'),
       ...(fixturesPath ? { fixturesPath } : {}),
+      ...(without.length ? { without } : {}),
       // Over HTTP the path a caller names is on their machine, not this one.
       ...(http ? { http, allowWrites: false } : {})
     },

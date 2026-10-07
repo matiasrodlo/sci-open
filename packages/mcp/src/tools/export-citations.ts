@@ -62,9 +62,9 @@ export const exportCitations = defineTool({
     }
 
     const kinds = args.papers.map(paperRefKind);
-    // Fifty DOIs to an OpenAlex request; a DOI it lacks, or could not be asked
-    // about, falls back to a DOI lookup, which is a search and spends an
-    // admission like one.
+    // Fifty DOIs to an OpenAlex or Crossref request; a DOI neither holds, or
+    // could be asked about, falls back to a DOI lookup, which is a search and
+    // spends an admission like one.
     const { found } = await deps.engine.resolveDois(kinds.flatMap(k => ('doi' in k ? [k.doi] : [])), { signal: deps.signal });
     const limit = pLimit(3);
     const resolved = await Promise.all(kinds.map(k => limit(async (): Promise<Paper | { reason: string }> => {

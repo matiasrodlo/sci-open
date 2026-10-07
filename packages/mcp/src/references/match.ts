@@ -14,6 +14,20 @@ export function tokens(text: string): string[] {
   return fold(text).replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(t => t.length > 1 && !STOP.has(t));
 }
 
+/**
+ * Whether a record's title is the cited title's main title, its subtitle — after
+ * a colon, a question mark or a dash — left off. Sources do that: OpenAlex titles
+ * "False-Positive Psychology: Undisclosed Flexibility in Data Collection…" as
+ * "False-Positive Psychology" and "MapReduce: simplified data processing on
+ * large clusters" as "MapReduce".
+ */
+function isMainTitleOf(record: string, cited: string): boolean {
+  const main = cited.split(/[:?]\s|\s[–—-]\s/)[0]!;
+  if (main.length === cited.length) return false;
+  const overlap = titleOverlap(main, record);
+  return overlap.precision === 1 && overlap.recall === 1;
+}
+
 /** precision: share of the cited title found in the candidate; recall: the reverse. */
 export function titleOverlap(cited: string, candidate: string): { precision: number; recall: number } {
   const a = tokens(cited);
@@ -188,10 +202,17 @@ export type Judgement = {
 export function judge(ref: ParsedReference, paper: Paper): Judgement {
   const corroborated_by = [...new Set(paper.sources.map(s => s.provider))];
   const issues: string[] = [];
-  const overlap = ref.title ? titleOverlap(ref.title, paper.title) : undefined;
   const yearOk = ref.year === undefined || paper.year === undefined ? undefined : Math.abs(ref.year - paper.year) <= 1;
   // A record with no authors cannot contradict a cited one.
   const authorOk = ref.surnames.length === 0 || paper.authors.length === 0 ? undefined : ref.surnames.some(s => surnameIn(s, paper.authors));
+  // A record titled with the cited main title alone, by the authors and in
+  // the year cited, is the paper cited. Measured live: two correct citations
+  // were called a DOI on another paper, their records' titles being three of
+  // twelve cited words and one of seven. The authors and year must agree, so a
+  // different paper sharing a short main title ("Deep learning") never passes.
+  const overlap = !ref.title ? undefined
+    : yearOk && authorOk && isMainTitleOf(paper.title, ref.title) ? { precision: 1, recall: 1 }
+    : titleOverlap(ref.title, paper.title);
   const venueOk = venueConsistent(ref, paper);
   const place = citedPlace(ref);
   const volumeOk = place.volume && paper.biblio?.volume ? number(place.volume) === number(paper.biblio.volume) : undefined;
@@ -208,7 +229,15 @@ export function judge(ref: ParsedReference, paper: Paper): Judgement {
   if (overlap && (precision < 0.9 || recall < 0.9) && precision >= 0.6) {
     issues.push(`title_partial_match: the cited title and the record's share ${Math.round(precision * 100)}% of the cited words`);
   }
-  const score = precision + 0.5 * recall + (yearOk ? 0.3 : 0) + (authorOk ? 0.3 : 0) + 0.05 * Math.min(corroborated_by.length - 1, 3);
+  // The volume and first page cited tell a paper from its reprints, which keep
+  // its title and authors under another venue and year. Measured live: a 1982
+  // paper cited as 1986 scored its 1986 reprint in a book series above the
+  // original, whose volume and first page the citation gave right. The venue
+  // stays out of the score: its check reads abbreviations loosely, and the
+  // "Phys" of a Rev. Mod. Phys. citation names Physical Review Letters too.
+  const placeChecks = [volumeOk, pagesOk];
+  const placeScore = 0.15 * (placeChecks.filter(ok => ok === true).length - placeChecks.filter(ok => ok === false).length);
+  const score = precision + 0.5 * recall + (yearOk ? 0.3 : 0) + (authorOk ? 0.3 : 0) + placeScore + 0.05 * Math.min(corroborated_by.length - 1, 3);
   const contradicted = yearOk === false || authorOk === false;
   // A detail the paper does not settle: it exists, and the citation is off.
   const detailWrong = venueOk === false || volumeOk === false || pagesOk === false;

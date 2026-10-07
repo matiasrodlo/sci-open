@@ -82,6 +82,15 @@ describe('readMcpConfig', () => {
     expect(config.apiKeys).toEqual({ openalex: 'real-key' });
   });
 
+  it('leaves out the sources it is told to, flag first, and warns about a name that is no source', () => {
+    expect(readMcpConfig(EMAIL, []).config).not.toHaveProperty('without');
+    expect(readMcpConfig({ ...EMAIL, SCI_OPEN_WITHOUT: 'OpenAlex' }, []).config.without).toEqual(['openalex']);
+    expect(readMcpConfig({ ...EMAIL, SCI_OPEN_WITHOUT: 'core' }, ['--without', 'openalex,crossref']).config.without).toEqual(['openalex', 'crossref']);
+    const { config, warnings } = readMcpConfig({ ...EMAIL, SCI_OPEN_WITHOUT: 'openalex,scopus' }, []);
+    expect(config.without).toEqual(['openalex']);
+    expect(warnings).toEqual([expect.stringMatching(/^--without scopus is not a source \(.*openalex.*\); ignored$/)]);
+  });
+
   it('exits 0 for --help and --version and 2 for an unknown flag, writing nothing to stdout', () => {
     const write = vi.spyOn(process.stdout, 'write');
     expect(readMcpConfig(EMAIL, ['--help']).exit).toMatchObject({ code: 0, output: expect.stringContaining('--toolsets') });

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getPooledClient } from '../../lib/http-client-factory';
+import { crossrefRequest } from '../../lib/crossref-pace';
 
 /** The only I/O in this authority. */
 
@@ -29,17 +30,20 @@ export async function lookupDoi(doi: string, options: FetchOptions): Promise<Cro
   const client = getPooledClient(baseUrl);
 
   try {
-    const response = await client.get<CrossrefPayload>(`/works/${encodeURIComponent(doi)}`, {
+    // Inside Crossref's limits for a single record, which the search
+    // provider's DOI lookups share.
+    const response = await crossrefRequest('single', () => client.get<CrossrefPayload>(`/works/${encodeURIComponent(doi)}`, {
       timeout: timeoutMs,
       headers: { Accept: 'application/json', ...(userAgent ? { 'User-Agent': userAgent } : {}) },
       ...(signal ? { signal } : {})
-    });
+    }), { maxWaitMs: timeoutMs, ...(userAgent ? { userAgent } : {}), ...(signal ? { signal } : {}) });
 
     // The pooled client resolves anything under 500, so a 404 arrives here
     // rather than in the catch.
     if (response.status === 404) return null;
     if (response.status >= 400) {
-      throw new Error(`Crossref ${response.status} for ${doi}`);
+      // The status rides along, so a 429 is read as the rate limit it is.
+      throw Object.assign(new Error(`Crossref ${response.status} for ${doi}`), { status: response.status });
     }
 
     return response.data?.message ? response.data : null;

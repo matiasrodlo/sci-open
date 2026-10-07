@@ -74,7 +74,29 @@ export function toToolError(error: unknown): ToolError {
   if (isTimeout(error)) {
     return new ToolError('upstream_unavailable', 'A source did not answer in time.', 'Retry once; if it persists, narrow the query or restrict sources.');
   }
+  // A source's own refusal or failure, by the HTTP status its client attached
+  // (arXiv, bioRxiv, OpenAlex) or the HTTP client's error carries. Measured
+  // live: arXiv's 429s reached the model as `internal`, a fault of this server.
+  const status = httpStatus(error);
+  if (status === 429) {
+    const seconds = retryAfter(error) ?? 60;
+    return new ToolError('rate_limited', 'A source asks for fewer requests for now.', `Retry in ${seconds} s.`, seconds);
+  }
+  if (status !== undefined && status >= 500) {
+    return new ToolError('upstream_unavailable', 'A source failed to answer.', 'Retry once; if it persists, restrict sources.');
+  }
   return new ToolError('internal', 'The server could not complete this request.');
+}
+
+function httpStatus(error: unknown): number | undefined {
+  const e = error as { status?: unknown; response?: { status?: unknown } } | undefined;
+  const status = e?.status ?? e?.response?.status;
+  return typeof status === 'number' ? status : undefined;
+}
+
+function retryAfter(error: unknown): number | undefined {
+  const seconds = (error as { retryAfterSeconds?: unknown } | undefined)?.retryAfterSeconds;
+  return typeof seconds === 'number' && seconds > 0 ? Math.ceil(seconds) : undefined;
 }
 
 /**

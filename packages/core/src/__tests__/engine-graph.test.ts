@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { links, works } = vi.hoisted(() => ({ links: vi.fn(), works: vi.fn() }));
+const { links, works, crossrefPage } = vi.hoisted(() => ({ links: vi.fn(), works: vi.fn(), crossrefPage: vi.fn() }));
 vi.mock('../graph/opencitations', async importOriginal => ({
   ...(await importOriginal<typeof import('../graph/opencitations')>()),
   citationLinks: links
@@ -8,6 +8,10 @@ vi.mock('../graph/opencitations', async importOriginal => ({
 vi.mock('../providers/openalex/fetch', async importOriginal => ({
   ...(await importOriginal<typeof import('../providers/openalex/fetch')>()),
   fetchWorksByDoi: works
+}));
+vi.mock('../providers/crossref/fetch', async importOriginal => ({
+  ...(await importOriginal<typeof import('../providers/crossref/fetch')>()),
+  fetchPage: crossrefPage
 }));
 
 import type { Paper } from '@sci-open/shared';
@@ -56,6 +60,21 @@ function openalexSource() {
 beforeEach(() => {
   links.mockReset();
   works.mockReset();
+  crossrefPage.mockReset();
+});
+
+/** Crossref as a search source, recording whether it was searched. */
+function crossrefSource() {
+  const source = openalexSource();
+  return { entry: { ...source.entry, id: 'crossref' as const }, asked: source.asked };
+}
+
+/** Crossref's answer to a `doi:` filter: a record for each DOI asked, as `fetchPage` returns it. */
+const crossrefAnswer = (native: string) => ({
+  message: {
+    items: new URLSearchParams(native).get('filter')!.split(',').map(f => f.slice('doi:'.length))
+      .map(doi => ({ DOI: doi, title: [`Work ${doi}`], subtitle: ['its subtitle'], issued: { 'date-parts': [[2020]] }, type: 'journal-article' }))
+  }
 });
 
 describe('citationLinks', () => {
@@ -240,5 +259,88 @@ describe('resolveDois', () => {
     const engine = createEngine({ userAgent: 'test', providers: [], authorities: [] });
     expect(await engine.resolveDois([])).toEqual({ found: new Map(), unasked: [] });
     expect(works).not.toHaveBeenCalled();
+  });
+});
+
+describe('an engine without OpenAlex', () => {
+  it('never asks it: not to search, not about a paper, not for a batch of DOIs', async () => {
+    const searched = openalexSource();
+    const asked: string[] = [];
+    const authority = (id: 'openalex' | 'crossref'): AuthorityEntry => ({
+      id,
+      capabilities: { fields: ['citationCount'], authoritative: [] },
+      pass: 1,
+      lookup: async () => {
+        asked.push(id);
+        return { citationCount: 3 };
+      }
+    } as AuthorityEntry);
+    const held: Paper = paper({ id: 'europepmc:1', doi: '10.1234/x', sources: [ref('europepmc', { nativeId: '1' })] });
+    const europepmc: ProviderEntry = {
+      ...openalexSource().entry,
+      id: 'europepmc',
+      search: async () => ({ papers: [held], totalHits: 1, skipped: [] }),
+      lookup: async () => held
+    };
+    const engine = createEngine({
+      userAgent: 'test', providers: [searched.entry, europepmc], authorities: [authority('openalex'), authority('crossref')], without: ['openalex']
+    });
+
+    const { response } = await engine.search({ q: 'crispr' });
+    expect(searched.asked).toEqual([]);
+    expect(response.providers.map(r => r.provider)).toEqual(['europepmc']);
+    expect(await engine.lookup('europepmc:1')).toMatchObject({ citationCount: 3 });
+    expect(asked).toContain('crossref');
+    expect(asked).not.toContain('openalex');
+    // Unasked, each DOI is left for a lookup in every other source.
+    expect(await engine.resolveDois(['10.1/X'])).toEqual({ found: new Map(), unasked: ['10.1/x'] });
+    expect(works).not.toHaveBeenCalled();
+  });
+});
+
+describe('resolveDois from Crossref', () => {
+  it('asks Crossref for every DOI, fifty to a request, when OpenAlex is left out', async () => {
+    const engine = createEngine({ userAgent: 'test', providers: [crossrefSource().entry], authorities: [], without: ['openalex'] });
+    crossrefPage.mockImplementation(async (native: string) => crossrefAnswer(native));
+    const dois = Array.from({ length: 60 }, (_, i) => `10.1/A${i}`);
+
+    const { found, unasked } = await engine.resolveDois([...dois, '10.1/a,b']);
+
+    expect(works).not.toHaveBeenCalled();
+    expect(crossrefPage.mock.calls.map(([native]) => new URLSearchParams(native as string).get('filter')!.split(',').length)).toEqual([50, 10]);
+    expect(found.size).toBe(60);
+    expect(found.get('10.1/a0')).toMatchObject({ id: 'crossref:10.1/a0', title: 'Work 10.1/a0: its subtitle', year: 2020 });
+    // A comma would split the filter.
+    expect(unasked).toEqual(['10.1/a,b']);
+  });
+
+  it('asks Crossref about the DOIs OpenAlex failed on, and only those', async () => {
+    const engine = createEngine({ userAgent: 'test', providers: [crossrefSource().entry], authorities: [] });
+    const dois = Array.from({ length: 60 }, (_, i) => `10.1/${i}`);
+    works
+      .mockRejectedValueOnce(new Error('timeout of 15000ms exceeded'))
+      .mockImplementationOnce(async (batch: string[]) => ({ results: batch.map(d => work(d)) }));
+    crossrefPage.mockImplementation(async (native: string) => crossrefAnswer(native));
+
+    const { found, unasked } = await engine.resolveDois(dois);
+
+    expect(new URLSearchParams(crossrefPage.mock.calls[0]![0] as string).get('filter')!.split(',')).toEqual(dois.slice(0, 50).map(d => `doi:${d}`));
+    expect(found.get('10.1/0')!.id).toBe('crossref:10.1/0');
+    expect(found.get('10.1/55')!.id).toMatch(/^openalex:/);
+    expect(unasked).toEqual([]);
+  });
+
+  it('cools Crossref down on a refused batch, for the batches after it and for searches', async () => {
+    const source = crossrefSource();
+    const engine = createEngine({ userAgent: 'test', providers: [source.entry], authorities: [], without: ['openalex'] });
+    crossrefPage.mockRejectedValue(Object.assign(new Error('Crossref 429'), { status: 429 }));
+
+    const first = await engine.resolveDois(Array.from({ length: 60 }, (_, i) => `10.1/${i}`));
+    expect(crossrefPage).toHaveBeenCalledTimes(1);
+    expect(first.unasked).toHaveLength(60);
+
+    const { response } = await engine.search({ q: 'crispr', filters: { openAccessOnly: false } });
+    expect(source.asked).toEqual([]);
+    expect(response.providers.find(r => r.provider === 'crossref')).toMatchObject({ rateLimited: 'cooling-down' });
   });
 });

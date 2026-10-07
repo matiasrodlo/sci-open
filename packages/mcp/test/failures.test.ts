@@ -62,8 +62,13 @@ describe('a failed tool call', () => {
 
   it('logs an upstream failure as a warning, a wait as info, and a tool’s own answer only at debug', async () => {
     const timeout = Object.assign(new Error('timeout of 15000ms exceeded'), { code: 'ECONNABORTED' });
+    // As the arXiv client throws a status it is answered with, and as the HTTP client throws a 5xx.
+    const refused = Object.assign(new Error('arXiv 429'), { status: 429 });
+    const failed = Object.assign(new Error('Request failed with status code 503'), { response: { status: 503 } });
     const cases: Array<[string, Error | undefined, string]> = [
       ['upstream_unavailable', timeout, 'warn'],
+      ['rate_limited', refused, 'info'],
+      ['upstream_unavailable', failed, 'warn'],
       ['not_found', undefined, 'debug'] // no source holds it: an answer, not a failure
     ];
     for (const [code, thrown, level] of cases) {
@@ -84,6 +89,15 @@ describe('a failed tool call', () => {
     const { structured } = await verifyReferences.run({ references: ['10.1234/s.1'] }, { ...verifying.deps, logger: verified.logger });
     expect(structured.results[0]).toMatchObject({ verdict: 'not_checked', issues: ['lookup_failed: internal'] });
     expect(verified.lines).toMatchObject([{ level: 'error', fields: { tool: 'verify_references', code: 'internal', err: 'boom in a normalizer' } }]);
+
+    // Measured live: arXiv's 429 on an arXiv id left the reference not checked
+    // as `internal`. It is a wait, with a number on it.
+    const busy = fakeEngine([STUDY]);
+    vi.spyOn(busy.engine, 'lookup').mockRejectedValue(Object.assign(new Error('arXiv 429'), { status: 429 }));
+    const waited = capture();
+    const checked = await verifyReferences.run({ references: ['arXiv:1610.02415'] }, { ...busy.deps, logger: waited.logger });
+    expect(checked.structured.results[0]).toMatchObject({ verdict: 'not_checked', issues: ['rate_limited: retry in 60 s'] });
+    expect(waited.lines).toMatchObject([{ level: 'info', fields: { tool: 'verify_references', code: 'rate_limited' } }]);
 
     const exporting = fakeEngine([STUDY]);
     vi.spyOn(exporting.engine, 'lookup').mockRejectedValue(new TypeError('boom in a lookup'));

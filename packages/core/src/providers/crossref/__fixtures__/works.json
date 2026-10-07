@@ -1,0 +1,512 @@
+{
+ "_note": "Recorded from api.crossref.org on 2026-10-07: a three-DOI filter (list) one single-DOI record, and a retracted one (Wakefield et al. 1998), trimmed to the selected fields; the last two items are made up.",
+ "list": {
+  "status": "ok",
+  "message": {
+   "total-results": 3,
+   "items": [
+    {
+     "DOI": "10.1177/0956797611417632",
+     "title": [
+      "False-Positive Psychology"
+     ],
+     "subtitle": [
+      "Undisclosed Flexibility in Data Collection and Analysis Allows Presenting Anything as Significant"
+     ],
+     "author": [
+      {
+       "given": "Joseph P.",
+       "family": "Simmons",
+       "sequence": "first",
+       "affiliation": [
+        {
+         "name": "Wharton School, University of Pennsylvania"
+        }
+       ],
+       "role": [
+        {
+         "vocabulary": "crossref",
+         "role": "author"
+        }
+       ]
+      },
+      {
+       "given": "Leif D.",
+       "family": "Nelson",
+       "sequence": "additional",
+       "affiliation": [
+        {
+         "name": "Haas School of Business, University of California, Berkeley"
+        }
+       ],
+       "role": [
+        {
+         "vocabulary": "crossref",
+         "role": "author"
+        }
+       ]
+      },
+      {
+       "given": "Uri",
+       "family": "Simonsohn",
+       "sequence": "additional",
+       "affiliation": [
+        {
+         "name": "Wharton School, University of Pennsylvania"
+        }
+       ],
+       "role": [
+        {
+         "vocabulary": "crossref",
+         "role": "author"
+        }
+       ]
+      }
+     ],
+     "issued": {
+      "date-parts": [
+       [
+        2011,
+        10,
+        17
+       ]
+      ]
+     },
+     "container-title": [
+      "Psychological Science"
+     ],
+     "volume": "22",
+     "page": "1359-1366",
+     "type": "journal-article"
+    },
+    {
+     "DOI": "10.1086/225469",
+     "title": [
+      "The Strength of Weak Ties"
+     ],
+     "author": [
+      {
+       "given": "Mark S.",
+       "family": "Granovetter",
+       "sequence": "first",
+       "affiliation": [],
+       "role": [
+        {
+         "vocabulary": "crossref",
+         "role": "author"
+        }
+       ]
+      }
+     ],
+     "issued": {
+      "date-parts": [
+       [
+        1973,
+        5
+       ]
+      ]
+     },
+     "container-title": [
+      "American Journal of Sociology"
+     ],
+     "volume": "78",
+     "page": "1360-1380",
+     "type": "journal-article"
+    },
+    {
+     "DOI": "10.1145/359340.359342",
+     "title": [
+      "A method for obtaining digital signatures and public-key cryptosystems"
+     ],
+     "author": [
+      {
+       "given": "R. L.",
+       "family": "Rivest",
+       "sequence": "first",
+       "affiliation": [
+        {
+         "name": "MIT Lab. for Computer Science and Department of Mathematics, Cambridge, MA"
+        }
+       ],
+       "role": [
+        {
+         "vocabulary": "crossref",
+         "role": "author"
+        }
+       ]
+      },
+      {
+       "given": "A.",
+       "family": "Shamir",
+       "sequence": "additional",
+       "affiliation": [
+        {
+         "name": "MIT Lab. for Computer Science and Department of Mathematics, Cambridge, MA"
+        }
+       ],
+       "role": [
+        {
+         "vocabulary": "crossref",
+         "role": "author"
+        }
+       ]
+      },
+      {
+       "given": "L.",
+       "family": "Adleman",
+       "sequence": "additional",
+       "affiliation": [
+        {
+         "name": "MIT Lab. for Computer Science and Department of Mathematics, Cambridge, MA"
+        }
+       ],
+       "role": [
+        {
+         "vocabulary": "crossref",
+         "role": "author"
+        }
+       ]
+      }
+     ],
+     "issued": {
+      "date-parts": [
+       [
+        1978,
+        2
+       ]
+      ]
+     },
+     "container-title": [
+      "Communications of the ACM"
+     ],
+     "volume": "21",
+     "page": "120-126",
+     "type": "journal-article"
+    },
+    {
+     "title": [
+      "A record with no DOI"
+     ],
+     "type": "journal-article"
+    },
+    {
+     "DOI": "10.1000/untitled",
+     "type": "journal-article"
+    }
+   ]
+  }
+ },
+ "single": {
+  "status": "ok",
+  "message": {
+   "DOI": "10.1145/1327452.1327492",
+   "title": [
+    "MapReduce"
+   ],
+   "subtitle": [
+    "simplified data processing on large clusters"
+   ],
+   "author": [
+    {
+     "given": "Jeffrey",
+     "family": "Dean",
+     "sequence": "first",
+     "affiliation": [
+      {
+       "name": "Google, Mountain View, CA"
+      }
+     ],
+     "role": [
+      {
+       "vocabulary": "crossref",
+       "role": "author"
+      }
+     ]
+    },
+    {
+     "given": "Sanjay",
+     "family": "Ghemawat",
+     "sequence": "additional",
+     "affiliation": [
+      {
+       "name": "Google, Mountain View, CA"
+      }
+     ],
+     "role": [
+      {
+       "vocabulary": "crossref",
+       "role": "author"
+      }
+     ]
+    }
+   ],
+   "issued": {
+    "date-parts": [
+     [
+      2008,
+      1
+     ]
+    ]
+   },
+   "published-print": {
+    "date-parts": [
+     [
+      2008,
+      1
+     ]
+    ]
+   },
+   "published-online": {
+    "date-parts": [
+     [
+      2008,
+      1
+     ]
+    ]
+   },
+   "container-title": [
+    "Communications of the ACM"
+   ],
+   "short-container-title": [
+    "Commun. ACM"
+   ],
+   "volume": "51",
+   "issue": "1",
+   "page": "107-113",
+   "type": "journal-article",
+   "is-referenced-by-count": 11666,
+   "abstract": "<jats:p>\n                    MapReduce is a programming model and an associated implementation for processing and generating large datasets that is amenable to a broad variety of real-world tasks. Users specify the computation in terms of a\n                    <jats:italic>map</jats:italic>\n                    and a\n                    <jats:italic>reduce</jats:italic>\n                    function, and the underlying runtime system automatically parallelizes the computation across large-scale clusters of machines, handles machine failures, and schedules inter-machine communication to make efficient use of the network and disks. Programmers find the system easy to use: more than ten thousand distinct MapReduce programs have been implemented internally at Google over the past four years, and an average of one hundred thousand MapReduce jobs are executed on Google's clusters every day, processing a total of more than twenty petabytes of data per day.\n                  </jats:p>",
+   "publisher": "Association for Computing Machinery (ACM)",
+   "language": "en"
+  }
+ },
+ "retracted": {
+  "status": "ok",
+  "message": {
+   "DOI": "10.1016/s0140-6736(97)11096-0",
+   "title": [
+    "RETRACTED: Ileal-lymphoid-nodular hyperplasia, non-specific colitis, and pervasive developmental disorder in children"
+   ],
+   "subtitle": [],
+   "author": [
+    {
+     "given": "AJ",
+     "family": "Wakefield",
+     "sequence": "first",
+     "affiliation": [],
+     "role": [
+      {
+       "vocabulary": "crossref",
+       "role": "author"
+      }
+     ]
+    },
+    {
+     "given": "SH",
+     "family": "Murch",
+     "sequence": "additional",
+     "affiliation": [],
+     "role": [
+      {
+       "vocabulary": "crossref",
+       "role": "author"
+      }
+     ]
+    },
+    {
+     "given": "A",
+     "family": "Anthony",
+     "sequence": "additional",
+     "affiliation": [],
+     "role": [
+      {
+       "vocabulary": "crossref",
+       "role": "author"
+      }
+     ]
+    },
+    {
+     "given": "J",
+     "family": "Linnell",
+     "sequence": "additional",
+     "affiliation": [],
+     "role": [
+      {
+       "vocabulary": "crossref",
+       "role": "author"
+      }
+     ]
+    },
+    {
+     "given": "DM",
+     "family": "Casson",
+     "sequence": "additional",
+     "affiliation": [],
+     "role": [
+      {
+       "vocabulary": "crossref",
+       "role": "author"
+      }
+     ]
+    },
+    {
+     "given": "M",
+     "family": "Malik",
+     "sequence": "additional",
+     "affiliation": [],
+     "role": [
+      {
+       "vocabulary": "crossref",
+       "role": "author"
+      }
+     ]
+    },
+    {
+     "given": "M",
+     "family": "Berelowitz",
+     "sequence": "additional",
+     "affiliation": [],
+     "role": [
+      {
+       "vocabulary": "crossref",
+       "role": "author"
+      }
+     ]
+    },
+    {
+     "given": "AP",
+     "family": "Dhillon",
+     "sequence": "additional",
+     "affiliation": [],
+     "role": [
+      {
+       "vocabulary": "crossref",
+       "role": "author"
+      }
+     ]
+    },
+    {
+     "given": "MA",
+     "family": "Thomson",
+     "sequence": "additional",
+     "affiliation": [],
+     "role": [
+      {
+       "vocabulary": "crossref",
+       "role": "author"
+      }
+     ]
+    },
+    {
+     "given": "P",
+     "family": "Harvey",
+     "sequence": "additional",
+     "affiliation": [],
+     "role": [
+      {
+       "vocabulary": "crossref",
+       "role": "author"
+      }
+     ]
+    },
+    {
+     "given": "A",
+     "family": "Valentine",
+     "sequence": "additional",
+     "affiliation": [],
+     "role": [
+      {
+       "vocabulary": "crossref",
+       "role": "author"
+      }
+     ]
+    },
+    {
+     "given": "SE",
+     "family": "Davies",
+     "sequence": "additional",
+     "affiliation": [],
+     "role": [
+      {
+       "vocabulary": "crossref",
+       "role": "author"
+      }
+     ]
+    },
+    {
+     "given": "JA",
+     "family": "Walker-Smith",
+     "sequence": "additional",
+     "affiliation": [],
+     "role": [
+      {
+       "vocabulary": "crossref",
+       "role": "author"
+      }
+     ]
+    }
+   ],
+   "issued": {
+    "date-parts": [
+     [
+      1998,
+      2
+     ]
+    ]
+   },
+   "published-print": {
+    "date-parts": [
+     [
+      1998,
+      2
+     ]
+    ]
+   },
+   "container-title": [
+    "The Lancet"
+   ],
+   "volume": "351",
+   "issue": "9103",
+   "page": "637-641",
+   "type": "journal-article",
+   "updated-by": [
+    {
+     "DOI": "10.1016/s0140-6736(04)15715-2",
+     "type": "correction",
+     "label": "Correction",
+     "source": "retraction-watch",
+     "updated": {
+      "date-parts": [
+       [
+        2004,
+        3,
+        6
+       ]
+      ],
+      "date-time": "2004-03-06T00:00:00Z",
+      "timestamp": 1078531200000
+     },
+     "record-id": "17269"
+    },
+    {
+     "DOI": "10.1016/s0140-6736(10)60175-4",
+     "type": "retraction",
+     "label": "Retraction",
+     "source": "retraction-watch",
+     "updated": {
+      "date-parts": [
+       [
+        2010,
+        2,
+        6
+       ]
+      ],
+      "date-time": "2010-02-06T00:00:00Z",
+      "timestamp": 1265414400000
+     },
+     "record-id": "4036"
+    }
+   ]
+  }
+ }
+}

@@ -5,7 +5,7 @@ import pLimit from '../p-limit';
 import { defineTool, type ToolDeps } from '../framework/define-tool';
 import { reportToolError } from '../errors';
 import { parseReference, type ParsedReference } from '../references/parse';
-import { judge, titleOverlap, tokens, type Judgement } from '../references/match';
+import { judge, tokens, type Judgement } from '../references/match';
 import { shapePaper, paperSchema, listedTitle, retractionWarning } from '../shape/paper';
 import { fenceUntrusted } from '../safety/untrusted';
 import { sanitizeText } from '../safety/sanitize';
@@ -57,11 +57,12 @@ export const verifyReferences = defineTool({
     results: z.array(resultSchema)
   }),
   async run(args, deps) {
-    // Every cited DOI from OpenAlex first, fifty to a request and no admission:
-    // a DOI it holds is judged on its record, without a search of every
-    // source. A batch failure costs only that shortcut.
+    // Every cited DOI resolved first, fifty to a request and no admission —
+    // from OpenAlex, or from Crossref where OpenAlex is not asked: a DOI held
+    // is judged on that record, without a search of every source. A batch
+    // failure costs only that shortcut.
     const dois = [...new Set(args.references.flatMap(r => citedDoi(r) ?? []))];
-    const openalex = dois.length
+    const resolved = dois.length
       ? await deps.engine.resolveDois(dois, { signal: deps.signal }).then(r => r.found, (error: unknown) => {
           // Cancelled, the call fails as a whole, and nothing failed to log.
           deps.signal.throwIfAborted();
@@ -70,7 +71,7 @@ export const verifyReferences = defineTool({
         })
       : new Map<string, Paper>();
     const limit = pLimit(3); // be polite: three references in flight at once
-    const results = await Promise.all(args.references.map(r => limit(() => checkOne(r, deps, openalex))));
+    const results = await Promise.all(args.references.map(r => limit(() => checkOne(r, deps, resolved))));
     const summary = { verified: 0, likely: 0, ambiguous: 0, mismatch: 0, not_found: 0, not_checked: 0, retracted: 0 };
     for (const r of results) summary[r.verdict]++;
     summary.retracted = results.filter(r => r.matched?.retracted).length;
@@ -104,11 +105,11 @@ function citedDoi(raw: string): string | undefined {
 
 /** One reference. A refused admission or a failed lookup is this reference's
  * outcome, not the batch's: the verdicts already reached are kept. */
-async function checkOne(raw: string, deps: ToolDeps, openalex: ReadonlyMap<string, Paper>): Promise<Result> {
+async function checkOne(raw: string, deps: ToolDeps, resolved: ReadonlyMap<string, Paper>): Promise<Result> {
   try {
     // A reference still queued when the call is cancelled is never started.
     deps.signal.throwIfAborted();
-    return await verifyOne(parseReference(raw), deps, openalex);
+    return await verifyOne(parseReference(raw), deps, resolved);
   } catch (caught) {
     // Cancelled, the call fails as a whole; no verdict is wanted any more.
     if (deps.signal.aborted) throw caught;
@@ -129,13 +130,14 @@ async function checkOne(raw: string, deps: ToolDeps, openalex: ReadonlyMap<strin
  * cited title. A DOI no source holds is asked of the DOI system itself before
  * it is called invented: the registry answers for every agency.
  *
- * A DOI is judged on OpenAlex's record (`openalex`, asked for the whole batch)
- * when it has one, and looked up in every source only when it has not. The
- * verdict is the same either way — corroboration moves the judge's score,
- * never its verdict — but `corroborated_by` then names OpenAlex alone, and
- * whether the paper is retracted is OpenAlex's word alone.
+ * A DOI is judged on the record the batch resolved it to (`resolved`: from
+ * OpenAlex, or from Crossref where OpenAlex is not asked) when it has one, and
+ * looked up in every source only when it has not. The verdict is the same
+ * either way — corroboration moves the judge's score, never its verdict — but
+ * `corroborated_by` then names that one source, and whether the paper is
+ * retracted is its word alone.
  */
-async function verifyOne(ref: ParsedReference, deps: ToolDeps, openalex: ReadonlyMap<string, Paper>): Promise<Result> {
+async function verifyOne(ref: ParsedReference, deps: ToolDeps, resolved: ReadonlyMap<string, Paper>): Promise<Result> {
   const input = sanitizeText(ref.raw);
   const done = (
     matched_on: 'doi' | 'arxiv' | 'pmid' | 'title',
@@ -167,13 +169,15 @@ async function verifyOne(ref: ParsedReference, deps: ToolDeps, openalex: Readonl
   });
 
   if (ref.doi) {
-    const paper = openalex.get(ref.doi.toLowerCase()) ?? (await deps.engine.lookupDoi(ref.doi, { admit: deps.admit, signal: deps.signal }));
+    const paper = resolved.get(ref.doi.toLowerCase()) ?? (await deps.engine.lookupDoi(ref.doi, { admit: deps.admit, signal: deps.signal }));
     if (paper) {
       const j = judge(ref, paper);
       // A DOI that resolves names a real paper, so a title that does not match
       // it is a wrong DOI, never "not found" — however much the two titles
-      // share (PRISMA 2009 cited with the PRISMA 2020 statement's DOI).
-      const wrong = ref.title !== undefined && (titleOverlap(ref.title, paper.title).precision < 0.5 || j.verdict === 'not_found');
+      // share (PRISMA 2009 cited with the PRISMA 2020 statement's DOI). The
+      // judge's precision, not the raw overlap: it reads a record that left the
+      // cited subtitle off as the title cited.
+      const wrong = ref.title !== undefined && ((j.title_precision ?? 0) < 0.5 || j.verdict === 'not_found');
       if (!wrong) return done('doi', paper, j);
       // The DOI's paper is not the one cited. The rest of the citation may
       // still name a real paper, whose DOI is the correction: find it, and
@@ -222,6 +226,9 @@ type Found = { p: Paper; j: Judgement };
 
 const STRONG = new Set(['verified', 'likely']);
 
+/** The record's venue, volume or first page is not the one cited. */
+const publishedElsewhere = (j: Judgement) => j.venue_consistent === false || j.volume_consistent === false || j.pages_consistent === false;
+
 /** The candidates a title search hands the judge: the top of the merged answer. */
 const JUDGED = 5;
 
@@ -248,15 +255,17 @@ const TITLE_DEPTH = 25;
  * goes first because classic papers are reprinted under their own title: the
  * plain title search ranked a 2007 reprint above the original. A year search
  * that finds only a weak match goes on, since the cited year may be the error;
- * the plain title search stops at any match, so a wrong year costs two
- * searches, not three.
+ * so does one whose match was published somewhere other than the citation
+ * says, which is how a reprint carrying the wrong year cited looks, and the
+ * plain title search then brings the original in to be judged beside it. That
+ * search stops at any match, so a wrong year costs two searches, not three.
  */
 async function findByTitle(ref: ParsedReference, deps: ToolDeps): Promise<Found | undefined> {
   if (!ref.title) return undefined;
   const words = tokens(ref.title).filter(t => !OPERATOR_WORDS.has(t)).slice(0, 12).join(' ');
   if (!words) return undefined;
   const attempts: Array<{ q: string; enough: (found: Found) => boolean }> = [
-    ...(ref.year ? [{ q: `TI=(${words}) AND PY=${ref.year - 1}-${ref.year + 1}`, enough: (f: Found) => STRONG.has(f.j.verdict) }] : []),
+    ...(ref.year ? [{ q: `TI=(${words}) AND PY=${ref.year - 1}-${ref.year + 1}`, enough: (f: Found) => STRONG.has(f.j.verdict) && !publishedElsewhere(f.j) }] : []),
     { q: `TI=(${words})`, enough: (f: Found) => f.j.verdict !== 'not_found' },
     { q: `TS=(${words})`, enough: () => true }
   ];

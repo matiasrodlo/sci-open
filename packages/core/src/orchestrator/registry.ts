@@ -3,6 +3,7 @@ import { apiKeyFor, type KeyedProvider } from '../lib/api-key';
 import * as arxiv from '../providers/arxiv';
 import * as biorxiv from '../providers/biorxiv';
 import * as core from '../providers/core';
+import * as crossref from '../providers/crossref';
 import * as datacite from '../providers/datacite';
 import * as doaj from '../providers/doaj';
 import * as europepmc from '../providers/europepmc';
@@ -96,7 +97,7 @@ export type ProviderEntry = {
  *
  * Every provider's `search`, `lookup` and `facets` already take the same core
  * options — the provider's own option types are supersets of these — so one
- * adapter drives all ten. There used to be ten, written out by hand: thirty
+ * adapter drives all eleven. There used to be ten, written out by hand: thirty
  * lines each of copying `signal`, `userAgent` and `now` across and reading an
  * API key from `process.env`, identical but for which key, and a place for
  * one of them to forward something the others did not.
@@ -177,6 +178,7 @@ export const PROVIDERS: ProviderEntry[] = [
   defineProvider('datacite', datacite, { key: 'datacite' }),
   defineProvider('biorxiv', biorxiv),
   defineProvider('openalex', openalex, { key: 'openalex', facetsAggregate: true }),
+  defineProvider('crossref', crossref),
   defineProvider('core', core, { key: 'core' }),
   defineProvider('europepmc', europepmc)
 ];

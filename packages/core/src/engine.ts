@@ -1,4 +1,4 @@
-import type { Paper, ProviderId, SearchParams, SearchResponse } from '@sci-open/shared';
+import type { Paper, ProviderId, SearchParams, SearchResponse, SourceId } from '@sci-open/shared';
 import { runSearch } from './orchestrator/from-search-params';
 import { ProviderCache } from './orchestrator/provider-cache';
 import { ResultSetCache } from './orchestrator/result-set';
@@ -26,6 +26,7 @@ import { SourceBusyError } from './lib/host-pacer';
 import { RequestBudget } from './lib/request-budget';
 import { fetchWorksByDoi, OpenAlexUnavailableError, WORKS_BY_DOI_MAX } from './providers/openalex/fetch';
 import { normalize as normalizeOpenAlex } from './providers/openalex/normalize';
+import { lookupDois as fetchCrossrefDois, DOIS_PER_REQUEST as CROSSREF_DOIS_MAX } from './providers/crossref';
 import { apiKeyFor } from './lib/api-key';
 import { log } from './lib/logger';
 
@@ -48,6 +49,11 @@ export type EngineOptions = {
   /** Subsets of the registries: how the engine is driven offline in tests. */
   providers?: readonly ProviderEntry[];
   authorities?: readonly AuthorityEntry[];
+  /** Sources left out entirely: never searched, never asked about a paper,
+   * and OpenAlex never asked to resolve a batch of DOIs, which every source
+   * is then asked one at a time instead. How the engine runs with no metered
+   * source: `['openalex']`. */
+  without?: readonly SourceId[];
   /** How long a source that answered 429 is left alone. Ten minutes by default. */
   quotaCoolDownMs?: number;
   /** The clock the cool-down runs on, for tests. */
@@ -60,11 +66,14 @@ export type EngineOptions = {
   openCitationsPerMinute?: number;
 };
 
+/** Every source an engine's `without` can name: the providers, then the authorities. */
+export const SOURCE_IDS: readonly SourceId[] = [...new Set<SourceId>([...PROVIDERS.map(p => p.id), ...AUTHORITIES.map(a => a.id)])];
+
 export type SearchOutcome = { response: SearchResponse; fromCache: boolean };
 
 /** What `resolveDois` found, by lower-cased DOI, and the DOIs it could not ask
- * about: OpenAlex failed or was cooling down, or the DOI cannot be listed in
- * an OpenAlex filter. A DOI in neither was asked about and is not in OpenAlex. */
+ * about: neither OpenAlex nor Crossref could be asked, or the DOI cannot be
+ * listed in their filters. A DOI in neither was asked about and is not held. */
 export type DoiResolution = { found: Map<string, Paper>; unasked: string[] };
 
 type Admit = () => Promise<void>;
@@ -124,9 +133,11 @@ export type Engine = {
    * is fetched once however it is paged. No admission: one request, to a
    * source the search does not ask. */
   citationLinks(doi: string, direction: CitationDirection, options?: Cancellable): Promise<CitationLink[]>;
-  /** Records for a list of DOIs from OpenAlex, fifty to a request, as
-   * OpenAlex alone has them: not merged with other sources, not enriched.
-   * Enough to cite a paper or list it. Not a search, and no admission. */
+  /** Records for a list of DOIs, fifty to a request, from OpenAlex, and from
+   * Crossref for those OpenAlex could not be asked about — left out, cooling
+   * down or failed — when Crossref is one of the sources. As that source alone
+   * has them: not merged with other sources, not enriched. Enough to cite a
+   * paper or list it. Not a search, and no admission. */
   resolveDois(dois: readonly string[], options?: Cancellable): Promise<DoiResolution>;
 };
 
@@ -137,8 +148,10 @@ export function createEngine(options: EngineOptions): Engine {
   const resultSets = new ResultSetCache();
   const authorityFacts = new AuthorityFactsCache();
   const { userAgent } = options;
-  const providers = options.providers ?? PROVIDERS;
-  const authorities = options.authorities ? { authorities: options.authorities } : {};
+  const without = new Set<string>(options.without ?? []);
+  const providers = (options.providers ?? PROVIDERS).filter(p => !without.has(p.id));
+  const authorityList = (options.authorities ?? AUTHORITIES).filter(a => !without.has(a.id));
+  const authorities = options.authorities || without.size ? { authorities: authorityList } : {};
 
   /**
    * The sources whose rate limit refused a recent request, left out until it
@@ -218,7 +231,7 @@ export function createEngine(options: EngineOptions): Engine {
     const citationsCooling = now() < citationsCoolUntil;
     return unavailable.size || citationsCooling
       ? {
-          authorities: (options.authorities ?? AUTHORITIES)
+          authorities: authorityList
             .filter(a => !unavailable.has(a.id as ProviderId) && !(citationsCooling && a.id === 'opencitations'))
         }
       : authorities;
@@ -252,6 +265,64 @@ export function createEngine(options: EngineOptions): Engine {
     // A held set's reports are what was learned when it was resolved.
     if (!fromCache) quota.note(response.providers);
     return { response, fromCache };
+  };
+
+  /** OpenAlex's records for these DOIs, into `found`; returns the DOIs it could not be asked about. */
+  const openAlexBatches = async (wanted: readonly string[], found: Map<string, Paper>, signal?: AbortSignal): Promise<string[]> => {
+    const unasked = wanted.filter(doi => /[|,]/.test(doi));
+    const listable = wanted.filter(doi => !/[|,]/.test(doi));
+    for (let i = 0; i < listable.length; i += WORKS_BY_DOI_MAX) {
+      signal?.throwIfAborted();
+      const batch = listable.slice(i, i + WORKS_BY_DOI_MAX);
+      // OpenAlex the batch is billed against the same budget as OpenAlex the
+      // source: while one is cooling down, so is the other.
+      if (quota.unavailable().has('openalex')) {
+        unasked.push(...listable.slice(i));
+        break;
+      }
+      try {
+        const payload = await fetchWorksByDoi(batch, {
+          userAgent, timeoutMs: 15_000, ...apiKeyFor('openalex'), ...(signal ? { signal } : {})
+        });
+        const { papers } = normalizeOpenAlex(payload, { retrievedAt: new Date().toISOString() });
+        for (const paper of papers) if (paper.doi) found.set(normalizeDoi(paper.doi), paper);
+      } catch (error) {
+        // Stopped, not failed: no batch after it is asked.
+        signal?.throwIfAborted();
+        // One batch's failure is its own: the others are still worth asking,
+        // unless this one was refused for the budget.
+        if (error instanceof OpenAlexUnavailableError && error.status === 429) quota.refuse('openalex');
+        log.warn('OpenAlex did not resolve a batch of DOIs', { dois: batch.length, err: error instanceof Error ? error.message : String(error) });
+        unasked.push(...batch);
+      }
+    }
+    return unasked;
+  };
+
+  /** Crossref's records for these DOIs, into `found`; returns the DOIs it could not be asked about. */
+  const crossrefBatches = async (pending: readonly string[], found: Map<string, Paper>, signal?: AbortSignal): Promise<string[]> => {
+    // A comma would split Crossref's filter.
+    const unasked = pending.filter(doi => doi.includes(','));
+    const listable = pending.filter(doi => !doi.includes(','));
+    for (let i = 0; i < listable.length; i += CROSSREF_DOIS_MAX) {
+      signal?.throwIfAborted();
+      const batch = listable.slice(i, i + CROSSREF_DOIS_MAX);
+      // The batch and the source share Crossref's limits, and its cool-down.
+      if (quota.unavailable().has('crossref')) {
+        unasked.push(...listable.slice(i));
+        break;
+      }
+      try {
+        const papers = await fetchCrossrefDois(batch, { userAgent, timeoutMs: 15_000, ...(signal ? { signal } : {}) });
+        for (const paper of papers) if (paper.doi) found.set(normalizeDoi(paper.doi), paper);
+      } catch (error) {
+        signal?.throwIfAborted();
+        if ((error as { status?: unknown } | undefined)?.status === 429) quota.refuse('crossref');
+        log.warn('Crossref did not resolve a batch of DOIs', { dois: batch.length, err: error instanceof Error ? error.message : String(error) });
+        unasked.push(...batch);
+      }
+    }
+    return unasked;
   };
 
   return {
@@ -297,7 +368,12 @@ export function createEngine(options: EngineOptions): Engine {
       if (!wanted) return null;
       // Not open access only: a closed paper exists all the same, and a
       // reference check that could not see it would call it fabricated.
-      const { response } = await search({ doi: wanted, filters: { openAccessOnly: false }, page: 1, pageSize: 1 }, extra);
+      // Ten records, not one: a source can answer a DOI with a record under
+      // another, and rank it first. Measured live, OpenAIRE answered an arXiv
+      // DOI with its merged record of the preprint and the PNAS article under
+      // the PNAS DOI, and a lookup that read one record called the arXiv DOI,
+      // which DataCite held, unindexed.
+      const { response } = await search({ doi: wanted, filters: { openAccessOnly: false }, page: 1, pageSize: 10 }, extra);
       return response.papers.find(paper => paper.doi && normalizeDoi(paper.doi) === normalizeDoi(wanted)) ?? null;
     },
     doiRegistered: (doi, extra = {}) => doiRegistered(doi, { userAgent, ...(extra.signal ? { signal: extra.signal } : {}) }),
@@ -340,33 +416,10 @@ export function createEngine(options: EngineOptions): Engine {
     async resolveDois(dois, extra = {}) {
       const wanted = [...new Set(dois.map(normalizeDoi))].filter(Boolean);
       const found = new Map<string, Paper>();
-      const unasked = wanted.filter(doi => /[|,]/.test(doi));
-      const listable = wanted.filter(doi => !/[|,]/.test(doi));
-      for (let i = 0; i < listable.length; i += WORKS_BY_DOI_MAX) {
-        extra.signal?.throwIfAborted();
-        const batch = listable.slice(i, i + WORKS_BY_DOI_MAX);
-        // OpenAlex the batch is billed against the same budget as OpenAlex the
-        // source: while one is cooling down, so is the other.
-        if (quota.unavailable().has('openalex')) {
-          unasked.push(...listable.slice(i));
-          break;
-        }
-        try {
-          const payload = await fetchWorksByDoi(batch, {
-            userAgent, timeoutMs: 15_000, ...apiKeyFor('openalex'), ...(extra.signal ? { signal: extra.signal } : {})
-          });
-          const { papers } = normalizeOpenAlex(payload, { retrievedAt: new Date().toISOString() });
-          for (const paper of papers) if (paper.doi) found.set(normalizeDoi(paper.doi), paper);
-        } catch (error) {
-          // Stopped, not failed: no batch after it is asked.
-          extra.signal?.throwIfAborted();
-          // One batch's failure is its own: the others are still worth asking,
-          // unless this one was refused for the budget.
-          if (error instanceof OpenAlexUnavailableError && error.status === 429) quota.refuse('openalex');
-          log.warn('OpenAlex did not resolve a batch of DOIs', { dois: batch.length, err: error instanceof Error ? error.message : String(error) });
-          unasked.push(...batch);
-        }
-      }
+      const afterOpenAlex = without.has('openalex') ? wanted : await openAlexBatches(wanted, found, extra.signal);
+      // Free, and the registry of most of the same DOIs: what OpenAlex could
+      // not be asked about is asked of Crossref, where it is a source.
+      const unasked = providers.some(p => p.id === 'crossref') ? await crossrefBatches(afterOpenAlex, found, extra.signal) : afterOpenAlex;
       return { found, unasked };
     },
     async readFullText(paper, { trustedOnly, signal }) {

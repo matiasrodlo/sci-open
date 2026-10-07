@@ -21,11 +21,15 @@ export type Server = {
   /**
    * The server's own reference checker, called directly with no model, its
    * answer given in verify_references' verdicts. A reference it gave no answer
-   * for is `not_checked`. Absent, the references suite has Claude check them
-   * with the server's tools instead.
+   * for is `not_checked`. `details`, where the server gives them, say which
+   * record each reference was matched to and why it was graded so. Absent, the
+   * references suite has Claude check them with the server's tools instead.
    */
-  verify?: (client: Client, references: readonly string[]) => Promise<{ verdicts: string[]; upstream?: Upstream }>;
+  verify?: (client: Client, references: readonly string[]) => Promise<{ verdicts: string[]; details?: Detail[]; upstream?: Upstream }>;
 };
+
+/** What a checker said about one reference besides its verdict. */
+export type Detail = { matched?: string; issues?: string[] };
 
 /** The workspace's built binary, found through the dependency rather than a
  * path relative to wherever the harness happens to run. */
@@ -38,9 +42,19 @@ export function sciOpen(args: readonly string[] = [], env: Record<string, string
     transport: { kind: 'stdio', command: process.execPath, args: [STDIO_BIN, ...args], env },
     async verify(client, references) {
       const result = await client.callTool({ name: 'verify_references', arguments: { references } }, { timeout: 600_000 });
-      const structured = result.structuredContent as { results?: Array<{ verdict: string }> } | undefined;
+      type Checked = { verdict: string; matched?: { id: string; doi?: string; year?: number; venue?: string }; issues?: string[] };
+      const structured = result.structuredContent as { results?: Checked[] } | undefined;
       const upstream = upstreamOf(result as { _meta?: Record<string, unknown> });
-      return { verdicts: references.map((_, i) => structured?.results?.[i]?.verdict ?? 'not_checked'), ...(upstream ? { upstream } : {}) };
+      const matched = (m: Checked['matched']) =>
+        m && [m.doi ? `doi:${m.doi}` : m.id, m.year, m.venue].filter(part => part !== undefined).join(', ');
+      return {
+        verdicts: references.map((_, i) => structured?.results?.[i]?.verdict ?? 'not_checked'),
+        details: references.map((_, i) => {
+          const r = structured?.results?.[i];
+          return { ...(r?.matched ? { matched: matched(r.matched) } : {}), ...(r?.issues?.length ? { issues: r.issues } : {}) };
+        }),
+        ...(upstream ? { upstream } : {})
+      };
     }
   };
 }

@@ -24,6 +24,36 @@ OpenAlex key's daily budget included. Run it deliberately, not in a loop: a
 holdout run is 70 references, up to 210 searches, and a tune run 130, which
 together can spend more than a day's budget.
 
+## Through Claude Code
+
+`--client claude-code` runs the model turns through Claude Code (`claude -p`)
+on the signed-in Claude account instead of the Claude API, for anyone without
+an API key. It works with every suite that calls a model:
+
+```bash
+pnpm --filter mcp-evals eval:selection tune --client claude-code
+```
+
+It needs the `claude` CLI on the PATH and signed in (`claude`, then
+`/login`). Each case runs in an empty directory with the same model and turn
+limit. Only the server's tools are offered, with Claude Code's built-in tools,
+every other MCP server and the user's settings left out. Claude Code's own
+system prompt and effort still apply, so its numbers measure the tools as a
+Claude Code user meets them. They are not comparable with the API runs, and
+their reports carry `claude-code` in the file name. Each case counts against
+the account's usage limits.
+
+## Without a source
+
+`--without <sources>` runs the references or reading suite against sci-open
+with those sources left out (`SCI_OPEN_WITHOUT`), and names the report after
+them (`2026-10-07-references-holdout-without-openalex.md`). Run beside the
+same suite with every source, it measures what a source is worth:
+
+```bash
+pnpm --filter mcp-evals eval:references holdout --without openalex
+```
+
 ## Baselines
 
 `--server <name>` runs the references or reading suite against another MCP

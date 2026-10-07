@@ -116,6 +116,24 @@ describe('createEngine', () => {
     expect(arxiv.calls[0]!.query.doi).toBe('10.1234/ARXIV-1');
   });
 
+  it('finds the record with the DOI asked for when another source ranks one with a different DOI first', async () => {
+    // Measured live: OpenAIRE answers an arXiv DOI with its merged record of
+    // the preprint and the journal version, under the journal's DOI, and it
+    // ranked first; DataCite's record of the arXiv DOI came second, and a
+    // lookup that read one record called the DOI unindexed.
+    const merged = paper({ id: 'openaire:1', doi: '10.1073/pnas.1', title: 'Recursive partitioning', sources: [ref('openaire', { nativeId: '1' })] });
+    const asked = paper({ id: 'datacite:10.48550/arxiv.1', doi: '10.48550/arxiv.1', title: 'Recursive partitioning', sources: [ref('datacite', { nativeId: '10.48550/arxiv.1', rank: 0 })] });
+    const answering = (id: ProviderId, found: typeof merged): ProviderEntry => ({
+      ...stub(id).entry,
+      search: async () => ({ papers: [found], totalHits: 1, skipped: [] })
+    });
+    // Held by two sources, the other record ranks first, as it did live.
+    const alsoMerged = { ...merged, id: 'ncbi:1', sources: [ref('ncbi', { nativeId: '1' })] };
+    const engine = engineWith(answering('openaire', merged), answering('ncbi', alsoMerged), answering('datacite', asked));
+
+    expect((await engine.lookupDoi('10.48550/arXiv.1'))?.id).toBe('datacite:10.48550/arxiv.1');
+  });
+
   it('answers a DOI no source holds with null', async () => {
     expect(await engineWith(stub('arxiv').entry).lookupDoi('10.1234/nowhere')).toBeNull();
   });

@@ -93,7 +93,6 @@ const REAL = new Set(['none', 'closed_real', 'preprint_version']);
  */
 export function scoreReferences(items: readonly ReferenceItem[], verdicts: readonly string[]) {
   const byType: Record<string, { correct: number; total: number }> = {};
-  const misses: Array<{ text: string; planted: string; verdict: string }> = [];
   let flagged = 0, rightlyFlagged = 0, real = 0, falseFabricated = 0, notChecked = 0;
   items.forEach((item, i) => {
     const verdict = verdicts[i] ?? 'not_checked';
@@ -104,7 +103,6 @@ export function scoreReferences(items: readonly ReferenceItem[], verdicts: reado
     const type = (byType[item.planted] ??= { correct: 0, total: 0 });
     type.total++;
     if (item.accept.includes(verdict)) type.correct++;
-    else misses.push({ text: item.text, planted: item.planted, verdict });
     if (FLAGS.has(verdict)) {
       flagged++;
       if (!REAL.has(item.planted)) rightlyFlagged++;
@@ -118,7 +116,6 @@ export function scoreReferences(items: readonly ReferenceItem[], verdicts: reado
     recallByType: Object.fromEntries(Object.entries(byType).map(([k, v]) => [k, v.total ? v.correct / v.total : 0])),
     flagPrecision: flagged ? rightlyFlagged / flagged : 1,
     falseFabricatedRate: real ? falseFabricated / real : 0,
-    notChecked,
-    misses
+    notChecked
   };
 }

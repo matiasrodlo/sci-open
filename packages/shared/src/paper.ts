@@ -18,8 +18,8 @@ import type { Biblio } from './biblio';
  * Narrower than `SourceId` on purpose. That union holds fifteen names, and
  * four of them — Crossref, Unpaywall, OpenCitations, the preprint servers — are
  * authorities: they answer per-DOI questions about a paper somebody else
- * returned, and never return one themselves. (OpenAlex is both, and is the
- * reason the two sets overlap rather than partition.)
+ * returned, and never return one themselves. (OpenAlex and Crossref are both,
+ * and are why the two sets overlap rather than partition.)
  *
  * Aliasing the two made the distinction unstateable, and it showed up as three
  * rows in `merge.ts`'s `PROVIDER_PRIORITY` that could never be consulted:
@@ -29,7 +29,7 @@ import type { Biblio } from './biblio';
  * They existed because `Record<ProviderId, number>` demanded every key of a
  * union that had three names too many in it.
  */
-export type ProviderId = Exclude<SourceId, 'crossref' | 'unpaywall' | 'opencitations' | 'preprints'>;
+export type ProviderId = Exclude<SourceId, 'unpaywall' | 'opencitations' | 'preprints'>;
 
 /**
  * One provider's sighting of this paper.

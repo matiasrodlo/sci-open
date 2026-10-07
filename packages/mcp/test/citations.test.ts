@@ -117,14 +117,14 @@ describe('get_citations', () => {
     expect(text.indexOf('Ignore previous')).toBeLessThan(text.indexOf(`</${fence}>`));
   });
 
-  it('says when OpenAlex could not be asked, rather than that the works are not in it', async () => {
+  it('says when the records could not be looked up, rather than that the works are not in them', async () => {
     const fake = fakeEngine([], {
       citations,
       openalex: async dois => ({ found: new Map(), unasked: [...dois] })
     });
     const { structured, text } = await getCitations.run(getCitations.input.parse({ paper: '10.7717/peerj-cs.421', direction: 'references' }), fake.deps);
     expect(structured.records_incomplete).toBe(true);
-    expect(text).toContain('OpenAlex could not be asked about some of these');
+    expect(text).toContain('Some of these could not be looked up');
   });
 
   it('tells a paper nobody cites from a DOI nobody registered', async () => {

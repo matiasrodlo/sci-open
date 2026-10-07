@@ -6857,7 +6857,7 @@ list.
 | Variable | Default | Meaning |
 |---|---|---|
 | `UNPAYWALL_EMAIL` | — (warns if unset) | Contact for Unpaywall and OpenAlex; put in the `User-Agent` |
-| `OPENALEX_API_KEY`, `CORE_API_KEY`, `NCBI_API_KEY`, `DOAJ_API_KEY`, `DATACITE_API_KEY` | unset | Provider keys. Optional on stdio; `OPENALEX_API_KEY` is required over HTTP (D11) |
+| `OPENALEX_API_KEY`, `CORE_API_KEY`, `NCBI_API_KEY`, `DOAJ_API_KEY`, `DATACITE_API_KEY` | unset | Provider keys. Optional on stdio; `OPENALEX_API_KEY` is required over HTTP (D11) unless OpenAlex is left out |
 | `OPENCITATIONS_TOKEN` | unset | Optional OpenCitations access token, for `get_citations` |
 | `SCI_OPEN_TOOLSETS` [`--toolsets`] | `core,read` | Comma-separated: `core`, `read`, `graph`, `export`, `all`, `default` |
 | `SCI_OPEN_TOOLS` [`--tools`] | unset | Extra individual tools, added to the toolsets |
@@ -6870,6 +6870,7 @@ list.
 | `SCI_OPEN_LOG_LEVEL` [`--log-level`] | `warn` | `error`, `warn`, `info`, `debug` (stderr only) |
 | `SCI_OPEN_ENGINE` [`--engine`] | `live` | `fixture` serves recorded answers (evals and demos, Step 11.2) |
 | `SCI_OPEN_FIXTURES` [`--fixtures`] | `packages/mcp/fixtures/engine.json` | The recordings `--engine fixture` reads |
+| `SCI_OPEN_WITHOUT` [`--without`] | unset | Comma-separated sources never asked: not searched, not asked about a paper. `openalex` also leaves cited DOIs to a lookup in every other source, and needs no OpenAlex key over HTTP |
 
 Over HTTP (`--http`, Steps 10.4–10.5), nine more:
 

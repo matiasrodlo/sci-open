@@ -9,6 +9,28 @@ in `test/__toolsnaps__/` are the record of every schema change.
 
 ### Added
 
+- `--without <sources>` (`SCI_OPEN_WITHOUT`) leaves sources out entirely: not
+  searched and not asked about a paper. `--without openalex` runs with no
+  metered source; cited DOIs are then looked up in every other source, and
+  HTTP needs no OpenAlex key.
+- Crossref is a search source: free, with no key, and the registry of most
+  journal DOIs, closed papers included. Every DOI lookup asks it, and so does
+  a keyword search that wants closed papers too (verify_references' title
+  searches, `open_access_only: false`); an open-access search does not, since
+  it says whether a paper is open for none of its records, and coverage says
+  so. Its requests, and the Crossref authority's, keep to Crossref's stated
+  limits for the pool the User-Agent's contact puts them in. On the references
+  eval without OpenAlex, it recovers what OpenAlex was there for: tune 122 of
+  128 checked and holdout 68 of 69, against 120 of 127 and 69 of 69 with
+  OpenAlex and none of its budget.
+- DOIs OpenAlex cannot be asked about — left out, cooling down or failed — are
+  resolved from Crossref instead, fifty to a request: verify_references judges
+  them on its record, and get_citations' and export_citations' rows keep
+  their records without OpenAlex.
+- Crossref reports retractions: a work its `updated-by` names retracted,
+  withdrawn or removed — the publisher's notices and Retraction Watch's data,
+  which Crossref carries — is `retracted`, as OpenAlex's and PubMed's are.
+
 - `sci-open-mcp --http` serves Streamable HTTP at `/mcp` on its own, with
   per-client request and new-search budgets, a new-search ceiling across every
   client (`SCI_OPEN_TOTAL_NEW_SEARCHES_PER_MIN`, 120), an Origin allowlist, a
@@ -146,6 +168,29 @@ in `test/__toolsnaps__/` are the record of every schema change.
   says whether a search would read each source in full.
 - verify_references took a cited surname for an author's when it was part of
   any author's name: "Li" verified as Illia Polosukhin.
+- verify_references matched a paper cited with the wrong year to a reprint
+  that carried that year: a 1982 paper cited as 1986 was called `likely`, as
+  its 1986 reprint in a book series, not `ambiguous`, as the original whose
+  journal, volume and first page the citation gave. A year-window match
+  published somewhere other than the citation says no longer ends the search,
+  and agreeing on the volume and first page cited now counts toward a match.
+- verify_references called a correct citation a DOI on another paper when the
+  DOI's record had left the subtitle off: OpenAlex titles "False-Positive
+  Psychology: Undisclosed Flexibility…" as "False-Positive Psychology", and
+  "MapReduce: simplified data processing on large clusters" as "MapReduce". A
+  record titled with the cited main title alone now matches it, when the cited
+  authors and year agree with the record.
+- A DOI lookup read one record and checked its DOI, so a source that answered
+  under another DOI and ranked first hid the record asked for: OpenAIRE
+  answers an arXiv DOI with its merged preprint-and-article record under the
+  journal's DOI, and DataCite's record of the arXiv DOI went unseen. It reads
+  ten now.
+- Crossref's records lost their subtitle: "MapReduce" for "MapReduce:
+  simplified data processing on large clusters". The title now carries it.
+- A source's HTTP 429 reached the model as `internal`, a fault of this server:
+  arXiv's, on every arXiv id while it was limiting requests, so verify_references
+  left those references not checked for no stated reason. A 429 is now
+  `rate_limited`, with a wait, and a 5xx `upstream_unavailable`.
 - The `sci-open` CLI ignored `SCI_OPEN_ENGINE=fixture` and searched the live
   sources.
 - read_paper gave an arXiv paper's `\paragraph{}` text twice: in its own

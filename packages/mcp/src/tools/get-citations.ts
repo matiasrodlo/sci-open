@@ -26,7 +26,7 @@ export const getCitations = defineTool({
   toolset: 'graph',
   description:
     'The references of a paper (direction="references") or the papers citing it (direction="cited_by"), from OpenCitations, ' +
-    'each resolved to a record where OpenAlex holds it, with self-citations flagged. Paged by offset. The paper needs a DOI; ' +
+    'each resolved to a record where OpenAlex or Crossref holds it, with self-citations flagged. Paged by offset. The paper needs a DOI; ' +
     'pass the DOI itself when you have it, which skips looking the paper up.',
   input: z.object({
     paper: z.string().min(1).max(300).describe('DOI (preferred) or sci-open id, e.g. 10.7717/peerj-cs.421 or openalex:W3134956838'),
@@ -42,8 +42,8 @@ export const getCitations = defineTool({
     offset: z.number().int(),
     returned: z.number().int(),
     next_offset: z.number().int().nullable(),
-    /** True when OpenAlex could not be asked about some DOIs on this page,
-     * so a link without a record may still be in it. */
+    /** True when neither OpenAlex nor Crossref could be asked about some DOIs
+     * on this page, so a link without a record may still be in it. */
     records_incomplete: z.boolean(),
     links: z.array(z.object({
       doi: z.string().optional(),
@@ -132,8 +132,8 @@ export const getCitations = defineTool({
       text: [
         ...(retractedRows.length ? [retractionWarning(retractedRows.length === 1 ? [`Link ${retractedRows[0]}`] : [`Links ${retractedRows.join(', ')}`])] : []),
         `# ${all.length.toLocaleString('en')} ${noun} of doi:${doi}${shown}`,
-        'Links from OpenCitations, which holds most open citation data but not every citation; records from OpenAlex.',
-        ...(recordsIncomplete ? ['OpenAlex could not be asked about some of these, so "no record" may only mean not looked up; retry later for them.'] : []),
+        'Links from OpenCitations, which holds most open citation data but not every citation; records from OpenAlex or Crossref.',
+        ...(recordsIncomplete ? ['Some of these could not be looked up, so "no record" may only mean not looked up; retry later for them.'] : []),
         ...(all.length === 0 ? [`OpenCitations holds no ${noun} for this DOI. A very new paper, or one whose publisher does not deposit references, can have none here.`] : []),
         '',
         ...(rows.length ? [fenceUntrusted('linked works', rows.join('\n'))] : []),

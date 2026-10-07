@@ -15,8 +15,12 @@ import { facetKey } from './facet-key';
 /**
  * Trust order for choosing between two values of the same field.
  *
- * Ten providers and eleven rows, because bioRxiv and medRxiv are one API that
- * reports which server answered.
+ * Eleven providers and twelve rows, because bioRxiv and medRxiv are one API
+ * that reports which server answered.
+ *
+ * Crossref is second: its records are what publishers deposit, title and
+ * subtitle together, and OpenAlex's carry the title alone. Without OpenAlex it
+ * is the base for every paper it holds.
  *
  * It used to hold fourteen, and three of them — Crossref at 1, Unpaywall at 3,
  * OpenCitations at 14 — could never be read. `priorityOf` maps over
@@ -29,16 +33,17 @@ import { facetKey } from './facet-key';
  */
 const PROVIDER_PRIORITY: Record<ProviderId, number> = {
   openalex: 1,
-  europepmc: 2,
-  core: 3,
-  openaire: 4,
-  plos: 5,
-  arxiv: 6,
-  biorxiv: 7,
-  medrxiv: 8,
-  doaj: 9,
-  ncbi: 10,
-  datacite: 11
+  crossref: 2,
+  europepmc: 3,
+  core: 4,
+  openaire: 5,
+  plos: 6,
+  arxiv: 7,
+  biorxiv: 8,
+  medrxiv: 9,
+  doaj: 10,
+  ncbi: 11,
+  datacite: 12
 };
 
 /**

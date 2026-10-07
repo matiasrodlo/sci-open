@@ -58,8 +58,9 @@ export const AUTHORITIES: AuthorityEntry[] = [
     id: 'crossref',
     capabilities: crossref.capabilities,
     pass: 0,
-    // arXiv's DOIs are DataCite's, which Crossref does not hold.
-    wants: paper => !isArxivDoi(paper.doi),
+    // arXiv's DOIs are DataCite's, which Crossref does not hold. A record
+    // Crossref returned already says everything it would.
+    wants: paper => !isArxivDoi(paper.doi) && !paper.sources.some(s => s.provider === 'crossref'),
     lookup: ({ doi, timeoutMs, signal, userAgent }) =>
       crossref.lookup(doi, {
         timeoutMs,

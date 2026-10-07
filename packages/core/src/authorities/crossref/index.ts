@@ -1,8 +1,8 @@
 import { capabilities } from './capabilities';
 import { lookupDoi, type FetchOptions, type CrossrefPayload } from './fetch';
-import { normalize, pickFullText } from './normalize';
+import { normalize, normalizeWork, pickFullText } from './normalize';
 
-export { capabilities, lookupDoi, normalize, pickFullText };
+export { capabilities, lookupDoi, normalize, normalizeWork, pickFullText };
 export type { FetchOptions, CrossrefPayload };
 
 export type LookupOptions = FetchOptions;

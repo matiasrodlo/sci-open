@@ -15,8 +15,8 @@ async function serveHttp(config: McpConfig, http: NonNullable<McpConfig['http']>
   // D11: unkeyed, OpenAlex gives this process a tenth of a key's daily budget,
   // and every client would share it. Refuse rather than warn: a warning in a
   // container log is read after the budget is gone.
-  if (config.engine === 'live' && !config.apiKeys.openalex && !http.allowUnkeyed) {
-    process.stderr.write('Serving HTTP needs OPENALEX_API_KEY. Set it, or SCI_OPEN_ALLOW_UNKEYED=1 for a trial.\n');
+  if (config.engine === 'live' && !config.apiKeys.openalex && !config.without?.includes('openalex') && !http.allowUnkeyed) {
+    process.stderr.write('Serving HTTP needs OPENALEX_API_KEY. Set it, leave OpenAlex out (--without openalex), or SCI_OPEN_ALLOW_UNKEYED=1 for a trial.\n');
     process.exit(2);
   }
   const metrics = createMetrics(logger);

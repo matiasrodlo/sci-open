@@ -129,7 +129,20 @@ export type ProviderCapabilities = {
     keywordSearch?: string;
     doiLookup?: string;
     fieldedSearch?: string;
+    openAccessOnly?: string;
   };
+  /**
+   * Whether its records say if a paper is open access. Absent is true.
+   *
+   * False for Crossref, which registers DOIs for closed papers and open ones
+   * alike and says which of them is which for none. Under an open-access filter
+   * every record it returned would be sent to Unpaywall to be checked, up to
+   * the rescue limit of them, for a corpus that is mostly closed; so a keyword
+   * search under that filter does not ask it (`plan`), and one that wants
+   * closed papers too — a reference check, `open_access_only: false` — does. A
+   * DOI lookup asks it either way.
+   */
+  reportsAccess?: boolean;
   /**
    * Can scope a clause to a field — `AU=`, `SO=`, `TI=` — in its own query
    * syntax.

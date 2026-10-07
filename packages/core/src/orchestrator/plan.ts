@@ -52,7 +52,13 @@ function holdsNone(stages: readonly PaperStage[]): string {
   return 'holds no papers of that type';
 }
 
-export function plan(query: Query, providers: readonly ProviderEntry[]): Plan {
+/** What the plan is told besides the query. */
+export type PlanOptions = {
+  /** Papers without a legal open copy are dropped (see `reportsAccess`). */
+  openAccessOnly?: boolean;
+};
+
+export function plan(query: Query, providers: readonly ProviderEntry[], options: PlanOptions = {}): Plan {
   const planned: ProviderEntry[] = [];
   const skipped: SkippedProvider[] = [];
 
@@ -92,6 +98,13 @@ export function plan(query: Query, providers: readonly ProviderEntry[]): Plan {
      */
     if (query.expression && !caps.fieldedSearch && query.terms.length === 0 && query.phrases.length === 0) {
       skipped.push({ provider: id, reason: caps.skipReason?.fieldedSearch ?? 'no fieldedSearch capability' });
+      continue;
+    }
+
+    // Open papers only, from a provider that cannot say which papers are:
+    // each record would be checked one at a time, for few that pass.
+    if (options.openAccessOnly && caps.reportsAccess === false) {
+      skipped.push({ provider: id, reason: caps.skipReason?.openAccessOnly ?? 'reports no access status to filter on' });
       continue;
     }
 

@@ -79,16 +79,45 @@ function pickAuthors(work: any): string[] {
     .filter((name: string) => name.length > 0);
 }
 
+/**
+ * The title with its subtitle, which Crossref keeps apart: "MapReduce" and
+ * "simplified data processing on large clusters". A title read alone is not
+ * the one a citation gives — OpenAlex's records carry it so, and correct
+ * citations of both papers were taken for DOIs on other works.
+ */
+function pickTitle(work: any): string | undefined {
+  const title = stripMarkup(first(work.title));
+  const subtitle = stripMarkup(first(work.subtitle));
+  if (!title || !subtitle || title.toLowerCase().includes(subtitle.toLowerCase())) return title;
+  return `${title}: ${subtitle}`;
+}
+
+/**
+ * The notices that leave a work standing no longer, as Crossref's `updated-by`
+ * names them: the publisher's own deposits, and Retraction Watch's database,
+ * which Crossref now carries (`source: "retraction-watch"`). Wakefield et al.
+ * 1998 in The Lancet lists a correction from 2004 and the retraction of 2010.
+ * A correction, an erratum or an expression of concern is not one of them.
+ */
+const RETRACTING = new Set(['retraction', 'withdrawal', 'removal']);
+
+const isRetracted = (work: any): boolean =>
+  asArray<any>(work?.['updated-by']).some(update => RETRACTING.has(String(update?.type ?? '').toLowerCase()));
+
 export function normalize(payload: CrossrefPayload | null): AuthorityFacts | null {
   const work = (payload as any)?.message;
-  if (!work) return null;
+  return work ? normalizeWork(work) : null;
+}
+
+/** One Crossref work, as a single-DOI request's `message` or a list's `items` carry it. Pure. */
+export function normalizeWork(work: any): AuthorityFacts {
 
   // Crossref ships both of these as JATS, tags and all — the recorded page's
   // abstract begins `<jats:title>Abstract</jats:title><jats:p>CRISPR/Cas9
   // technology…`, and its titles carry `<i>` and `<sub>` for species names and
   // formulae. The old path passed them straight into `AuthorityFacts`, so the
   // markup reached the browser.
-  const title = stripMarkup(first(work.title));
+  const title = pickTitle(work);
   const venue = first(work['container-title']) ?? first(work['short-container-title']);
   const year = pickYear(work);
   const abstract = stripMarkup(work.abstract);
@@ -116,6 +145,7 @@ export function normalize(payload: CrossrefPayload | null): AuthorityFacts | nul
     ...(Number.isFinite(citationCount) ? { citationCount } : {}),
     ...(fullText ? { fullText } : {}),
     ...(doi ? { landingPage: `https://doi.org/${doi}` } : {}),
-    ...(stage ? { stage } : {})
+    ...(stage ? { stage } : {}),
+    ...(isRetracted(work) ? { retracted: true as const } : {})
   };
 }
