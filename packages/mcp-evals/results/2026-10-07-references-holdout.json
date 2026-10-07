@@ -8,15 +8,15 @@
     "server": "sci-open",
     "mode": "direct",
     "references": 70,
-    "upstreamRequests": 855,
-    "upstreamRequestsPerReference": 12.214285714285714,
+    "upstreamRequests": 920,
+    "upstreamRequestsPerReference": 13.142857142857142,
     "recallByType": {
       "none": 1,
       "closed_real": 1,
       "fabricated": 1,
       "doi_wrong": 1,
       "doi_invented": 0.8571428571428571,
-      "year_wrong": 0.8571428571428571,
+      "year_wrong": 1,
       "preprint_version": 1,
       "author_wrong": 1
     },
@@ -116,10 +116,9 @@
         "ambiguous"
       ],
       "verdict": "ambiguous",
-      "matched": "doi:10.1101/304774, 2018, bioRxiv (Cold Spring Harbor Laboratory)",
+      "matched": "doi:10.1145/3422622, 2020, Communications of the ACM",
       "issues": [
-        "author_mismatch: no cited surname appears in the record",
-        "title_partial_match: the cited title and the record's share 100% of the cited words"
+        "year_mismatch: cited 2017, record 2020"
       ]
     },
     {
@@ -555,9 +554,10 @@
       "accept": [
         "ambiguous"
       ],
-      "verdict": "not_found",
+      "verdict": "ambiguous",
+      "matched": "doi:10.2307/1884513, 1956, The Quarterly Journal of Economics",
       "issues": [
-        "no_similar_title_in_any_source"
+        "year_mismatch: cited 1961, record 1956"
       ]
     },
     {

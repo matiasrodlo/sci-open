@@ -240,10 +240,15 @@ const JUDGED = 5;
  */
 const TITLE_DEPTH = 25;
 
+/** The first cited author as the grammar takes one: quoted where the name holds more than letters. */
+const authorClause = (surname: string): string =>
+  /^\p{L}+$/u.test(surname) ? `AU=${surname}` : `AU="${surname.replace(/"/g, '')}"`;
+
 /**
  * The title's words in the title within a year of the one cited, then in the
- * title at any date, then anywhere in the record — each only when the one
- * before found nothing good enough. The judge grades every candidate, so the
+ * title at any date, then in the title of a work by the first author cited,
+ * then anywhere in the record — each only when the one before found nothing
+ * good enough. The judge grades every candidate, so the
  * searches can afford to be wide.
  *
  * Words, not the quoted title: a phrase keeps its punctuation, and sources do
@@ -256,7 +261,17 @@ const TITLE_DEPTH = 25;
  * so does one whose match was published somewhere other than the citation
  * says, which is how a reprint carrying the wrong year cited looks, and the
  * plain title search then brings the original in to be judged beside it. That
- * search stops at any match, so a wrong year costs two searches, not three.
+ * search stops at any match published where the citation says, so a wrong
+ * year costs two searches, not three.
+ *
+ * The author goes in third because a generic title's original is outranked by
+ * the papers that share its words. Measured on the references eval: "A
+ * mathematical theory of communication" cited as 1951 matched a 1950 Physics
+ * Today item, and "Rises, trenches, great faults, and crustal blocks" a
+ * reprint series, and neither title search returned the original at all.
+ * Crossref, asked for the title's words with the author (`query.author`),
+ * returns it among its first three, beside the reprints, and the volume and
+ * first page cited tell the judge which is the original.
  */
 async function findByTitle(ref: ParsedReference, deps: ToolDeps): Promise<Found | undefined> {
   if (!ref.title) return undefined;
@@ -264,7 +279,8 @@ async function findByTitle(ref: ParsedReference, deps: ToolDeps): Promise<Found 
   if (!words) return undefined;
   const attempts: Array<{ q: string; enough: (found: Found) => boolean }> = [
     ...(ref.year ? [{ q: `TI=(${words}) AND PY=${ref.year - 1}-${ref.year + 1}`, enough: (f: Found) => STRONG.has(f.j.verdict) && !publishedElsewhere(f.j) }] : []),
-    { q: `TI=(${words})`, enough: (f: Found) => f.j.verdict !== 'not_found' },
+    { q: `TI=(${words})`, enough: (f: Found) => f.j.verdict !== 'not_found' && !publishedElsewhere(f.j) },
+    ...(ref.surnames[0] ? [{ q: `TI=(${words}) AND ${authorClause(ref.surnames[0])}`, enough: (f: Found) => f.j.verdict !== 'not_found' }] : []),
     { q: `TS=(${words})`, enough: () => true }
   ];
   let best: Found | undefined;

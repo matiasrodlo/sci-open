@@ -41,6 +41,9 @@ export function fakeEngine(papers: readonly Paper[], options: FakeOptions = {}):
   const matches = (q: string, p: Paper): boolean => {
     const years = q.match(/^(.*) AND PY=(\d{4})-(\d{4})$/);
     if (years) return p.year !== undefined && p.year >= Number(years[2]) && p.year <= Number(years[3]) && matches(years[1]!, p);
+    // An author: a word of some author's name, as a source matches one.
+    const author = q.match(/^(.*) AND AU="?([^"]+)"?$/);
+    if (author) return p.authors.some(a => tokens(a).includes(author[2]!.toLowerCase())) && matches(author[1]!, p);
     // Title words, or for TS= the title and abstract: every word present, in any order.
     const words = q.match(/^(TI|TS)=\((.*)\)$/);
     if (words) {

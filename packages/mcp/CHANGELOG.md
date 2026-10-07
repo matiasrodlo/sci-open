@@ -195,6 +195,13 @@ in `test/__toolsnaps__/` are the record of every schema change.
   "Exploring quantum annealing for coarse-grained protein folding", by others.
   With the year and the authors both wrong, only the whole title cited is now
   `ambiguous`; anything less is `not_found`.
+- verify_references did not find the original of a generic title, whose
+  words return lookalikes and reprints ahead of it: "A mathematical theory of
+  communication" cited as 1951 matched a 1950 Physics Today item, and the
+  original was in no title search's answer. A match published somewhere
+  other than the citation says no longer ends the plain title search, and a
+  title search by the first author cited (Crossref's `query.author`) comes
+  before the search of every field.
 - A source's HTTP 429 reached the model as `internal`, a fault of this server:
   arXiv's, on every arXiv id while it was limiting requests, so verify_references
   left those references not checked for no stated reason. A 429 is now

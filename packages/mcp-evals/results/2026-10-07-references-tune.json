@@ -8,16 +8,16 @@
     "server": "sci-open",
     "mode": "direct",
     "references": 130,
-    "upstreamRequests": 1676,
-    "upstreamRequestsPerReference": 12.892307692307693,
+    "upstreamRequests": 1816,
+    "upstreamRequestsPerReference": 13.96923076923077,
     "recallByType": {
       "none": 1,
       "preprint_version": 1,
       "fabricated": 1,
       "doi_wrong": 1,
-      "year_wrong": 0.8461538461538461,
+      "year_wrong": 0.9230769230769231,
       "author_wrong": 1,
-      "doi_invented": 0.9230769230769231,
+      "doi_invented": 1,
       "closed_real": 1
     },
     "flagPrecision": 1,
@@ -329,12 +329,10 @@
       "accept": [
         "ambiguous"
       ],
-      "verdict": "likely",
-      "matched": "doi:10.1063/1.3067010, 1950, Physics Today",
+      "verdict": "ambiguous",
+      "matched": "doi:10.1002/j.1538-7305.1948.tb01338.x, 1948, Bell System Technical Journal",
       "issues": [
-        "venue_mismatch: the citation does not name the record's venue, Physics Today",
-        "volume_mismatch: cited 27, record 3",
-        "pages_mismatch: cited from 379, record from 31"
+        "year_mismatch: cited 1951, record 1948"
       ]
     },
     {
@@ -680,14 +678,12 @@
       "accept": [
         "mismatch"
       ],
-      "verdict": "ambiguous",
-      "matched": "doi:10.1021/nl102824h, 2010, Nano Letters",
+      "verdict": "mismatch",
+      "matched": "doi:10.1088/0953-8984/22/17/175503, 2010, Journal of Physics: Condensed Matter",
       "issues": [
         "doi_not_registered",
-        "author_mismatch: no cited surname appears in the record",
-        "venue_mismatch: the citation does not name the record's venue, Nano Letters",
-        "volume_mismatch: cited 81, record 10",
-        "pages_mismatch: cited from 109, record from 4285",
+        "volume_mismatch: cited 81, record 22",
+        "pages_mismatch: cited from 109, record from 175503",
         "title_partial_match: the cited title and the record's share 100% of the cited words"
       ]
     },
@@ -699,11 +695,9 @@
         "ambiguous"
       ],
       "verdict": "ambiguous",
-      "matched": "doi:10.1017/9781139028493.013, 2024, The Einstein Paradox",
+      "matched": "doi:10.1103/physrev.47.777, 1935, Physical Review",
       "issues": [
-        "year_mismatch: cited 1939, record 2024",
-        "venue_mismatch: the citation does not name the record's venue, The Einstein Paradox",
-        "pages_mismatch: cited from 777, record from 157"
+        "year_mismatch: cited 1939, record 1935"
       ]
     },
     {
@@ -996,7 +990,7 @@
         "mismatch"
       ],
       "verdict": "mismatch",
-      "matched": "doi:10.1037/0022-3514.92.6.1087, 2007, Journal of personality and social psychology",
+      "matched": "doi:10.1037/0022-3514.92.6.1087, 2007, Journal of Personality and Social Psychology",
       "issues": [
         "doi_not_registered"
       ]
@@ -1463,11 +1457,8 @@
         "likely"
       ],
       "verdict": "likely",
-      "matched": "doi:10.5194/essd-13-4349-2021, 2021, Earth System Science Data",
+      "matched": "doi:10.5194/essd-2021-82, 2021",
       "issues": [
-        "venue_mismatch: the citation does not name the record's venue, Earth System Science Data",
-        "volume_mismatch: cited 146, record 13",
-        "pages_mismatch: cited from 1999, record from 4349",
         "title_partial_match: the cited title and the record's share 100% of the cited words"
       ]
     },

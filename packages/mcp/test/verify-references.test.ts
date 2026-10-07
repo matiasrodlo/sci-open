@@ -108,6 +108,47 @@ describe('verify_references', () => {
     expect(results[0]).toMatchObject({ verdict: 'mismatch', issues: expect.arrayContaining(['doi_points_to_different_work']) });
   });
 
+  describe('a generic title whose original the title search does not return', () => {
+    // Measured on the references eval: "A mathematical theory of communication"
+    // cited as 1951 matched a 1950 Physics Today item, and the title search
+    // returned the original at no rank at all. Made up here, as eval
+    // references stay out.
+    const original = paper({
+      id: 'crossref:10.1000/ssj.1948', doi: '10.1000/ssj.1948', title: 'A mathematical theory of signalling',
+      authors: ['C. E. Lindqvist'], year: 1948, venue: 'Signal Systems Journal', biblio: { volume: '27', firstPage: '379' },
+      sources: [ref('crossref')]
+    });
+    const elsewhere = paper({
+      ...original, id: 'crossref:10.1000/pl.1950', doi: '10.1000/pl.1950', year: 1950, venue: 'Physics Lately',
+      biblio: { volume: '3', firstPage: '31' }
+    });
+    // Ahead of the original in every answer: the five the judge sees.
+    const lookalikes = ['in neurons', 'for networks', 'and its limits', 'revisited'].map((tail, i) => paper({
+      id: `crossref:10.1000/look.${i}`, doi: `10.1000/look.${i}`, title: `A mathematical theory of signalling ${tail}`,
+      authors: ['Ben Okoro'], year: 2010 + i, sources: [ref('crossref')]
+    }));
+    const cited = 'Lindqvist CE. A mathematical theory of signalling. Signal Systems Journal. 1951;27(3):379-423.';
+
+    it('looks for the title by the author cited, and finds the original there', async () => {
+      const fake = fakeEngine([elsewhere, ...lookalikes, original]);
+      const { structured } = await verifyReferences.run({ references: [cited] }, fake.deps);
+      expect(structured.results[0]).toMatchObject({
+        verdict: 'ambiguous', matched: { doi: '10.1000/ssj.1948' }, issues: ['year_mismatch: cited 1951, record 1948']
+      });
+      expect(fake.searches).toEqual([
+        'TI=(mathematical theory signalling) AND PY=1950-1952',
+        'TI=(mathematical theory signalling)',
+        'TI=(mathematical theory signalling) AND AU=lindqvist'
+      ]);
+    });
+
+    it('quotes an author whose name is more than letters', async () => {
+      const fake = fakeEngine([]);
+      await verifyReferences.run({ references: ['Perdomo-Ortiz A. A study nobody wrote. 2012.'] }, fake.deps);
+      expect(fake.searches).toContain('TI=(study nobody wrote) AND AU="perdomo-ortiz"');
+    });
+  });
+
   describe('a DOI whose record left the cited subtitle off', () => {
     // Measured live: OpenAlex titles "False-Positive Psychology: Undisclosed
     // Flexibility…" as "False-Positive Psychology", and the correct citation
