@@ -175,3 +175,14 @@ describe('mergePapers', () => {
     expect(mergePapers([])).toEqual([]);
   });
 });
+
+describe('mergePapers — an arXiv preprint and the other sources\' copies of it', () => {
+  it('merges on the arXiv DOI, whatever its case', () => {
+    // arXiv's normaliser writes `10.48550/arXiv.<id>`; OpenAlex lower-cases it.
+    const fromArxiv = paper({ id: 'arxiv:1706.03762v7', doi: '10.48550/arXiv.1706.03762', title: 'Attention Is All You Need', sources: [ref('arxiv', { nativeId: '1706.03762v7' })] });
+    const fromOpenAlex = paper({ id: 'openalex:W2963403868', doi: '10.48550/arxiv.1706.03762', title: 'Attention Is All You Need', sources: [ref('openalex')] });
+    const merged = mergePapers([fromArxiv, fromOpenAlex]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0]!.sources.map(s => s.provider)).toEqual(['openalex', 'arxiv']);
+  });
+});

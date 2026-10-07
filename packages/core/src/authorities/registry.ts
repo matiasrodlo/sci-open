@@ -50,11 +50,16 @@ export type AuthorityEntry = {
  * OpenAlex, then Unpaywall — which is last of the three because the two fields
  * it overwrites should overwrite whatever the other two wrote, not race them.
  */
+/** A DOI arXiv registered (`10.48550/arXiv.…`), which only DataCite holds. */
+const isArxivDoi = (doi: string | undefined): boolean => !!doi && /^10\.48550\/arxiv\./i.test(doi.trim());
+
 export const AUTHORITIES: AuthorityEntry[] = [
   {
     id: 'crossref',
     capabilities: crossref.capabilities,
     pass: 0,
+    // arXiv's DOIs are DataCite's, which Crossref does not hold.
+    wants: paper => !isArxivDoi(paper.doi),
     lookup: ({ doi, timeoutMs, signal, userAgent }) =>
       crossref.lookup(doi, {
         timeoutMs,
@@ -78,6 +83,8 @@ export const AUTHORITIES: AuthorityEntry[] = [
     id: 'unpaywall',
     capabilities: unpaywall.capabilities,
     pass: 0,
+    // Unpaywall indexes Crossref's DOIs; arXiv's are DataCite's.
+    wants: paper => !isArxivDoi(paper.doi),
     lookup: ({ doi, timeoutMs, signal, userAgent }) =>
       unpaywall.lookup(doi, {
         timeoutMs,

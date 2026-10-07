@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { parseStringPromise } from 'xml2js';
-import { normalize, totalHits, ArxivQueryError } from '../normalize';
+import { normalize, totalHits, ArxivQueryError, arxivDoi } from '../normalize';
 
 const read = (p: string) => parseStringPromise(fs.readFileSync(path.resolve(__dirname, p), 'utf8'));
 
@@ -85,10 +85,16 @@ describe('normalize — the fields the old connector dropped', () => {
     expect(published().venue).toBe('Phys. Rev. Lett. 127, 208102, 2021');
   });
 
-  it('leaves both absent when arXiv does not supply them', () => {
+  it('gives a preprint with no published version its own arXiv DOI, without the version, and no venue', () => {
+    // Without it the record merged with neither OpenAlex's nor Europe PMC's
+    // copy of the same preprint, which list it under that DOI.
     const bare = run(EDGE).papers.find(p => p.id === 'arxiv:2101.00003v1')!;
-    expect(bare.doi).toBeUndefined();
+    expect(bare.doi).toBe('10.48550/arXiv.2101.00003');
     expect(bare.venue).toBeUndefined();
+  });
+
+  it('writes an old-style id into the DOI with its archive', () => {
+    expect(arxivDoi('hep-th/9901001v2')).toBe('10.48550/arXiv.hep-th/9901001');
   });
 });
 

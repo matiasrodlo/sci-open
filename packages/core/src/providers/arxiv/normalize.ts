@@ -92,6 +92,12 @@ function pickTopics(entry: any): string[] {
     .filter((t: unknown): t is string => typeof t === 'string' && t.length > 0);
 }
 
+/** The DOI arXiv registers for a paper: its id without the version. */
+export function arxivDoi(nativeId: string): string | undefined {
+  const id = nativeId.replace(/v\d+$/, '');
+  return id ? `10.48550/arXiv.${id}` : undefined;
+}
+
 function normalizeOne(entry: any, ref: SourceRef): Paper {
   const url = first(entry?.id);
   if (!url) throw new Error('entry has no id');
@@ -111,7 +117,13 @@ function normalizeOne(entry: any, ref: SourceRef): Paper {
   // provider — it fell back to a title-and-year key, and the preprint's
   // submission year rarely matches the publication year, so the two survived
   // as separate results.
-  const doi = flatten(entry?.['arxiv:doi']);
+  //
+  // Without one, the preprint's own: arXiv registers `10.48550/arXiv.<id>`
+  // with DataCite for every paper, and OpenAlex and Europe PMC list the
+  // preprint under it. Left without, the arXiv record merged with neither,
+  // and the same preprint was listed twice — and, having no DOI, had no
+  // citations to follow and none to export.
+  const doi = flatten(entry?.['arxiv:doi']) ?? arxivDoi(nativeId);
 
   // `arxiv:journal_ref` is where the preprint was published, when it has been.
   const venue = flatten(entry?.['arxiv:journal_ref']);
