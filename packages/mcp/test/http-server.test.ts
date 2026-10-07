@@ -1,7 +1,7 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { paper, ref } from '@sci-open/core/testing';
-import { startHttpServer, type RunningHttpServer } from '../src/http-server';
+import { clientKey, startHttpServer, type RunningHttpServer } from '../src/http-server';
 import { createMetrics } from '../src/metrics';
 import type { HttpConfig } from '../src/config';
 import type { Engine } from '@sci-open/core';
@@ -30,7 +30,10 @@ async function serve(http: Partial<HttpConfig> = {}, newSearchesPerMinute = 30, 
   const metrics = createMetrics(quiet);
   running = await startHttpServer({
     deps: { engine: engine ?? fake.engine, config: { ...fake.deps.config, allowWrites: true }, metrics },
-    http: { host: '127.0.0.1', port: 0, allowedOrigins: [], trustProxy: [], requestsPerMinute: 60, allowUnkeyed: false, ...http },
+    http: {
+      host: '127.0.0.1', port: 0, allowedOrigins: [], trustProxy: [], requestsPerMinute: 60, totalNewSearchesPerMinute: 120,
+      allowUnkeyed: false, ...http
+    },
     newSearchesPerMinute,
     logger: quiet
   });
@@ -152,6 +155,43 @@ describe('sci-open-mcp --http', () => {
     expect(searches).toEqual(['TS=crispr', 'TS=cholera']);
   });
 
+  it('keys an IPv6 client by its /64, so a host cannot rotate its way to a fresh budget', async () => {
+    const { url, searches } = await serve({ trustProxy: ['loopback'] }, 1);
+    const a = (await connect(url, { forwardedFor: '2001:db8:1:2::1' })).client;
+    const sameHost = (await connect(url, { forwardedFor: '2001:db8:1:2:ffff:ffff:ffff:fffe' })).client;
+    const elsewhere = (await connect(url, { forwardedFor: '2001:db8:1:3::1' })).client;
+
+    expect((await a.callTool({ name: 'search_papers', arguments: { query: 'TS=crispr' } })).isError).toBeFalsy();
+    expect(textOf(await sameHost.callTool({ name: 'search_papers', arguments: { query: 'TS=malaria' } }))).toMatch(/^Error \(rate_limited\)/);
+    expect((await elsewhere.callTool({ name: 'search_papers', arguments: { query: 'TS=cholera' } })).isError).toBeFalsy();
+    expect(searches).toEqual(['TS=crispr', 'TS=cholera']);
+  });
+
+  it('caps new searches across every client, after each client\'s own budget, which a refusal by the cap gives back', async () => {
+    // Only Date: the buckets read Date.now, and the sockets keep real timers.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      const { url, searches } = await serve({ trustProxy: ['loopback'], totalNewSearchesPerMinute: 2 }, 1);
+      const [a, b, c] = await Promise.all(['203.0.113.1', '203.0.113.2', '203.0.113.3'].map(async ip => (await connect(url, { forwardedFor: ip })).client));
+      const search = (client: Client, query: string) => client.callTool({ name: 'search_papers', arguments: { query } }).then(textOf);
+
+      expect(await search(a, 'TS=crispr')).not.toMatch(/^Error/);
+      // Past its own budget, a spends nothing of everyone's: c still gets the last of it.
+      expect(await search(a, 'TS=malaria')).toMatch(/^Error \(rate_limited\)/);
+      expect(await search(c, 'TS=dengue')).not.toMatch(/^Error/);
+      // b has its own budget left, but everyone's is spent.
+      expect(await search(b, 'TS=malaria')).toMatch(/^Error \(rate_limited\)/);
+
+      // Half a minute refills one of everyone's two, and none of b's own: b
+      // searches now only because the cap's refusal gave its token back.
+      vi.setSystemTime(Date.now() + 30_000);
+      expect(await search(b, 'TS=cholera')).not.toMatch(/^Error/);
+      expect(searches).toEqual(['TS=crispr', 'TS=dengue', 'TS=cholera']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('does not believe X-Forwarded-For from a hop it was not told to trust', async () => {
     const { url } = await serve({}, 1);
     const a = (await connect(url, { forwardedFor: '203.0.113.1' })).client;
@@ -208,5 +248,22 @@ describe('sci-open-mcp --http', () => {
   it('hides /metrics when no admin key is set', async () => {
     const { url } = await serve();
     expect((await fetch(url.replace(/\/mcp$/, '/metrics'))).status).toBe(404);
+  });
+});
+
+describe('clientKey', () => {
+  it('keeps an IPv4 address, and reads one a dual-stack socket reports as IPv6 as itself', () => {
+    expect(clientKey('203.0.113.7')).toBe('203.0.113.7');
+    expect(clientKey('::ffff:203.0.113.7')).toBe('203.0.113.7');
+    expect(clientKey('::FFFF:CB00:7107')).toBe('203.0.113.7');
+  });
+
+  it('keys an IPv6 address by its /64, however it is spelled', () => {
+    const key = clientKey('2001:db8:1:2::1');
+    expect(key).toBe('2001:db8:1:2::/64');
+    expect(clientKey('2001:0DB8:0001:0002:ffff:ffff:ffff:fffe')).toBe(key);
+    expect(clientKey('2001:db8:1:2::1%eth0')).toBe(key);
+    expect(clientKey('2001:db8:1:3::1')).not.toBe(key);
+    expect(clientKey('::1')).toBe('0:0:0:0::/64');
   });
 });

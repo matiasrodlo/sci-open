@@ -34,6 +34,9 @@ export type HttpConfig = {
   trustProxy: string[];
   /** Requests a minute per client, any kind. */
   requestsPerMinute: number;
+  /** New searches a minute across every client: the ceiling over the
+   * per-client budgets (`maxNewSearchesPerMinute`). */
+  totalNewSearchesPerMinute: number;
   /** Serve without an OpenAlex key. For a trial, never a shared deployment. */
   allowUnkeyed: boolean;
   /** Enables GET /metrics for whoever sends it as a bearer token. */
@@ -63,8 +66,9 @@ export const USAGE = `sci-open-mcp: MCP server for open-access scientific litera
 
 Over HTTP: OPENALEX_API_KEY is required (SCI_OPEN_ALLOW_UNKEYED=1 for a trial),
 SCI_OPEN_ALLOWED_ORIGINS names hostnames a browser may call from,
-SCI_OPEN_TRUST_PROXY the proxies that may name the client, SCI_OPEN_ADMIN_KEY
-enables GET /metrics, and no file is ever written.
+SCI_OPEN_TRUST_PROXY the proxies that may name the client,
+SCI_OPEN_TOTAL_NEW_SEARCHES_PER_MIN caps new searches across every client,
+SCI_OPEN_ADMIN_KEY enables GET /metrics, and no file is ever written.
 
 Set UNPAYWALL_EMAIL to a real address. Every setting is listed in Appendix A of
 docs/mcp-implementation-manual.md.`;
@@ -175,6 +179,7 @@ export function readMcpConfig(env: NodeJS.ProcessEnv, argv: string[]): ConfigRes
       allowedOrigins: list(read('SCI_OPEN_ALLOWED_ORIGINS')) ?? [],
       trustProxy: list(read('SCI_OPEN_TRUST_PROXY')) ?? [],
       requestsPerMinute: whole('SCI_OPEN_REQUESTS_PER_MIN', 60, 1, 6000),
+      totalNewSearchesPerMinute: whole('SCI_OPEN_TOTAL_NEW_SEARCHES_PER_MIN', 120, 1, 6000),
       allowUnkeyed: isOn('SCI_OPEN_ALLOW_UNKEYED'),
       ...(adminKey ? { adminKey } : {})
     };

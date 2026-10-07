@@ -227,12 +227,14 @@ OPENALEX_API_KEY=… UNPAYWALL_EMAIL=you@example.org \
 ```
 
 Each client has a request allowance (`SCI_OPEN_REQUESTS_PER_MIN`, 60) and a
-new-search budget (`SCI_OPEN_MAX_NEW_SEARCHES_PER_MIN`, 30). Behind a reverse
-proxy, name it in `SCI_OPEN_TRUST_PROXY` so the budgets follow the visitor
-rather than the proxy. A browser may call it only from a hostname in
-`SCI_OPEN_ALLOWED_ORIGINS`, nothing is written to disk (`save_paper` is not
-served, `save_to` is refused), `GET /health`
-answers the version, and `GET /metrics` opens to a bearer token set in
+new-search budget (`SCI_OPEN_MAX_NEW_SEARCHES_PER_MIN`, 30), and new searches
+across every client are capped too (`SCI_OPEN_TOTAL_NEW_SEARCHES_PER_MIN`,
+120). An IPv6 client is its /64, so a host cannot rotate addresses for a fresh
+budget. Behind a reverse proxy, name it in `SCI_OPEN_TRUST_PROXY` so the
+budgets follow the visitor rather than the proxy. A browser may call it only
+from a hostname in `SCI_OPEN_ALLOWED_ORIGINS`, nothing is written to disk
+(`save_paper` is not served, `save_to` is refused), `GET /health` answers the
+version, and `GET /metrics` opens to a bearer token set in
 `SCI_OPEN_ADMIN_KEY`: calls, errors and time per tool, and the requests each
 tool sent the sources, with those of the window by source — failed,
 rate-limited, and OpenAlex's cost.

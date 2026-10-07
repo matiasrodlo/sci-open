@@ -16,3 +16,4 @@ export { SourceBusyError } from './lib/host-pacer';
 export type { FullTextDocument } from './fulltext/types';
 export { OpenCitationsUnavailableError, OPENCITATIONS_HOST } from './graph/opencitations';
 export type { CitationLink, CitationDirection } from './graph/opencitations';
+export { ipv6Groups } from './lib/ip';

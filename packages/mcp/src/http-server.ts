@@ -1,12 +1,12 @@
 import { AsyncLocalStorage } from 'async_hooks';
 import { createServer as createNodeServer, type IncomingMessage, type ServerResponse } from 'http';
 import { timingSafeEqual } from 'crypto';
-import type { AddressInfo } from 'net';
+import { isIPv4, type AddressInfo } from 'net';
 import proxyAddr from 'proxy-addr';
 import { hostHeaderValidation, originValidation, toNodeHandler } from '@modelcontextprotocol/node';
-import type { EngineLogger } from '@sci-open/core';
+import { ipv6Groups, type EngineLogger } from '@sci-open/core';
 import { createHttpHandler } from './http';
-import { tokenBucket } from './admission';
+import { TokenBucket } from './admission';
 import { AdmissionError } from './errors';
 import type { HttpConfig } from './config';
 import type { ServerDeps } from './server';
@@ -22,13 +22,19 @@ import { BUILD } from './build-info';
  *   free. A call that resolves something new — a search, a count, a DOI
  *   lookup, a page of a set no longer held — also spends the client's
  *   new-search budget, which is what stands between one script and every
- *   source's daily quota. A process-wide budget would let one client spend
- *   everyone's.
+ *   source's daily quota. A process-wide budget alone would let one client
+ *   spend everyone's.
+ * - **A ceiling over every client.** Per-client budgets bound one client, not
+ *   a thousand, or one posing as a thousand. New searches across all clients
+ *   also spend `totalNewSearchesPerMinute`, after the client's own budget: a
+ *   client past its own spends nothing of everyone's, and a call the ceiling
+ *   refuses gets the client's token back.
  * - **The client is the visitor, not the proxy.** Behind a reverse proxy every
  *   request comes from the proxy's address, which would make both budgets one
  *   bucket for everybody. X-Forwarded-For is believed only from the hops named
  *   in `trustProxy`, walking it from the right, as Fastify and Express do; a
- *   value a client wrote itself sits further left and is never read.
+ *   value a client wrote itself sits further left and is never read. An IPv6
+ *   visitor is its /64 (`clientKey`).
  * - **Browsers.** A request carrying an `Origin` — only a browser sends one —
  *   is refused unless its hostname is allowed, so a page elsewhere cannot
  *   drive the server from a visitor's browser. Bound to loopback, the `Host`
@@ -53,13 +59,32 @@ export type HttpServerOptions = {
 
 export type RunningHttpServer = { url: string; close(): Promise<void> };
 
+/**
+ * The key a client's budgets are kept under: its IPv4 address, or the /64 its
+ * IPv6 address is in. A host is handed a /64 at the least and may send from
+ * any address in it, so keyed by address one host would hold 2^64 budgets
+ * and forget every other client's past `MAX_CLIENTS`. A network handed a /56
+ * or a /48 still holds 256 or 65,536 keys; the ceiling over every client is
+ * what bounds that. An IPv4 address a dual-stack socket reports as IPv6
+ * (`::ffff:203.0.113.7`) is that IPv4 address.
+ */
+export function clientKey(address: string): string {
+  if (isIPv4(address)) return address;
+  const groups = ipv6Groups(address);
+  if (!groups) return address;
+  if (groups.slice(0, 5).every(g => g === 0) && groups[5] === 0xffff) {
+    return [groups[6]! >> 8, groups[6]! & 0xff, groups[7]! >> 8, groups[7]! & 0xff].join('.');
+  }
+  return `${groups.slice(0, 4).map(g => g.toString(16)).join(':')}::/64`;
+}
+
 /** One budget per client key, the least recently seen forgotten past `MAX_CLIENTS`. */
-function perClient(perMinute: number): (client: string) => () => Promise<void> {
-  const buckets = new Map<string, () => Promise<void>>();
+function perClient(perMinute: number): (client: string) => TokenBucket {
+  const buckets = new Map<string, TokenBucket>();
   return client => {
     let bucket = buckets.get(client);
     if (bucket) buckets.delete(client);
-    else bucket = tokenBucket(perMinute);
+    else bucket = new TokenBucket(perMinute);
     buckets.set(client, bucket); // most recent last
     if (buckets.size > MAX_CLIENTS) buckets.delete(buckets.keys().next().value!);
     return bucket;
@@ -81,10 +106,11 @@ function json(res: ServerResponse, status: number, body: unknown, headers: Recor
 
 export async function startHttpServer({ deps, http, newSearchesPerMinute, logger }: HttpServerOptions): Promise<RunningHttpServer> {
   const trust = proxyAddr.compile(http.trustProxy);
-  const clientOf = (req: IncomingMessage) => proxyAddr(req, trust);
+  const clientOf = (req: IncomingMessage) => clientKey(proxyAddr(req, trust));
 
   const requestBudget = perClient(http.requestsPerMinute);
   const searchBudget = perClient(newSearchesPerMinute);
+  const everyone = new TokenBucket(http.totalNewSearchesPerMinute);
 
   // The handler is built once; the client is known per request. Each MCP
   // request runs in its own store, which `admit` reads however deep in a
@@ -93,7 +119,14 @@ export async function startHttpServer({ deps, http, newSearchesPerMinute, logger
   const admit = async () => {
     const client = current.getStore();
     if (client === undefined) throw new Error('admit was called outside an HTTP request');
-    await searchBudget(client)();
+    const own = searchBudget(client);
+    own.take();
+    try {
+      everyone.take();
+    } catch (error) {
+      own.giveBack();
+      throw error;
+    }
   };
 
   const handler = createHttpHandler(
@@ -129,7 +162,7 @@ export async function startHttpServer({ deps, http, newSearchesPerMinute, logger
 
       const client = clientOf(req);
       try {
-        await requestBudget(client)();
+        requestBudget(client).take();
       } catch (error) {
         const wait = error instanceof AdmissionError ? error.retryAfterSeconds ?? 60 : 60;
         return json(

@@ -1921,15 +1921,34 @@ resolve).
 ```ts
 import { AdmissionError } from './errors';
 
+export class TokenBucket {
+  private tokens: number;
+  private last: number;
+
+  constructor(private readonly perMinute: number, private readonly now: () => number = Date.now) {
+    this.tokens = perMinute;
+    this.last = now();
+  }
+
+  take(): void {
+    const t = this.now();
+    this.tokens = Math.min(this.perMinute, this.tokens + ((t - this.last) / 60_000) * this.perMinute);
+    this.last = t;
+    if (this.tokens < 1) throw new AdmissionError(Math.ceil(((1 - this.tokens) * 60) / this.perMinute));
+    this.tokens -= 1;
+  }
+
+  /** Returns a token spent on a call another bucket then refused (Step 10.4). */
+  giveBack(): void {
+    this.tokens = Math.min(this.perMinute, this.tokens + 1);
+  }
+}
+
+/** A `TokenBucket` as an `admit`: one per process on stdio. */
 export function tokenBucket(perMinute: number, now: () => number = Date.now) {
-  let tokens = perMinute;
-  let last = now();
+  const bucket = new TokenBucket(perMinute, now);
   return async function admit(): Promise<void> {
-    const t = now();
-    tokens = Math.min(perMinute, tokens + ((t - last) / 60_000) * perMinute);
-    last = t;
-    if (tokens < 1) throw new AdmissionError(Math.ceil(((1 - tokens) * 60) / perMinute));
-    tokens -= 1;
+    bucket.take();
   };
 }
 ```
@@ -4643,6 +4662,9 @@ export type HttpConfig = {
   trustProxy: string[];
   /** Requests a minute per client, any kind. */
   requestsPerMinute: number;
+  /** New searches a minute across every client: the ceiling over the
+   * per-client budgets (`maxNewSearchesPerMinute`). */
+  totalNewSearchesPerMinute: number;
   /** Serve without an OpenAlex key. For a trial, never a shared deployment. */
   allowUnkeyed: boolean;
   /** Enables GET /metrics for whoever sends it as a bearer token. */
@@ -4670,8 +4692,9 @@ export const USAGE = `sci-open-mcp: MCP server for open-access scientific litera
 
 Over HTTP: OPENALEX_API_KEY is required (SCI_OPEN_ALLOW_UNKEYED=1 for a trial),
 SCI_OPEN_ALLOWED_ORIGINS names hostnames a browser may call from,
-SCI_OPEN_TRUST_PROXY the proxies that may name the client, SCI_OPEN_ADMIN_KEY
-enables GET /metrics, and no file is ever written.
+SCI_OPEN_TRUST_PROXY the proxies that may name the client,
+SCI_OPEN_TOTAL_NEW_SEARCHES_PER_MIN caps new searches across every client,
+SCI_OPEN_ADMIN_KEY enables GET /metrics, and no file is ever written.
 
 Set UNPAYWALL_EMAIL to a real address. Every setting is listed in Appendix A of
 docs/mcp-implementation-manual.md.`;
@@ -4772,6 +4795,7 @@ export function readMcpConfig(env: NodeJS.ProcessEnv, argv: string[]): ConfigRes
       allowedOrigins: list(read('SCI_OPEN_ALLOWED_ORIGINS')) ?? [],
       trustProxy: list(read('SCI_OPEN_TRUST_PROXY')) ?? [],
       requestsPerMinute: whole('SCI_OPEN_REQUESTS_PER_MIN', 60, 1, 6000),
+      totalNewSearchesPerMinute: whole('SCI_OPEN_TOTAL_NEW_SEARCHES_PER_MIN', 120, 1, 6000),
       allowUnkeyed: isOn('SCI_OPEN_ALLOW_UNKEYED'),
       ...(adminKey ? { adminKey } : {})
     };
@@ -4995,14 +5019,24 @@ needs, each for a reason:
   cheap, not free, and past it the answer is 429 with `Retry-After`. A call
   that resolves something new also spends the client's new-search budget
   (`SCI_OPEN_MAX_NEW_SEARCHES_PER_MIN`, 30), which reaches the tools as an
-  `admit` (Step 5.5). A process-wide budget would let one client spend
+  `admit` (Step 5.5). A process-wide budget alone would let one client spend
   everyone's. The 10,000 most recent clients are remembered; the idlest are
   forgotten first.
+- **A ceiling over every client.** Per-client budgets bound one client, not a
+  thousand, or one posing as a thousand. A new search also spends a budget
+  shared by every client (`SCI_OPEN_TOTAL_NEW_SEARCHES_PER_MIN`, 120),
+  after the client's own: a client past its own budget spends nothing of
+  everyone's, and a call the ceiling refuses gets the client's token back
+  (`TokenBucket.giveBack`, Step 4.8).
 - **The client is the visitor, not the proxy.** Behind a reverse proxy every
   request comes from the proxy's address. `X-Forwarded-For` is believed only
   from the hops named in `SCI_OPEN_TRUST_PROXY`, walked from the right
   (`proxy-addr`); a value a client wrote itself sits further left and is
   never read. With nothing trusted, the client is the socket's address.
+  An IPv6 client is its /64 (`clientKey`): a host is handed a /64 at the
+  least and may send from any address in it, so keyed by address one host
+  would hold 2^64 budgets. An IPv4 address a dual-stack socket reports as
+  IPv6 (`::ffff:203.0.113.7`) is that IPv4 address.
 - **Browsers.** A request carrying an `Origin` — only a browser sends one — is
   refused with 403 unless its hostname is in `SCI_OPEN_ALLOWED_ORIGINS`, so a
   page elsewhere cannot drive the server from a visitor's browser (the SDK's
@@ -5026,7 +5060,14 @@ const current = new AsyncLocalStorage<string>();
 const admit = async () => {
   const client = current.getStore();
   if (client === undefined) throw new Error('admit was called outside an HTTP request');
-  await searchBudget(client)();
+  const own = searchBudget(client);
+  own.take();
+  try {
+    everyone.take();
+  } catch (error) {
+    own.giveBack();
+    throw error;
+  }
 };
 const handler = createHttpHandler({ ...deps, config: { ...deps.config, allowWrites: false }, admit }, { maxRequestBodySize: MAX_BODY_BYTES });
 const node = toNodeHandler(handler, { maxRequestBodySize: MAX_BODY_BYTES });
@@ -5076,6 +5117,7 @@ lists them all.
 | `SCI_OPEN_TRUST_PROXY` | empty | Proxies trusted to name the client in `X-Forwarded-For`: addresses, CIDRs or `proxy-addr` names such as `loopback` |
 | `SCI_OPEN_REQUESTS_PER_MIN` | `60` | Requests a minute per client, of any kind |
 | `SCI_OPEN_MAX_NEW_SEARCHES_PER_MIN` | `30` | New searches a minute per client — the stdio setting, applied per client |
+| `SCI_OPEN_TOTAL_NEW_SEARCHES_PER_MIN` | `120` | New searches a minute across every client: the ceiling over the per-client budgets |
 | `SCI_OPEN_ADMIN_KEY` | unset | Bearer token for `GET /metrics`; unset hides the route |
 | `SCI_OPEN_ALLOW_UNKEYED` | off | Serve without `OPENALEX_API_KEY`. For a trial, never a shared deployment (D11) |
 
@@ -6751,7 +6793,7 @@ the window's requests by source. The evals sum the `_meta` per case
 | Leaking internals in errors | `toToolError` maps everything to stable codes and generic messages | Phase 4 |
 | stdout corruption (stdio) | console redirect, stderr logger, quiet dotenv | Phase 10 |
 | DNS rebinding and cross-site calls (HTTP) | the SDK's `originValidation`: a browser `Origin` outside `SCI_OPEN_ALLOWED_ORIGINS` gets 403; clients that send none pass. Bound to loopback, a `Host` that is not loopback gets 403 | Step 10.4 |
-| Abuse of the public endpoint | per-client request allowance + new-search budget, keyed on the visitor a trusted proxy names (`SCI_OPEN_TRUST_PROXY`); body cap; writes refused | Steps 10.4, 10.6 |
+| Abuse of the public endpoint | per-client request allowance + new-search budget, keyed on the visitor a trusted proxy names (`SCI_OPEN_TRUST_PROXY`), an IPv6 visitor by its /64; a new-search ceiling over every client; body cap; writes refused | Steps 10.4, 10.6 |
 | Agent traffic spending an upstream quota | depth 300, counts for tuning, cool-down after a 429, OpenAlex key required over HTTP | D11, D13; Steps 3.4, 3.6, 10.4 |
 | Operator details leaking | `/health` answers the version only, never the contact-bearing user agent; `/metrics` behind a bearer key compared in constant time | Step 10.4 |
 | Publishing compromise | tag-triggered release in a protected environment; npm provenance; registry login by OIDC, no stored token; pinned publisher | Step 13.9 |
@@ -6829,7 +6871,7 @@ list.
 | `SCI_OPEN_ENGINE` [`--engine`] | `live` | `fixture` serves recorded answers (evals and demos, Step 11.2) |
 | `SCI_OPEN_FIXTURES` [`--fixtures`] | `packages/mcp/fixtures/engine.json` | The recordings `--engine fixture` reads |
 
-Over HTTP (`--http`, Steps 10.4–10.5), eight more:
+Over HTTP (`--http`, Steps 10.4–10.5), nine more:
 
 | Variable | Default | Meaning |
 |---|---|---|
@@ -6839,6 +6881,7 @@ Over HTTP (`--http`, Steps 10.4–10.5), eight more:
 | `SCI_OPEN_ALLOWED_ORIGINS` | empty | Hostnames a browser may call from; empty refuses every browser `Origin` |
 | `SCI_OPEN_TRUST_PROXY` | empty | Proxies trusted to name the client in `X-Forwarded-For` |
 | `SCI_OPEN_REQUESTS_PER_MIN` | `60` | Requests a minute per client, of any kind |
+| `SCI_OPEN_TOTAL_NEW_SEARCHES_PER_MIN` | `120` | New searches a minute across every client, over the per-client budgets |
 | `SCI_OPEN_ADMIN_KEY` | unset | Bearer token for `GET /metrics`; unset hides the route |
 | `SCI_OPEN_ALLOW_UNKEYED` | off | Serve without `OPENALEX_API_KEY`; trials only |
 

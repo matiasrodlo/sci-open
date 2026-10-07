@@ -11,7 +11,7 @@ import { fenceUntrusted } from '../src/safety/untrusted';
 import { writeUserFile } from '../src/safety/paths';
 import { clampText, fitWholeItems } from '../src/shape/budget';
 import { coverageOf, coverageSentence, totalIsLowerBound } from '../src/shape/coverage';
-import { tokenBucket } from '../src/admission';
+import { TokenBucket, tokenBucket } from '../src/admission';
 import pLimit from '../src/p-limit';
 import { ToolError } from '../src/errors';
 import { BUILD } from '../src/build-info';
@@ -239,6 +239,15 @@ describe('tokenBucket', () => {
     await expect(admit()).rejects.toMatchObject({ code: 'rate_limited', retryAfterSeconds: 20 });
     t = 20_000;
     await expect(admit()).resolves.toBeUndefined();
+  });
+
+  it('takes back a token given back, never past its size', () => {
+    const bucket = new TokenBucket(1, () => 0);
+    bucket.giveBack(); // full already: nothing to take back
+    bucket.take();
+    expect(() => bucket.take()).toThrow(expect.objectContaining({ code: 'rate_limited' }));
+    bucket.giveBack();
+    expect(() => bucket.take()).not.toThrow();
   });
 });
 

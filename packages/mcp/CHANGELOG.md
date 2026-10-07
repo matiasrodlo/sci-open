@@ -10,9 +10,11 @@ in `test/__toolsnaps__/` are the record of every schema change.
 ### Added
 
 - `sci-open-mcp --http` serves Streamable HTTP at `/mcp` on its own, with
-  per-client request and new-search budgets, an Origin allowlist, a loopback
-  Host check, `GET /health` and an admin-keyed `GET /metrics`. Settings are
-  `SCI_OPEN_` variables; see the README.
+  per-client request and new-search budgets, a new-search ceiling across every
+  client (`SCI_OPEN_TOTAL_NEW_SEARCHES_PER_MIN`, 120), an Origin allowlist, a
+  loopback Host check, `GET /health` and an admin-keyed `GET /metrics`. An
+  IPv6 client is its /64, so rotating addresses within one does not buy a
+  fresh budget. Settings are `SCI_OPEN_` variables; see the README.
 - Every request sent to a source is counted where it leaves, by source, with
   failures, 429s and OpenAlex's own price for it (`meta.cost_usd`). Each
   result's `_meta` says what its call asked (`io.github.matiasrodlo/usage`),

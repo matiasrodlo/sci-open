@@ -11,14 +11,34 @@ import { AdmissionError } from './errors';
  * sources from bursts; a source's daily budget is a different limit, which
  * the engine handles by the source's own 429.
  */
+export class TokenBucket {
+  private tokens: number;
+  private last: number;
+
+  constructor(private readonly perMinute: number, private readonly now: () => number = Date.now) {
+    this.tokens = perMinute;
+    this.last = now();
+  }
+
+  /** Spends a token, or throws `AdmissionError` saying when one will be free. */
+  take(): void {
+    const t = this.now();
+    this.tokens = Math.min(this.perMinute, this.tokens + ((t - this.last) / 60_000) * this.perMinute);
+    this.last = t;
+    if (this.tokens < 1) throw new AdmissionError(Math.ceil(((1 - this.tokens) * 60) / this.perMinute));
+    this.tokens -= 1;
+  }
+
+  /** Returns a token spent on a call another bucket then refused. */
+  giveBack(): void {
+    this.tokens = Math.min(this.perMinute, this.tokens + 1);
+  }
+}
+
+/** A `TokenBucket` as an `admit`: one per process on stdio. */
 export function tokenBucket(perMinute: number, now: () => number = Date.now) {
-  let tokens = perMinute;
-  let last = now();
+  const bucket = new TokenBucket(perMinute, now);
   return async function admit(): Promise<void> {
-    const t = now();
-    tokens = Math.min(perMinute, tokens + ((t - last) / 60_000) * perMinute);
-    last = t;
-    if (tokens < 1) throw new AdmissionError(Math.ceil(((1 - tokens) * 60) / perMinute));
-    tokens -= 1;
+    bucket.take();
   };
 }

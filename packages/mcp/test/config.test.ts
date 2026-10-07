@@ -12,18 +12,19 @@ describe('readMcpConfig', () => {
   it('reads the HTTP settings from flags and the environment, flags first, and never writes there', () => {
     const { config } = readMcpConfig({
       ...EMAIL, SCI_OPEN_HTTP_PORT: '9000', SCI_OPEN_ALLOWED_ORIGINS: 'a.example, b.example',
-      SCI_OPEN_TRUST_PROXY: 'loopback,10.0.0.0/8', SCI_OPEN_REQUESTS_PER_MIN: '90', SCI_OPEN_ADMIN_KEY: 'k', SCI_OPEN_ALLOW_UNKEYED: '1'
+      SCI_OPEN_TRUST_PROXY: 'loopback,10.0.0.0/8', SCI_OPEN_REQUESTS_PER_MIN: '90', SCI_OPEN_TOTAL_NEW_SEARCHES_PER_MIN: '300',
+      SCI_OPEN_ADMIN_KEY: 'k', SCI_OPEN_ALLOW_UNKEYED: '1'
     }, ['--http', '--port', '8081', '--host', '0.0.0.0']);
     expect(config.http).toEqual({
       host: '0.0.0.0', port: 8081, allowedOrigins: ['a.example', 'b.example'], trustProxy: ['loopback', '10.0.0.0/8'],
-      requestsPerMinute: 90, allowUnkeyed: true, adminKey: 'k'
+      requestsPerMinute: 90, totalNewSearchesPerMinute: 300, allowUnkeyed: true, adminKey: 'k'
     });
     expect(config.allowWrites).toBe(false);
   });
 
   it('defaults to loopback on 8080, trusting no proxy and allowing no browser', () => {
     expect(readMcpConfig({ ...EMAIL, SCI_OPEN_HTTP: '1' }, []).config.http).toEqual({
-      host: '127.0.0.1', port: 8080, allowedOrigins: [], trustProxy: [], requestsPerMinute: 60, allowUnkeyed: false
+      host: '127.0.0.1', port: 8080, allowedOrigins: [], trustProxy: [], requestsPerMinute: 60, totalNewSearchesPerMinute: 120, allowUnkeyed: false
     });
   });
 
