@@ -42,6 +42,12 @@ in `test/__toolsnaps__/` are the record of every schema change.
   `volume`, `number`, `pages`; RIS `VL`, `IS`, `SP`, `EP`), get_paper and
   `detail: "full"` show them, and verify_references checks a cited volume and
   first page against them.
+- `save_paper` (toolset `read`) writes a paper's whole full text to a local
+  Markdown file, none of it into the conversation. It replaces read_paper's
+  `save_to`, so read_paper is read-only: a client that asks before every call
+  of a tool that can write no longer asks before every outline and section.
+  It is served only where writes are allowed; over HTTP, or with
+  `--no-writes`, it is left out, and asking for it by name is refused.
 
 ### Changed
 
@@ -54,10 +60,11 @@ in `test/__toolsnaps__/` are the record of every schema change.
   names every such word it read that way (`query.read_as_words`, and a
   "Read as words" line), so a query that meant an operator in lower case
   finds out. `NEAR/3` is still refused in any case.
-- Where writes are not allowed — over HTTP, or with `--no-writes` — read_paper
-  and export_citations offer no `save_to` or `overwrite`, and are annotated
-  read-only; a `save_to` sent anyway is answered `writes_disabled`. On a local
-  connection with writes allowed they are unchanged.
+- Where writes are not allowed — over HTTP, or with `--no-writes` —
+  export_citations offers no `save_to` or `overwrite` and is annotated
+  read-only, a `save_to` sent anyway is answered `writes_disabled`, and
+  save_paper is not served. On a local connection with writes allowed
+  nothing changes.
 - The text the model reads carries what the workflows need: search_papers
   shows the facets it was asked for, not only in structured content;
   `detail: "full"` shows each result's abstract, DOI, venue and citation count,
@@ -140,6 +147,7 @@ in `test/__toolsnaps__/` are the record of every schema change.
 
 ### Removed
 
+- read_paper's `save_to` and `overwrite`: use save_paper.
 - The sci-open web app and API, and with them `/api/mcp`,
   `MCP_HTTP_ENABLED` and `MCP_ALLOWED_ORIGINS`. The repository is the MCP
   server and the engine it is built on; `--http` replaces the API route.

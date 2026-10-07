@@ -57,7 +57,7 @@ describe('protocol', () => {
 
   it('lists the default tools in a fixed order', async () => {
     const { tools } = await client.listTools();
-    expect(tools.map(t => t.name)).toEqual(['search_papers', 'get_search_page', 'get_paper', 'verify_references', 'read_paper']);
+    expect(tools.map(t => t.name)).toEqual(['search_papers', 'get_search_page', 'get_paper', 'verify_references', 'read_paper', 'save_paper']);
   });
 
   it('gives the client the instructions, grammar included', () => {
@@ -66,6 +66,7 @@ describe('protocol', () => {
 
   it('describes the opt-in tools only to a client that is served them', () => {
     expect(client.getInstructions()).not.toMatch(/get_citations|export_citations/);
+    expect(client.getInstructions()).toContain('- Keep a paper: save_paper');
     expect(allClient.getInstructions()).toContain('- Follow citations: get_citations');
     expect(allClient.getInstructions()).toContain('- Cite papers: export_citations');
   });
@@ -96,12 +97,13 @@ describe('protocol', () => {
   });
 
   it('marks every tool read-only except the two that can write a file', async () => {
-    // Annotations describe a tool, not a call: read_paper and export_citations
-    // write only with save_to, and replace a file only with overwrite, but they can.
+    // Annotations describe a tool, not a call: export_citations writes only
+    // with save_to, and either replaces a file only with overwrite, but they can.
+    // read_paper is read-only: saving a paper is save_paper's.
     const { tools } = await allClient.listTools();
-    expect(tools).toHaveLength(7);
+    expect(tools).toHaveLength(8);
     for (const t of tools) {
-      const writes = t.name === 'read_paper' || t.name === 'export_citations';
+      const writes = t.name === 'save_paper' || t.name === 'export_citations';
       expect(t.annotations).toMatchObject({ readOnlyHint: !writes, destructiveHint: writes, idempotentHint: !writes, openWorldHint: true });
     }
   });

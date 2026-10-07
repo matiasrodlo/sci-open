@@ -101,13 +101,20 @@ describe('sci-open-mcp --http', () => {
   it('takes toolsets from the URL, names the valid ones for a typo, and never writes', async () => {
     const { url } = await serve();
     const { client } = await connect(url, { query: '?toolsets=all' });
-    expect((await client.listTools()).tools).toHaveLength(7);
+    // Every tool but save_paper, which only writes files.
+    expect((await client.listTools()).tools.map(t => t.name)).toHaveLength(7);
+    expect((await client.listTools()).tools.map(t => t.name)).not.toContain('save_paper');
+    expect(client.getInstructions()).not.toContain('save_paper');
     const refused = await client.callTool({ name: 'export_citations', arguments: { papers: ['10.1234/s.1'], save_to: '/tmp/sci-open-x' } });
     expect(textOf(refused)).toMatch(/^Error \(writes_disabled\)/);
 
     const typo = await post(`${url}?toolsets=nope`, LIST_TOOLS);
     expect(typo.status).toBe(400);
     expect(((await typo.json()) as { error: { message: string } }).error.message).toMatch(/^Unknown toolset "nope"/);
+
+    const writer = await post(`${url}?tools=save_paper`, LIST_TOOLS);
+    expect(writer.status).toBe(400);
+    expect(((await writer.json()) as { error: { message: string } }).error.message).toMatch(/^Tool "save_paper" only writes files/);
   });
 
   it('refuses a browser on an origin it was not told to allow, and passes clients that send none', async () => {

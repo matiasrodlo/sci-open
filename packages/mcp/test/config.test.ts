@@ -96,27 +96,33 @@ describe('readMcpConfig', () => {
 });
 
 describe('selectTools', () => {
-  const names = (request: Parameters<typeof selectTools>[0]) => selectTools(request).map(t => t.name);
+  const names = (request: Parameters<typeof selectTools>[0], writable = true) => selectTools(request, writable).map(t => t.name);
 
   it('serves core and read by default, in a fixed order', () => {
-    expect(names({})).toEqual(['search_papers', 'get_search_page', 'get_paper', 'verify_references', 'read_paper']);
+    expect(names({})).toEqual(['search_papers', 'get_search_page', 'get_paper', 'verify_references', 'read_paper', 'save_paper']);
     expect(names({ toolsets: ['default'] })).toEqual(names({}));
   });
 
   it('serves every tool for all, and adds tools by name', () => {
     expect(names({ toolsets: ['all'] })).toEqual([
-      'search_papers', 'get_search_page', 'get_paper', 'verify_references', 'read_paper', 'get_citations', 'export_citations'
+      'search_papers', 'get_search_page', 'get_paper', 'verify_references', 'read_paper', 'save_paper', 'get_citations', 'export_citations'
     ]);
     expect(names({ toolsets: ['graph'] })).toEqual(['get_citations']);
     expect(names({ toolsets: ['default'], tools: ['export_citations'] })).toEqual([
-      'search_papers', 'get_search_page', 'get_paper', 'verify_references', 'read_paper', 'export_citations'
+      'search_papers', 'get_search_page', 'get_paper', 'verify_references', 'read_paper', 'save_paper', 'export_citations'
     ]);
     expect(names({ toolsets: ['graph'], tools: ['get_paper'] })).toEqual(['get_paper', 'get_citations']);
     expect(names({ toolsets: ['core'] })).not.toContain('read_paper');
   });
 
+  it('leaves save_paper out where writes are not allowed, and refuses it by name there', () => {
+    expect(names({}, false)).toEqual(['search_papers', 'get_search_page', 'get_paper', 'verify_references', 'read_paper']);
+    expect(names({ toolsets: ['all'] }, false)).not.toContain('save_paper');
+    expect(() => selectTools({ tools: ['save_paper'] }, false)).toThrow(/"save_paper" only writes files/);
+  });
+
   it('refuses an unknown toolset or tool, naming the valid ones', () => {
-    expect(() => selectTools({ toolsets: ['nope'] })).toThrow('Unknown toolset "nope". Toolsets: core, read, graph, export.');
-    expect(() => selectTools({ tools: ['read_pdf'] })).toThrow(/Unknown tool "read_pdf".*Tools: search_papers/);
+    expect(() => selectTools({ toolsets: ['nope'] }, true)).toThrow('Unknown toolset "nope". Toolsets: core, read, graph, export.');
+    expect(() => selectTools({ tools: ['read_pdf'] }, true)).toThrow(/Unknown tool "read_pdf".*Tools: search_papers/);
   });
 });

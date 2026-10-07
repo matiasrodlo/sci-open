@@ -1,28 +1,44 @@
-import { createHash } from 'crypto';
 import * as z from 'zod';
+import type { Paper } from '@sci-open/shared';
+import type { FullTextDocument } from '@sci-open/core';
 import { defineTool } from '../framework/define-tool';
 import { ToolError } from '../errors';
 import { resolvePaperRef } from './resolve-paper';
 import { fenceUntrusted } from '../safety/untrusted';
 import { sanitizeText, stripInvisible } from '../safety/sanitize';
-import { writeUserFile } from '../safety/paths';
-import { writesAllowed } from '../config';
 import { retractionWarning } from '../shape/paper';
-import { documentToMarkdown } from '../shape/markdown';
 
 const MAX_MATCHES = 20;
 const CONTEXT = 100; // characters each side of a match
 
 /**
+ * Where a full text came from, in a line, and which version of the paper it
+ * is when that is not the one the record describes: a published paper is read
+ * from its arXiv preprint when that is the open copy, and a repository PDF is
+ * often the accepted manuscript. A quote is then the copy's, and is cited as
+ * that copy. For read_paper and save_paper alike.
+ */
+export function copySource(paper: Paper, doc: FullTextDocument): string {
+  const license = doc.license ? sanitizeText(doc.license) : undefined;
+  const version = doc.tier === 'arxiv-html' && paper.stage !== 'preprint'
+    ? 'This is the arXiv preprint of a paper published since; its text may differ from the published version. Cite a quotation from it as the preprint.'
+    : doc.tier === 'pdf' && paper.oaStatus === 'green'
+      ? 'This copy is from a repository, often the accepted manuscript rather than the published version; its pages may not be the journal\'s.'
+      : '';
+  return `Source: ${doc.tier} · ${doc.url}${license ? ` · license: ${license}` : ''}${version ? `\n${version}` : ''}`;
+}
+
+/**
  * One tool, three views — the outline first, then a section a page at a time,
  * or a search for a passage — so a paper of any length is read without
- * flooding the context, and the default tool count stays small.
+ * flooding the context, and the default tool count stays small. Read-only:
+ * writing the whole text to a file is save_paper's, so a client that asks
+ * before any call that can write never asks before a read.
  */
 export const readPaper = defineTool({
   name: 'read_paper',
   title: 'Read paper',
   toolset: 'read',
-  writes: ['save_to', 'overwrite'],
   description:
     'Read the legal open-access full text of a paper. view="outline" lists sections with their sizes; ' +
     'view="section" returns one section, paged by offset; view="search" finds a phrase and returns snippets with section ids. ' +
@@ -33,9 +49,7 @@ export const readPaper = defineTool({
     section: z.string().max(20).optional().describe('Section id from the outline, e.g. s2.1'),
     offset: z.number().int().min(0).default(0),
     max_chars: z.number().int().min(1000).max(30000).default(12000),
-    query: z.string().min(2).max(200).optional().describe('Phrase to find when view="search"'),
-    save_to: z.string().max(1000).optional().describe('Absolute path; writes the whole text as Markdown (local connections only)'),
-    overwrite: z.boolean().default(false)
+    query: z.string().min(2).max(200).optional().describe('Phrase to find when view="search"')
   }),
   output: z.object({
     /** A source records this paper as retracted. */
@@ -49,23 +63,15 @@ export const readPaper = defineTool({
       id: z.string(), title: z.string(), offset: z.number().int(), returned: z.number().int(),
       total: z.number().int(), next_offset: z.number().int().nullable(), text: z.string()
     }).optional(),
-    matches: z.array(z.object({ section: z.string(), offset: z.number().int(), snippet: z.string() })).optional(),
-    saved: z.object({ path: z.string(), bytes: z.number().int(), sha256: z.string() }).optional()
+    matches: z.array(z.object({ section: z.string(), offset: z.number().int(), snippet: z.string() })).optional()
   }),
   async run(args, deps) {
-    // Never over HTTP, whatever the configuration says: the path is on the
-    // caller's machine, and this process is not. Checked before anything is
-    // fetched, like the arguments below: a refusal certain from the start
-    // must not spend a lookup, a download or a paced host's slot first.
-    const writable = writesAllowed(deps);
-    if (args.save_to !== undefined && !writable) {
-      throw new ToolError('writes_disabled', 'This server is not allowed to write files.', 'Omit save_to to receive the content inline.');
-    }
-    // Checked before anything is fetched: a missing argument costs nothing.
-    if (args.save_to === undefined && args.view === 'section' && !args.section) {
+    // Checked before anything is fetched: a missing argument must not spend a
+    // lookup, a download or a paced host's slot first.
+    if (args.view === 'section' && !args.section) {
       throw new ToolError('invalid_input', 'view="section" needs a section id.', 'Take one from view="outline", e.g. s2.1.');
     }
-    if (args.save_to === undefined && args.view === 'search' && !args.query) {
+    if (args.view === 'search' && !args.query) {
       throw new ToolError('invalid_input', 'view="search" needs a query.');
     }
 
@@ -81,23 +87,7 @@ export const readPaper = defineTool({
     // Every view leads with it: a passage from a retracted paper is still read.
     const lead = paper.retracted ? [retractionWarning(['This paper'])] : [];
     const provenance = doc.license ? { license: doc.license } : {};
-    // The copy read is not always the version the record describes: a
-    // published paper is read from its arXiv preprint when that is the open
-    // copy, and a repository PDF is often the accepted manuscript. A quote
-    // is then the copy's, and is cited as that copy.
-    const version = doc.tier === 'arxiv-html' && paper.stage !== 'preprint'
-      ? 'This is the arXiv preprint of a paper published since; its text may differ from the published version. Cite a quotation from it as the preprint.'
-      : doc.tier === 'pdf' && paper.oaStatus === 'green'
-        ? 'This copy is from a repository, often the accepted manuscript rather than the published version; its pages may not be the journal\'s.'
-        : '';
-    const source = `Source: ${doc.tier} · ${doc.url}${base.license ? ` · license: ${base.license}` : ''}${version ? `\n${version}` : ''}`;
-
-    if (args.save_to !== undefined) {
-      const markdown = documentToMarkdown(doc);
-      const path = await writeUserFile({ allowed: writable }, args.save_to, '.md', markdown, args.overwrite);
-      const saved = { path, bytes: Buffer.byteLength(markdown), sha256: createHash('sha256').update(markdown).digest('hex') };
-      return { structured: { ...base, saved }, text: [...lead, `Saved ${doc.sections.length} sections (${saved.bytes} bytes) to ${path}.`].join('\n'), provenance };
-    }
+    const source = copySource(paper, doc);
 
     if (args.view === 'outline') {
       const outline = doc.sections.map(s => ({ id: s.id, title: sanitizeText(s.title), chars: s.text.length }));

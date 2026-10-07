@@ -4,7 +4,7 @@ import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import { useLogger } from '@sci-open/core';
 import { createServerFactory } from '../server';
 import { selectTools } from '../toolsets';
-import { readMcpConfig, type McpConfig } from '../config';
+import { readMcpConfig, writesAllowed, type McpConfig } from '../config';
 import { stderrLogger } from '../log';
 import { createMetrics } from '../metrics';
 import { engineFor } from '../engine-for';
@@ -51,7 +51,7 @@ function main(): void {
   // A typo in a client config fails here, with the valid names, rather than
   // when the first client connects.
   try {
-    selectTools(config);
+    selectTools(config, writesAllowed({ transport: config.http ? 'http' : 'stdio', config }));
   } catch (error) {
     process.stderr.write(`${(error as Error).message}\n`);
     process.exit(2);

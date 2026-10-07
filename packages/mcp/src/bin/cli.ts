@@ -15,6 +15,7 @@ import { searchPapers } from '../tools/search-papers';
 import { getPaper } from '../tools/get-paper';
 import { verifyReferences } from '../tools/verify-references';
 import { readPaper } from '../tools/read-paper';
+import { savePaper } from '../tools/save-paper';
 import { getCitations } from '../tools/get-citations';
 import { exportCitations } from '../tools/export-citations';
 
@@ -24,7 +25,7 @@ const USAGE = `sci-open <command>
   paper <id or DOI>                            get_paper
   verify <file>                                verify_references, one reference per line (25 at most)
   read <id or DOI> [--section ID [--offset N] | --find TEXT | --out FILE]
-                                               read_paper: the outline, a section, a search, or all of it to a file
+                                               read_paper: the outline, a section or a search; --out: save_paper, all of it to a file
   refs <DOI or id> [--offset N]                get_citations: what the paper cites
   citers <DOI or id> [--offset N]              get_citations: what cites the paper
   cite <DOI or id>... [--ris] [--abstracts] [--out FILE]
@@ -114,11 +115,10 @@ async function main(): Promise<void> {
     case 'paper':
       return run(getPaper, paperRefKind(rest[0] ?? ''));
     case 'read':
+      if (values.out) return run(savePaper, { paper: rest[0] ?? '', path: values.out });
       return run(readPaper, {
         paper: rest[0] ?? '',
-        ...(values.out
-          ? { save_to: values.out }
-          : values.section
+        ...(values.section
             ? { view: 'section', section: values.section, ...(values.offset ? { offset: Number(values.offset) } : {}) }
             : values.find
               ? { view: 'search', query: values.find }

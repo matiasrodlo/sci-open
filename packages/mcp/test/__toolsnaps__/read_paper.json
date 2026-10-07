@@ -41,15 +41,6 @@
         "type": "string",
         "minLength": 2,
         "maxLength": 200
-      },
-      "save_to": {
-        "description": "Absolute path; writes the whole text as Markdown (local connections only)",
-        "type": "string",
-        "maxLength": 1000
-      },
-      "overwrite": {
-        "default": false,
-        "type": "boolean"
       }
     },
     "required": [
@@ -182,28 +173,6 @@
           ],
           "additionalProperties": false
         }
-      },
-      "saved": {
-        "type": "object",
-        "properties": {
-          "path": {
-            "type": "string"
-          },
-          "bytes": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
-          },
-          "sha256": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "path",
-          "bytes",
-          "sha256"
-        ],
-        "additionalProperties": false
       }
     },
     "required": [
@@ -216,9 +185,9 @@
   },
   "annotations": {
     "title": "Read paper",
-    "readOnlyHint": false,
-    "destructiveHint": true,
-    "idempotentHint": false,
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
     "openWorldHint": true
   }
 }

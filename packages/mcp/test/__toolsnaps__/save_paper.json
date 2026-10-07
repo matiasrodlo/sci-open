@@ -1,0 +1,92 @@
+{
+  "name": "save_paper",
+  "title": "Save paper",
+  "description": "Write the legal open-access full text of a paper to a local Markdown file, a heading per section, without reading it into the conversation. For a paper the user wants to keep or to search with other tools; use read_paper to read it here.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "paper": {
+        "type": "string",
+        "maxLength": 300,
+        "description": "sci-open id or DOI"
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1000,
+        "description": "Absolute path of the file to write (~ is the home directory); .md is added when missing"
+      },
+      "overwrite": {
+        "default": false,
+        "description": "Replace a file already at the path",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "paper",
+      "path"
+    ],
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "retracted": {
+        "type": "boolean",
+        "const": true
+      },
+      "paper": {
+        "type": "string"
+      },
+      "tier": {
+        "type": "string",
+        "enum": [
+          "europepmc-jats",
+          "arxiv-html",
+          "pdf"
+        ]
+      },
+      "url": {
+        "type": "string"
+      },
+      "license": {
+        "type": "string"
+      },
+      "path": {
+        "type": "string"
+      },
+      "sections": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+      },
+      "bytes": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+      },
+      "sha256": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "paper",
+      "tier",
+      "url",
+      "path",
+      "sections",
+      "bytes",
+      "sha256"
+    ],
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false
+  },
+  "annotations": {
+    "title": "Save paper",
+    "readOnlyHint": false,
+    "destructiveHint": true,
+    "idempotentHint": false,
+    "openWorldHint": true
+  }
+}

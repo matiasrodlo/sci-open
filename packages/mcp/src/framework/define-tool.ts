@@ -50,6 +50,9 @@ export type ToolDefinition<I extends z.ZodObject, O extends z.ZodObject> = {
    * are not allowed they are left out of the schema, and the tool is
    * read-only (`inputOf`). */
   writes?: readonly string[];
+  /** Writing a file is the whole tool. Where writes are not allowed it is not
+   * served at all (`selectTools`), rather than served to refuse every call. */
+  onlyWhereWritable?: true;
   /** Computes the answer. Validation, budgets, provenance, errors and metrics
    * are `registerTools`' job, never a tool's. */
   run(args: z.infer<I>, deps: ToolDeps): Promise<ToolOutcome<z.infer<O>>>;

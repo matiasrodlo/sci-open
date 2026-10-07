@@ -3,7 +3,7 @@ import type { Engine, EngineLogger } from '@sci-open/core';
 import { instructionsFor } from './instructions';
 import { selectTools } from './toolsets';
 import { registerTools } from './framework/register';
-import type { McpConfig } from './config';
+import { writesAllowed, type McpConfig } from './config';
 import type { Metrics } from './metrics';
 import { tokenBucket } from './admission';
 import { BUILD } from './build-info';
@@ -24,7 +24,7 @@ export function createServer(deps: ServerDeps, request: { toolsets?: string[]; t
   const tools = selectTools({
     toolsets: request.toolsets ?? deps.config.toolsets,
     tools: request.tools ?? deps.config.tools
-  });
+  }, writesAllowed(deps));
   const server = new McpServer(
     { name: identity.name, title: 'sci-open — open-access literature', version: identity.version },
     {

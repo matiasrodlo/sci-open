@@ -44,6 +44,11 @@ and a result names every such word (`read_as_words`), because the English in
 a model's query was read as logic — `do not resuscitate orders` excluded
 resuscitation.
 
+Writing a paper's full text to a file moved from read_paper's `save_to` to a
+tool of its own, `save_paper`, served only where writes are allowed, so
+read_paper is annotated read-only and a client that asks before every call of
+a tool that can write never asks before a read.
+
 Steps that changed the removed apps are kept, condensed, as the record of how
 the current layout came to be; their full text is in git history at
 `14e6aba9` and on `feat/mcp-server`. Every other step describes the server
@@ -135,7 +140,7 @@ Concretely, every answer is:
   anonymous and rate-limited (decision D9).
 - No lab, HPC or instrument control. Stay in the literature layer.
 - No write access to anything except, optionally, a file the user names on
-  their own machine (`save_to`, stdio only).
+  their own machine (`save_paper`, or `export_citations`' `save_to`; stdio only).
 
 ## 2. What "cutting edge" means here
 
@@ -233,8 +238,9 @@ Three rules hold the architecture together:
 
 ## 4. The tool contract
 
-Seven tools in four toolsets. The default toolsets are `core` and `read`
-(five tools).
+Eight tools in four toolsets. The default toolsets are `core` and `read`:
+six tools on a local connection, five over HTTP, where `save_paper` is not
+served.
 
 | Tool | Toolset | Purpose | Key inputs | Returns |
 |---|---|---|---|---|
@@ -242,15 +248,19 @@ Seven tools in four toolsets. The default toolsets are `core` and `read`
 | `get_search_page` | core | Read another page of a search | `handle`, `page` | the same shape as `search_papers` |
 | `get_paper` | core | One full record | `id` \| `doi` | full paper with per-field sources |
 | `verify_references` | core | Check up to 25 references; flag fabricated, garbled or mismatched ones | `references[]` | verdict per reference + summary counts |
-| `read_paper` | read | Read legal open-access full text | `paper`, `view: outline \| section \| search`, `section`, `offset`, `query`, `save_to` | outline, a page of a section, or matches with context |
+| `read_paper` | read | Read legal open-access full text | `paper`, `view: outline \| section \| search`, `section`, `offset`, `query` | outline, a page of a section, or matches with context |
+| `save_paper` | read (where writes are allowed) | Write a paper's whole full text to a local Markdown file | `paper`, `path`, `overwrite` | the path, its size and SHA-256 — no body text |
 | `get_citations` | graph | References of a paper, or papers citing it | `paper`, `direction`, `limit`, `offset` | linked works, resolved to records |
 | `export_citations` | export | BibTeX or RIS for a list of papers | `papers[]`, `format`, `save_to` | a file path (stdio) or an embedded resource |
 
-All tools are read-only (`readOnlyHint: true`) except `read_paper` and
-`export_citations`, which write a file when — and only when — the caller passes
-`save_to` on a stdio connection with writes allowed. Annotations describe a
-tool, not a call, so those two are declared not read-only, and destructive,
-because `overwrite: true` replaces an existing file.
+All tools are read-only (`readOnlyHint: true`) except `save_paper`, which
+writes a file, and `export_citations`, which writes one when — and only when —
+the caller passes `save_to`, both on a stdio connection with writes allowed.
+Annotations describe a tool, not a call, so those two are declared not
+read-only, and destructive, because `overwrite: true` replaces an existing
+file. That is why saving is not a parameter of `read_paper`: a client that
+asks before every call of a tool that can write would ask before every read.
+Where writes are not allowed, `save_paper` is not served at all.
 
 ## 5. Repository layout after the work
 
@@ -356,7 +366,9 @@ depth, the access check run — so it saves the model's context and nothing
 else.
 
 **D8 — Default to five tools.** `core` + `read`. `graph` and `export` are
-opt-in. Context7 (two tools) is the most-starred server in its category;
+opt-in. (Six on a local connection since `save_paper` left `read_paper`: one
+short description, against an approval prompt before every read in a client
+that asks before any tool that can write.) Context7 (two tools) is the most-starred server in its category;
 GitHub, Sentry, Exa and Supabase all ship a small default set with opt-in
 groups.
 
@@ -2341,9 +2353,11 @@ export function createServerFactory(deps: ServerDeps): McpServerFactory {
 }
 ```
 
-Tools that can write are registered on every transport; they refuse `save_to`
-when `deps.config.allowWrites` is false, which is always the case over HTTP
-(Appendix A). Hiding them would hide their read paths too.
+A tool that can write as well as read (`export_citations`) is registered on
+every transport, without `save_to` where writes are not allowed, which is
+always the case over HTTP (Appendix A); hiding it would hide its read path
+too. A tool that only writes (`save_paper`, `onlyWhereWritable`) is left out
+there by `selectTools`, and asking for it by name is refused.
 
 Note the token bucket is created **once per process** and shared by every
 per-request instance; a bucket per instance would never run dry. That is right
@@ -3860,9 +3874,12 @@ One tool, three views — GitHub's consolidation pattern (`issue_read` with a
   itself, so a program can concatenate the pages.
 - **search** — case-insensitive search over all sections; up to 20 matches,
   each with 200 characters of context and its section id and offset.
-- **save_to** — writes the whole document as Markdown through
-  `writeUserFile(…, '.md', …)`, returns path, bytes and SHA-256, and *no body
-  text*. Refused on HTTP connections (`writes_disabled`), whatever the
+- **To a file** — not a view, and not this tool: `save_paper` (its own file,
+  `tools/save-paper.ts`) writes the whole document as Markdown through
+  `writeUserFile(…, '.md', …)` and returns path, bytes and SHA-256, and *no
+  body text*. It began as read_paper's `save_to`, and moved so that read_paper
+  is annotated read-only. It is served only where writes are allowed, and
+  refuses on an HTTP connection (`writes_disabled`) whatever the
   configuration says.
 
 `sanitize.ts` (Step 4.4) gains one export for the slices, which must keep
@@ -3874,7 +3891,7 @@ blank lines, so it is used only for what the model reads:
 export const stripInvisible = (raw: string): string => raw.replace(INVISIBLE, '');
 ```
 
-The Markdown for `save_to` comes from `src/shape/markdown.ts`. A file is for
+The Markdown for `save_paper` comes from `src/shape/markdown.ts`. A file is for
 the user, not the model, so it carries no fence:
 
 ```ts
@@ -4641,7 +4658,7 @@ export const USAGE = `sci-open-mcp: MCP server for open-access scientific litera
 
   --toolsets <list>         core, read, graph, export, all, default  [SCI_OPEN_TOOLSETS]
   --tools <list>            extra tools by name                      [SCI_OPEN_TOOLS]
-  --no-writes               refuse save_to                           [SCI_OPEN_ALLOW_WRITES=0]
+  --no-writes               no save_paper, and no save_to            [SCI_OPEN_ALLOW_WRITES=0]
   --trusted-fulltext-only   full text from Europe PMC and arXiv only [SCI_OPEN_TRUSTED_FULLTEXT_ONLY=1]
   --engine <live|fixture>   fixture serves recorded answers          [SCI_OPEN_ENGINE]
   --fixtures <path>         the recordings for --engine fixture      [SCI_OPEN_FIXTURES]
@@ -4654,7 +4671,7 @@ export const USAGE = `sci-open-mcp: MCP server for open-access scientific litera
 Over HTTP: OPENALEX_API_KEY is required (SCI_OPEN_ALLOW_UNKEYED=1 for a trial),
 SCI_OPEN_ALLOWED_ORIGINS names hostnames a browser may call from,
 SCI_OPEN_TRUST_PROXY the proxies that may name the client, SCI_OPEN_ADMIN_KEY
-enables GET /metrics, and save_to is always refused.
+enables GET /metrics, and no file is ever written.
 
 Set UNPAYWALL_EMAIL to a real address. Every setting is listed in Appendix A of
 docs/mcp-implementation-manual.md.`;
@@ -6798,7 +6815,7 @@ list.
 | `OPENCITATIONS_TOKEN` | unset | Optional OpenCitations access token, for `get_citations` |
 | `SCI_OPEN_TOOLSETS` [`--toolsets`] | `core,read` | Comma-separated: `core`, `read`, `graph`, `export`, `all`, `default` |
 | `SCI_OPEN_TOOLS` [`--tools`] | unset | Extra individual tools, added to the toolsets |
-| `SCI_OPEN_ALLOW_WRITES` [`--no-writes`] | `1` on stdio, always `0` on HTTP | Whether `save_to` may write files |
+| `SCI_OPEN_ALLOW_WRITES` [`--no-writes`] | `1` on stdio, always `0` on HTTP | Whether `save_paper` is served and `save_to` may write files |
 | `SCI_OPEN_TRUSTED_FULLTEXT_ONLY` [`--trusted-fulltext-only`] | `0` | Full text only from Europe PMC and arXiv |
 | `SCI_OPEN_TEXT_BUDGET_CHARS` | `40000` | Maximum `content` text per result |
 | `SCI_OPEN_STRUCTURED_BUDGET_CHARS` | `80000` | Maximum `structuredContent` per result |
@@ -6821,7 +6838,8 @@ Over HTTP (`--http`, Steps 10.4–10.5), eight more:
 | `SCI_OPEN_ADMIN_KEY` | unset | Bearer token for `GET /metrics`; unset hides the route |
 | `SCI_OPEN_ALLOW_UNKEYED` | off | Serve without `OPENALEX_API_KEY`; trials only |
 
-Over HTTP `save_to` is always refused, whatever `SCI_OPEN_ALLOW_WRITES` says.
+Over HTTP nothing is written, whatever `SCI_OPEN_ALLOW_WRITES` says:
+`save_paper` is not served and `save_to` is refused.
 
 ## B. Error codes
 
@@ -6833,7 +6851,7 @@ Over HTTP `save_to` is always refused, whatever `SCI_OPEN_ALLOW_WRITES` says.
 | `no_full_text` | No legal open copy could be read | Use `get_paper` for the abstract |
 | `upstream_unavailable` | A source timed out or failed | Retry once; narrow the query |
 | `rate_limited` | Too many new searches, or a paced source (arXiv) has no free slot yet | Wait `retryAfterSeconds`; page existing searches or read other papers meanwhile |
-| `writes_disabled` | `save_to` on a connection that cannot write | Omit `save_to` |
+| `writes_disabled` | `save_to`, or `save_paper`, on a connection that cannot write | Omit `save_to`; read with `read_paper` |
 | `internal` | Anything else (details only in server logs) | Report it to the user |
 
 ## C. Definition of done

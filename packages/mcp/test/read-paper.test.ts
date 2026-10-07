@@ -5,6 +5,7 @@ import path from 'path';
 import { SourceBusyError, type FullTextDocument } from '@sci-open/core';
 import { paper, ref } from '@sci-open/core/testing';
 import { readPaper } from '../src/tools/read-paper';
+import { savePaper } from '../src/tools/save-paper';
 import { fakeEngine, type FakeOptions } from './fake-engine';
 
 /**
@@ -155,20 +156,33 @@ describe('read_paper', () => {
   });
 });
 
-describe('read_paper save_to', () => {
+describe('save_paper', () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'sci-open-read-'));
+  const save = (args: Record<string, unknown>) => savePaper.input.parse({ paper: 'europepmc:1', ...args });
 
   it('writes the whole text as Markdown on a local connection, and returns no body text', async () => {
     const fake = fakeEngine([STUDY], { documents: { 'europepmc:1': DOC } });
     const deps = { ...fake.deps, config: { ...fake.deps.config, allowWrites: true } };
-    const { structured, text } = await readPaper.run(readPaper.input.parse({ paper: 'europepmc:1', save_to: path.join(dir, 'study') }), deps);
+    const { structured, text } = await savePaper.run(save({ path: path.join(dir, 'study') }), deps);
 
     const file = readFileSync(path.join(dir, 'study.md'), 'utf8');
-    expect(structured.saved).toMatchObject({ path: path.join(dir, 'study.md'), bytes: Buffer.byteLength(file) });
-    expect(structured.saved!.sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(structured).toMatchObject({ paper: 'europepmc:1', tier: 'europepmc-jats', path: path.join(dir, 'study.md'), sections: 4, bytes: Buffer.byteLength(file) });
+    expect(structured.sha256).toMatch(/^[0-9a-f]{64}$/);
     expect(file).toMatch(/^# A long study\n\nSource: https:\/\/www\.ebi\.ac\.uk.*\nLicense: This is an open-access/);
     expect(file).toContain('\n\n## Methods\n\n### Sampling\n\nParagraph 0');
-    expect(text).toBe(`Saved 4 sections (${Buffer.byteLength(file)} bytes) to ${path.join(dir, 'study.md')}.`);
+    expect(text.split('\n')).toEqual([
+      `Saved 4 sections (${Buffer.byteLength(file)} bytes) to ${path.join(dir, 'study.md')}.`,
+      `Source: europepmc-jats · ${DOC.url} · license: ${DOC.license}`
+    ]);
+    expect(text).not.toContain('Paragraph 0');
+  });
+
+  it('replaces a file only when asked', async () => {
+    const fake = fakeEngine([STUDY], { documents: { 'europepmc:1': DOC } });
+    const deps = { ...fake.deps, config: { ...fake.deps.config, allowWrites: true } };
+    await savePaper.run(save({ path: path.join(dir, 'twice.md') }), deps);
+    await expect(savePaper.run(save({ path: path.join(dir, 'twice.md') }), deps)).rejects.toMatchObject({ code: 'invalid_input' });
+    await expect(savePaper.run(save({ path: path.join(dir, 'twice.md'), overwrite: true }), deps)).resolves.toBeDefined();
   });
 
   it('refuses over HTTP whatever the configuration says, before fetching anything', async () => {
@@ -176,15 +190,13 @@ describe('read_paper save_to', () => {
     const readFullText = vi.spyOn(fake.engine, 'readFullText');
     const lookup = vi.spyOn(fake.engine, 'lookup');
     const deps = { ...fake.deps, transport: 'http' as const, config: { ...fake.deps.config, allowWrites: true } };
-    await expect(readPaper.run(readPaper.input.parse({ paper: 'europepmc:1', save_to: path.join(dir, 'http') }), deps))
-      .rejects.toMatchObject({ code: 'writes_disabled' });
+    await expect(savePaper.run(save({ path: path.join(dir, 'http') }), deps)).rejects.toMatchObject({ code: 'writes_disabled' });
     expect(lookup).not.toHaveBeenCalled();
     expect(readFullText).not.toHaveBeenCalled();
   });
 
   it('refuses when writes are turned off', async () => {
     const fake = fakeEngine([STUDY], { documents: { 'europepmc:1': DOC } });
-    await expect(readPaper.run(readPaper.input.parse({ paper: 'europepmc:1', save_to: path.join(dir, 'off') }), fake.deps))
-      .rejects.toMatchObject({ code: 'writes_disabled' });
+    await expect(savePaper.run(save({ path: path.join(dir, 'off') }), fake.deps)).rejects.toMatchObject({ code: 'writes_disabled' });
   });
 });

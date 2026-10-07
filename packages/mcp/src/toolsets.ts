@@ -4,6 +4,7 @@ import { getSearchPage } from './tools/get-search-page';
 import { getPaper } from './tools/get-paper';
 import { verifyReferences } from './tools/verify-references';
 import { readPaper } from './tools/read-paper';
+import { savePaper } from './tools/save-paper';
 import { getCitations } from './tools/get-citations';
 import { exportCitations } from './tools/export-citations';
 
@@ -11,10 +12,11 @@ import { exportCitations } from './tools/export-citations';
  * Every tool, in a fixed order: tools/list must be deterministic, for clients
  * that cache it and for prompt caching. `graph` (get_citations) and `export`
  * (export_citations) are opt-in: most sessions never need them, and every
- * tool listed costs every request its description.
+ * tool listed costs every request its description. save_paper is served only
+ * where writes are allowed (`onlyWhereWritable`).
  */
 export const ALL_TOOLS: readonly ToolDefinition<any, any>[] = [
-  searchPapers, getSearchPage, getPaper, verifyReferences, readPaper, getCitations, exportCitations
+  searchPapers, getSearchPage, getPaper, verifyReferences, readPaper, savePaper, getCitations, exportCitations
 ];
 
 export const DEFAULT_TOOLSETS: readonly Toolset[] = ['core', 'read'];
@@ -27,8 +29,15 @@ export const ALIASES: Readonly<Record<string, string>> = {};
  * The tools a request asks for: toolsets (default `core,read`; `all`;
  * `default`) plus individual tools by name. An unknown name fails, with the
  * valid ones — a typo in a client config must never silently drop a tool.
+ *
+ * Where writes are not allowed (`writable` false: over HTTP, or turned off) a
+ * tool that only writes files is left out of its toolset, and asking for it
+ * by name fails, saying why: it could only refuse every call.
  */
-export function selectTools(request: { toolsets?: readonly string[]; tools?: readonly string[] }): ToolDefinition<any, any>[] {
+export function selectTools(
+  request: { toolsets?: readonly string[]; tools?: readonly string[] },
+  writable: boolean
+): ToolDefinition<any, any>[] {
   const sets = request.toolsets?.length ? request.toolsets : DEFAULT_TOOLSETS;
   const unknownSets = sets.filter(s => s !== 'all' && s !== 'default' && !TOOLSETS.includes(s as Toolset));
   const names = (request.tools ?? []).map(n => ALIASES[n] ?? n);
@@ -39,6 +48,13 @@ export function selectTools(request: { toolsets?: readonly string[]; tools?: rea
       `Toolsets: ${TOOLSETS.join(', ')}. Tools: ${ALL_TOOLS.map(t => t.name).join(', ')}.`
     );
   }
+  const unwritable = writable ? [] : names.filter(n => ALL_TOOLS.some(t => t.name === n && t.onlyWhereWritable));
+  if (unwritable.length) {
+    throw new Error(
+      `${unwritable.map(t => `Tool "${t}"`).join(', ')} only writes files, and this server may not write them ` +
+      '(over HTTP, or with writes turned off).'
+    );
+  }
   const wanted = new Set<Toolset>(sets.includes('all') ? TOOLSETS : sets.flatMap(s => (s === 'default' ? DEFAULT_TOOLSETS : [s as Toolset])));
-  return ALL_TOOLS.filter(t => wanted.has(t.toolset) || names.includes(t.name));
+  return ALL_TOOLS.filter(t => (wanted.has(t.toolset) || names.includes(t.name)) && (writable || !t.onlyWhereWritable));
 }

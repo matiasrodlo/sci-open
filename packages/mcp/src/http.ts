@@ -17,8 +17,8 @@ import { selectTools } from './toolsets';
  * which ours do only for a client that asked for progress (D12). `'json'`
  * would drop those notifications.
  *
- * Writes are always refused here, whatever the config says: `save_to` names a
- * path on the caller's machine, and over HTTP this process is not on it.
+ * Writes are always refused here, whatever the config says: a path to write
+ * names one on the caller's machine, and over HTTP this process is not on it.
  */
 export function createHttpHandler(
   deps: Omit<ServerDeps, 'transport'>,
@@ -41,7 +41,7 @@ export function createHttpHandler(
     // valid names are the fix, as `--toolsets` answers on stdio.
     fetch: async (request, requestOptions) => {
       try {
-        selectTools(selectionFrom(new URL(request.url)));
+        selectTools(selectionFrom(new URL(request.url)), false); // never writes over HTTP
       } catch (error) {
         return Response.json(
           { jsonrpc: '2.0', id: null, error: { code: -32602, message: (error as Error).message } },

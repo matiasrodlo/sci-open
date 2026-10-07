@@ -23,7 +23,8 @@ const rows = ALL_TOOLS.map(def => {
   const params = Object.keys(schema.properties ?? {})
     .map(name => `\`${name}\`${schema.required?.includes(name) ? '' : '?'}`)
     .join(', ');
-  const on = DEFAULT_TOOLSETS.includes(def.toolset) ? 'yes' : 'no';
+  // A tool that only writes files is served only where writes are allowed.
+  const on = DEFAULT_TOOLSETS.includes(def.toolset) ? (def.onlyWhereWritable ? 'yes, local only' : 'yes') : 'no';
   return `| \`${def.name}\` | ${def.toolset} | ${on} | ${def.description.replace(/\|/g, '\\|')} | ${params} |`;
 });
 

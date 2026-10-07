@@ -1,7 +1,7 @@
 {"id":"ts-01","split":"tune","prompt":"Find recent peer-reviewed papers on CRISPR base editing in plants.","expect":{"first":"search_papers","args":{"publication_type":["peer-reviewed"]}}}
 {"id":"ts-02","split":"tune","prompt":"Is this citation real? Smith J. (2021) Deep learning for protein folding. Nature 590:1-10.","expect":{"first":"verify_references"}}
 {"id":"ts-46","split":"tune","prompt":"In arxiv:2404.18021, find where the authors describe their wet-lab validation and summarise it.","expect":{"sequence":["read_paper"]}}
-{"id":"ts-47","split":"tune","prompt":"Save the full text of arxiv:2404.18021 to /tmp/crispr-gpt.md so I can read it offline.","expect":{"first":"read_paper","args":{"save_to":"/tmp/crispr-gpt.md"}}}
+{"id":"ts-47","split":"tune","prompt":"Save the full text of arxiv:2404.18021 to /tmp/crispr-gpt.md so I can read it offline.","expect":{"first":"save_paper","args":{"path":"/tmp/crispr-gpt.md"}}}
 {"id":"ts-04","split":"tune","prompt":"Roughly how many open-access papers on microplastics in drinking water have come out since 2020? I don't need the list.","expect":{"first":"search_papers","args":{"count_only":true}}}
 {"id":"ts-05","split":"tune","prompt":"Give me the full record for doi:10.1371/journal.pone.0000217, including which sources hold it.","expect":{"first":"get_paper","args":{"doi":"10.1371/journal.pone.0000217"}}}
 {"id":"ts-06","split":"tune","prompt":"Show me the details of arxiv:1706.03762.","expect":{"first":"get_paper","args":{"id":"arxiv:1706.03762"}}}

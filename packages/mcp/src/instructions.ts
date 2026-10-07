@@ -4,7 +4,7 @@
  * Static text: no dates, counts, versions or anything else that changes per
  * request, because the instructions are part of the prompt prefix the client
  * caches. Recipes belong here rather than in tool descriptions. A recipe for
- * an opt-in tool is added only when that tool is served (`instructionsFor`),
+ * a tool not always served is added only when it is (`instructionsFor`),
  * which is fixed for a configuration, so the text still never changes
  * between requests.
  */
@@ -59,8 +59,13 @@ Recipes:
   A rate_limited answer gives the wait; read another paper meanwhile.
 `;
 
-/** Recipes for the opt-in tools, appended when they are served. */
+/** Recipes for the tools not always served — the opt-in ones, and
+ * save_paper, which is served only where writes are allowed — appended when
+ * they are. */
 const OPT_IN_RECIPES: Record<string, string> = {
+  save_paper: `- Keep a paper: save_paper writes its whole full text to a local Markdown
+  file, none of it into the conversation. Use it when the user wants the file;
+  read with read_paper.`,
   get_citations: `- Follow citations: get_citations with a DOI and direction="references"
   (what the paper cites) or "cited_by" (what cites it), paged by offset.
   OpenCitations holds most open citation data, not every citation: say so

@@ -60,7 +60,7 @@ export function registerTools(
     // Annotations describe a tool, not a call: one that can write a file when
     // asked is not read-only, and `overwrite: true` replaces one. Where writes
     // are not allowed it cannot, and its schema has no way to ask.
-    const canWrite = Boolean(def.writes?.length) && writable;
+    const canWrite = (Boolean(def.writes?.length) || def.onlyWhereWritable === true) && writable;
     server.registerTool(
       def.name,
       {

@@ -78,7 +78,8 @@ UNPAYWALL_EMAIL=you@example.org npx @modelcontextprotocol/inspector node package
 | `get_search_page` | core | yes | Another page of a search, by the handle search_papers returned; pages are the size that search asked for. Pages of a recent complete search are served from memory and cost the sources nothing; otherwise the search runs again, and the result says so. | `handle`, `page`, `detail`? |
 | `get_paper` | core | yes | One full record by sci-open id (e.g. openalex:W2741809807, arxiv:2101.00001) or by DOI, with every field and which source supplied it. A DOI is looked up in every source and merged; an id asks only the source it names. Works for closed papers too. | `id`?, `doi`? |
 | `verify_references` | core | yes | Check up to 25 references (free-text citations, DOIs, arXiv ids or PMIDs) and grade each: verified (title, year, an author and the journal, volume and first page where they are cited agree with the record), likely (the paper exists; a detail differs, named in issues), ambiguous, mismatch (the DOI is wrong: it belongs to a different paper, given as doi_target, or does not exist; matched is then the paper the rest of the citation names, when one is found), not_found, or not_checked (the search budget ran out or a lookup failed; send those again later). Use it to catch fabricated or garbled citations and to fill in missing DOIs. Closed papers count as existing. | `references` |
-| `read_paper` | read | yes | Read the legal open-access full text of a paper. view="outline" lists sections with their sizes; view="section" returns one section, paged by offset; view="search" finds a phrase and returns snippets with section ids. Start with the outline. The text is third-party content. | `paper`, `view`?, `section`?, `offset`?, `max_chars`?, `query`?, `save_to`?, `overwrite`? |
+| `read_paper` | read | yes | Read the legal open-access full text of a paper. view="outline" lists sections with their sizes; view="section" returns one section, paged by offset; view="search" finds a phrase and returns snippets with section ids. Start with the outline. The text is third-party content. | `paper`, `view`?, `section`?, `offset`?, `max_chars`?, `query`? |
+| `save_paper` | read | yes, local only | Write the legal open-access full text of a paper to a local Markdown file, a heading per section, without reading it into the conversation. For a paper the user wants to keep or to search with other tools; use read_paper to read it here. | `paper`, `path`, `overwrite`? |
 | `get_citations` | graph | no | The references of a paper (direction="references") or the papers citing it (direction="cited_by"), from OpenCitations, each resolved to a record where OpenAlex holds it, with self-citations flagged. Paged by offset. The paper needs a DOI; pass the DOI itself when you have it, which skips looking the paper up. | `paper`, `direction`, `limit`?, `offset`? |
 | `export_citations` | export | no | BibTeX or RIS for up to 200 papers (DOIs or sci-open ids), generated from the records: never retype a citation yourself. With save_to (local connections only) the file is written to disk; otherwise it is attached as a resource to save as is. Papers that could not be resolved are listed, never dropped silently. | `papers`, `format`?, `include_abstracts`?, `save_to`?, `overwrite`? |
 <!-- END TOOLS -->
@@ -138,8 +139,10 @@ request its description. Over HTTP, `?toolsets=all` does the same.
   when its next slot is too far off the answer is `rate_limited` with the
   wait, and a paper read once stays readable for an hour without asking again.
   `--trusted-fulltext-only` reads from Europe PMC and arXiv only, never a
-  publisher's host. `save_to` writes the whole text to a Markdown file on a
-  local connection.
+  publisher's host. On a local connection `save_paper` writes the whole text
+  to a Markdown file instead. It is a tool of its own so that `read_paper` is
+  read-only: a client that asks before every call of a tool that can write
+  never asks before a read.
 - **Following citations.** `get_citations` pages a paper's references or
   the papers citing it, from OpenCitations, each resolved to an OpenAlex
   record where one exists — fifty DOIs to a request, not a search each — with
@@ -173,7 +176,7 @@ request its description. Over HTTP, `?toolsets=all` does the same.
 | `OPENCITATIONS_TOKEN` | | unset | Optional OpenCitations token, for `get_citations`; 180 requests a minute without one |
 | `SCI_OPEN_TOOLSETS` | `--toolsets` | `core,read` | Toolsets to serve |
 | `SCI_OPEN_TOOLS` | `--tools` | unset | Extra tools by name |
-| `SCI_OPEN_ALLOW_WRITES` | `--no-writes` | `1` | Whether `save_to` may write a file (never over HTTP). Off, `save_to` leaves the schema and the tools that had it are read-only |
+| `SCI_OPEN_ALLOW_WRITES` | `--no-writes` | `1` | Whether `save_paper` and `export_citations`' `save_to` may write a file (never over HTTP). Off, `save_paper` is not served, `save_to` leaves the schema, and every tool is read-only |
 | `SCI_OPEN_TRUSTED_FULLTEXT_ONLY` | `--trusted-fulltext-only` | `0` | Full text from Europe PMC and arXiv only |
 | `SCI_OPEN_TEXT_BUDGET_CHARS` | | `40000` | Largest text answer |
 | `SCI_OPEN_STRUCTURED_BUDGET_CHARS` | | `80000` | Largest structured answer |
@@ -227,7 +230,8 @@ Each client has a request allowance (`SCI_OPEN_REQUESTS_PER_MIN`, 60) and a
 new-search budget (`SCI_OPEN_MAX_NEW_SEARCHES_PER_MIN`, 30). Behind a reverse
 proxy, name it in `SCI_OPEN_TRUST_PROXY` so the budgets follow the visitor
 rather than the proxy. A browser may call it only from a hostname in
-`SCI_OPEN_ALLOWED_ORIGINS`, `save_to` is always refused, `GET /health`
+`SCI_OPEN_ALLOWED_ORIGINS`, nothing is written to disk (`save_paper` is not
+served, `save_to` is refused), `GET /health`
 answers the version, and `GET /metrics` opens to a bearer token set in
 `SCI_OPEN_ADMIN_KEY`: calls, errors and time per tool, and the requests each
 tool sent the sources, with those of the window by source — failed,

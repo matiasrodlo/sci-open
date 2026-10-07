@@ -73,28 +73,39 @@ describe('a tool’s input', () => {
 });
 
 describe('a tool that can write a file', () => {
-  const WRITERS = ['read_paper', 'export_citations'];
-
-  it('offers save_to, and says it can write, where writes are allowed', async () => {
+  it('offers save_paper, and export_citations\' save_to, and says they can write, where writes are allowed', async () => {
     const { client, close } = await serve();
-    for (const tool of (await client.listTools()).tools.filter(t => WRITERS.includes(t.name))) {
-      expect(Object.keys(tool.inputSchema.properties ?? {})).toEqual(expect.arrayContaining(['save_to', 'overwrite']));
-      expect(tool.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true });
-    }
+    const tools = (await client.listTools()).tools;
+    const save = tools.find(t => t.name === 'save_paper')!;
+    expect(Object.keys(save.inputSchema.properties ?? {})).toEqual(['paper', 'path', 'overwrite']);
+    expect(save.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true });
+    const exporter = tools.find(t => t.name === 'export_citations')!;
+    expect(Object.keys(exporter.inputSchema.properties ?? {})).toEqual(expect.arrayContaining(['save_to', 'overwrite']));
+    expect(exporter.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true });
+    await close();
+  });
+
+  it('keeps read_paper read-only even where writes are allowed: saving is save_paper\'s', async () => {
+    const { client, close } = await serve();
+    const read = (await client.listTools()).tools.find(t => t.name === 'read_paper')!;
+    expect(Object.keys(read.inputSchema.properties ?? {})).not.toContain('save_to');
+    expect(read.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false, idempotentHint: true });
     await close();
   });
 
   it.each([
     ['over HTTP', { transport: 'http' as const }],
     ['with writes turned off', { allowWrites: false }]
-  ])('%s, offers no save_to and is read-only, and answers a save_to with why', async (_case, options) => {
+  ])('%s, serves no save_paper, offers no save_to, and answers a save_to with why', async (_case, options) => {
     const { client, close } = await serve(options);
-    for (const tool of (await client.listTools()).tools.filter(t => WRITERS.includes(t.name))) {
+    const tools = (await client.listTools()).tools;
+    expect(tools.map(t => t.name)).not.toContain('save_paper');
+    for (const tool of tools) {
       expect(Object.keys(tool.inputSchema.properties ?? {}), tool.name).not.toContain('save_to');
       expect(Object.keys(tool.inputSchema.properties ?? {}), tool.name).not.toContain('overwrite');
-      expect(tool.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false, idempotentHint: true });
+      expect(tool.annotations, tool.name).toMatchObject({ readOnlyHint: true, destructiveHint: false, idempotentHint: true });
     }
-    const refused = await client.callTool({ name: 'read_paper', arguments: { paper: 'openalex:W1', save_to: '/tmp/sci-open-x' } });
+    const refused = await client.callTool({ name: 'export_citations', arguments: { papers: ['openalex:W1'], save_to: '/tmp/sci-open-x' } });
     expect(text(refused)).toMatch(/^Error \(writes_disabled\)/);
     await close();
   });

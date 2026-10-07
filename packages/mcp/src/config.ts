@@ -51,7 +51,7 @@ export const USAGE = `sci-open-mcp: MCP server for open-access scientific litera
 
   --toolsets <list>         core, read, graph, export, all, default  [SCI_OPEN_TOOLSETS]
   --tools <list>            extra tools by name                      [SCI_OPEN_TOOLS]
-  --no-writes               refuse save_to                           [SCI_OPEN_ALLOW_WRITES=0]
+  --no-writes               no save_paper, and no save_to            [SCI_OPEN_ALLOW_WRITES=0]
   --trusted-fulltext-only   full text from Europe PMC and arXiv only [SCI_OPEN_TRUSTED_FULLTEXT_ONLY=1]
   --engine <live|fixture>   fixture serves recorded answers          [SCI_OPEN_ENGINE]
   --fixtures <path>         the recordings for --engine fixture      [SCI_OPEN_FIXTURES]
@@ -64,7 +64,7 @@ export const USAGE = `sci-open-mcp: MCP server for open-access scientific litera
 Over HTTP: OPENALEX_API_KEY is required (SCI_OPEN_ALLOW_UNKEYED=1 for a trial),
 SCI_OPEN_ALLOWED_ORIGINS names hostnames a browser may call from,
 SCI_OPEN_TRUST_PROXY the proxies that may name the client, SCI_OPEN_ADMIN_KEY
-enables GET /metrics, and save_to is always refused.
+enables GET /metrics, and no file is ever written.
 
 Set UNPAYWALL_EMAIL to a real address. Every setting is listed in Appendix A of
 docs/mcp-implementation-manual.md.`;

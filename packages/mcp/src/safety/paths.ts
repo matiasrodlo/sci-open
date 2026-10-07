@@ -22,7 +22,7 @@ export async function writeUserFile(
   }
   const expanded = requested === '~' || requested.startsWith('~/') ? path.join(os.homedir(), requested.slice(1)) : requested;
   if (!path.isAbsolute(expanded)) {
-    throw new ToolError('invalid_input', 'save_to must be an absolute path.', 'Example: /Users/me/papers/smith2024.md');
+    throw new ToolError('invalid_input', 'The path to write must be absolute.', 'Example: /Users/me/papers/smith2024.md');
   }
   const target = expanded.endsWith(extension) ? expanded : `${expanded}${extension}`;
   await fs.mkdir(path.dirname(target), { recursive: true });
