@@ -31,6 +31,32 @@ describe('arxivHtmlToSections, on a recorded paper', () => {
   });
 });
 
+describe('arxivHtmlToSections, on \\paragraph headings', () => {
+  // LaTeXML's markup for 2111.11426 §1.1: a subsection whose prose is all in
+  // `\paragraph{}`s, one holding a definition beside its paragraphs. LaTeXML
+  // writes a line break between blocks, which parts a run-in title from its text.
+  const para = (text: string) => `\n<div class="ltx_para"><p class="ltx_p">${text}</p></div>`;
+  const { sections } = arxivHtmlToSections(
+    `<html><body><article class="ltx_document">` +
+      `<section class="ltx_section"><h2 class="ltx_title ltx_title_section">1 Introduction</h2>${para('Fields are everywhere.')}` +
+      `<section class="ltx_subsection"><h3 class="ltx_title ltx_title_subsection">1.1 Background</h3>` +
+      `<section class="ltx_paragraph"><h6 class="ltx_title ltx_title_paragraph">Fields</h6>${para('Following physics, we define fields.')}` +
+      `<div class="ltx_theorem ltx_theorem_definition"><h6 class="ltx_title ltx_runin ltx_title_theorem">Definition 1.1.</h6>` +
+      `${para('A field is a quantity defined for all coordinates.')}</div></section>` +
+      `<section class="ltx_paragraph"><h6 class="ltx_title ltx_title_paragraph">Neural Fields</h6>${para('A network parameterizes a neural field.')}</section>` +
+      `</section></section></article></body></html>`
+  );
+
+  it('reads each paragraph as a subsection, its words in it alone', () => {
+    expect(sections.map(s => [s.id, s.title, s.text])).toEqual([
+      ['s1', '1 Introduction', 'Fields are everywhere.'],
+      ['s1.1', '1.1 Background', ''],
+      ['s1.1.1', 'Fields', 'Following physics, we define fields.\n\nDefinition 1.1. A field is a quantity defined for all coordinates.'],
+      ['s1.1.2', 'Neural Fields', 'A network parameterizes a neural field.']
+    ]);
+  });
+});
+
 describe('arxivHtmlToSections, against what a reader cannot see', () => {
   const page = (para: string) =>
     `<html><body><article class="ltx_document"><h1 class="ltx_title ltx_title_document">T</h1>` +

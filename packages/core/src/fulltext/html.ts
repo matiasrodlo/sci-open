@@ -13,9 +13,15 @@ const clean = (text: string) => text.replace(/\s+/g, ' ').trim();
 const subsections = (el: HTMLElement): HTMLElement[] =>
   el.childNodes.filter((n): n is HTMLElement => n instanceof HTMLElement && n.rawTagName === 'section');
 
+/** A section's own prose: its paragraphs, and its definitions, theorems and
+ * proofs, which LaTeXML sets beside the paragraphs rather than inside one. A
+ * `\paragraph{}` is a `<section>` (`ltx_paragraph`), read as a subsection,
+ * so its words are not its parent's too. */
+const PROSE = ['ltx_para', 'ltx_theorem', 'ltx_proof'];
+
 const prose = (el: HTMLElement): string =>
   el.childNodes
-    .filter((n): n is HTMLElement => n instanceof HTMLElement && (n.classList.contains('ltx_para') || n.classList.contains('ltx_paragraph')))
+    .filter((n): n is HTMLElement => n instanceof HTMLElement && PROSE.some(c => n.classList.contains(c)))
     .map(p => clean(p.text))
     .filter(Boolean)
     .join('\n\n');
@@ -23,7 +29,8 @@ const prose = (el: HTMLElement): string =>
 /**
  * An arXiv HTML rendering (LaTeXML) as sections: `.ltx_abstract` as `s0`,
  * then each `<section>` of the document and its subsections, numbered by
- * position, appendices included.
+ * position, appendices included. As in the JATS reader, a section whose prose
+ * is all in its subsections is kept with empty text.
  *
  * Hidden elements are removed before any text is read. Instructions hidden in
  * papers are a documented attack on AI readers, and an element styled out of

@@ -144,6 +144,12 @@ in `test/__toolsnaps__/` are the record of every schema change.
   any author's name: "Li" verified as Illia Polosukhin.
 - The `sci-open` CLI ignored `SCI_OPEN_ENGINE=fixture` and searched the live
   sources.
+- read_paper gave an arXiv paper's `\paragraph{}` text twice: in its own
+  section and again in its parent's, so a view="search" found the passage
+  twice and the outline overstated the paper's length (nearly a third of 2111.11426's
+  165,000 characters). A paragraph's text is now in its own section alone, and
+  definitions, theorems and proofs, which only the copy in the parent carried,
+  are read wherever they sit.
 
 ### Removed
 
