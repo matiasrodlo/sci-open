@@ -57,7 +57,28 @@ function quote(phrase: string): string {
  * where the quoted phrase has 7,740.
  */
 function scoped(term: string): string {
-  return `(TITLE_ABS:${term} OR MESH:${term} OR KW:${term})`;
+  return `(${fielded('TITLE_ABS', term)} OR ${fielded('MESH', term)} OR ${fielded('KW', term)})`;
+}
+
+/**
+ * A value searched in one field, in brackets of its own.
+ *
+ * Europe PMC's parser misreads a quoted `MESH:` term beside an `OR` unless it
+ * is bracketed, and the count it reports then has nothing to do with the
+ * query. Measured on 2026-10-07: `MESH:"time-restricted eating"` matches 140,
+ * and followed by `OR TITLE_ABS:"zzqx nonexistent"`, which matches nothing,
+ * 595,554 — the same figure with `"fasting"` in its place. After an `OR` the
+ * prefix is lost instead: `TITLE_ABS:zzqxnonexistent OR MESH:"fasting"` is
+ * 570,085, the count for `fasting` across the whole index. So the topic spread
+ * for that phrase, unbracketed, asked about 597,671 records; bracketed, 991.
+ *
+ * Only `MESH` was caught at it — `TITLE_ABS`, `KW`, `TITLE`, `AUTH` and
+ * `JOURNAL` each counted the same beside an `OR` as alone — but every field a
+ * term is searched in is bracketed, so the next one to do it is answered
+ * already.
+ */
+function fielded(field: string, value: string): string {
+  return `(${field}:${value})`;
 }
 
 /**
@@ -140,7 +161,7 @@ function wildcards(term: string): string {
 
 const DIALECT: Dialect = {
   fields: field => FIELDS[field] ?? [],
-  scope: (field, value) => `${field}:${value}`,
+  scope: (field, value) => fielded(field, value),
   term: text => wildcards(text.trim()),
   phrase: text => quote(text),
   years: range => yearRange(range),
@@ -149,7 +170,7 @@ const DIALECT: Dialect = {
   supportsNot: true,
   // Quoted, which Europe PMC reads as a name in either order — measured, with
   // the figures, in `withAuthorName`.
-  authorName: words => `AUTH:${quote(words.join(' '))}`
+  authorName: words => fielded('AUTH', quote(words.join(' ')))
 };
 
 /** The query as it reached this provider before the grammar existed. */

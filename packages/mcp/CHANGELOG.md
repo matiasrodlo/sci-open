@@ -214,6 +214,13 @@ in `test/__toolsnaps__/` are the record of every schema change.
   165,000 characters). A paragraph's text is now in its own section alone, and
   definitions, theorems and proofs, which only the copy in the parent carried,
   are read wherever they sit.
+- Europe PMC's count for a quoted topic phrase was hundreds of thousands too
+  high, and its later pages were off topic: its parser misreads a quoted
+  `MESH:` term beside an `OR` unless it is bracketed, and every topic term is
+  searched as `TITLE_ABS OR MESH OR KW`. `TS="time-restricted eating" AND
+  PY=2020-2024` counted 196,807 open-access matches, and counts 285 now;
+  `TS=("base editing" AND plants) AND PY=2022-2026` 6,855, now 107. Every
+  field Europe PMC is asked a term in is now bracketed on its own.
 
 ### Removed
 
