@@ -84,6 +84,22 @@ describe('citationLinks', () => {
     expect(links).toHaveBeenCalledTimes(1);
   });
 
+  it('stops fetching a list its only reader left, and holds nothing', async () => {
+    const engine = createEngine({ userAgent: 'test', providers: [], authorities: [] });
+    links.mockImplementationOnce((_doi: string, _direction: string, options: { signal: AbortSignal }) =>
+      new Promise((_resolve, reject) => options.signal.addEventListener('abort', () => reject(options.signal.reason), { once: true })));
+    const reader = new AbortController();
+
+    const reading = engine.citationLinks('10.1/x', 'cited_by', { signal: reader.signal });
+    reader.abort();
+    await expect(reading).rejects.toMatchObject({ name: 'AbortError' });
+    expect((links.mock.calls[0]![2] as { signal: AbortSignal }).signal.aborted).toBe(true);
+
+    links.mockResolvedValueOnce([]);
+    expect(await engine.citationLinks('10.1/x', 'cited_by')).toEqual([]);
+    expect(links).toHaveBeenCalledTimes(2);
+  });
+
   it('holds nothing that failed', async () => {
     const engine = createEngine({ userAgent: 'test', providers: [], authorities: [] });
     links.mockRejectedValueOnce(new Error('down')).mockResolvedValueOnce([]);
@@ -204,6 +220,20 @@ describe('resolveDois', () => {
 
     await engine.resolveDois(['10.1/x']);
     expect(works).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks no batch after its signal aborts, and rejects rather than call the rest unasked', async () => {
+    const engine = createEngine({ userAgent: 'test', providers: [], authorities: [] });
+    const reader = new AbortController();
+    works.mockImplementation(async (batch: string[]) => {
+      reader.abort(); // the caller gives up while the first batch is out
+      return { results: batch.map(d => work(d)) };
+    });
+
+    await expect(engine.resolveDois(Array.from({ length: 120 }, (_, i) => `10.1/${i}`), { signal: reader.signal }))
+      .rejects.toMatchObject({ name: 'AbortError' });
+    expect(works).toHaveBeenCalledTimes(1);
+    expect(works.mock.calls[0]![1]).toMatchObject({ signal: reader.signal });
   });
 
   it('asks nothing for no DOIs', async () => {

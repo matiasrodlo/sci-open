@@ -3,7 +3,7 @@ import dns from 'dns';
 import http from 'http';
 import https from 'https';
 import net from 'net';
-import { pipeline, Readable, Transform } from 'stream';
+import { addAbortSignal, pipeline, Readable, Transform } from 'stream';
 import { promisify } from 'util';
 import zlib from 'zlib';
 import { preferredPdfUrl } from './pdf-url';
@@ -416,14 +416,22 @@ function decoderFor(encoding: string): Transform | undefined | null {
  * it, and axios's `timeout` stops applying once the headers arrive, so an
  * abandoned read left the publisher's socket open. `pipeline` destroys every
  * stage when any one of them closes early or fails.
+ *
+ * **`signal` reaches the body too.** Axios hands over the stream once the
+ * headers arrive, so an abort after that is put on the stream the caller
+ * reads: it fails with an `AbortError`, and the pipeline closes the socket.
+ * An abort before then rejects with the signal's reason.
  */
-export async function fetchPdfStream(url: URL, userAgent: string): Promise<Readable> {
+export async function fetchPdfStream(url: URL, userAgent: string, signal?: AbortSignal): Promise<Readable> {
   const response = await guardedGet(url, userAgent, {
     timeoutMs: DOWNLOAD_TIMEOUT_MS,
     headers: { 'Accept-Encoding': 'identity' },
     decompress: false,
-    validateStatus: (status: number) => status >= 200 && status < 400
+    validateStatus: (status: number) => status >= 200 && status < 400,
+    ...(signal ? { signal } : {})
   }).catch((error: any) => {
+    // Stopped, not unreachable.
+    signal?.throwIfAborted();
     if (error instanceof PdfFetchError) {
       throw error;
     }
@@ -479,7 +487,7 @@ export async function fetchPdfStream(url: URL, userAgent: string): Promise<Reada
   // the callback only has to exist.
   pipeline([response.data, ...(decoder ? [decoder] : []), limited], () => {});
 
-  return limited;
+  return signal ? addAbortSignal(signal, limited) : limited;
 }
 
 /** The first bytes of every PDF: the header comment, `%PDF-1.7` and so on. */

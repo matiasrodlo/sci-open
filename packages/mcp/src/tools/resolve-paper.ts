@@ -49,7 +49,7 @@ export async function resolvePaperRef(ref: string, deps: ToolDeps): Promise<Pape
   const kind = paperRefKind(ref);
   const paper = 'doi' in kind
     ? await deps.engine.lookupDoi(kind.doi, { admit: deps.admit, signal: deps.signal }) // a DOI lookup is a search
-    : await deps.engine.lookup(kind.id);
+    : await deps.engine.lookup(kind.id, { signal: deps.signal });
   if (!paper) {
     throw new ToolError('not_found', 'No source holds this paper.', 'Pass a DOI or an id from search_papers, such as openalex:W2741809807.');
   }

@@ -91,6 +91,11 @@ export type SearchCallOptions = {
   depth?: number;
 };
 
+/** Stops a call, as `SearchCallOptions.signal` does a search: the request
+ * out is aborted and the call rejects with the signal's reason, holding
+ * nothing. Work another call is waiting on goes on for that call. */
+export type Cancellable = { signal?: AbortSignal };
+
 export type Engine = {
   /** A federated search across the sources. `admit` is asked only when a
    * new result set must be resolved, never for a page of a held one.
@@ -101,28 +106,28 @@ export type Engine = {
   count(params: SearchParams, options?: SearchCallOptions): Promise<CountOutcome>;
   /** A paper by sci-open id (`provider:nativeId`), enriched by the authorities.
    * Asks only the provider the id names, and holds its answer half an hour. */
-  lookup(id: string): Promise<Paper | null>;
+  lookup(id: string, options?: Cancellable): Promise<Paper | null>;
   /** A paper by DOI, whether or not it is open access, merged across every
    * source that holds it. A DOI lookup is a search, and spends an admission
    * like one. */
   lookupDoi(doi: string, options?: { admit?: Admit; signal?: AbortSignal }): Promise<Paper | null>;
   /** Whether the DOI system holds this DOI at all — whoever registered it.
    * `undefined` when the registry could not say. One request, no admission. */
-  doiRegistered(doi: string): Promise<boolean | undefined>;
+  doiRegistered(doi: string, options?: Cancellable): Promise<boolean | undefined>;
   /** The best-structured legal open-access full text of a paper, or null.
    * Held for an hour, so its sections are read without fetching it again.
    * Throws `SourceBusyError` when the only copy is on a paced host with no
    * slot soon enough: a copy that cannot be fetched yet, not no copy. */
-  readFullText(paper: Paper, options: { trustedOnly: boolean }): Promise<FullTextDocument | null>;
+  readFullText(paper: Paper, options: { trustedOnly: boolean } & Cancellable): Promise<FullTextDocument | null>;
   /** Every OpenCitations link of a paper, by DOI: what it cites
    * (`references`) or what cites it (`cited_by`). Held ten minutes, so a list
    * is fetched once however it is paged. No admission: one request, to a
    * source the search does not ask. */
-  citationLinks(doi: string, direction: CitationDirection): Promise<CitationLink[]>;
+  citationLinks(doi: string, direction: CitationDirection, options?: Cancellable): Promise<CitationLink[]>;
   /** Records for a list of DOIs from OpenAlex, fifty to a request, as
    * OpenAlex alone has them: not merged with other sources, not enriched.
    * Enough to cite a paper or list it. Not a search, and no admission. */
-  resolveDois(dois: readonly string[]): Promise<DoiResolution>;
+  resolveDois(dois: readonly string[], options?: Cancellable): Promise<DoiResolution>;
 };
 
 export function createEngine(options: EngineOptions): Engine {
@@ -186,7 +191,7 @@ export function createEngine(options: EngineOptions): Engine {
   const lookupFlights = new SingleFlight();
   const LOOKUP_HOLD_MS = 30 * 60_000;
   const LOOKUPS_HELD = 1_000;
-  const providerRecord = async (id: string): Promise<Paper | null> => {
+  const providerRecord = async (id: string, signal?: AbortSignal): Promise<Paper | null> => {
     const held = lookups.get(id);
     lookups.delete(id);
     if (held && held.expires > now()) {
@@ -194,14 +199,14 @@ export function createEngine(options: EngineOptions): Engine {
       return held.paper;
     }
     // Two lookups of one id at once ask the provider once.
-    const { value } = await lookupFlights.run(id, async () => {
-      const paper = await lookupPaper(id, { userAgent, providers });
+    const { value } = await lookupFlights.run(id, async shared => {
+      const paper = await lookupPaper(id, { userAgent, providers, signal: shared });
       if (paper) {
         lookups.set(id, { paper, expires: now() + LOOKUP_HOLD_MS });
         if (lookups.size > LOOKUPS_HELD) lookups.delete(lookups.keys().next().value!);
       }
       return paper;
-    });
+    }, signal);
     return value;
   };
 
@@ -269,15 +274,20 @@ export function createEngine(options: EngineOptions): Engine {
       quota.note(outcome.reports);
       return outcome;
     },
-    async lookup(id) {
+    async lookup(id, extra = {}) {
       // Not gated: a lookup asks one provider through its entity endpoint,
       // which OpenAlex does not bill against the search budget. Its enrichment
       // is, so it leaves out a cooled-down OpenAlex like a search's.
-      const found = await providerRecord(id);
+      const found = await providerRecord(id, extra.signal);
+      // A provider can answer "none" for a request the signal cut off.
+      extra.signal?.throwIfAborted();
       if (!found) return null;
       const { papers } = await enrichPage([found], {
-        userAgent, cache: new AuthorityCache(authorityFacts), ...authoritiesNow(quota.unavailable())
+        userAgent, cache: new AuthorityCache(authorityFacts), ...authoritiesNow(quota.unavailable()),
+        ...(extra.signal ? { signal: extra.signal } : {})
       });
+      // Enrichment stopped by the signal returns what it had, for nobody.
+      extra.signal?.throwIfAborted();
       return papers[0] ?? found;
     },
     async lookupDoi(doi, extra = {}) {
@@ -290,20 +300,21 @@ export function createEngine(options: EngineOptions): Engine {
       const { response } = await search({ doi: wanted, filters: { openAccessOnly: false }, page: 1, pageSize: 1 }, extra);
       return response.papers.find(paper => paper.doi && normalizeDoi(paper.doi) === normalizeDoi(wanted)) ?? null;
     },
-    doiRegistered: doi => doiRegistered(doi, { userAgent }),
-    async citationLinks(doi, direction) {
+    doiRegistered: (doi, extra = {}) => doiRegistered(doi, { userAgent, ...(extra.signal ? { signal: extra.signal } : {}) }),
+    async citationLinks(doi, direction, extra = {}) {
       const key = `${direction}|${normalizeDoi(doi)}`;
       const held = linkLists.get(key);
       if (held && held.expires > now()) return held.links;
       dropList(key);
       // Two pages asked for at once fetch the list once, and hold it once.
-      const { value } = await linkFlights.run(key, async () => {
+      const { value } = await linkFlights.run(key, async shared => {
         if (now() < citationsCoolUntil) throw new SourceBusyError(OPENCITATIONS_HOST, citationsCoolUntil - now());
         linkRequests.take();
         let links: CitationLink[];
         try {
           links = await fetchCitationLinks(doi, direction, {
             userAgent,
+            signal: shared,
             ...(options.openCitationsToken ? { token: options.openCitationsToken } : {})
           });
         } catch (error) {
@@ -323,15 +334,16 @@ export function createEngine(options: EngineOptions): Engine {
           heldLinks += links.length;
         }
         return links;
-      });
+      }, extra.signal);
       return value;
     },
-    async resolveDois(dois) {
+    async resolveDois(dois, extra = {}) {
       const wanted = [...new Set(dois.map(normalizeDoi))].filter(Boolean);
       const found = new Map<string, Paper>();
       const unasked = wanted.filter(doi => /[|,]/.test(doi));
       const listable = wanted.filter(doi => !/[|,]/.test(doi));
       for (let i = 0; i < listable.length; i += WORKS_BY_DOI_MAX) {
+        extra.signal?.throwIfAborted();
         const batch = listable.slice(i, i + WORKS_BY_DOI_MAX);
         // OpenAlex the batch is billed against the same budget as OpenAlex the
         // source: while one is cooling down, so is the other.
@@ -340,10 +352,14 @@ export function createEngine(options: EngineOptions): Engine {
           break;
         }
         try {
-          const payload = await fetchWorksByDoi(batch, { userAgent, timeoutMs: 15_000, ...apiKeyFor('openalex') });
+          const payload = await fetchWorksByDoi(batch, {
+            userAgent, timeoutMs: 15_000, ...apiKeyFor('openalex'), ...(extra.signal ? { signal: extra.signal } : {})
+          });
           const { papers } = normalizeOpenAlex(payload, { retrievedAt: new Date().toISOString() });
           for (const paper of papers) if (paper.doi) found.set(normalizeDoi(paper.doi), paper);
         } catch (error) {
+          // Stopped, not failed: no batch after it is asked.
+          extra.signal?.throwIfAborted();
           // One batch's failure is its own: the others are still worth asking,
           // unless this one was refused for the budget.
           if (error instanceof OpenAlexUnavailableError && error.status === 429) quota.refuse('openalex');
@@ -353,16 +369,16 @@ export function createEngine(options: EngineOptions): Engine {
       }
       return { found, unasked };
     },
-    async readFullText(paper, { trustedOnly }) {
+    async readFullText(paper, { trustedOnly, signal }) {
       // Trusted mode reads fewer tiers, so its answer is held apart.
       const key = `${paper.id}|${trustedOnly ? 'trusted' : 'any'}`;
       const held = fullTexts.get(key);
       if (held !== undefined) return held;
-      const { value } = await fullTextFlights.run(key, async () => {
-        const { doc, definitive } = await resolveFullText(paper, { userAgent, trustedOnly });
+      const { value } = await fullTextFlights.run(key, async shared => {
+        const { doc, definitive } = await resolveFullText(paper, { userAgent, trustedOnly, signal: shared });
         if (doc || definitive) fullTexts.set(key, doc);
         return doc;
-      });
+      }, signal);
       return value;
     }
   };

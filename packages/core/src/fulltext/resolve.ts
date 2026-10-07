@@ -20,6 +20,8 @@ export type ResolveOptions = {
   trustedOnly: boolean;
   timeoutMs?: number;
   maxWaitMs?: number;
+  /** Stops the read: the request out is aborted and no further tier is tried. */
+  signal?: AbortSignal;
   now?: () => Date;
 };
 
@@ -41,6 +43,10 @@ type Parsed = { title?: string; license?: string; sections: Section[] };
  * `definitive` is false when no copy was found but some tier failed rather
  * than answering: a timeout is not evidence that there is no copy, and a miss
  * held on it would hide one for as long as misses are held.
+ *
+ * An aborted `signal` rejects with its reason, whatever tier it stopped: a
+ * read that was stopped found nothing either way, and says so rather than
+ * "no copy".
  */
 export async function resolveFullText(paper: Paper, options: ResolveOptions): Promise<{ doc: FullTextDocument | null; definitive: boolean }> {
   const tiers: Array<[FullTextTier, () => Promise<FullTextDocument | null>]> = [
@@ -52,10 +58,12 @@ export async function resolveFullText(paper: Paper, options: ResolveOptions): Pr
   let busy: SourceBusyError | undefined;
   let failed = false;
   for (const [tier, attempt] of tiers) {
+    options.signal?.throwIfAborted();
     try {
       const doc = await attempt();
       if (doc && doc.sections.some(s => s.text)) return { doc, definitive: true };
     } catch (error) {
+      options.signal?.throwIfAborted();
       if (error instanceof SourceBusyError) {
         if (!busy || error.retryAfterMs < busy.retryAfterMs) busy = error;
       } else {
@@ -64,6 +72,8 @@ export async function resolveFullText(paper: Paper, options: ResolveOptions): Pr
       }
     }
   }
+  // A tier can answer "none" for a request the signal cut off.
+  options.signal?.throwIfAborted();
   if (busy) throw busy;
   return { doc: null, definitive: !failed };
 }
@@ -78,7 +88,8 @@ async function fromEuropePmc(paper: Paper, options: ResolveOptions): Promise<Ful
   const found = await client.get('/search', {
     params: { query, resultType: 'core', format: 'json', pageSize: 1 },
     timeout,
-    headers: { Accept: 'application/json', 'User-Agent': options.userAgent }
+    headers: { Accept: 'application/json', 'User-Agent': options.userAgent },
+    ...(options.signal ? { signal: options.signal } : {})
   });
   const hit = found.status === 200 ? found.data?.resultList?.result?.[0] : undefined;
   if (!hit?.pmcid || hit.isOpenAccess !== 'Y' || hit.inEPMC !== 'Y') return null;
@@ -87,7 +98,8 @@ async function fromEuropePmc(paper: Paper, options: ResolveOptions): Promise<Ful
   const xml = await client.get<string>(path, {
     responseType: 'text',
     timeout,
-    headers: { Accept: 'application/xml', 'User-Agent': options.userAgent }
+    headers: { Accept: 'application/xml', 'User-Agent': options.userAgent },
+    ...(options.signal ? { signal: options.signal } : {})
   });
   if (xml.status !== 200 || typeof xml.data !== 'string') return null;
   return documentOf(paper, 'europepmc-jats', `${EPMC}${path}`, jatsToSections(xml.data), options);
@@ -105,11 +117,12 @@ async function fromArxivHtml(paper: Paper, options: ResolveOptions): Promise<Ful
 
   const client = getPooledClient('https://arxiv.org');
   const path = `/html/${encodeURI(id)}`; // encodeURI: old-style ids (hep-th/9901001) keep their slash
-  await ARXIV_PACER.acquire(options.maxWaitMs ?? MAX_WAIT_MS);
+  await ARXIV_PACER.acquire(options.maxWaitMs ?? MAX_WAIT_MS, options.signal);
   const page = await client.get<string>(path, {
     responseType: 'text',
     timeout: options.timeoutMs ?? 15_000,
-    headers: { Accept: 'text/html', 'User-Agent': options.userAgent }
+    headers: { Accept: 'text/html', 'User-Agent': options.userAgent },
+    ...(options.signal ? { signal: options.signal } : {})
   });
   // 404 is "no rendering"; a 200 that is not a LaTeXML document is not one either.
   if (page.status !== 200 || typeof page.data !== 'string' || !page.data.includes('ltx_document')) return null;
@@ -120,10 +133,10 @@ async function fromPdf(paper: Paper, options: ResolveOptions): Promise<FullTextD
   const copy = paper.fullText;
   if (!copy || copy.kind !== 'pdf') return null;
   // An arXiv-hosted PDF is under the same Crawl-delay as its HTML.
-  await pacerFor(copy.url)?.acquire(options.maxWaitMs ?? MAX_WAIT_MS);
+  await pacerFor(copy.url)?.acquire(options.maxWaitMs ?? MAX_WAIT_MS, options.signal);
   // Only a URL from the engine's own record is ever fetched; the SSRF guard
   // inside pdfToSections is the second line, not the first.
-  return documentOf(paper, 'pdf', copy.url, { sections: await pdfToSections(copy.url, options.userAgent) }, options);
+  return documentOf(paper, 'pdf', copy.url, { sections: await pdfToSections(copy.url, options.userAgent, options.signal) }, options);
 }
 
 function documentOf(paper: Paper, tier: FullTextTier, url: string, parsed: Parsed, options: ResolveOptions): FullTextDocument {

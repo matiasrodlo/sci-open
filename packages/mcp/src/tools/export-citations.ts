@@ -65,13 +65,13 @@ export const exportCitations = defineTool({
     // Fifty DOIs to an OpenAlex request; a DOI it lacks, or could not be asked
     // about, falls back to a DOI lookup, which is a search and spends an
     // admission like one.
-    const { found } = await deps.engine.resolveDois(kinds.flatMap(k => ('doi' in k ? [k.doi] : [])));
+    const { found } = await deps.engine.resolveDois(kinds.flatMap(k => ('doi' in k ? [k.doi] : [])), { signal: deps.signal });
     const limit = pLimit(3);
     const resolved = await Promise.all(kinds.map(k => limit(async (): Promise<Paper | { reason: string }> => {
       try {
         const paper = 'doi' in k
           ? found.get(k.doi.toLowerCase()) ?? (await deps.engine.lookupDoi(k.doi, { admit: deps.admit, signal: deps.signal }))
-          : await deps.engine.lookup(k.id);
+          : await deps.engine.lookup(k.id, { signal: deps.signal });
         return paper ?? { reason: 'not_found' };
       } catch (error) {
         if (deps.signal.aborted) throw error; // cancelled: the export as a whole

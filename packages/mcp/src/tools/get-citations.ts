@@ -76,10 +76,10 @@ export const getCitations = defineTool({
       doi = paper.doi;
     }
 
-    const all = await deps.engine.citationLinks(doi, args.direction);
+    const all = await deps.engine.citationLinks(doi, args.direction, { signal: deps.signal });
     // OpenCitations answers an unknown DOI with an empty list, the same as a
     // paper nobody cites; the DOI registry tells the two apart.
-    if (all.length === 0 && (await deps.engine.doiRegistered(doi)) === false) {
+    if (all.length === 0 && (await deps.engine.doiRegistered(doi, { signal: deps.signal })) === false) {
       throw new ToolError('not_found', `No DOI registry holds ${doi}.`, 'Check the DOI, or find the paper with search_papers.');
     }
     if (args.offset > 0 && args.offset >= all.length) {
@@ -87,7 +87,7 @@ export const getCitations = defineTool({
     }
 
     const page = all.slice(args.offset, args.offset + args.limit);
-    const { found, unasked } = await deps.engine.resolveDois(page.flatMap(l => l.dois));
+    const { found, unasked } = await deps.engine.resolveDois(page.flatMap(l => l.dois), { signal: deps.signal });
     const notAsked = new Set(unasked.map(d => d.toLowerCase()));
 
     const links = page.map(link => {

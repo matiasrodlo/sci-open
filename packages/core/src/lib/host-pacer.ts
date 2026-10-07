@@ -6,15 +6,32 @@ export class SourceBusyError extends Error {
   }
 }
 
-type Clock = { now(): number; sleep(ms: number): Promise<void> };
+type Clock = { now(): number; sleep(ms: number, signal?: AbortSignal): Promise<void> };
 
-const realClock: Clock = { now: () => Date.now(), sleep: ms => new Promise(resolve => setTimeout(resolve, ms)) };
+const realClock: Clock = {
+  now: () => Date.now(),
+  sleep: (ms, signal) =>
+    new Promise((resolve, reject) => {
+      if (signal?.aborted) return reject(signal.reason);
+      const onAbort = () => {
+        clearTimeout(timer);
+        reject(signal!.reason);
+      };
+      const timer = setTimeout(() => {
+        signal?.removeEventListener('abort', onAbort);
+        resolve();
+      }, ms);
+      signal?.addEventListener('abort', onAbort, { once: true });
+    })
+};
 
 /**
  * Spaces the requests this process sends to one host — a robots.txt
  * `Crawl-delay`, kept by reservation. A caller takes the next free slot and
  * sleeps until it. One whose slot is further off than it will wait gets
  * `SourceBusyError` and takes nothing, so a refusal never delays anyone else.
+ * One whose signal aborts while it sleeps rejects with the signal's reason,
+ * and gives its slot back if nobody has reserved one after it.
  *
  * Per process, not per deployment: two server replicas would each send at
  * this rate. Divide the interval among them before running more than one.
@@ -28,13 +45,23 @@ export class HostPacer {
     private readonly clock: Clock = realClock
   ) {}
 
-  async acquire(maxWaitMs: number): Promise<void> {
+  async acquire(maxWaitMs: number, signal?: AbortSignal): Promise<void> {
+    signal?.throwIfAborted();
     const now = this.clock.now();
     const slot = Math.max(now, this.nextSlot);
     if (slot - now > maxWaitMs) throw new SourceBusyError(this.host, slot - now);
     // Reserved before the first await, so no two callers can take one slot.
     this.nextSlot = slot + this.intervalMs;
-    if (slot > now) await this.clock.sleep(slot - now);
+    if (slot <= now) return;
+    try {
+      await this.clock.sleep(slot - now, signal);
+    } catch (error) {
+      // Nothing will be sent in this slot. Still the last one reserved, it
+      // is let go, so the next caller does not wait out a request never made;
+      // with a later one reserved, the gap stays rather than move anyone.
+      if (this.nextSlot === slot + this.intervalMs) this.nextSlot = slot;
+      throw error;
+    }
   }
 }
 

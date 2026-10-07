@@ -51,6 +51,7 @@ export type CitationLinkOptions = {
   token?: string;
   timeoutMs?: number;
   baseUrl?: string;
+  signal?: AbortSignal;
 };
 
 /**
@@ -93,7 +94,8 @@ export async function citationLinks(
       Accept: 'application/json',
       'User-Agent': options.userAgent,
       ...(options.token ? { authorization: options.token } : {})
-    }
+    },
+    ...(options.signal ? { signal: options.signal } : {})
   });
   // The pooled client resolves a 4xx rather than throwing.
   if (response.status >= 400) {

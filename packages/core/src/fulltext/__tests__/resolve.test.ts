@@ -109,6 +109,34 @@ describe('resolveFullText', () => {
     expect(fetched).toBe('/html/2404.18021');
   });
 
+  it('stops at the tier its signal aborts, rejecting with the reason and trying no other', async () => {
+    const signals: AbortSignal[] = [];
+    hosts.set(EPMC, (_path: string, config: { signal: AbortSignal }) => {
+      signals.push(config.signal);
+      return new Promise((_resolve, reject) => config.signal.addEventListener('abort', () => reject(new Error('canceled')), { once: true }));
+    });
+    const reader = new AbortController();
+
+    const reading = resolveFullText(plos, { ...OPTIONS, signal: reader.signal });
+    await vi.waitFor(() => expect(signals).toHaveLength(1));
+    reader.abort();
+
+    await expect(reading).rejects.toMatchObject({ name: 'AbortError' });
+    expect(pdf.pages).not.toHaveBeenCalled();
+  });
+
+  it('says it was stopped, not that there is no copy, when a tier finds none after the signal aborts', async () => {
+    europePmc(undefined);
+    const reader = new AbortController();
+    pdf.pages.mockImplementation(async () => {
+      reader.abort();
+      return [];
+    });
+
+    await expect(resolveFullText(plos, { ...OPTIONS, signal: reader.signal })).rejects.toMatchObject({ name: 'AbortError' });
+    expect(pdf.pages).toHaveBeenCalledWith('https://journals.plos.org/x.pdf', 'test', reader.signal);
+  });
+
   it('falls back to the PDF, a page a section, when neither has the paper', async () => {
     europePmc(undefined);
     pdf.pages.mockResolvedValue([{ id: 'p1', title: 'Page 1', text: 'Hello' }, { id: 'p2', title: 'Page 2', text: 'World' }]);
@@ -116,7 +144,7 @@ describe('resolveFullText', () => {
     const { doc } = await resolveFullText(plos, OPTIONS);
 
     expect(doc).toMatchObject({ tier: 'pdf', url: 'https://journals.plos.org/x.pdf', totalChars: 10 });
-    expect(pdf.pages).toHaveBeenCalledWith('https://journals.plos.org/x.pdf', 'test');
+    expect(pdf.pages).toHaveBeenCalledWith('https://journals.plos.org/x.pdf', 'test', undefined);
   });
 
   it('never fetches from a publisher in trusted mode', async () => {

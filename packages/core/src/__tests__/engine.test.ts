@@ -286,6 +286,35 @@ describe('what a call costs the sources', () => {
       expect(asked).toEqual(['2101.00001', '2101.00001']);
     });
 
+    it('stops a lookup its caller left, holding nothing, and goes on for another caller waiting on it', async () => {
+      const arxiv = stub('arxiv');
+      const signals: AbortSignal[] = [];
+      let answer!: () => void;
+      const answered = new Promise<void>(resolve => { answer = resolve; });
+      arxiv.entry.lookup = async ({ nativeId, signal }) => {
+        signals.push(signal!);
+        await Promise.race([answered, new Promise((_, reject) => signal!.addEventListener('abort', () => reject(signal!.reason), { once: true }))]);
+        return paper({ id: `arxiv:${nativeId}`, sources: [ref('arxiv', { nativeId })] });
+      };
+      const engine = engineWith(arxiv.entry);
+
+      const caller = new AbortController();
+      const looking = engine.lookup('arxiv:2101.00001', { signal: caller.signal });
+      caller.abort();
+      await expect(looking).rejects.toMatchObject({ name: 'AbortError' });
+      expect(signals[0]!.aborted).toBe(true);
+
+      const leaving = new AbortController();
+      const left = engine.lookup('arxiv:2101.00001', { signal: leaving.signal });
+      const staying = engine.lookup('arxiv:2101.00001');
+      leaving.abort();
+      await expect(left).rejects.toMatchObject({ name: 'AbortError' });
+      answer();
+      expect((await staying)?.id).toBe('arxiv:2101.00001');
+      expect(signals).toHaveLength(2);
+      expect(signals[1]!.aborted).toBe(false);
+    });
+
     it('is not held when no source had it, so a paper indexed later is found', async () => {
       const { engine, asked } = byId();
       expect(await engine.lookup('arxiv:missing')).toBeNull();
@@ -408,6 +437,46 @@ describe('reading full text', () => {
 
     await e.readFullText(target, { trustedOnly: false });
     expect(await e.readFullText(target, { trustedOnly: false })).toEqual(doc);
+    expect(resolve).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops a read its only reader left, and holds nothing', async () => {
+    const signals: AbortSignal[] = [];
+    resolve.mockImplementation((_paper, options: { signal: AbortSignal }) => {
+      signals.push(options.signal);
+      return new Promise((_resolve, reject) => options.signal.addEventListener('abort', () => reject(options.signal.reason), { once: true }));
+    });
+    const e = engine();
+    const reader = new AbortController();
+
+    const reading = e.readFullText(target, { trustedOnly: false, signal: reader.signal });
+    reader.abort();
+    await expect(reading).rejects.toMatchObject({ name: 'AbortError' });
+    expect(signals[0]!.aborted).toBe(true);
+
+    resolve.mockResolvedValue({ doc, definitive: true });
+    expect(await e.readFullText(target, { trustedOnly: false })).toEqual(doc);
+    expect(resolve).toHaveBeenCalledTimes(2);
+  });
+
+  it('goes on with a read another reader still waits on', async () => {
+    let finish!: (value: unknown) => void;
+    const signals: AbortSignal[] = [];
+    resolve.mockImplementation((_paper, options: { signal: AbortSignal }) => {
+      signals.push(options.signal);
+      return new Promise(r => { finish = r; });
+    });
+    const e = engine();
+    const leaving = new AbortController();
+
+    const left = e.readFullText(target, { trustedOnly: false, signal: leaving.signal });
+    const staying = e.readFullText(target, { trustedOnly: false, signal: new AbortController().signal });
+    leaving.abort();
+    await expect(left).rejects.toMatchObject({ name: 'AbortError' });
+    expect(signals[0]!.aborted).toBe(false);
+
+    finish({ doc, definitive: true });
+    expect(await staying).toEqual(doc);
     expect(resolve).toHaveBeenCalledTimes(1);
   });
 

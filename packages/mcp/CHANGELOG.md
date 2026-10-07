@@ -20,10 +20,12 @@ in `test/__toolsnaps__/` are the record of every schema change.
   the window down by source. The evals report requests and OpenAlex cost per
   case.
 - A call the client cancels stops what it asked of the sources: the fan-out,
-  the facet counts, the access check and the page's details, and
-  verify_references starts no further reference. A search another call is
-  waiting on goes on for that call. A full text or citation list being
-  fetched still runs to the end.
+  the facet counts, the access check and the page's details, a lookup by id,
+  the DOI registry, OpenAlex's DOI batches, a citation list and a full text
+  (each tier's request, the wait for arXiv's crawl delay, the PDF download),
+  and verify_references starts no further reference. A search or read another
+  call is waiting on goes on for that call. Only parsing a PDF already
+  downloaded runs to the end.
 - A failed tool call is logged on stderr with its cause, which the model is
   still never shown: an `error`, with the stack, for a fault in the server, a
   warning for a source failing, `info` for a wait on a paced source and

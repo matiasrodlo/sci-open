@@ -106,6 +106,8 @@ export type LookupOptions = {
   userAgent?: string;
   /** Defaults to the whole registry. A subset is how this is driven offline. */
   providers?: readonly ProviderEntry[];
+  /** Stops the request to the provider. */
+  signal?: AbortSignal;
   now?: () => Date;
 };
 
@@ -115,6 +117,7 @@ export async function lookupPaper(id: string, options: LookupOptions = {}): Prom
     depth = DEFAULT_DEPTH,
     userAgent,
     providers = PROVIDERS,
+    signal,
     now
   } = options;
 
@@ -129,6 +132,7 @@ export async function lookupPaper(id: string, options: LookupOptions = {}): Prom
       nativeId,
       timeoutMs,
       ...(userAgent ? { userAgent } : {}),
+      ...(signal ? { signal } : {}),
       ...(now ? { now } : {})
     });
 
@@ -148,6 +152,7 @@ export async function lookupPaper(id: string, options: LookupOptions = {}): Prom
     // a lookup returns nothing for a paper that plainly exists.
     openAccessOnly: false,
     ...(userAgent ? { userAgent } : {}),
+    ...(signal ? { signal } : {}),
     ...(now ? { now } : {})
   });
 

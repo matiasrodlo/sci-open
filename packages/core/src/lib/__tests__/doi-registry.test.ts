@@ -37,6 +37,18 @@ describe('doiRegistered', () => {
     expect(await doiRegistered('10.1371/journal.pone.0000217', { userAgent: 'test' })).toBeUndefined();
   });
 
+  it('rejects for a caller that left, rather than know nothing', async () => {
+    const caller = new AbortController();
+    get.mockImplementationOnce(async (_path: string, config: { signal: AbortSignal }) => {
+      expect(config.signal).toBe(caller.signal);
+      caller.abort();
+      throw new Error('canceled');
+    });
+
+    await expect(doiRegistered('10.1371/journal.pone.0000217', { userAgent: 'test', signal: caller.signal }))
+      .rejects.toMatchObject({ name: 'AbortError' });
+  });
+
   it('encodes each part of the handle but keeps the slashes between them', async () => {
     get.mockResolvedValue({ status: 200, data: { responseCode: 1 } });
 

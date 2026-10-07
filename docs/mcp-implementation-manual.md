@@ -6795,8 +6795,12 @@ In rough order of value:
    counts, the access check and the page's details stop, and nothing is held.
    Work is shared through `SingleFlight`s — a result set, a provider's request
    — so a caller that cancels stops waiting at once, but the shared work is
-   stopped only when every caller waiting on it has. Not yet: a full text
-   being fetched, or a citation list.
+   stopped only when every caller waiting on it has. The engine's other calls
+   take it too (`Cancellable`): a lookup by id and its enrichment, the DOI
+   registry, OpenAlex's DOI batches (none after the abort), a citation list,
+   and a full text — each tier's request, the arXiv pacer's wait, which gives
+   its slot back, and the PDF's body. Only parsing a PDF already downloaded
+   runs to the end.
 
 ---
 

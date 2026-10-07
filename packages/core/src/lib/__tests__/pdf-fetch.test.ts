@@ -426,6 +426,35 @@ describe('fetchPdfStream — the body', () => {
     expect(upstream.destroyed).toBe(true);
   });
 
+  it('ends the download, and the publisher\'s side, when the signal aborts mid-body', async () => {
+    // Axios hands the stream over at the headers; an abort after that has to
+    // reach the stream being read.
+    const upstream = new PassThrough();
+    upstream.write(Buffer.alloc(1024));
+    const get = serve({ 'content-type': 'application/pdf' }, upstream);
+    const reader = new AbortController();
+
+    const stream = await fetchPdfStream(new URL('https://publisher.example.com/paper.pdf'), 'ua', reader.signal);
+    expect((get.mock.calls[0]![1] as any).signal).toBe(reader.signal);
+    const reading = read(stream);
+    reader.abort();
+
+    await expect(reading).rejects.toMatchObject({ name: 'AbortError' });
+    expect(upstream.destroyed).toBe(true);
+  });
+
+  it('rejects with the signal\'s reason, not as an unreachable PDF, when aborted before the headers', async () => {
+    const reader = new AbortController();
+    vi.spyOn(axios, 'get').mockImplementation(async () => {
+      reader.abort();
+      throw Object.assign(new Error('canceled'), { code: 'ERR_CANCELED' });
+    });
+
+    const error = await fetchPdfStream(new URL('https://publisher.example.com/paper.pdf'), 'ua', reader.signal).catch(e => e);
+    expect(error).not.toBeInstanceOf(PdfFetchError);
+    expect(error).toMatchObject({ name: 'AbortError' });
+  });
+
   it('decodes a compressed body, and does not pass on the compressed length', async () => {
     // Axios decoded it and kept Content-Length: a header of 244 bytes in front
     // of a body of 200,009, and the reader got the first 244.

@@ -62,7 +62,9 @@ export const verifyReferences = defineTool({
     // source. A batch failure costs only that shortcut.
     const dois = [...new Set(args.references.flatMap(r => citedDoi(r) ?? []))];
     const openalex = dois.length
-      ? await deps.engine.resolveDois(dois).then(r => r.found, (error: unknown) => {
+      ? await deps.engine.resolveDois(dois, { signal: deps.signal }).then(r => r.found, (error: unknown) => {
+          // Cancelled, the call fails as a whole, and nothing failed to log.
+          deps.signal.throwIfAborted();
           reportToolError(error, 'verify_references', deps.logger);
           return new Map<string, Paper>();
         })
@@ -185,7 +187,7 @@ async function verifyOne(ref: ParsedReference, deps: ToolDeps, openalex: Readonl
         doi_target: shapePaper(paper, 'concise')
       };
     }
-    const registered = await deps.engine.doiRegistered(ref.doi);
+    const registered = await deps.engine.doiRegistered(ref.doi, { signal: deps.signal });
     if (registered === true) return unmatched('ambiguous', 'doi', ['doi_registered_but_not_indexed']);
     if (registered === undefined) return unmatched('ambiguous', 'doi', ['doi_unconfirmed: the DOI registry did not answer']);
     // An invented DOI. The rest of the reference may still name a real paper.
@@ -201,7 +203,7 @@ async function verifyOne(ref: ParsedReference, deps: ToolDeps, openalex: Readonl
     if (!id) continue;
     // An arXiv id keeps its version when the citation gives one; without one
     // the lookup accepts any version.
-    const paper = await deps.engine.lookup(kind === 'arxiv' ? `arxiv:${id}` : `ncbi:${id}`);
+    const paper = await deps.engine.lookup(kind === 'arxiv' ? `arxiv:${id}` : `ncbi:${id}`, { signal: deps.signal });
     if (paper) return done(kind, paper, judge(ref, paper));
   }
 

@@ -76,7 +76,7 @@ export const readPaper = defineTool({
     }
 
     const paper = await resolvePaperRef(args.paper, deps);
-    const doc = await deps.engine.readFullText(paper, { trustedOnly: deps.config.trustedFullTextOnly });
+    const doc = await deps.engine.readFullText(paper, { trustedOnly: deps.config.trustedFullTextOnly, signal: deps.signal });
     if (!doc) {
       throw new ToolError('no_full_text', 'No legal open-access full text was found for this paper.', 'Use get_paper for the abstract and landing page.');
     }
