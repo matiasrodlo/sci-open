@@ -20,19 +20,27 @@ bound, the coverage sentence, the handle (searches only) and the result hash
    with `*`. Log every query you try, with its counts, not only the last.
    Counts are each source's own, so compare variants with them; never report
    one as the number of papers found.
-4. With the final query, run `search_papers` without `count_only` at
-   `page_size=10` and `detail="full"`, which shows each abstract, and page
-   with `get_search_page` (`detail="full"` again) until `next` is null or the
-   user's cap.
-5. Screen titles and abstracts against the user's criteria. For an uncertain
+4. A search reads only the top of each source's matches, and the counts say
+   where that bites ("A search reads … the top 300"). For a review that must
+   find every match, get every source read in full first: narrow the query,
+   or split it into `PY=` ranges and run the steps below once per range. If
+   the user settles for the top of each source instead, log that as a limit
+   of the search.
+5. With the final query, or each part of it, run `search_papers` without
+   `count_only` at `page_size=10` and `detail="full"`, which shows each
+   abstract, and page with `get_search_page` (`detail="full"` again) until
+   `next` is null or the user's cap. "End of what was read" means the sources
+   held more than was read: go back to step 4.
+6. Screen titles and abstracts against the user's criteria. For an uncertain
    paper, `read_paper` with `view="outline"`, then its methods section. Exclude
    a paper marked `retracted`, and log it as excluded for that reason.
-6. To check for papers the query missed, follow the citations of the most
+7. To check for papers the query missed, follow the citations of the most
    relevant included papers with `get_citations` (`references` backwards,
    `cited_by` forwards), and screen what it finds the same way. Log it as a
    citation search, with the papers it started from.
-7. Export the included papers with `export_citations`, with `save_to` if the
+8. Export the included papers with `export_citations`, with `save_to` if the
    user wants a file, and list them with their DOIs in the log.
 
-Report coverage as the results give it: if a source failed, say the totals
-are lower bounds and name the sources that were missing.
+Report coverage as the results give it: if a source failed, or some sources
+were read only in part, say the totals are lower bounds and name those
+sources.

@@ -3,7 +3,7 @@ import type { SearchResponse } from '@sci-open/shared';
 import { encodeSearchHandle, type SearchSpec } from '../handles';
 import { shapePaper, paperSchema, listedTitle, retractionWarning, type ShapedPaper } from '../shape/paper';
 import { fitWholeItems } from '../shape/budget';
-import { coverageOf, coverageSchema, coverageSentence } from '../shape/coverage';
+import { coverageOf, coverageSchema, coverageSentence, totalIsLowerBound } from '../shape/coverage';
 import { fenceUntrusted } from '../safety/untrusted';
 import { sanitizeText } from '../safety/sanitize';
 import type { ToolOutcome } from '../framework/define-tool';
@@ -66,8 +66,9 @@ export function presentPage(
   const { kept, omitted } = fitWholeItems(r.papers.map(p => shapePaper(p, opts.detail)), opts.structuredBudget);
   const more = r.page * r.pageSize < r.total;
   const coverage = coverageOf(r);
-  // A source that failed and a rescue cut short both leave the total short.
-  const lowerBound = !r.complete || r.bounded;
+  // A source that failed, a rescue cut short and a source read only to the
+  // depth all leave the total short of what matches.
+  const lowerBound = totalIsLowerBound(coverage);
   const facets = opts.includeFacets
     ? Object.fromEntries(Object.entries(r.facets).map(([k, v]) => [k, v.slice(0, TOP_FACET_VALUES).map(b => ({ value: b.value, count: b.count }))]))
     : undefined;
@@ -101,7 +102,12 @@ export function presentPage(
     `# ${r.total.toLocaleString('en')}${lowerBound ? '+' : ''} results${spec.q ? ` for \`${spec.q}\`` : spec.doi ? ` for DOI ${spec.doi}` : ''} — page ${r.page}`,
     '',
     `**Coverage:** ${coverageSentence(coverage)}`,
-    more ? `**Next:** get_search_page(handle="${handle}", page=${r.page + 1})` : '**End of results.**',
+    more
+      ? `**Next:** get_search_page(handle="${handle}", page=${r.page + 1})`
+      : coverage.truncated.length
+        // Not the end of what matches: the end of the top that was read.
+        ? '**End of what was read.** The sources hold more matches than a search reads: to reach them, narrow the query or split it by PY= ranges until search_papers with count_only=true shows every source within what a search reads.'
+        : '**End of results.**',
     omitted ? `**Note:** the last ${omitted} result(s) of this page were omitted to fit the response limit; run search_papers again with a smaller page_size.` : '',
     opts.rerun ? '**Note:** the search was run again for this page (the held set had expired or was incomplete), so it may overlap or skip results from earlier pages.' : '',
     ...(facetLines.length ? ['', '**Facets**, the top values of each:', fenceUntrusted('facet values', facetLines.join('\n'))] : []),

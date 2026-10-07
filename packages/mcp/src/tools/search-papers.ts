@@ -76,7 +76,7 @@ export const searchPapers = defineTool({
 
     if (args.count_only) {
       if (doi) throw new ToolError('invalid_input', 'count_only counts the matches of a query; a DOI names one paper.', 'Drop count_only to look the DOI up.');
-      return presentCounts(await deps.engine.count({ ...params, page: 1 }, engineOptions), query!);
+      return presentCounts(await deps.engine.count({ ...params, page: 1 }, engineOptions), query!, deps.config.searchDepth);
     }
 
     const { response } = await deps.engine.search({ ...params, page: 1 }, engineOptions);

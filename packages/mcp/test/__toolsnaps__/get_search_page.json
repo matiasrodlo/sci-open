@@ -163,6 +163,33 @@
               "additionalProperties": false
             }
           },
+          "truncated": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "read": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "matches": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "source",
+                "read",
+                "matches"
+              ],
+              "additionalProperties": false
+            }
+          },
           "per_source": {
             "type": "array",
             "items": {
@@ -200,6 +227,7 @@
           "answered",
           "failed",
           "skipped",
+          "truncated",
           "per_source"
         ],
         "additionalProperties": false

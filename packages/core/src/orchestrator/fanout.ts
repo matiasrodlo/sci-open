@@ -184,6 +184,10 @@ export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOut
           status: 'ok',
           retrieved: outcome.papers.length,
           ...(outcome.totalHits !== undefined ? { totalHits: outcome.totalHits } : {}),
+          // Against the depth, not against `retrieved`: a record the
+          // normaliser skipped was read all the same, and a provider that
+          // answered everything it holds is not cut short by losing one.
+          ...(outcome.totalHits !== undefined && outcome.totalHits > offset + depth ? { truncated: true as const } : {}),
           latency: Date.now() - startedAt
         }
       };

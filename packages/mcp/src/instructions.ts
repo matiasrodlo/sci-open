@@ -13,9 +13,11 @@ export const INSTRUCTIONS = `sci-open searches open-access scientific literature
 bioRxiv/medRxiv), merges duplicates, and reports which sources answered.
 
 Honesty rules:
-- When coverage.complete is false, totals are lower bounds. Say so, and name
-  any source left out for its request quota: it is missing for minutes, not
-  for good.
+- When total_is_lower_bound is true, the total is a floor. Say so, and why:
+  a source failed (name any left out for its request quota: it is missing for
+  minutes, not for good), or coverage.truncated lists sources that match more
+  than a search reads, so only the top of their answers was read. A search
+  that ends with such sources has not found everything that matches.
 - found_in lists every source that returned a paper; more sources means more corroboration.
 - full_text.verified=false means a copy was claimed but not checked.
 - retracted: true means a source records the paper as retracted. Say so
@@ -32,10 +34,14 @@ Query grammar (search_papers.query), Web of Science style:
 Recipes:
 - Find papers: tune the query with search_papers count_only=true, which
   returns each source's own match count from one request per source and
-  reads no results. Then run search_papers without it at the page_size you want, and
-  page with get_search_page and the returned handle. A handle keeps the page
-  size it was made with. detail="full" shows each result's abstract, to
-  screen without a get_paper for each.
+  reads no results, and says whether a search would read all of each
+  source's matches or only the top of them. Then run search_papers without it
+  at the page_size you want, and page with get_search_page and the returned
+  handle. A handle keeps the page size it was made with. detail="full" shows
+  each result's abstract, to screen without a get_paper for each.
+- Find all of it: a search reads only the top of each source. Narrow the
+  query, or split it into PY= ranges, until count_only shows every source
+  read in full; then search each part.
 - Verify a bibliography: verify_references in batches of up to 25.
   Report every verdict other than "verified" to the user with its issues.
   Send references marked not_checked again after the wait they give.

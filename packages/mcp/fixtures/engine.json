@@ -5225,42 +5225,48 @@
      "retrieved": 300,
      "totalHits": 35170,
      "latency": 5423,
-     "facetError": "1 count failed: NCBI returned no usable response: esearch count: API rate limit exceeded"
+     "facetError": "1 count failed: NCBI returned no usable response: esearch count: API rate limit exceeded",
+     "truncated": true
     },
     {
      "provider": "doaj",
      "status": "ok",
      "retrieved": 300,
      "totalHits": 22894,
-     "latency": 1220
+     "latency": 1220,
+     "truncated": true
     },
     {
      "provider": "plos",
      "status": "ok",
      "retrieved": 300,
      "totalHits": 4116,
-     "latency": 1209
+     "latency": 1209,
+     "truncated": true
     },
     {
      "provider": "openaire",
      "status": "ok",
      "retrieved": 300,
      "totalHits": 70573,
-     "latency": 4761
+     "latency": 4761,
+     "truncated": true
     },
     {
      "provider": "openalex",
      "status": "ok",
      "retrieved": 300,
      "totalHits": 92421,
-     "latency": 5442
+     "latency": 5442,
+     "truncated": true
     },
     {
      "provider": "europepmc",
      "status": "ok",
      "retrieved": 300,
      "totalHits": 35799,
-     "latency": 4005
+     "latency": 4005,
+     "truncated": true
     },
     {
      "provider": "datacite",
@@ -6314,42 +6320,48 @@
      "retrieved": 300,
      "totalHits": 35170,
      "latency": 5423,
-     "facetError": "1 count failed: NCBI returned no usable response: esearch count: API rate limit exceeded"
+     "facetError": "1 count failed: NCBI returned no usable response: esearch count: API rate limit exceeded",
+     "truncated": true
     },
     {
      "provider": "doaj",
      "status": "ok",
      "retrieved": 300,
      "totalHits": 22894,
-     "latency": 1220
+     "latency": 1220,
+     "truncated": true
     },
     {
      "provider": "plos",
      "status": "ok",
      "retrieved": 300,
      "totalHits": 4116,
-     "latency": 1209
+     "latency": 1209,
+     "truncated": true
     },
     {
      "provider": "openaire",
      "status": "ok",
      "retrieved": 300,
      "totalHits": 70573,
-     "latency": 4761
+     "latency": 4761,
+     "truncated": true
     },
     {
      "provider": "openalex",
      "status": "ok",
      "retrieved": 300,
      "totalHits": 92421,
-     "latency": 5442
+     "latency": 5442,
+     "truncated": true
     },
     {
      "provider": "europepmc",
      "status": "ok",
      "retrieved": 300,
      "totalHits": 35799,
-     "latency": 4005
+     "latency": 4005,
+     "truncated": true
     },
     {
      "provider": "datacite",
@@ -7686,14 +7698,16 @@
      "status": "ok",
      "retrieved": 299,
      "totalHits": 333,
-     "latency": 4838
+     "latency": 4838,
+     "truncated": true
     },
     {
      "provider": "europepmc",
      "status": "ok",
      "retrieved": 300,
      "totalHits": 6837,
-     "latency": 3180
+     "latency": 3180,
+     "truncated": true
     },
     {
      "provider": "datacite",
@@ -8424,7 +8438,8 @@
      "status": "ok",
      "retrieved": 300,
      "totalHits": 2240,
-     "latency": 3272
+     "latency": 3272,
+     "truncated": true
     },
     {
      "provider": "openalex",

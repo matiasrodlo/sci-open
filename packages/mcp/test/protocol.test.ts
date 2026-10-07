@@ -170,6 +170,12 @@ describe('protocol', () => {
     });
     expect(result.structuredContent).not.toHaveProperty('handle');
     expect(text(result)).toContain('no results read');
+    // Whether a search would read each source whole: 300 records a source.
+    expect((result.structuredContent as any).counts.per_source).toEqual(expect.arrayContaining([
+      { source: 'openalex', status: 'ok', count: 81_234, read_in_full: false }
+    ]));
+    expect(text(result)).toContain('| openalex | 81,234 | the top 300 |');
+    expect(text(result)).toContain('it would read only the top of');
   });
 
   it('sends progress only to a caller that asked, in increasing order', async () => {

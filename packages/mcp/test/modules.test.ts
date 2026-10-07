@@ -10,7 +10,7 @@ import { hasVisibleText, sanitizeText, stripInvisible } from '../src/safety/sani
 import { fenceUntrusted } from '../src/safety/untrusted';
 import { writeUserFile } from '../src/safety/paths';
 import { clampText, fitWholeItems } from '../src/shape/budget';
-import { coverageOf, coverageSentence } from '../src/shape/coverage';
+import { coverageOf, coverageSentence, totalIsLowerBound } from '../src/shape/coverage';
 import { tokenBucket } from '../src/admission';
 import pLimit from '../src/p-limit';
 import { ToolError } from '../src/errors';
@@ -185,6 +185,27 @@ describe('coverage', () => {
       '1 of 3 sources answered; no answer from europepmc (timeout) — the total is a lower bound; ' +
       'openalex (request quota spent) left out for a few minutes — the total is a lower bound; ' +
       'skipped biorxiv (no keyword index); the access check was cut short, so a few papers may be missing.'
+    );
+  });
+
+  it('says the total counts what was read when a source matched more than was read', () => {
+    const c = coverageOf({
+      complete: true,
+      bounded: false,
+      providers: [
+        report('arxiv', { retrieved: 114, totalHits: 114 }),
+        report('europepmc', { retrieved: 300, totalHits: 35_799, truncated: true }),
+        report('openalex', { retrieved: 300, totalHits: 92_421, truncated: true })
+      ]
+    });
+    expect(c.truncated).toEqual([
+      { source: 'openalex', read: 300, matches: 92_421 },
+      { source: 'europepmc', read: 300, matches: 35_799 }
+    ]);
+    expect(totalIsLowerBound(c)).toBe(true);
+    expect(coverageSentence(c)).toBe(
+      '3 of 3 sources answered; some sources match more than a search reads, and only the top of their answers was read ' +
+      '(openalex 300 of 92,421, europepmc 300 of 35,799), so the total counts what was read, not every match.'
     );
   });
 });

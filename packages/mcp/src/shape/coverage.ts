@@ -7,6 +7,9 @@ export const coverageSchema = z.object({
   answered: z.array(z.string()),
   failed: z.array(z.object({ source: z.string(), status: z.enum(['timeout', 'error']), rate_limited: z.boolean().optional() })),
   skipped: z.array(z.object({ source: z.string(), reason: z.string() })),
+  /** Sources that matched more than a search reads from each: the top `read`
+   * of their `matches`, so the total counts what was read, not every match. */
+  truncated: z.array(z.object({ source: z.string(), read: z.number().int(), matches: z.number().int() })),
   per_source: z.array(z.object({ source: z.string(), status: z.string(), retrieved: z.number().int(), total_hits: z.number().int().optional() }))
 });
 export type Coverage = z.infer<typeof coverageSchema>;
@@ -22,6 +25,10 @@ export function coverageOf(r: Pick<SearchResponse, 'complete' | 'bounded' | 'pro
       .filter((p): p is typeof p & { status: 'timeout' | 'error' } => p.status === 'timeout' || p.status === 'error')
       .map(p => ({ source: p.provider, status: p.status, ...(p.rateLimited ? { rate_limited: true } : {}) })),
     skipped: r.providers.filter(p => p.status === 'skipped').map(p => ({ source: p.provider, reason: p.skipReason ?? 'not asked' })),
+    truncated: r.providers
+      .filter((p): p is typeof p & { totalHits: number } => p.status === 'ok' && p.truncated === true && p.totalHits !== undefined)
+      .sort((a, b) => b.totalHits - a.totalHits)
+      .map(p => ({ source: p.provider, read: p.retrieved, matches: p.totalHits })),
     per_source: r.providers.map(p => ({
       source: p.provider,
       status: p.status,
@@ -42,5 +49,19 @@ export function coverageSentence(c: Coverage): string {
   if (limited.length) parts.push(`${limited.map(f => `${f.source} (request quota spent)`).join(', ')} left out for a few minutes — the total is a lower bound`);
   if (c.skipped.length) parts.push(`skipped ${c.skipped.map(s => `${s.source} (${s.reason})`).join(', ')}`);
   if (c.bounded) parts.push('the access check was cut short, so a few papers may be missing');
+  if (c.truncated.length) parts.push(truncatedClause(c.truncated));
   return `${parts.join('; ')}.`;
+}
+
+/** The sources a search read only the top of, and what that makes the total. */
+function truncatedClause(truncated: Coverage['truncated']): string {
+  const listed = truncated.map(t => `${t.source} ${t.read.toLocaleString('en')} of ${t.matches.toLocaleString('en')}`).join(', ');
+  return `some sources match more than a search reads, and only the top of their answers was read (${listed}), ` +
+    'so the total counts what was read, not every match';
+}
+
+/** Whether a page's total is a floor: a source failed, the access check was
+ * cut short, or a source matched more than was read from it. */
+export function totalIsLowerBound(c: Coverage): boolean {
+  return !c.complete || c.bounded || c.truncated.length > 0;
 }

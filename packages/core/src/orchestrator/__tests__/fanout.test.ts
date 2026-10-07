@@ -46,6 +46,19 @@ describe('fanOut', () => {
     expect(reports.find(r => r.provider === 'europepmc')?.totalHits).toBe(900);
   });
 
+  it('marks a provider that matched more than the depth as read only in part', async () => {
+    // depth 10: europepmc matched 900 and gave 10; ncbi matched 3 and gave all
+    // 3; plos matched 10 exactly, and lost one to the normaliser, which is
+    // still a whole read.
+    const providers = [ok('europepmc', 10, 900), ok('ncbi', 3, 3), ok('plos', 9, 10), ok('doaj', 4)];
+    const { reports } = await fanOut(plan(QUERY, providers), base);
+    const truncated = Object.fromEntries(reports.map(r => [r.provider, r.truncated ?? false]));
+
+    expect(truncated).toEqual({ europepmc: true, ncbi: false, plos: false, doaj: false });
+    // Every source answered: the set is whole, only its total is a floor.
+    expect(isComplete(reports)).toBe(true);
+  });
+
   it('reports a provider that was never asked, and why', async () => {
     const providers = [ok('europepmc', 1), stubProvider('biorxiv', async () => ({ papers: [], skipped: [] }), { keywordSearch: false })];
     const { reports } = await fanOut(plan(QUERY, providers), base);

@@ -27,6 +27,15 @@ export type ProviderReport = {
    * would count the same paper many times over.
    */
   totalHits?: number;
+  /**
+   * True when the provider matched more than the search reads from it — its
+   * `totalHits` is past the depth — so what it contributed is the top of its
+   * answer, in the order it was read, and not all of it. A set any provider
+   * was truncated in is complete in the sense `isComplete` means, every source
+   * answered, but its `total` counts what was read and is a lower bound on
+   * what matches.
+   */
+  truncated?: true;
   /** Present when `status` is `error` or `timeout`. */
   error?: string;
   /**
