@@ -55,6 +55,19 @@ export type OpenAirePayload = {
   results?: unknown;
 };
 
+/**
+ * A failed request as its status and, when the body says, why. A refused
+ * search answers `{"message": "Too many logical operators found. …"}`, which
+ * the status alone hid: the fan-out reported OpenAIRE "error" and nothing said
+ * what it had objected to.
+ */
+function failure(status: number, body: unknown): string {
+  const message = (body as { message?: unknown } | null)?.message;
+  return typeof message === 'string' && message.trim()
+    ? `HTTP ${status}: ${message.trim().slice(0, 200)}`
+    : `HTTP ${status}`;
+}
+
 function requestConfig(options: Omit<FetchOptions, 'pageSize' | 'offset'>) {
   const { timeoutMs, signal, userAgent } = options;
   return {
@@ -99,7 +112,7 @@ export async function fetchPage(
   });
 
   if (response.status >= 400) {
-    throw new OpenAireUnavailableError(`HTTP ${response.status}`, response.status);
+    throw new OpenAireUnavailableError(failure(response.status, response.data), response.status);
   }
 
   const payload = response.data ?? {};
@@ -135,7 +148,7 @@ export async function fetchProduct(
 
   if (response.status === 404) return null;
   if (response.status >= 400) {
-    throw new OpenAireUnavailableError(`HTTP ${response.status}`, response.status);
+    throw new OpenAireUnavailableError(failure(response.status, response.data), response.status);
   }
 
   return response.data ?? null;

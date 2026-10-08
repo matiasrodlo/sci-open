@@ -156,6 +156,43 @@ describe('toParams — alternatives and nested queries', () => {
 });
 
 /**
+ * OpenAIRE refuses a search with more than four `AND`, `OR` and `NOT`: HTTP
+ * 400, "Too many logical operators found. Max allowed is 4". A space is not
+ * counted, and reads as AND. Measured on 2026-10-07: `(crispr AND (mouse OR
+ * rat) AND (liver OR kidney))` and the same with spaces both answered 815.
+ */
+describe('toParams — at most four operators', () => {
+  const search = (input: string) => toParams(parseQuery(input), { openAccessOnly: true }).search;
+
+  it('keeps a search within the limit as it was', () => {
+    expect(search('TS=crispr AND (TS=mouse OR TS=rat)')).toBe('(crispr AND (mouse OR rat))');
+    expect(search('TS=(a OR b OR c OR d OR e)')).toBe('a OR b OR c OR d OR e');
+  });
+
+  it('joins required parts with spaces when the ANDs would take it over', () => {
+    // Five operators written out, which OpenAIRE refused; three with spaces.
+    expect(search('(TS=a OR TS=b) AND (TS=c OR TS=d) AND (TS=e OR TS=f)')).toBe('((a OR b) (c OR d) (e OR f))');
+  });
+
+  it('leaves out the costliest part the filter applies afterwards, never a topic part', () => {
+    // The benchmark's search, refused at eight. The title group is left out
+    // and `matchesQuery` holds what comes back to it; the topic groups stay.
+    expect(search(
+      'TI=("time-restricted eating" OR "time restricted eating" OR "time-restricted feeding" OR "time restricted feeding") ' +
+      'AND TS=(randomized OR randomised) AND TS=(obesity OR obese OR overweight) AND PY=2020-2024'
+    )).toBe('((randomized OR randomised) (obesity OR obese OR overweight))');
+  });
+
+  it('sends nothing when only topic parts would take it over', () => {
+    // Left out, a topic part widens the search for good; see `dropsForGood`.
+    expect(translate(parseQuery('TS=(a OR b OR c OR d) AND TS=(e OR f OR g)'), { openAccessOnly: true })).toBe('');
+    // Six alternatives: none can be left out without losing its records.
+    expect(translate(parseQuery('TS=(a OR b OR c OR d OR e OR f)'), { openAccessOnly: true })).toBe('');
+    expect(translate(query({ terms: ['a', 'b', 'c', 'd', 'e', 'f'], join: 'OR' }))).toBe('');
+  });
+});
+
+/**
  * `ALL=` reaches authors, venues and publishers as well as the body text, and
  * OpenAIRE's search is the body text only, so it cannot state one. Nor can it
  * leave one out: a miss on `all` is `unknown` to `matchesQuery`, so everything

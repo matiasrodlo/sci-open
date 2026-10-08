@@ -7,7 +7,7 @@ const { get } = vi.hoisted(() => ({ get: vi.fn() }));
 // resolved, exactly as the real factory delivers them.
 vi.mock('../../../lib/http-client-factory', () => ({ getPooledClient: () => ({ get }) }));
 
-import { lookup } from '../index';
+import { fetchPage, lookup } from '../index';
 
 const options = { timeoutMs: 1000 };
 const ID = 'doi_dedup___::e102f905c7609789b70634cf0ecde7cd';
@@ -61,5 +61,24 @@ describe('lookup', () => {
     get.mockResolvedValue({ status: 429, data: {} });
 
     await expect(lookup(ID, options)).rejects.toThrow('HTTP 429');
+  });
+});
+
+describe('a refused search', () => {
+  it('says what OpenAIRE objected to, not only the status', async () => {
+    const message = 'Too many logical operators found. Max allowed is 4, found: 8. Input: (((a) OR (b)))';
+    get.mockResolvedValue({ status: 400, data: { message, error: 'Bad Request', code: 400 } });
+
+    const refused = fetchPage({ search: '(((a) OR (b)))', type: 'publication' }, { pageSize: 1, offset: 0, timeoutMs: 1000 });
+
+    await expect(refused).rejects.toThrow(`HTTP 400: ${message}`);
+    await expect(refused).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('gives the status alone when the body says nothing', async () => {
+    get.mockResolvedValue({ status: 400, data: 'Bad Request' });
+
+    await expect(fetchPage({ search: 'x', type: 'publication' }, { pageSize: 1, offset: 0, timeoutMs: 1000 }))
+      .rejects.toThrow(/HTTP 400$/);
   });
 });

@@ -221,6 +221,20 @@ in `test/__toolsnaps__/` are the record of every schema change.
   PY=2020-2024` counted 196,807 open-access matches, and counts 285 now;
   `TS=("base editing" AND plants) AND PY=2022-2026` 6,855, now 107. Every
   field Europe PMC is asked a term in is now bracketed on its own.
+- OpenAIRE refuses a search with more than four `AND`, `OR` and `NOT`, and
+  coverage said only "no answer from openaire (error)". Searches an agent
+  builds from a few synonym groups go over it:
+  - `TI=(four phrases) AND TS=(randomized OR randomised) AND
+    TS=(obesity OR obese OR overweight)` was refused at eight.
+  - Such a search is now written with spaces for its ANDs, which OpenAIRE
+    reads the same and does not count.
+  - When that is not enough, the costliest part the results are filtered by
+    afterwards (a title, abstract, author or venue part) is left out; that
+    search now has OpenAIRE answer.
+  - When even that is not enough (six topic synonyms, say), OpenAIRE is
+    skipped as unable to express the query.
+  - A refusal's reason is now in the report and logged as a warning; other
+    failures are logged at debug.
 
 ### Removed
 

@@ -62,6 +62,12 @@ export type Dialect = {
   /** False where the API has no negation. The clause is then dropped, not faked. */
   supportsNot: boolean;
   /**
+   * What joins the required parts of an `AND`: `' AND '` unless the API reads
+   * something shorter the same way. OpenAIRE reads a space as AND and counts
+   * only the operators it is sent against a limit; see its `translate.ts`.
+   */
+  and?: string;
+  /**
    * One person, from the words of their name in the order they were written,
    * as this index finds a person — or `undefined` where these words cannot be
    * sent as a name.
@@ -270,7 +276,7 @@ export function nameAsWords(words: readonly string[], dialect: Dialect): string 
     const scoped = natives.map(native => dialect.scope(native, term));
     clauses.push(scoped.length === 1 ? scoped[0]! : `(${scoped.join(' OR ')})`);
   }
-  return clauses.length === 1 ? clauses[0] : `(${clauses.join(' AND ')})`;
+  return clauses.length === 1 ? clauses[0] : `(${clauses.join(dialect.and ?? ' AND ')})`;
 }
 
 /**
@@ -360,7 +366,7 @@ export function renderExpression(
           .map(child => renderExpression(child, dialect, negated, probe))
           .filter((part): part is string => part !== undefined);
         const group = withAuthorName(
-          literal.length === 0 ? undefined : literal.length === 1 ? literal[0] : `(${literal.join(' AND ')})`,
+          literal.length === 0 ? undefined : literal.length === 1 ? literal[0] : `(${literal.join(dialect.and ?? ' AND ')})`,
           named,
           dialect
         );
@@ -369,7 +375,7 @@ export function renderExpression(
         others.forEach((child, index) => leftOut(child, rest[index]));
         const present = [group, ...rest].filter((part): part is string => part !== undefined);
         if (present.length === 0) return undefined;
-        return present.length === 1 ? present[0]! : `(${present.join(' AND ')})`;
+        return present.length === 1 ? present[0]! : `(${present.join(dialect.and ?? ' AND ')})`;
       }
 
       const parts = node.nodes.map(child => renderExpression(child, dialect, negated, probe));
@@ -385,7 +391,7 @@ export function renderExpression(
       if (negated && parts.some(part => part === undefined)) return undefined;
       const present = parts.filter((part): part is string => part !== undefined);
       if (present.length === 0) return undefined;
-      return present.length === 1 ? present[0]! : `(${present.join(' AND ')})`;
+      return present.length === 1 ? present[0]! : `(${present.join(dialect.and ?? ' AND ')})`;
     }
 
     case 'or': {

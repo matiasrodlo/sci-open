@@ -1,5 +1,5 @@
 import type { Query, QueryField, QueryNode } from '@sci-open/shared';
-import { cannotSend, flatStatesWhole, flatTerms, renderExpression, type Dialect } from '../render-query';
+import { cannotSend, dropsForGood, flatStatesWhole, flatTerms, renderExpression, type Dialect } from '../render-query';
 
 /**
  * Query -> OpenAIRE's request parameters.
@@ -134,6 +134,65 @@ function flatSearch(query: Query): string {
 }
 
 /**
+ * The most `AND`, `OR` and `NOT` a search may hold. One more is refused with
+ * HTTP 400, "Too many logical operators found. Max allowed is 4", and the
+ * provider reported failed. Measured on 2026-10-07: `a OR b OR c OR d OR e`
+ * answered and a sixth term was refused; `(a OR b) AND (c OR d) AND (e OR f)`
+ * was refused at 5. A space is not counted, and it is an AND: written with
+ * spaces, that query answered 1,408, and `(crispr AND (mouse OR rat) AND
+ * (liver OR kidney))` and the same with spaces both answered 815.
+ */
+const MAX_OPERATORS = 4;
+
+function operators(search: string): number {
+  return search.match(/\b(?:AND|OR|NOT)\b/g)?.length ?? 0;
+}
+
+/** The dialect with every required part joined by a space, which costs no operator. */
+const TERSE: Dialect = { ...DIALECT, and: ' ' };
+
+/**
+ * The tree without its required part that costs the most operators, of those
+ * `matchesQuery` applies to what comes back — or nothing when no such part
+ * costs any. Leaving it out widens the search, and the filter narrows the
+ * answer back (see `dropsForGood`). A topic part is never left out: nothing
+ * that comes back without it would be removed.
+ */
+function withoutCostliestPart(node: QueryNode): QueryNode | undefined {
+  if (node.kind !== 'and') return undefined;
+  const cost = (child: QueryNode) => operators(renderExpression(child, TERSE) ?? '');
+  const droppable = node.nodes.filter(child => !dropsForGood(child) && cost(child) > 0);
+  if (droppable.length === 0) return undefined;
+  const costliest = droppable.reduce((a, b) => (cost(b) > cost(a) ? b : a));
+  const rest = node.nodes.filter(child => child !== costliest);
+  return rest.length === 1 ? rest[0]! : { kind: 'and', nodes: rest };
+}
+
+/**
+ * A search over the limit, brought within it: its ANDs as spaces, and then, as
+ * far as that is not enough, its costliest filterable parts left out. Nothing
+ * when what is left still is over, which reports OpenAIRE skipped, as unable
+ * to express the query, rather than failed. Measured on 2026-10-07, the
+ * benchmark's `TI=(… OR … OR … OR …) AND TS=(randomized OR randomised) AND
+ * TS=(obesity OR obese OR overweight)` was refused at 8 operators, and lost
+ * OpenAIRE from every search an agent built that way.
+ */
+function shortened(expression: QueryNode): string {
+  let node: QueryNode | undefined = expression;
+  while (node) {
+    const search = renderExpression(node, TERSE) ?? '';
+    if (operators(search) <= MAX_OPERATORS) return search;
+    node = withoutCostliestPart(node);
+  }
+  return '';
+}
+
+/** A search as it is, when within the limit, or nothing. */
+function withinLimit(search: string): string {
+  return operators(search) <= MAX_OPERATORS ? search : '';
+}
+
+/**
  * The search for a parsed query, or nothing it can be sent as.
  *
  * Nothing when the query needs a part the search cannot state and
@@ -141,11 +200,15 @@ function flatSearch(query: Query): string {
  * cannot send whole that holds a topic term (see `cannotSend`). Otherwise from
  * the flat form when that states the query whole, which keeps the common
  * search exactly as it was, and in the search's own syntax when it is nested.
+ * Either way within `MAX_OPERATORS`; see `shortened`.
  */
 function expressionSearch(query: Query, expression: QueryNode): string {
   if (cannotSend(expression, DIALECT)) return '';
-  if (flatStatesWhole(expression)) return flatSearch(query);
-  return renderExpression(expression, DIALECT) ?? '';
+  // The flat form joins required parts with spaces already, so only its
+  // alternatives count; and those cannot be left out.
+  if (flatStatesWhole(expression)) return withinLimit(flatSearch(query));
+  const search = renderExpression(expression, DIALECT) ?? '';
+  return operators(search) <= MAX_OPERATORS ? search : shortened(expression);
 }
 
 /**
@@ -173,7 +236,7 @@ export function toParams(query: Query, options: TranslateOptions = {}): OpenAire
   // `crispr AND (mouse OR rat)` reached OpenAIRE as `crispr`, and 11 of the 465
   // papers it returned mentioned either animal — so it is rendered instead.
   // See `expressionSearch`.
-  const search = query.expression ? expressionSearch(query, query.expression) : flatSearch(query);
+  const search = query.expression ? expressionSearch(query, query.expression) : withinLimit(flatSearch(query));
 
   // Published, and not the unknowns beside it, is the one narrowing OpenAIRE
   // can be asked for. A search for preprints never gets here: `normalize`

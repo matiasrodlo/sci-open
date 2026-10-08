@@ -1,6 +1,7 @@
 import type { Paper, ProviderId, ProviderReport, Query } from '@sci-open/shared';
 import type { Plan } from './plan';
 import type { ProviderCache } from './provider-cache';
+import { log } from '../lib/logger';
 
 /**
  * Ask every planned provider, in parallel, within a budget the orchestrator
@@ -201,6 +202,16 @@ export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOut
       };
     } catch (error) {
       const timedOut = error instanceof Error && error.name === 'TimeoutError';
+      // Logged, so a failure's cause is not only in a report a client may
+      // reduce to "error". A refused query is a translation this service got
+      // wrong, worth a warning; a timeout or a rate limit is the source's minute.
+      const refused = !timedOut && refusedQuery(error);
+      (refused ? log.warn : log.debug)('Provider failed', {
+        provider: provider.id,
+        status: timedOut ? 'timeout' : statusOf(error),
+        error: error instanceof Error ? error.message : String(error),
+        query: nativeQuery
+      });
       return {
         papers: [],
         report: {
@@ -212,7 +223,7 @@ export async function fanOut(plan: Plan, options: FanOutOptions): Promise<FanOut
           retrieved: 0,
           query: nativeQuery,
           error: error instanceof Error ? error.message : String(error),
-          ...(!timedOut && refusedQuery(error) ? { refused: true } : {}),
+          ...(refused ? { refused: true } : {}),
           ...(!timedOut && statusOf(error) === 429 ? { rateLimited: 'refused' as const } : {}),
           latency: Date.now() - startedAt
         }
